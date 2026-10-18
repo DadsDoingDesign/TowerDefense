@@ -23,7 +23,13 @@ import { hash01 } from './seasonHash'
  *    the view's edges and thin over the game; the flash lights the margins
  *    only, so it never washes out the lane.
  *
- * Capped (`SeasonWeather.count`: ≤ 40 on a phone, ~1.7× on a desk, plus a few
+ * The calm pass (Oct 2026; the designer: "a bit overwhelming now that I'm
+ * playing more"): 40–50% of the old particles, the sheets narrower, sparser
+ * and fainter, the fog and the clouds fainter, everything at
+ * {@link WEATHER_PEAK} of its old strength, a particle over the game at
+ * {@link OVER_GAME} of its own, and the flash rarer and fainter.
+ *
+ * Capped (`SeasonWeather.count`: ≤ 18 on a phone, ~1.7× on a desk, plus a few
  * large shapes — fog banks, cloud shadows, the rain or snow sheet); Light
  * halves the particles and the fog, keeps one sheet, drops the cloud shadows
  * and the flash, and redraws the fog at half the rate; the particles are
@@ -279,12 +285,13 @@ class Sheet {
     private readonly kind: 'rain' | 'snow',
     salt: number,
   ) {
-    const n = kind === 'rain' ? 7 : 9
+    // Drops a tile (7 and 9 before the calm pass).
+    const n = kind === 'rain' ? 4 : 5
     for (let i = 0; i < n; i++) this.drops.push({ x: hash01(i, salt, 91), y: hash01(i, salt, 92), s: hash01(i, salt, 93) })
   }
 
   /** The sheet over `rects` at time `t`, falling at (vx, vy) field px / s with a sway. */
-  fill(B: PixelBatch, rects: readonly View[], k: number, u: number, t: number, vx: number, vy: number, sway: number, alpha: number): void {
+  fill(B: PixelBatch, rects: readonly View[], k: number, u: number, t: number, vx: number, vy: number, sway: number, alpha: number, grid?: ClearGrid): void {
     const T = Math.max(16, Math.round(96 * k))
     const ox = vx * t + Math.sin(t * 0.8) * sway
     const oy = vy * t
@@ -300,6 +307,9 @@ class Sheet {
             const x = Math.round(ox + (i + d.x) * T)
             const y = Math.round(oy + (j + d.y) * T)
             if (x < r.x0 || x >= r.x0 + r.w || y < r.y0 || y >= r.y0 + r.h) continue
+            // Never over the game where the band meets it (the road's way
+            // in, the wagon, a slot by the edge): the calm pass, Oct 2026.
+            if (grid && !isClear(grid, x, y)) continue
             if (this.kind === 'rain') {
               // A slanted streak in two steps, brightest at its head.
               const len = Math.round((9 + d.s * 5) * u * 0.5)
@@ -337,8 +347,15 @@ function edgeRects(view: View, share: number): View[] {
   ]
 }
 
-/** How strongly a particle shows over the game, as a share of its strength on clear ground. */
-const OVER_GAME = 0.34
+/** How strongly a particle shows over the game, as a share of its strength on clear ground (0.34 before the calm pass). */
+export const OVER_GAME = 0.18
+/** How many particles spawn over the game, as a share of those thrown there (0.3 before). */
+const SPAWN_OVER_GAME = 0.12
+/** Every weather particle's strength against its old one (the calm pass, Oct 2026). */
+export const WEATHER_PEAK = 0.65
+/** Seconds to the first far flash, and between flashes, at the least (each gets up to {@link FLASH_SPREAD_S} more). */
+export const FLASH_GAP_S = 45
+const FLASH_SPREAD_S = 45
 
 export class WeatherLayer {
   private parts: WP[] = []
@@ -348,7 +365,7 @@ export class WeatherLayer {
   private sheets: [Sheet, Sheet] | null = null
   private batch = new PixelBatch()
   private t = 0
-  private nextFlash = 14 + Math.random() * 20
+  private nextFlash = FLASH_GAP_S + Math.random() * FLASH_SPREAD_S
   private flash = -1
   /** Particles alive (the review's numbers). */
   count = 0
@@ -412,7 +429,7 @@ export class WeatherLayer {
     if (w.lightning && !light) {
       if (this.flash < 0 && this.t > this.nextFlash) {
         this.flash = 0
-        this.nextFlash = this.t + 18 + Math.random() * 26
+        this.nextFlash = this.t + FLASH_GAP_S + Math.random() * FLASH_SPREAD_S
       }
       if (this.flash >= 0) {
         this.flash += dt
@@ -421,7 +438,7 @@ export class WeatherLayer {
         if (f >= 0.6) this.flash = -1
         if (a > 0) {
           const g0 = ctx.globalAlpha
-          ctx.globalAlpha = 0.16 * a
+          ctx.globalAlpha = 0.08 * a
           ctx.fillStyle = '#e8f0ff'
           const b = Math.min(view.w, view.h) * 0.16
           ctx.fillRect(view.x0, view.y0, view.w, b)
@@ -438,15 +455,17 @@ export class WeatherLayer {
     // The rain's band is narrower and fainter than the snow's (the motion
     // audit, Oct 2026: at 540 px/s every pixel of a 22% band changed every
     // frame, four times the next world's motion at the battlefield's edges).
+    // The calm pass (Oct 2026) narrowed both again, thinned their tiles and
+    // halved their strength: the rain was still the busiest margin in the game.
     const B = this.batch
     if (this.sheets && w.sheet === 'rain') {
-      const vy = 540 * k
-      this.sheets[0].fill(B, edgeRects(view, 0.15), k, u, this.t, -0.22 * vy, vy, 0, 0.42)
-      if (!light) this.sheets[1].fill(B, edgeRects(view, 0.075), k, u, this.t + 0.37, -0.22 * vy * 1.15, vy * 1.15, 0, 0.42)
+      const vy = 420 * k
+      this.sheets[0].fill(B, edgeRects(view, 0.1), k, u, this.t, -0.22 * vy, vy, 0, 0.3, grid)
+      if (!light) this.sheets[1].fill(B, edgeRects(view, 0.05), k, u, this.t + 0.37, -0.22 * vy * 1.15, vy * 1.15, 0, 0.3, grid)
       this.shapes += light ? 1 : 2
     } else if (this.sheets && w.sheet === 'snow') {
-      this.sheets[0].fill(B, edgeRects(view, 0.22), k, u, this.t, -5 * k, 20 * k, 6 * k, 0.6)
-      if (!light) this.sheets[1].fill(B, edgeRects(view, 0.11), k, u, this.t + 3.1, -8 * k, 34 * k, 10 * k, 0.9)
+      this.sheets[0].fill(B, edgeRects(view, 0.15), k, u, this.t, -4 * k, 16 * k, 5 * k, 0.32, grid)
+      if (!light) this.sheets[1].fill(B, edgeRects(view, 0.07), k, u, this.t + 3.1, -6 * k, 26 * k, 8 * k, 0.45, grid)
       this.shapes += light ? 1 : 2
     }
 
@@ -502,7 +521,7 @@ export class WeatherLayer {
         const y = view.y0 + Math.random() * view.h
         const clear = isClear(grid, x, y)
         if (kind === 'dew' && !clear) continue
-        if (!clear && Math.random() > 0.3) continue
+        if (!clear && Math.random() > SPAWN_OVER_GAME) continue
         this.parts.push(this.spawn(kind, x, y, k, u, view))
         break
       }
@@ -511,7 +530,7 @@ export class WeatherLayer {
 
     // Draw, in whole field px.
     for (const q of this.parts) {
-      const over = isClear(grid, q.x, q.y) ? 1 : OVER_GAME
+      const over = (isClear(grid, q.x, q.y) ? 1 : OVER_GAME) * WEATHER_PEAK
       const fade = Math.min(1, q.age / 0.25, q.life - q.age < 0.4 ? (q.life - q.age) / 0.4 : 1)
       const x = Math.round(q.x)
       const y = Math.round(q.y)
@@ -521,7 +540,7 @@ export class WeatherLayer {
           if (q.down > 0) {
             // A splash: a pair of droplets either side, then a ring.
             const s = 1 - q.down / 0.22
-            B.alpha = 0.55 * (1 - s)
+            B.alpha = 0.55 * (1 - s) * WEATHER_PEAK
             const r = Math.round(u * (1 + s * 2))
             B.rect(x - r, y - u, u, u)
             B.rect(x + r, y - u, u, u)
@@ -595,11 +614,11 @@ export class WeatherLayer {
         }
         case 'dew': {
           const tw = Math.sin((q.age / q.life) * Math.PI)
-          B.alpha = tw * 0.9
+          B.alpha = tw * 0.9 * WEATHER_PEAK
           const s = Math.max(1, Math.round(u / 2))
           B.rect(x, y, s, s)
           if (tw > 0.7) {
-            B.alpha = tw * 0.45
+            B.alpha = tw * 0.45 * WEATHER_PEAK
             B.rect(x - s, y, s, s)
             B.rect(x + s, y, s, s)
             B.rect(x, y - s, s, s)
@@ -619,15 +638,15 @@ export class WeatherLayer {
     switch (kind) {
       case 'rain': {
         // From above the view or anywhere in it; it lands a little way below.
-        const vy = (430 + r() * 140) * k
+        const vy = (340 + r() * 110) * k
         const yy = r() < 0.5 ? view.y0 - 10 * k : y
         return { ...base, y: yy, vy, vx: -0.22 * vy, life: 2, land: yy + (30 + r() * 140) * k }
       }
       case 'snow':
-        return { ...base, vy: (16 + r() * 16) * k, life: 6 + r() * 4, land: y + (40 + r() * 160) * k, size: r() < 0.3 ? 2 * u : u }
+        return { ...base, vy: (12 + r() * 12) * k, life: 7 + r() * 4, land: y + (40 + r() * 160) * k, size: r() < 0.3 ? 2 * u : u }
       case 'petal':
       case 'leaf':
-        return { ...base, vy: (12 + r() * 12) * k, life: 4 + r() * 3 }
+        return { ...base, vy: (8 + r() * 9) * k, life: 5 + r() * 3 }
       case 'dust':
         return { ...base, life: 3 + r() * 3 }
       case 'fluff':

@@ -132,10 +132,15 @@ for (const kind of ['home', 'battle']) {
       )
     }
     const file = `${kind}-${id}.webp`
-    await sharp(frames, { join: { animated: true } })
-      .webp({ quality: 72, effort: 6, loop: 0, delay: Array(n).fill(Math.round(1000 / FPS)), smartSubsample: true })
-      .toFile(path.join(OUT, file))
-    const kb = Math.round(fs.statSync(path.join(OUT, file)).size / 1024)
+    // Under ~1.5 MB a card: the quality steps down until it fits.
+    let kb = Infinity
+    for (const quality of [72, 62, 52, 44, 36]) {
+      await sharp(frames, { join: { animated: true } })
+        .webp({ quality, effort: 6, loop: 0, delay: Array(n).fill(Math.round(1000 / FPS)), smartSubsample: true })
+        .toFile(path.join(OUT, file))
+      kb = Math.round(fs.statSync(path.join(OUT, file)).size / 1024)
+      if (kb <= 1400) break
+    }
     console.log(`${file}: ${W}×${H}, ${n} frames, ${kb} KB`)
     manifest.push({ id: `${kind}-${id}`, group: 'Effects', people: NAMES[id], title, caption: CAPTIONS[kind][id], file })
   }

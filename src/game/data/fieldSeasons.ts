@@ -73,7 +73,10 @@ export type WeatherKind = 'rain' | 'snow' | 'petal' | 'leaf' | 'dust' | 'fluff' 
 export interface SeasonWeather {
   /** The particles, as a weighted list (a kind twice is twice as common). */
   kinds: readonly WeatherKind[]
-  /** How many on a phone at Full (a desk gets ~1.7×; Light halves both). */
+  /**
+   * How many on a phone at Full (a desk gets ~1.7×; Light halves both). The
+   * calm pass (Oct 2026) took every season to 40–50% of its old count.
+   */
   count: number
   /** Fog banks drifting at different speeds (parallax), thickest at the view's margins. */
   fog?: { color: string; alpha: number; banks: number }
@@ -167,7 +170,7 @@ export const FIELD_SEASONS: Record<CompanyId, FieldSeason> = {
       { kind: 'leaves', where: 'open', share: 0.05 },
     ],
     edge: ['ember', 'ember', 'leaf'],
-    weather: { kinds: ['dust', 'dust', 'fluff', 'fluff', 'leaf'], count: 30 },
+    weather: { kinds: ['dust', 'dust', 'fluff', 'fluff', 'leaf'], count: 14 },
   },
   // Easel House: spring — fresh green, blossom trees in pink and white,
   // flowers through the meadow, petals on the air and a pair of butterflies.
@@ -183,7 +186,7 @@ export const FIELD_SEASONS: Record<CompanyId, FieldSeason> = {
       { kind: 'flowers', where: 'forest', share: 0.5 },
     ],
     edge: ['fleck', 'fleck', 'blossom'],
-    weather: { kinds: ['petal', 'petal', 'petal', 'butterfly'], count: 30 },
+    weather: { kinds: ['petal', 'petal', 'petal', 'butterfly'], count: 14 },
   },
   // Ironvein: overcast and raining — dark wet pines, rocks with a wet shine,
   // mud and puddles with the sky in them, rain falling and splashing, cloud
@@ -204,7 +207,7 @@ export const FIELD_SEASONS: Record<CompanyId, FieldSeason> = {
       { kind: 'mud', where: 'forest', share: 0.22 },
     ],
     edge: ['spark', 'spark', 'ash'],
-    weather: { kinds: ['rain'], count: 40, sheet: 'rain', clouds: { color: '#141c2a', alpha: 0.16, count: 2 }, lightning: true },
+    weather: { kinds: ['rain'], count: 16, sheet: 'rain', clouds: { color: '#141c2a', alpha: 0.09, count: 2 }, lightning: true },
   },
   // Rosethread: a misty morning — fog banks drifting at the margins, the far
   // trees softened, dew on the grass, reeds and lily pads by the water,
@@ -226,7 +229,7 @@ export const FIELD_SEASONS: Record<CompanyId, FieldSeason> = {
       { kind: 'mushroom', where: 'forest', share: 0.22 },
     ],
     edge: ['petal', 'mote'],
-    weather: { kinds: ['dew', 'dew', 'dust'], count: 18, fog: { color: '#f4eef6', alpha: 0.85, banks: 6 } },
+    weather: { kinds: ['dew', 'dew', 'dust'], count: 8, fog: { color: '#f4eef6', alpha: 0.45, banks: 4 } },
   },
   // Moonquill: frost — snow over the ground with the grass poking through,
   // snow-laden pines with icicles, rocks and bushes under snow, the lakes'
@@ -246,7 +249,7 @@ export const FIELD_SEASONS: Record<CompanyId, FieldSeason> = {
     accent: true,
     props: [{ kind: 'drift', where: 'forest', share: 0.3 }],
     edge: ['star', 'star', 'snow'],
-    weather: { kinds: ['snow'], count: 40, sheet: 'snow' },
+    weather: { kinds: ['snow'], count: 18, sheet: 'snow' },
   },
 }
 

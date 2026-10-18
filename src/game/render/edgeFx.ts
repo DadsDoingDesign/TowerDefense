@@ -17,6 +17,9 @@ import { drawnRoad, worldOf } from './terrain'
  * battle (`BattleCanvas` makes it), drawn inside the battle's own loop — no
  * second rAF. Respects the effects level: Light halves it, reduced motion
  * (`off`) clears it. `Math.random` only: never a run's RNG stream.
+ *
+ * The calm pass (Oct 2026): 45% of the old caps, slower drift, every particle
+ * at {@link EDGE_PEAK} of its old strength.
  */
 interface P {
   kind: EdgeKind
@@ -30,6 +33,9 @@ interface P {
   color: string
   phase: number
 }
+
+/** Every edge particle's strength against its old one (the calm pass). */
+export const EDGE_PEAK = 0.7
 
 /** Cell size of the clear-of-the-game grid, field px. */
 const CELL = 8
@@ -109,8 +115,8 @@ export class EdgeBand {
   private batch = new PixelBatch()
   /** Particles alive (the review's numbers). */
   count = 0
-  /** The most it keeps alive on a phone and a desk at Full (a season with weather keeps fewer). */
-  caps = { phone: 24, desk: 40 }
+  /** The most it keeps alive on a phone and a desk at Full (24 and 40 before the calm pass; the battle keeps fewer beside the weather). */
+  caps = { phone: 11, desk: 18 }
 
   /**
    * One frame: step, spawn and draw, in field px, on a context set up for the
@@ -154,7 +160,7 @@ export class EdgeBand {
         case 'blossom':
         case 'petal':
         case 'snow':
-          q.vx = Math.sin(q.age * 1.9 + q.phase) * 8 * u
+          q.vx = Math.sin(q.age * 1.3 + q.phase) * 5 * u
           break
         case 'spark':
           q.vy += 90 * u * dt
@@ -184,7 +190,7 @@ export class EdgeBand {
     const B = this.batch
     for (const q of this.parts) {
       const k = q.age / q.life
-      const fade = Math.min(1, q.age / 0.3, (1 - k) * 3)
+      const fade = Math.min(1, q.age / 0.3, (1 - k) * 3) * EDGE_PEAK
       const x = Math.round(q.x)
       const y = Math.round(q.y)
       const s = q.size
@@ -225,7 +231,7 @@ export class EdgeBand {
           B.rect(x, y, s, s)
           break
         case 'star': {
-          const tw = 0.5 + 0.5 * Math.sin(q.age * 2.6 + q.phase)
+          const tw = 0.5 + 0.5 * Math.sin(q.age * 1.2 + q.phase)
           B.alpha = fade * (0.35 + 0.65 * tw)
           B.rect(x, y, u, u)
           if (tw > 0.75) {
@@ -251,17 +257,17 @@ export class EdgeBand {
     const base: P = { kind, x, y, vx: 0, vy: 0, age: 0, life: 3, size: 2 * u, color, phase: r() * 6.28 }
     switch (kind) {
       case 'ember':
-        return { ...base, vy: -(10 + r() * 14) * u, life: 2 + r(), size: (r() < 0.4 ? 3 : 2) * u }
+        return { ...base, vy: -(7 + r() * 10) * u, life: 2.5 + r(), size: (r() < 0.25 ? 3 : 2) * u }
       case 'spark':
-        return { ...base, vx: (r() - 0.5) * 30 * u, vy: -(30 + r() * 25) * u, life: 0.8 + r() * 0.5, size: u * (r() < 0.5 ? 2 : 1) }
+        return { ...base, vx: (r() - 0.5) * 20 * u, vy: -(22 + r() * 18) * u, life: 0.9 + r() * 0.5, size: u * (r() < 0.3 ? 2 : 1) }
       case 'leaf':
       case 'blossom':
       case 'petal':
-        return { ...base, vy: (8 + r() * 8) * u, life: 3 + r() * 2 }
+        return { ...base, vy: (5 + r() * 6) * u, life: 4 + r() * 2 }
       case 'snow':
-        return { ...base, vy: (7 + r() * 7) * u, life: 4 + r() * 2, size: (r() < 0.3 ? 3 : 2) * u }
+        return { ...base, vy: (5 + r() * 5) * u, life: 5 + r() * 2, size: (r() < 0.3 ? 3 : 2) * u }
       case 'drizzle':
-        return { ...base, vx: -6 * u, vy: (70 + r() * 30) * u, life: 0.5 + r() * 0.3 }
+        return { ...base, vx: -5 * u, vy: (55 + r() * 25) * u, life: 0.6 + r() * 0.3 }
       case 'ash':
         return { ...base, vx: (r() - 0.5) * 4 * u, vy: (5 + r() * 4) * u, life: 4, size: u }
       case 'mote':

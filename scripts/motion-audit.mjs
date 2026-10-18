@@ -43,7 +43,7 @@
  * Keep the frames out of the repo (a scratch folder); commit only a few
  * heatmaps, palette-compressed. Env: AUDIT_VIEW=desk (1280 × 800; every
  * capture named `…-desk`), AUDIT_CARDS=1 (a 3.5 s `card-home-<world>` capture
- * each, for `scripts/motion-cards.mjs`), AUDIT_BASE (default
+ * each, for `scripts/motion-cards.mjs`), AUDIT_SEED (a fixed contract seed for the battles), AUDIT_BASE (default
  * http://localhost:5227/), PW_CHROMIUM, AUDIT_EVAL (code run in each page once it
  * is up — an experiment, e.g. one world's layer switched off), AUDIT_TAG (a
  * suffix on every capture's name).
@@ -530,6 +530,13 @@ async function toBattle(p, world) {
     await p.page.waitForTimeout(wait)
   }
   await cta(1500) // home → terms
+  // AUDIT_SEED: the same contract seed (so the same road and waves) in every run.
+  if (process.env.AUDIT_SEED)
+    await p.page.evaluate((seed) => {
+      const g = window.__game
+      const b = g.getState().board
+      if (b) g.setState({ board: { ...b, seed } })
+    }, Number(process.env.AUDIT_SEED))
   await cta(1500) // sign → pick
   await cta(2500) // march → the opening fight
   if (world === 'neutral') await holdNeutral(p.page)

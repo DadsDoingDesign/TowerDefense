@@ -4,8 +4,9 @@
  * The designer, on the cost of the worlds on a slow phone: "Auto + setting".
  *
  *  - The player's setting, `Effects: Full / Light` (`settingsStore.effects`).
- *    Light is the reduced set: half the particles, the frames still (no
- *    flipbook, no strip, no crest, no sheen), no glows behind the particles.
+ *    Light is the reduced set, derived from Full: half its particles at half
+ *    the cadence, no CTA shimmer, no glows behind the particles (the frames,
+ *    strips and crest are still at every level since the calm pass).
  *  - Auto: on Full, a device that cannot hold the frame rate drops to Light by
  *    itself — the loops that draw the worlds (`fxEngine`, the battle's edge
  *    band) report each frame's length here; a measured rate under
