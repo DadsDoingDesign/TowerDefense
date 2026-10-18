@@ -18,7 +18,10 @@ import {
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import sharp from 'sharp'
-import { cutOffHand, heroGear, rigFor, unpaints, unpaintsOff } from '../src/game/render/gearMarks'
+import { bareStrip, cutAndFill, cutOffHand, heroGear, offHandPlan, rigFor, shieldFillFor, unpaints, unpaintsOff } from '../src/game/render/gearMarks'
+import { SHIELD_FILL } from '../src/game/render/shieldFill.generated'
+import { BODY_TORSOS } from '../src/game/render/bodyAnchors.generated'
+import { fillProblems, shieldFills, type RawStrip } from '../scripts/shield-fill-lib'
 import { drawProjectile, swingSide, swingSpan } from '../src/game/render/projectiles'
 import { drawShots } from '../src/game/render/renderer'
 import { isMelee } from '../src/game/engine/melee'
@@ -188,6 +191,144 @@ describe('gear on the figure', () => {
           }
       expect(touched, role).toBe(0)
     }
+  })
+})
+
+/*
+ * The body the painted shield hid, rebuilt (`scripts/shield-fill-lib.ts`, the
+ * shipped patch `shieldFill.generated.ts`). The designer: "when it's small it
+ * looks odd since the body is missing". These read the real strips.
+ */
+describe('the body under the shield', () => {
+  const ROLES = [
+    ['fighter_idle', 6],
+    ['fighter_atk', 6],
+  ] as const
+  async function strip(role: string, frames: number): Promise<RawStrip> {
+    const file = join(__dirname, '..', 'public/assets/sprites/tinyswords', `${role}.png`)
+    const { data, info } = await sharp(readFileSync(file)).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
+    return { name: role, data: new Uint8Array(data), w: info.width, h: info.height, frames }
+  }
+  /** Per frame: transparent px the outside cannot reach (4-connected through non-opaque px). */
+  function pockets(d: Uint8Array, w: number, h: number, x0: number, cw: number): Set<number> {
+    const opaque = (x: number, y: number) => d[(y * w + x0 + x) * 4 + 3] >= 128
+    const out = new Uint8Array(cw * h)
+    const stack: number[] = []
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < cw; x++)
+        if ((x === 0 || y === 0 || x === cw - 1 || y === h - 1) && !opaque(x, y)) {
+          out[y * cw + x] = 1
+          stack.push(y * cw + x)
+        }
+    while (stack.length) {
+      const p = stack.pop()!
+      const x = p % cw
+      const y = (p - x) / cw
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const X = x + dx
+        const Y = y + dy
+        if (X < 0 || Y < 0 || X >= cw || Y >= h || out[Y * cw + X] || opaque(X, Y)) continue
+        out[Y * cw + X] = 1
+        stack.push(Y * cw + X)
+      }
+    }
+    const holes = new Set<number>()
+    for (let i = 0; i < out.length; i++) if (!out[i] && !opaque(i % cw, Math.floor(i / cw))) holes.add(i)
+    return holes
+  }
+  /** Painted (opaque, not outline ink) px facing a non-opaque px: an open outline. */
+  function openEdge(d: Uint8Array, w: number, h: number, x0: number, cw: number): number {
+    const at = (x: number, y: number) => (y * w + x0 + x) * 4
+    const opaque = (x: number, y: number) => x >= 0 && y >= 0 && x < cw && y < h && d[at(x, y) + 3] >= 128
+    const ink = (x: number, y: number) => Math.abs(d[at(x, y)] - 22) <= 2 && Math.abs(d[at(x, y) + 1] - 28) <= 2 && Math.abs(d[at(x, y) + 2] - 46) <= 2
+    let n = 0
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < cw; x++)
+        if (opaque(x, y) && !ink(x, y) && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => !opaque(x + dx, y + dy))) n++
+    return n
+  }
+
+  it('ships the patch the strips on disk make (`npm run anchors`), and it is sound', async () => {
+    const strips = await Promise.all(ROLES.map(([r, f]) => strip(r, f)))
+    const fills = shieldFills(strips)
+    for (const s of strips) {
+      expect(fills[s.name].fill, s.name).toEqual(SHIELD_FILL.tinyswords[s.name])
+      expect(fillProblems(s.name, s, SHIELD_FILL.tinyswords[s.name]), s.name).toEqual([])
+    }
+  })
+
+  it('fills the cut: no hole inside the body, the outline closed, every frame of both strips', async () => {
+    for (const [role, frames] of ROLES) {
+      const s = await strip(role, frames)
+      const fill = shieldFillFor('tinyswords', role)!
+      expect(fill, role).not.toBe(null)
+      const cut = new Uint8Array(s.data)
+      cutAndFill(cut, s.w, s.h, frames, null)
+      const bare = new Uint8Array(s.data)
+      cutAndFill(bare, s.w, s.h, frames, fill)
+      const cw = s.w / frames
+      for (let f = 0; f < frames; f++) {
+        const at = `${role} frame ${f}`
+        // Something real is rebuilt where the shield stood…
+        let rebuilt = 0
+        for (let y = 0; y < s.h; y++)
+          for (let x = 0; x < cw; x++) {
+            const o = (y * s.w + f * cw + x) * 4 + 3
+            if (cut[o] === 0 && s.data[o] >= 128 && bare[o] >= 128) rebuilt++
+          }
+        expect(rebuilt, at).toBeGreaterThan(150)
+        // …with no transparent pocket the art itself does not have…
+        const art = pockets(s.data, s.w, s.h, f * cw, cw)
+        expect([...pockets(bare, s.w, s.h, f * cw, cw)].filter((p) => !art.has(p)), at).toEqual([])
+        // …and no more painted px facing empty space than the art as painted.
+        expect(openEdge(bare, s.w, s.h, f * cw, cw), at).toBeLessThanOrEqual(openEdge(s.data, s.w, s.h, f * cw, cw))
+      }
+    }
+  })
+
+  it('the rebuilt tunic is part of the tunic, so a body piece dresses all of it', () => {
+    for (const [role] of ROLES) {
+      const cut = BODY_TORSOS.tinyswords[role]
+      const bare = BODY_TORSOS.tinyswords[bareStrip(role)]
+      expect(bare, role).toHaveLength(cut.length)
+      const area = (spans: readonly number[]) => {
+        let n = 0
+        for (let i = 0; i + 2 < spans.length; i += 3) n += spans[i + 2] - spans[i + 1] + 1
+        return n
+      }
+      bare.forEach((t, f) => {
+        expect(t.x0, `${role} frame ${f}`).toBeLessThan(cut[f].x0)
+        expect(area(t.spans), `${role} frame ${f}`).toBeGreaterThan(area(cut[f].spans))
+      })
+    }
+  })
+
+  it('a hero with a real Shield keeps the art exactly as painted: no cut, no patch, its own torso', () => {
+    const fighter = rigFor('tinyswords', 'fighter')
+    const plan = (main: Item | null, off: Item | null, role = 'fighter_idle') => offHandPlan('tinyswords', fighter, heroGear(hero(main, off).equipment), role)
+    expect(plan(item('Sword', 'oneHand'), item('Shield', 'offHand'))).toEqual({ cut: false, fill: null, torso: 'fighter_idle' })
+    expect(plan(item('Sword', 'oneHand'), item('Shield', 'offHand'), 'fighter_atk')).toEqual({ cut: false, fill: null, torso: 'fighter_atk' })
+    // Anything else in the off hand, or nothing: cut, rebuilt, dressed from the rebuilt tunic.
+    for (const off of [null, item('Tome', 'offHand'), item('Quiver', 'offHand'), item('Focus', 'offHand'), item('Buckler', 'offHand'), item('Pavise', 'offHand')]) {
+      const p = plan(item('Sword', 'oneHand'), off)
+      expect(p.cut).toBe(true)
+      expect(p.fill).toBe(SHIELD_FILL.tinyswords.fighter_idle)
+      expect(p.torso).toBe('fighter_idle_bare')
+    }
+    expect(plan(item('Greatsword', 'twoHand'), null, 'fighter_atk').fill).toBe(SHIELD_FILL.tinyswords.fighter_atk)
+    // Only the armoured look is rebuilt; an unmeasured pack is never cut.
+    expect(offHandPlan('tinyswords', rigFor('tinyswords', 'rogue'), heroGear(hero(item('Dagger', 'oneHand')).equipment), 'rogue_idle')).toEqual({ cut: false, fill: null, torso: 'rogue_idle' })
+    expect(offHandPlan('fieldwatch', rigFor('fieldwatch', 'fighter'), heroGear(hero(item('Greatsword', 'twoHand')).equipment), 'fighter_idle')).toEqual({ cut: false, fill: null, torso: 'fighter_idle' })
+  })
+
+  it('a patch made for another size of strip is never applied', async () => {
+    const s = await strip('fighter_idle', 6)
+    const fill = shieldFillFor('tinyswords', 'fighter_idle')!
+    const a = new Uint8Array(s.data)
+    cutAndFill(a, s.w, s.h, 6, { ...fill, w: fill.w + 6 })
+    const b = new Uint8Array(s.data)
+    cutAndFill(b, s.w, s.h, 6, null)
+    expect(a).toEqual(b)
   })
 })
 

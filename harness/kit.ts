@@ -4,7 +4,8 @@
  * and the portrait each one gets (`heroPortrait`), for the design review.
  *
  * Run:  npx vite --port 5223  →  http://localhost:5223/harness/kit.html
- *       (`?scale=2` for the field's phone density, `?frames=1` for every frame)
+ *       (`?scale=2` for the field's phone density, `?frames=1` for every frame,
+ *       `?shield=1` for the knight's off hands over its rebuilt body)
  */
 import '../src/styles/global.css'
 import { drawSentinel, setPresentationTime, type DrawSentinel } from '../src/game/render/renderer'
@@ -23,7 +24,8 @@ const q = new URLSearchParams(location.search)
 const SCALE = Number(q.get('scale') ?? 3)
 const out = document.getElementById('out')!
 const GRASS = '#5a9b43'
-const BOX = { w: 104, h: 112, ox: 46, oy: 96 }
+/** The figure's box, in logical px; the shield review's is wide enough for the swing. */
+const BOX = q.get('shield') ? { w: 136, h: 128, ox: 64, oy: 112 } : { w: 104, h: 112, ox: 46, oy: 96 }
 
 const BODY_KIND: Record<string, string> = {
   mail: 'Mail',
@@ -105,7 +107,50 @@ function portrait(e: Equipment, label: string): HTMLElement {
   return wrap
 }
 
+/**
+ * `?shield=1` — the knight with its painted shield cut and the body under it
+ * rebuilt (`gearMarks.cutAndFill`, `shieldFill.generated.ts`): every off hand
+ * the armoured look holds, and none, each in no body piece and four of them,
+ * at rest and through the swing — beside the painted-shield knight it came
+ * from (the Shield row). `&scale=` sets the zoom.
+ */
+const OFF_HANDS: { title: string; main: string | null; off: string | null }[] = [
+  { title: 'Sword + Shield (the art as painted)', main: 'Sword', off: 'Shield' },
+  { title: 'Sword, empty off hand', main: 'Sword', off: null },
+  { title: 'Greatsword (two-hander)', main: 'Greatsword', off: null },
+  { title: 'Sword + Tome', main: 'Sword', off: 'Tome' },
+  { title: 'Sword + Quiver', main: 'Sword', off: 'Quiver' },
+  { title: 'Sword + Focus', main: 'Sword', off: 'Focus' },
+  { title: 'Sword + Buckler', main: 'Sword', off: 'Buckler' },
+  { title: 'Sword + Pavise', main: 'Sword', off: 'Pavise' },
+]
+const SHIELD_BODIES = [null, 'Mail', 'Plate', 'Robe', 'Cloak']
+
+function buildShield(): void {
+  out.textContent = ''
+  const only = q.get('only')
+  for (const h of OFF_HANDS) {
+    if (only && !h.title.toLowerCase().includes(only.toLowerCase())) continue
+    const row = document.createElement('section')
+    row.innerHTML = `<h2>${h.title}</h2>`
+    const figs = document.createElement('div')
+    figs.className = 'row'
+    for (const b of SHIELD_BODIES) {
+      const e = eq(h.main, h.off, b)
+      figs.append(fig(e, `${b ?? 'no body'} · idle`, 0, 0.01))
+      if (q.get('frames')) for (const ff of [0.95, 0.6, 0.3]) figs.append(fig(e, `${b ?? 'no body'} · atk ${ff}`, ff))
+    }
+    row.append(figs)
+    const pts = document.createElement('div')
+    pts.className = 'row'
+    for (const b of SHIELD_BODIES) pts.append(portrait(eq(h.main, h.off, b), b ?? 'no body'))
+    if (!q.get('nopt')) row.append(pts)
+    out.append(row)
+  }
+}
+
 function build(): void {
+  if (q.get('shield')) return buildShield()
   out.textContent = ''
   for (const h of HANDS) {
     const row = document.createElement('section')
