@@ -98,8 +98,13 @@ export type Grip = 'one' | 'two' | 'bow' | 'twin'
 
 /** What a frame asks the FX layer for (the swing's smear, a loosed arrow, a spell's spark). */
 export interface FrameFx {
-  /** A tongue out of the snout: 1 a flick, 2 the full fork. */
-  tongue?: 1 | 2
+  /** A tail's swish: the tip's offset (px). */
+  tail?: number
+  /** Saffra's scale tips under a pinch; the pinch falls. */
+  weigh?: boolean
+  pinch?: boolean
+  /** Brannoch's tally: marks added to the slate. */
+  tally?: number
   /** A vial held to the light glints. */
   glint?: boolean
   smear?: 1 | 2
@@ -163,10 +168,10 @@ export interface Key {
 
 /** Rest hands per grip. */
 const REST: Readonly<Record<Grip, { main: HandKey; off: HandKey }>> = {
-  one: { main: [1.0, 48, 30], off: [0.95, 125, -10] },
+  one: { main: [1.05, 52, 50], off: [0.95, 125, -10] },
   two: { main: [1.0, 55, 20], off: [0.95, 125, 0] },
-  bow: { main: [1.0, 40, 0], off: [0.95, 125, 0] },
-  twin: { main: [1.0, 48, 40], off: [0.95, 125, -35] },
+  bow: { main: [1.0, 66, 38], off: [0.95, 125, 0] },
+  twin: { main: [1.0, 58, 40], off: [0.95, 125, -35] },
 }
 
 const IDLE: readonly Key[] = [
@@ -226,100 +231,119 @@ const WALK: readonly Key[] = [
 ]
 
 const HIT: readonly Key[] = [
-  { lean: -3, headTilt: -10, main: [0.9, 95, 12], off: [0.95, 135, -20], expr: 'hurt' },
-  { lean: -2, bob: 1, headTilt: -6, main: [0.9, 85, 20], off: [0.95, 125, -15], expr: 'hurt' },
+  { lean: -3, headTilt: -10, main: [0.95, 70, 70], off: [0.95, 135, -20], expr: 'hurt' },
+  { lean: -2, bob: 1, headTilt: -6, main: [0.95, 65, 62], off: [0.95, 125, -15], expr: 'hurt' },
   { lean: -1, headTilt: -2, expr: 'neutral' },
 ]
 
+/** Cheer: the near fist pumps at chest height (a near arm raised would cross the face), the far arm goes up behind the head. */
 const CHEER: readonly Key[] = [
-  { bob: 1, headDy: 1, main: [0.9, 70, 30], off: [0.9, 110, 0], expr: 'happy' },
-  { lift: 4, main: [1.1, -78, -6], off: [1.0, -104, 0], expr: 'happy' },
-  { lift: 6, main: [1.15, -84, 0], off: [1.05, -100, 0], expr: 'happy' },
-  { lift: 2, main: [1.05, -70, 8], off: [1.0, -112, 0], expr: 'happy' },
+  { bob: 1, headDy: 1, main: [0.95, 60, 50], off: [0.9, 110, 0], expr: 'happy' },
+  { lift: 4, main: [1.2, 40, 44], off: [1.15, -112, 0], expr: 'happy' },
+  { lift: 6, main: [1.25, 34, 40], off: [1.2, -106, 0], expr: 'happy' },
+  { lift: 2, main: [1.1, 46, 50], off: [1.05, -118, 0], expr: 'happy' },
 ]
 
 // ── the company faces: idle tempo, tic, reaction (hand keys are absolute) ──
 
-const IDLE_SLOW: readonly Key[] = [
-  { bob: 0 }, { bob: 0 }, { bob: 0, headDy: 0 }, { bob: 1 }, { bob: 1, headDy: 1 }, { bob: 1, headDy: 1 }, { bob: 0, headDy: 1 }, { bob: 0 },
-]
-const IDLE_BRISK: readonly Key[] = [{ bob: 0 }, { bob: 1 }, { bob: 1, headDy: 1 }, { bob: 0, headDy: 1 }, { bob: 0 }, { bob: 0 }]
-const IDLE_PLANTED: readonly Key[] = [{ bob: 0 }, { bob: 0 }, { bob: 0 }, { bob: 1 }, { bob: 1 }, { bob: 0 }]
-
+/**
+ * Each face moves in its own SHAPE, at its own period (co-prime, never equal):
+ * Saffra a brisk bob (0.83 s), Odile a slow breath that rises (1.57 s),
+ * Brannoch a planted weight shift (2.21 s), Hask a sway with his tail (1.93 s),
+ * Wren a gentle bob with a lagging hat (1.31 s). Idle hand keys are offsets.
+ */
 export const PERSONA_IDLE: Readonly<Record<PersonaId, readonly Key[]>> = {
-  saffra: IDLE_BRISK, odile: IDLE_SLOW, brannoch: IDLE_PLANTED, hask: IDLE_SLOW, wren: IDLE_PLANTED,
+  saffra: [{ bob: 0 }, { bob: 1 }, { bob: 1, headDy: 1 }, { bob: 0, headDy: 1 }, { bob: 0 }],
+  odile: [{}, {}, { headDy: -1 }, { headDy: -1, main: [0, -2, 0] }, { headDy: -1, main: [0, -2, 0] }, { headDy: -1 }, {}, {}],
+  brannoch: [{}, { lean: -1 }, { lean: -1 }, { lean: -1 }, { lean: 0 }, {}, { lean: 1 }, { lean: 1 }, { lean: 1 }, { lean: 0 }, {}],
+  hask: [
+    { fx: { tail: 0 } }, { lean: 1, fx: { tail: 1 } }, { lean: 1, fx: { tail: 2 } }, { lean: 1, fx: { tail: 2 } }, { lean: 0, fx: { tail: 1 } },
+    { fx: { tail: 0 } }, { lean: -1, fx: { tail: -1 } }, { lean: -1, fx: { tail: -2 } }, { lean: -1, fx: { tail: -2 } }, { fx: { tail: -1 } },
+  ],
+  wren: [{}, { bob: 1 }, { bob: 1, headDy: 1 }, { headDy: 1 }, {}, {}],
 }
-export const PERSONA_IDLE_MS: Readonly<Record<PersonaId, number>> = { saffra: 110, odile: 190, brannoch: 220, hask: 170, wren: 200 }
+/** Each face's idle period (ms): co-prime in 10 ms units (83, 157, 221, 193, 131). */
+export const PERSONA_IDLE_PERIOD: Readonly<Record<PersonaId, number>> = { saffra: 829, odile: 1571, brannoch: 2213, hask: 1933, wren: 1307 }
+/** Per-frame hold of a face's idle (ms; the period spread over its frames). */
+export const PERSONA_IDLE_MS: Readonly<Record<PersonaId, number>> = Object.fromEntries(
+  (Object.keys(PERSONA_IDLE_PERIOD) as PersonaId[]).map((id) => [id, PERSONA_IDLE_PERIOD[id] / PERSONA_IDLE[id].length]),
+) as Record<PersonaId, number>
 
-/** Saffra sniffs the spice pouch; Odile smooths her silk; Brannoch taps his tally twice; Hask tastes the air; Wren holds a vial to the light. */
+/**
+ * The tics — none of them at the face. Saffra weighs a pinch of spice on her
+ * scale; Odile smooths the bolt on her arm, at the waist; Brannoch lifts his
+ * slate and chalks another cart; Hask blinks slowly and swishes his tail; Wren
+ * holds the vial out to the side, in the light.
+ */
 export const PERSONA_TIC: Readonly<Record<PersonaId, readonly Key[]>> = {
   saffra: [
-    { off: [1.0, 80, 0] },
-    { off: [1.15, 10, 0] },
-    { off: [1.45, -28, 0], expr: 'closed', headTilt: -5, headDy: -1 },
-    { off: [1.45, -28, 0], expr: 'closed', headTilt: -7, headDy: -1 },
-    { off: [1.15, 20, 0], expr: 'happy' },
-    { off: [1.0, 90, 0], expr: 'happy' },
+    { main: [0.85, 85, 0], off: [1.1, 85, 0] },
+    { main: [0.75, 112, 0], off: [1.5, 64, 0], expr: 'focus' },
+    { main: [0.75, 115, 0], off: [1.72, 57, 0], expr: 'focus', fx: { pinch: true } },
+    { main: [0.75, 115, 0], off: [1.72, 57, 0], expr: 'focus', fx: { pinch: true, weigh: true } },
+    { main: [0.75, 115, 0], off: [1.4, 70, 0], expr: 'happy', fx: { weigh: true } },
+    { main: [0.9, 75, 0], off: [1.0, 110, 0], expr: 'happy' },
   ],
   odile: [
-    { main: [1.0, 120, 0], expr: 'smug' },
-    { main: [1.3, 150, 0], expr: 'smug' },
-    { main: [1.4, 166, 0], expr: 'smug', headTilt: 3 },
-    { main: [1.3, 152, 0], expr: 'smug', headTilt: 3 },
-    { main: [1.4, 166, 0], expr: 'closed', headTilt: 3 },
-    { main: [1.1, 110, 0], expr: 'smug' },
+    { main: [1.1, 120, 0], expr: 'smug' },
+    { main: [1.4, 138, 0], expr: 'smug' },
+    { main: [1.55, 146, 0], expr: 'smug' },
+    { main: [1.4, 140, 0], expr: 'smug' },
+    { main: [1.55, 146, 0], expr: 'closed' },
+    { main: [1.15, 115, 0], expr: 'smug' },
   ],
   brannoch: [
-    { main: [1.0, 130, 0], expr: 'focus' },
-    { main: [1.2, 150, 0], expr: 'focus', headDy: 1 },
-    { main: [1.05, 140, 0], expr: 'focus' },
-    { main: [1.2, 150, 0], expr: 'focus', headDy: 1 },
-    { main: [1.05, 140, 0], expr: 'focus' },
-    { main: [0.95, 75, 0] },
+    { off: [1.0, 110, 0] },
+    { off: [1.0, 105, 0], bob: 1, expr: 'focus' },
+    { off: [1.0, 110, 0], expr: 'focus', fx: { tally: 1 } },
+    { off: [1.0, 105, 0], bob: 1, expr: 'focus', fx: { tally: 1 } },
+    { off: [1.0, 110, 0], expr: 'focus', fx: { tally: 2 } },
+    { off: [0.95, 120, 0], fx: { tally: 2 } },
   ],
   hask: [
-    { headTilt: 0 },
-    { headTilt: -3, fx: { tongue: 1 } },
-    { headTilt: -4, fx: { tongue: 2 } },
-    { headTilt: -3, fx: { tongue: 1 } },
-    { headTilt: 0 },
+    { fx: { tail: 0 } },
+    { expr: 'smug', fx: { tail: 2 } },
+    { expr: 'closed', fx: { tail: 4 } },
+    { expr: 'closed', fx: { tail: 3 } },
+    { expr: 'smug', fx: { tail: 0 } },
+    { fx: { tail: -3 } },
   ],
   wren: [
-    { off: [1.0, 80, 0], expr: 'focus' },
-    { off: [1.2, 10, 0], expr: 'focus' },
-    { off: [1.5, -22, 0], expr: 'focus', fx: { glint: true }, headTilt: -3 },
-    { off: [1.5, -22, 0], expr: 'happy', fx: { glint: true }, headTilt: -3 },
-    { off: [1.2, 20, 0], expr: 'happy' },
-    { off: [1.0, 100, 0] },
+    { off: [1.1, 140, 0], expr: 'focus' },
+    { off: [1.4, 165, 0], expr: 'focus' },
+    { off: [1.6, 188, 0], expr: 'focus', fx: { glint: true } },
+    { off: [1.6, 188, 0], expr: 'happy', fx: { glint: true } },
+    { off: [1.3, 160, 0], expr: 'happy' },
+    { off: [1.0, 125, 0] },
   ],
 }
 
-/** The reaction when its slot is picked: Saffra points and winks; Odile half-bows; Brannoch nods once; Hask touches the hook to his brow; Wren lifts the vial. */
+/** The reactions, each its own style: Saffra a quick hop and a wink; Odile a slow half-bow; Brannoch one curt nod; Hask twirls his hook; Wren a small bounce, the vial raised to the side. */
 export const PERSONA_REACT: Readonly<Record<PersonaId, readonly Key[]>> = {
   saffra: [
-    { lean: 2, main: [1.25, -8, 70], expr: 'wink' },
-    { lean: 3, main: [1.35, -12, 75], expr: 'wink' },
-    { lean: 2, main: [1.2, 10, 60], expr: 'happy' },
-    { lean: 0 },
+    { lift: 1, main: [1.15, 42, 0], expr: 'wink' },
+    { lift: 2, main: [1.2, 36, 0], expr: 'wink' },
+    { lift: 1, main: [1.1, 46, 0], expr: 'happy' },
+    { expr: 'happy' },
   ],
   odile: [
-    { lean: 2, headDy: 1, headTilt: 5, main: [0.7, 175, 0], expr: 'closed' },
-    { lean: 4, headDy: 3, headTilt: 8, main: [0.6, 180, 0], expr: 'closed' },
-    { lean: 2, headDy: 1, headTilt: 4, main: [0.7, 170, 0], expr: 'happy' },
+    { lean: 2, headDy: 1, headTilt: 5, main: [0.85, 118, 0], expr: 'closed' },
+    { lean: 3, headDy: 2, headTilt: 8, main: [0.8, 120, 0], expr: 'closed' },
+    { lean: 2, headDy: 1, headTilt: 4, main: [0.85, 118, 0], expr: 'happy' },
     { lean: 0, expr: 'smug' },
   ],
   brannoch: [{ headDy: 3, headTilt: 5 }, { headDy: 1, headTilt: 2 }, { headDy: 0 }],
   hask: [
-    { main: [1.1, -60, -10], fx: { tongue: 1 } },
-    { main: [1.15, -72, -14], headTilt: -4, fx: { tongue: 2 } },
-    { main: [1.05, -40, 0] },
-    { main: [0.95, 48, 20] },
+    { main: [1.1, 20, 100], fx: { tail: 2 } },
+    { main: [1.15, 18, 165], fx: { tail: 3 } },
+    { main: [1.15, 18, 230], fx: { tail: 1 } },
+    { main: [1.0, 50, 140], fx: { tail: 0 } },
   ],
   wren: [
-    { lift: 1, off: [1.3, -40, 0], expr: 'happy', fx: { glint: true } },
-    { lift: 2, off: [1.5, -60, 0], expr: 'happy', fx: { glint: true } },
-    { lift: 0, off: [1.2, -20, 0], expr: 'happy' },
-    { off: [1.0, 100, 0] },
+    { lift: 1, off: [1.3, 160, 0], expr: 'happy' },
+    { lift: 2, off: [1.55, 182, 0], expr: 'happy', fx: { glint: true } },
+    { lift: 0, off: [1.3, 160, 0], expr: 'happy' },
+    { off: [1.0, 125, 0] },
   ],
 }
 
@@ -400,9 +424,12 @@ export function poseFor(race: RaceId, anim: AnimId, frame: number, motion: Motio
   const step = k.step ?? 0
 
   const torsoX = CX + lean * 0.6
-  const shoulderY = torsoTop + 4
-  const shoulderMain = { x: torsoX + b.torsoRx - 2.5, y: shoulderY }
-  const shoulderOff = { x: torsoX - b.torsoRx + 2.5, y: shoulderY }
+  // the arms hang from the torso's sides BELOW the head (an arm drawn in front of the head
+  // must never start under the chin, where it reads as something at the mouth)
+  const chin = headY + b.headRy
+  const shoulderY = Math.min(hipsY - 4, Math.max(torsoTop + 4, chin + b.armR + 3))
+  const shoulderMain = { x: torsoX + b.torsoRx - 1.5, y: shoulderY }
+  const shoulderOff = { x: torsoX - b.torsoRx + 1.5, y: shoulderY }
 
   const rest = REST[grip]
   const hand = (key: HandKey | undefined, base: HandKey, offset: boolean): HandKey =>
@@ -412,14 +439,20 @@ export function poseFor(race: RaceId, anim: AnimId, frame: number, motion: Motio
   let ok = hand(k.off, rest.off, offsetKeys)
   // both hands on one shaft: the arms stay closer in (a broad people never overreaches the cell)
   if (grip === 'two' && anim === 'attack') mk = [mk[0] * 0.8, mk[1], mk[2]]
-  // a bow is held up and forward in every frame the attack is not drawing it
-  if (grip === 'bow' && anim !== 'attack' && anim !== 'cheer') mk = [mk[0], mk[1], 0]
+  // a bow at rest is carried low and tipped forward (its upper limb never rises past the face)
+  if (grip === 'bow' && anim !== 'attack') mk = [mk[0], Math.max(mk[1], 62), Math.max(50, mk[2])]
 
   const place = (sh: { x: number; y: number }, key: HandKey): Anchor => {
     const rad = (key[1] * Math.PI) / 180
     return { x: sh.x + Math.cos(rad) * b.armLen * key[0], y: sh.y + Math.sin(rad) * b.armLen * key[0], angle: key[2], facing: 1 }
   }
-  const mainHand = place(shoulderMain, mk)
+  let mainHand = place(shoulderMain, mk)
+  // at rest a big-headed people (a gnome) holds its weapon hand out past the face, so nothing rises in front of it
+  const headX = CX + lean + 1
+  const resting = anim === 'idle' || anim === 'walk' || anim === 'hit' || anim === 'cheer'
+  if (resting && mainHand.x < headX + b.headRx * 0.85) mainHand = { ...mainHand, x: headX + b.headRx * 0.85 }
+  // the bigger the head, the further forward a resting one-hander leans (its blade clears the face)
+  if (resting && (grip === 'one' || grip === 'twin' || grip === 'bow')) mainHand = { ...mainHand, angle: Math.max(mainHand.angle, 50 + Math.max(0, b.headRx - 20) * 5) }
   let offHand = place(shoulderOff, ok)
   if (grip === 'two') {
     // the off hand closes on the shaft, a hand's breadth below the main

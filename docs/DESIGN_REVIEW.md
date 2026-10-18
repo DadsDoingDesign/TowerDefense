@@ -4657,3 +4657,62 @@ The designer, on the home card: "the border on the ui can be too intense, especi
 **Left.** Peppercorn's crest is still the brightest world art on the home. It is the card's mark, and it is low and dull now. The Buy Company slot keeps its carved cyan rim. The dock's five framed slots sit in a row above the framed card. They are adjacent, not nested, and each is a single dim line.
 
 **Cards** for the designer's phone: `docs/ui-audit-2026-10/frames-calm/`, five home cards and the hero pick (BEFORE over AFTER, with a 3× crop of the card's foot and the CTA), and a `manifest.json`.
+### 2026-10-18 — the company faces, round 2: nothing at the mouth, races that read, motion out of step
+
+The designer's notes on round 1: the dock with faces is good (keep the layout and the +16 px slot); the reptile reads as a wolf, and the gnome and elf need more passes; the dock figures move in step; Saffra at dock size needs more work; Saffra and Odile each seem to have "something coming out of the mouth". Each note was applied to all five faces and the builder, not only the one named. Prototype only: nothing is wired into the dock.
+
+**Why there was something at the mouth.** Three causes. The near sleeve started at a shoulder anchor just under the chin and was drawn after the head, so it read as a strand from the mouth. The skull had a nose bump at mouth height. There were drawn mouths. Fixes:
+- the shoulders now sit below the chin, and the sleeve is clipped there;
+- no nose bump and no mouths;
+- a resting hand is held clear of the face, a resting bow is carried low, the hook hangs, and the flask is held by its neck below the hand;
+- the pouch-sniff and the forked tongue are gone.
+
+A test now guards it ("nothing at the mouth"): no hand, held thing or effect from the eyes to the chin and past the face's front. It checks every frame of every face and every people × five kits.
+
+**Round 1 (the field faces at 3× and 8×, beside the CC0 knight and goblins).**
+- **Hask read as a wolf.** He now has:
+  - a flat wide snout with a pale jaw and a nostril;
+  - a heavy brow over a gold slit eye;
+  - a lipless mouth line and a low two-tone ridge;
+  - a thick tapering tail and teal scales.
+- **Wren read as a small man in a hat.** He now has a big round nose, a white beard, a rosy cheek and eyes set higher.
+- **Odile's ear hid under her hair.** It is now long and out sideways, over the hair.
+- **The tics.**
+  - Saffra weighs a pinch on her scale.
+  - Odile smooths the silk at her waist.
+  - Brannoch lifts his slate and chalks a cart.
+  - Hask blinks and swishes his tail.
+  - Wren holds the vial out to the side, never by the face.
+- **The reactions.** Hop and wink; half-bow; nod; hook twirl; bounce.
+- **The sleeve clip went wrong at first.** It detached near-horizontal arms, and the elf's bow attack floated. It now clips only an arm that runs down past the chin, and by at most 40 % of its length.
+
+**Round 2 (the redrawn dock figures, 24 × 28, at 6–8× and at 1×/2× on the slot).**
+- **Saffra's balance.** At 24 px it read as a crossbow held out. Three balance variants all still read as a crossbow or a table. The dock gives her a burlap pepper sack instead, hung low from the hand; the field figure keeps the scale. Her gold band read as a visor, so it is now red.
+- **Hask's hook.** It read as a ring or ball, and is now a J. Its twirl turns the J.
+- **Odile's ear.** It started at the top of her head and pointed up, and read as a quill stuck in the hair. It now sits at eye level and points back.
+- **Odile's colour.** Her biggest mass was plum and navy, not Rosethread's rose. The tunic is rose now, with the cloak plum behind.
+- **Wren's face.** The cheek pixel beside his eye read as a red eye, and his nose was the face's own ink, so it vanished.
+- **Two fixes made it worse, and were caught.**
+  - Wren's first rosy nose, at beard height, read as a tongue. It is now skin-toned, at eye level, with the beard right under it.
+  - Saffra's arm began under her chin, and her heft lifted the sack to her face. The arm now starts lower, and the heft sinks instead of rising.
+
+**Round 3 (the cards as exported, at 1×, 6× and the dock mock).**
+- Every face is known by its shape: a filled silhouette card at field 1×, dock 2× and dock 4×. A test keeps the dock silhouettes apart (IoU < 0.8).
+- Nothing is near any mouth on any frame.
+- The two card layouts were fixed: the silhouette rows overlapped, and the dock card said 8× for 6×.
+- The motion card plotted every idle as the same sine. It now plots each face's real head offset, so the five shapes show.
+
+**Motion.** Each face has:
+- its own idle shape: Saffra a quick bob, Odile a slow breath, Brannoch a weight shift side to side, Hask a sway against a tail swish, Wren a bob with the sprout lagging;
+- its own prime period: 829, 1571, 2213, 1933 and 1307 ms;
+- its own tic interval (5.3, 7.1, 6.7, 5.9 and 7.7 s) at a hashed phase.
+
+The salt was picked from 5,000 so that in the first twelve seconds no two tics start within 0.6 s, and nobody is mid-tic when the home opens. Five 1.5 s tics on 5–8 s beats add up to more than ten seconds per ten seconds, so tics do overlap. What the test holds is that no two START together. `miniAt(id, t)` is the one clock; `motion-desync` is the 10 s proof.
+
+**Benchmark.** Pixel Frog's own 24 px figures carry one prop and no small detail. That is why the balance became a sack at dock size. Clash Royale's card art gives each character one pose-defining prop, readable as a silhouette; the five now pass that silhouette test.
+
+**Still weakest.**
+- At dock 2×, Saffra and Brannoch are the closest silhouettes: both have round heads on a block. The knot, the sack and the slate separate them, but only just.
+- Hask's company colour (the oxblood apron) is smaller than his teal skin. Here the race wins over the company.
+- Saffra's band is gold on the field and red on the dock.
+- The field figures' shading is still flatter than the pack's.

@@ -24,7 +24,7 @@ import {
   composeFrame, resolveLook, layerIndex, FACES, framesFor, frameMsFor,
   type AnimId, type HeroFrame, type HeroLook, type LayerId, type PersonaId, type RaceId,
 } from '../src/game/render/hero'
-import { MINI_H, MINI_W, miniFrame, miniFrames, type MiniAnim } from '../src/game/render/hero/mini'
+import { MINI_FACES, MINI_H, MINI_W, miniAt, miniFrame, ticPhase, type MiniAnim } from '../src/game/render/hero/mini'
 import { torsoOutline } from '../src/game/render/hero/parts'
 
 const out = document.getElementById('out')!
@@ -646,7 +646,7 @@ function variants(): void {
     for (const hr of d.hairs) card(`hair-${r}-${hr}`, 'Rig/Parts', `${PEOPLE_OF[r].title} — hair “${hr}”`, `The hair / headgear variant at 6×; 1× in the corner. Judge the ear and face stay clear of it.`, (gg, b) => headCard(gg, b, { race: r, hair: hr }))
   }
   // the greyscale silhouette test
-  card('silhouettes', 'Rig/Parts', 'Silhouettes: the five peoples', 'Each people filled flat (top, 3×) and in greyscale (bottom). Judge that they read apart by shape alone.', (gg, b) => {
+  card('race-silhouettes', 'Rig/Parts', 'Silhouettes: the five peoples', 'Each people filled flat (top, 3×) and in greyscale (bottom). Judge that they read apart by shape alone.', (gg, b) => {
     const k = 3
     RACES.forEach((r, i) => {
       const f = F({ race: r })
@@ -866,6 +866,7 @@ function faces(): void {
         hero(gg, f, b.x + b.w - 64, b.y + 104, 1)
       }, people)
     }
+    // (the silhouette line-up is one card for all five, below)
     // a life loop: the idle twice, the tic once, the idle again (~4 s, as it would play)
     {
       const seq: [AnimId, number][] = []
@@ -883,8 +884,14 @@ function faces(): void {
       }, people)
     }
     // the dock figure
-    card(`dock-${fc.id}`, 'Dock', `${fc.name} at dock size`, 'Redrawn at 24 px for the dock slot (shown 8×): idle, tic, reaction and locked, with the 2× slot size beside. Judge it is still a person, not a smudge.', (gg, b) => {
+    card(`dock-${fc.id}`, 'Dock', `${fc.name} at dock size`, 'Redrawn at 24 px for the dock slot (shown 6×): idle, tic, reaction and locked, the 2× slot size beside; the strip below is 1× and 2× on the slot. Judge it is still a person, not a smudge.', (gg, b) => {
       const k = 6
+      // the strip: every idle frame at 1× and 2×, on the slot's own colour
+      gg.fillStyle = '#2c3434'
+      gg.fillRect(b.x + 8, b.y + 360, b.w - 16, 68)
+      const nIdle = MINI_FACES[fc.id].idle.length
+      for (let j = 0; j < Math.min(nIdle, 6); j++) gg.drawImage(miniCanvas(fc.id, 'idle', j), b.x + 20 + j * 56, b.y + 366, MINI_W * 2, MINI_H * 2)
+      for (let j = 0; j < Math.min(nIdle, 6); j++) gg.drawImage(miniCanvas(fc.id, 'idle', j), b.x + 370 + j * 30, b.y + 384, MINI_W, MINI_H)
       const cells: [MiniAnim, number, boolean, string][] = [['idle', 0, false, 'idle'], ['tic', 2, false, 'tic'], ['react', 1, false, 'picked'], ['idle', 0, true, 'locked']]
       cells.forEach(([a, f, lock, lab], i) => {
         const x = b.x + 8 + (i % 2) * 280, yy = b.y + 6 + Math.floor(i / 2) * 176
@@ -897,32 +904,104 @@ function faces(): void {
     }, CARD, CARD, people)
   }
 
-  // the dock in motion: five slots at their 2× size, idling, each tic on its own beat, one picked
-  const beats = 24
-  const ms = Array.from({ length: beats }, () => 160)
-  animCard('dock-motion', 'The dock in motion (2× slot size)', 'Five figures idling, each tic on its own beat, the third slot picked; the fifth locked. Judge it stays calm next to the map (atmosphere, not a show).', beats, ms, (gg, b, i) => {
+  // the silhouette line-up: field and dock, filled black — each must be known by its shape alone
+  card('silhouettes', 'Company faces', 'Silhouettes: field and dock', 'The five faces filled flat, at the sizes the game shows them (field 1×, dock 2×) and the dock figure at 4×. Judge that each is known by its shape alone.', (gg, b) => {
+    gg.fillStyle = '#e1d4bd'
+    gg.fillRect(b.x, b.y, b.w, b.h)
+    const flat = (src: Uint8ClampedArray, w: number, h: number): HTMLCanvasElement => {
+      const [c2, g2] = canvas(w, h)
+      const id2 = g2.createImageData(w, h)
+      for (let p = 0; p < w * h; p++) if (src[p * 4 + 3] === 255) id2.data.set([22, 28, 46, 255], p * 4)
+      g2.putImageData(id2, 0, 0)
+      return c2
+    }
+    DOCK_ORDER.forEach((id, i) => {
+      const fc = FACES.find((x) => x.id === id)!
+      const f = F(fc.look)
+      const bx = boxOf([f], 1)
+      const cw = bx.x1 - bx.x0 + 1, chh = bx.y1 - bx.y0 + 1
+      const x = b.x + 40 + i * 106
+      const sil = flat(f.rgba, CELL, CELL)
+      const m = miniFrame(id, 'idle', 0)
+      const ms = flat(m.rgba, m.w, m.h)
+      // the field figure at 1× and the dock figure at 2×: the sizes the game shows them
+      gg.drawImage(sil, bx.x0, bx.y0, cw, chh, x + Math.round((104 - cw) / 2), b.y + 150 - chh, cw, chh)
+      gg.drawImage(ms, x + (104 - MINI_W * 2) / 2, b.y + 170, MINI_W * 2, MINI_H * 2)
+      // the dock figure at 4×, to judge its edge
+      gg.drawImage(ms, x + (104 - MINI_W * 4) / 2, b.y + 250, MINI_W * 4, MINI_H * 4)
+      text(gg, fc.name, x + 52, b.y + b.h - 8, 15, '#1d1713', 800, 'center')
+    })
+    text(gg, 'field', b.x + 6, b.y + 130, 12, '#6d5f52', 700)
+    text(gg, '1×', b.x + 6, b.y + 146, 12, '#6d5f52', 700)
+    text(gg, 'dock', b.x + 6, b.y + 196, 12, '#6d5f52', 700)
+    text(gg, '2×', b.x + 6, b.y + 212, 12, '#6d5f52', 700)
+    text(gg, 'dock', b.x + 6, b.y + 300, 12, '#6d5f52', 700)
+    text(gg, '4×', b.x + 6, b.y + 316, 12, '#6d5f52', 700)
+  }, CARD, CARD, 'all')
+
+  // the dock in motion: the dock's own clock (miniAt), 6.4 s at 80 ms a frame; the third slot picked at 1.6 s, the fifth locked
+  const STEP = 80, N = 80
+  animCard('dock-motion', 'The dock in motion (2× slot size)', 'The dock’s own clock: each face idles in its own shape and period, tics on its own beat, the third slot picked; the fifth locked. Judge that no two move together.', N, Array.from({ length: N }, () => STEP), (gg, b, i) => {
     gg.fillStyle = '#1d2a2a'
     gg.fillRect(b.x, b.y, b.w, b.h)
     const sw = 100
+    const t = i * STEP
     DOCK_ORDER.forEach((id, s) => {
-      const x = b.x + 22 + s * (sw + 6), y0 = b.y + 120
+      const x = b.x + 22 + s * (sw + 6), y0 = b.y + 110
       const picked = s === 2
       gg.fillStyle = picked ? '#4a3a24' : '#2c3434'
-      gg.fillRect(x, y0, sw, 152)
+      gg.fillRect(x, y0, sw, 168)
       gg.strokeStyle = picked ? GOLD : '#4f5e65'
       gg.lineWidth = picked ? 4 : 2
-      gg.strokeRect(x, y0, sw, 152)
+      gg.strokeRect(x, y0, sw, 168)
       const locked = s === 4
-      const ticAt = [3, 9, 15, 21, 0][s]
-      const tn = miniFrames(id, 'tic')
-      let a: MiniAnim = 'idle', f = Math.floor(i / 2) % 4
-      if (picked && i < 4) { a = 'react'; f = i }
-      else if (!locked && i >= ticAt && i < ticAt + tn) { a = 'tic'; f = i - ticAt }
-      if (locked) { a = 'idle'; f = 0 }
-      gg.drawImage(miniCanvas(id, a, f, locked), x + (sw - MINI_W * 3) / 2, y0 + 14, MINI_W * 3, MINI_H * 3)
-      text(gg, locked ? 'locked' : `Rep ${[4, 2, 6, 3, 0][s]}`, x + sw / 2, y0 + 140, 16, locked ? DIM : '#f2e8d8', 800, 'center')
+      const at = miniAt(id, t, { pickedAt: picked ? 1600 : undefined, still: locked })
+      gg.drawImage(miniCanvas(id, at.anim, at.frame, locked), x + (sw - MINI_W * 3) / 2, y0 + 10, MINI_W * 3, MINI_H * 3)
+      text(gg, locked ? 'locked' : `Rep ${[4, 2, 6, 3, 0][s]}`, x + sw / 2, y0 + 156, 16, locked ? DIM : '#f2e8d8', 800, 'center')
     })
+    text(gg, `${(t / 1000).toFixed(1)} s`, b.x + b.w - 14, b.y + 28, 16, DIM, 700, 'right')
   }, 'all', 'Dock')
+
+  // proof that they never move in step: ten seconds of each face's clock
+  card('motion-desync', 'Dock', 'Ten seconds: no two in step', 'Each row is one face over 10 s: the line is how far its head moves (its own shape and period), the blocks its tics (its own interval and phase). Judge that no two line up.', (gg, b) => {
+    const x0 = b.x + 150, w = b.w - 162, T = 10000
+    const SHAPE: Record<PersonaId, string> = { saffra: 'quick bob', odile: 'slow breath', brannoch: 'weight shift', hask: 'sway + tail', wren: 'bob + sprout' }
+    gg.fillStyle = '#231c17'
+    gg.fillRect(b.x, b.y, b.w, b.h)
+    for (let sec = 0; sec <= 10; sec++) {
+      const x = x0 + (sec / 10) * w
+      gg.fillStyle = '#3b3029'
+      gg.fillRect(x, b.y + 8, 1, b.h - 30)
+      text(gg, `${sec}`, x, b.y + b.h - 8, 12, DIM, 700, 'center')
+    }
+    DOCK_ORDER.forEach((id, r) => {
+      const f = MINI_FACES[id]
+      const y = b.y + 22 + r * 64
+      gg.drawImage(miniCanvas(id, 'idle', 0), b.x + 6, y - 14, MINI_W * 2, MINI_H * 2)
+      text(gg, FACES.find((fc) => fc.id === id)!.name, b.x + 56, y + 14, 13, '#efe6d6', 700)
+      text(gg, `${SHAPE[id]} · ${(f.period / 1000).toFixed(2)} s`, b.x + 56, y + 30, 11, DIM)
+      // the idle's motion as a line: which frame of its loop, over time
+      gg.strokeStyle = ['#e3b64f', '#d55869', '#5d8be2', '#47aba9', '#95d562'][r]
+      gg.lineWidth = 2
+      gg.beginPath()
+      for (let px = 0; px <= w; px++) {
+        const t = (px / w) * T
+        const at = miniAt(id, t)
+        // the head's real offset in this frame (sideways for a shift or sway, down for a bob or breath)
+        const mv = at.anim === 'idle' ? f.idle[at.frame].move?.head ?? [0, 0] : [0, 0]
+        const v = mv[0] || -mv[1]
+        const yy = y + 12 - v * 9
+        px ? gg.lineTo(x0 + px, yy) : gg.moveTo(x0 + px, yy)
+      }
+      gg.stroke()
+      // the tics: blocks where they play
+      for (let px = 0; px <= w; px++) {
+        const t = (px / w) * T
+        if (miniAt(id, t).anim === 'tic') { gg.fillStyle = 'rgba(227,182,79,0.55)'; gg.fillRect(x0 + px, y - 2, 1, 30) }
+      }
+      text(gg, `tic every ${(f.ticEvery / 1000).toFixed(1)} s · phase ${(ticPhase(id) / 1000).toFixed(1)} s`, x0 + w, y + 40, 11, DIM, 400, 'right')
+    })
+  }, CARD, 66 + 22 + 5 * 64 + 40 + 92)
 }
 
 // ── 8 · zoomed beside the pack (the 8× critique) ───────────────────────────
