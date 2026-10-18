@@ -4565,3 +4565,39 @@ The designer asked for three rounds of critique on every asset, against aestheti
 - `harvest-cc0 --check` could not reach the network (403). No pack file was added: every mark here is hand-drawn rows.
 
 **Cards.** `docs/ui-audit-2026-10/asset-critique/marks/cards/`: 19 cards plus `manifest.json`.
+### 2026-10-18 — the battlefield's static art, three rounds of critique
+
+The designer: "do 3 rounds of critiques to improve every asset along a rubric of aesthetics, brand, and its job". This pass covered the battlefield's static art: the terrain bake, the roads, the danger ground, the five field seasons and their props, the overlays, the wagon and the gate, and the shots and hits. The moving weather and edge band were another pass's. No rule, number or RNG draw changed. The dressing (`buildDressing`) is untouched, and every new placement is a hash of position, the field and the season.
+
+**How it was looked at.** `scripts/battlefield-critique.mjs` renders each company's road with its own danger ground, the house look, and both hand-made benches. It draws the 1:1 bake, then real battles (setup, a hero armed, mid-wave) at 390 × 844 and 1280 × 800. Shots were read at 1× and in 3× crops. The BEFORE set came from an untouched export of the starting commit on a second dev server. The scores (A/B/J, 1–5) and what changed per asset and round are in `docs/ui-audit-2026-10/asset-critique/battlefield/SCORECARD.md`.
+
+**Round 1.**
+- **The seam.** The seasons' keep-mask held a 4 px verge round the road and a square 2 px past each danger tile. That left a ring of summer grass round every road and patch in the frost's snow and the harvest's straw. It now keeps exactly the drawn road and each piece's drawn shape.
+- **Frost.** The snow is a step down from paper white, so a cream helmet stands off it. The pines keep a green body with snow on the lit boughs; before, they were grey-white cones.
+- **Spring.** The blossom ramp gained a dark step (before, the trees read as cotton puffs). The wood gained reed beds and brackish pools.
+- **Overcast.** Cut quarry stone stands in the wood. Puddles are fewer and lie in the ground; before, they were blue discs by the road.
+- **Misty morning.** Less haze. Willows stand among the pines.
+- **Late summer.** Props stand in clumps (a harvested field, then plain wood), and pepper plants stand among them.
+- **Lakes.** A bank shadow and a deeper middle.
+- **Burns.** A browned, ragged rim.
+
+**Round 2.**
+- **The wagon.** Round, spoked wheels (the old wheels were flat ovals). It stands in a clearing in the bake, not on baked treetops.
+- **The road.** A sunken lane, with the caravans' broken wheel tracks.
+- **The gate.** A standing palisade of sharpened stakes; before, the planks lay flat across the road.
+- **Cursed ground.** Sunken.
+- **Spring.** Wet sedge in the meadow, and taller reeds.
+- **Frost.** Rings of glowing mushrooms in the hollows.
+
+**Round 3.**
+- The near autumn trees turn yellow, not green.
+- Rounder burns, with an ember ring.
+- Spring has more reeds and less blossom.
+
+**Benchmarks.** Kingdom Rush and the Tiny Swords showcase: the lane and the slots stay the cleanest things on the field, decoration frames the margins, and props are grounded with shadows. The danger ground still has to fill its tiles, so its silhouette is the grid's.
+
+**Still weakest.** The art slot's salt marsh and the scrolls slot's mushroom hollows are hints, carried by scenery. Their seasons stay spring and frost, which the designer asked for by name. Making them full lands is the designer's call: a field-wide reed-channel layer for the marsh, and new set pieces for the gardens. Small props (pools, glowing caps, sunflowers) are flecks at 1×.
+
+**Cards.** `docs/ui-audit-2026-10/asset-critique/battlefield/cards/` holds 13 cards and `manifest.json`, built by `scripts/battlefield-cards.mjs`.
+
+**Checks.** The typecheck, `npm test` (1258 tests, including `fieldWorlds`, `fieldGen`, `fields` and `caravan`) and `build:checks` are green. `scripts/harvest-cc0.ts --check` could not reach the GitHub API from this sandbox. No asset file was added: every new prop is procedural.

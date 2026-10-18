@@ -253,12 +253,9 @@ export function drawCaravan(ctx: CanvasRenderingContext2D, map: GameMap, look: C
   const y0 = Math.round(at.y - WAGON_H / 2)
   const ground = y0 + WAGON_H
   ctx.save()
-  // A trodden patch under the caravan, so it stands in a clearing rather than
-  // on the treetops, then the contact shadow every object on the field has.
-  ctx.fillStyle = 'rgba(74, 56, 34, 0.55)'
-  ctx.beginPath()
-  ctx.ellipse(at.x + (FLAG_GAP + FLAG_W) / 2, ground - 8, (WAGON_W + FLAG_W) * 0.56, 16, 0, 0, Math.PI * 2)
-  ctx.fill()
+  // The clearing it stands in is the terrain bake's (`terrain.drawWagonClearing`:
+  // no tree or prop inside the caravan's box); here, the contact shadow every
+  // object on the field has.
   ctx.fillStyle = 'rgba(0,0,0,0.26)'
   ctx.beginPath()
   ctx.ellipse(at.x + 6, ground - 6, WAGON_W * 0.46, 7, 0, 0, Math.PI * 2)
