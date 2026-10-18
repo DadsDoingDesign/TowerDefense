@@ -12,7 +12,7 @@
  */
 import { RAMPS, isRampId, type RampId } from './palette'
 import {
-  CELL, CX, FEET, LayerBuf, OWN_SHADOW, Pen, newComposite, outerLine, shadow, stamp,
+  CELL, CX, FEET, LayerBuf, OWN_SHADOW, Pen, newComposite, shadow, stamp,
   type Composite, type MatResolver,
 } from './raster'
 import { ANIMS, FRAME_COUNT, framesFor, poseFor, type AnimId, type PersonaId, type Pose, type Posture, type RaceId } from './rig'
@@ -66,7 +66,9 @@ export function resolveLook(look: HeroLook): ResolvedLook {
       case 'cloth': return pal.cloth ?? liv.cloth
       case 'trim': return pal.trim ?? liv.trim
       case 'metal': return pal.metal ?? 'steel'
-      case 'leather': case 'boots': return pal.leather ?? 'leather'
+      case 'leather': return pal.leather ?? 'leather'
+      // the pack's legs and feet are one dark mass, never a brown boot blob
+      case 'boots': return pal.pants ?? 'navy'
       case 'pants': return pal.pants ?? 'navy'
       default: return 'cream'
     }
@@ -157,7 +159,11 @@ function composeResolved(R: ResolvedLook, anim: AnimId, frame: number): HeroFram
   shadow(out, CX, FEET - 1, 12 + P.body.stance + P.body.torsoRx * 0.25 - P.lift * 0.5, 4.2)
 
   const front: Record<'mainArm' | 'offArm', Piece[]> = { mainArm: [], offArm: [] }
-  for (const layer of LAYERS) {
+  // a wind-up passes the near arm and its item behind the head (the 3/4 view): drawn just before it
+  const order: readonly LayerId[] = P.behind
+    ? LAYERS.flatMap((l) => (l === 'mainArm' || l === 'mainItem' ? [] : l === 'head' ? ['mainArm', 'mainItem', 'head'] as LayerId[] : [l]))
+    : LAYERS
+  for (const layer of order) {
     if (layer === 'fx') continue
     const c = ctxFor(layer)
     for (const part of LAYER_PARTS[layer]) part(c)
@@ -168,7 +174,7 @@ function composeResolved(R: ResolvedLook, anim: AnimId, frame: number): HeroFram
     if (layer === 'mainItem') for (const pc of front.mainArm) stamp(out, pc.buf, layerIndex('mainArm'), undefined, pc.ring)
     if (layer === 'offItem') for (const pc of front.offArm) stamp(out, pc.buf, layerIndex('offArm'), undefined, pc.ring)
   }
-  outerLine(out)
+  // no extra outer px: the pack's outer line is the ring's 2 px (its most common run, measured)
 
   const sil = new Uint8Array(CELL * CELL)
   for (let i = 0; i < CELL * CELL; i++) sil[i] = out.rgba[i * 4 + 3] === 255 && out.owner[i] !== OWN_SHADOW ? 1 : 0

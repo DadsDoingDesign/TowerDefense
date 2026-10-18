@@ -57,7 +57,7 @@ export const FACES: readonly CompanyFace[] = [
       who: 'Saffra, human, Peppercorn’s spice broker. Came up selling pepper off a cart in the farm towns whose fields burn every summer; she buys the smoke-singed sacks cheap.',
       want: 'Wants the price before it turns. Fears a wagon of spice gone to smoke.',
       temperament: 'Brisk, hot-tempered, generous (she tips the moment it sells).',
-      tic: 'Weighs a pinch of pepper on her scale, and grins when it tips.',
+      tic: 'Lifts her scale, watches it tip, and grins at the price.',
       silhouette: 'Lean + angular: a forward lean, the knotted scarf’s tail.',
       prop: 'A brass spice scale; a pouch of red pepper.',
     },

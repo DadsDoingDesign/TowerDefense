@@ -52,18 +52,24 @@ export interface RaceBody {
   handR: number
 }
 
+/**
+ * Measured against the pack's pawn, knight and archer (round 3): the head is the
+ * widest mass, the body under it narrow and short, the legs thin and dark, the
+ * arms slim, the fists small. The arm is two bones (`armLen` × 0.6 each), so a
+ * resting arm bends and its fist hangs at mid-thigh.
+ */
 export const RACE_BODY: Readonly<Record<RaceId, RaceBody>> = {
-  human: { headRx: 20.5, headRy: 19, neck: 6, torsoRx: 15.5, torsoH: 21.5, flare: 2.5, legH: 8.5, legR: 3.5, footRx: 5.5, stance: 7, armLen: 13, armR: 3.5, handR: 5 },
-  elf: { headRx: 18, headRy: 20, neck: 6, torsoRx: 13, torsoH: 25, flare: 1, legH: 12, legR: 3, footRx: 5, stance: 6, armLen: 15, armR: 3, handR: 4.5 },
-  dwarf: { headRx: 21.5, headRy: 18, neck: 7, torsoRx: 20.5, torsoH: 18, flare: 3.5, legH: 3.5, legR: 4.5, footRx: 6.5, stance: 9.5, armLen: 12, armR: 4.5, handR: 5.5 },
-  reptilian: { headRx: 19, headRy: 17, neck: 5, torsoRx: 15.5, torsoH: 23, flare: 2.5, legH: 8.5, legR: 4, footRx: 6, stance: 7, armLen: 14.5, armR: 3.5, handR: 5 },
-  gnome: { headRx: 23, headRy: 21, neck: 6, torsoRx: 12, torsoH: 14.5, flare: 2.5, legH: 3.5, legR: 3, footRx: 5, stance: 6, armLen: 10, armR: 3, handR: 4.5 },
+  human: { headRx: 20.5, headRy: 19, neck: 6, torsoRx: 11.5, torsoH: 20, flare: 2, legH: 7.5, legR: 2.8, footRx: 4.4, stance: 5.5, armLen: 15, armR: 2.7, handR: 3.7 },
+  elf: { headRx: 18, headRy: 20, neck: 6, torsoRx: 9.5, torsoH: 23, flare: 1, legH: 11, legR: 2.5, footRx: 4.2, stance: 5, armLen: 17, armR: 2.4, handR: 3.4 },
+  dwarf: { headRx: 21.5, headRy: 18, neck: 7, torsoRx: 15.5, torsoH: 17, flare: 3, legH: 3.5, legR: 3.6, footRx: 5, stance: 8, armLen: 11, armR: 3.4, handR: 4.2 },
+  reptilian: { headRx: 19, headRy: 17, neck: 5, torsoRx: 11.5, torsoH: 22, flare: 2, legH: 8, legR: 3, footRx: 4.8, stance: 6, armLen: 16, armR: 2.8, handR: 3.8 },
+  gnome: { headRx: 23, headRy: 21, neck: 6, torsoRx: 9.5, torsoH: 14, flare: 2, legH: 3.5, legR: 2.5, footRx: 4, stance: 5, armLen: 11.5, armR: 2.4, handR: 3.4 },
 }
 
 /** The limits every people's body stays inside, so every part fits every people. */
 export const RACE_LIMITS: Readonly<Record<keyof RaceBody, readonly [number, number]>> = {
-  headRx: [17, 24], headRy: [16, 22], neck: [4, 8], torsoRx: [11, 21], torsoH: [13, 26], flare: [0, 5],
-  legH: [3, 13], legR: [3, 5], footRx: [4, 7], stance: [5, 11], armLen: [10, 16], armR: [3, 5], handR: [4, 6],
+  headRx: [17, 24], headRy: [16, 22], neck: [4, 8], torsoRx: [9, 16], torsoH: [13, 24], flare: [0, 4],
+  legH: [3, 12], legR: [2.4, 3.8], footRx: [3.8, 5.2], stance: [4.5, 9], armLen: [10, 18], armR: [2.3, 3.5], handR: [3.3, 4.4],
 }
 
 export interface Anchor {
@@ -140,6 +146,8 @@ export interface Pose {
   fx: FrameFx
   /** The jump: the shadow stays on the ground. */
   lift: number
+  /** A wind-up: the near arm and what it holds pass BEHIND the head this frame. */
+  behind: boolean
 }
 
 /** A hand's keyframe: reach (× arm length), direction (deg, 0 = right, 90 = down), item angle. */
@@ -164,14 +172,27 @@ export interface Key {
   step?: number
   /** Walk: each foot's stride offset and lift (px): [backDx, backLift, frontDx, frontLift]. */
   feet?: readonly [number, number, number, number]
+  /** The near arm winds up behind the head (drawn before it). */
+  behind?: boolean
 }
 
 /** Rest hands per grip. */
 const REST: Readonly<Record<Grip, { main: HandKey; off: HandKey }>> = {
   one: { main: [1.05, 52, 50], off: [0.95, 125, -10] },
-  two: { main: [1.0, 55, 20], off: [0.95, 125, 0] },
+  // a two-hander rests tipped forward: an upright pole would rise past the face
+  two: { main: [1.0, 50, 48], off: [0.95, 125, 0] },
   bow: { main: [1.0, 66, 38], off: [0.95, 125, 0] },
   twin: { main: [1.0, 58, 40], off: [0.95, 125, -35] },
+}
+
+/**
+ * A face's own resting hands (over the grip's): Saffra shows her scale forward
+ * at the waist, her elbow bent; Wren carries his vial up at his side (a short
+ * people's hanging hand is at the ground).
+ */
+const PERSONA_REST: Partial<Record<PersonaId, { main?: HandKey; off?: HandKey }>> = {
+  saffra: { main: [0.85, 30, 0] },
+  wren: { off: [0.72, 140, 0] },
 }
 
 const IDLE: readonly Key[] = [
@@ -185,38 +206,43 @@ const IDLE: readonly Key[] = [
 /** Idle hand keys are offsets from rest (added). */
 const IDLE_IS_OFFSET = true
 
+/**
+ * The attacks. A chibi arm cannot reach over its head, so a wind-up goes UP AND
+ * BACK, behind the head (as the pack's warrior winds up), never up in front of
+ * the face.
+ */
 const ATTACK: Readonly<Record<Motion, readonly Key[]>> = {
   swing: [
-    { lean: -1, main: [1.0, -78, -8], off: [0.9, 125, -10], expr: 'focus' },
-    { lean: -2, main: [1.1, -92, -34], off: [0.85, 135, -15], expr: 'focus', headDy: -1 },
-    { lean: 1, main: [1.1, -35, 48], off: [0.9, 120, -5], expr: 'focus', fx: { smear: 1 }, step: 1 },
+    { lean: -1, main: [1.0, -140, -20], off: [0.9, 125, -10], expr: 'focus', behind: true },
+    { lean: -2, main: [1.05, -155, -40], off: [0.85, 135, -15], expr: 'focus', headDy: -1, behind: true },
+    { lean: 1, main: [1.1, 4, 78], off: [0.9, 120, -5], expr: 'focus', fx: { smear: 1 }, step: 1 },
     { lean: 3, bob: 1, main: [1.15, 22, 112], off: [0.9, 105, 0], expr: 'focus', fx: { smear: 2 }, step: 2 },
     { lean: 2, bob: 1, main: [1.05, 48, 132], off: [0.9, 110, -5], step: 2 },
     { lean: 0, main: [0.95, 62, 62], off: [0.9, 115, -10], step: 1 },
   ],
   thrust: [
-    { lean: -1, main: [0.65, 165, 82], off: [0.9, 120, 0], expr: 'focus' },
-    { lean: -2, main: [0.45, 185, 86], off: [0.9, 130, 0], expr: 'focus' },
+    { lean: -1, main: [0.65, 150, 84], off: [0.9, 120, 0], expr: 'focus' },
+    { lean: -2, main: [0.45, 160, 88], off: [0.9, 130, 0], expr: 'focus' },
     { lean: 3, main: [1.4, 2, 90], off: [0.9, 100, 0], expr: 'focus', fx: { thrust: true }, step: 2 },
     { lean: 3, main: [1.45, 6, 90], off: [0.9, 100, 0], expr: 'focus', step: 2 },
     { lean: 1, main: [1.05, 30, 66], off: [0.9, 110, 0], step: 1 },
-    { lean: 0, main: [0.92, 66, 32], off: [0.9, 115, 0] },
+    { lean: 0, main: [0.92, 66, 48], off: [0.9, 115, 0] },
   ],
   shoot: [
-    { lean: 0, main: [1.2, -4, 0], off: [0.9, -8, 0], expr: 'focus' },
-    { lean: -1, main: [1.25, -4, 0], off: [0.35, 200, 0], expr: 'focus', drawn: true },
-    { lean: -1, main: [1.25, -4, 0], off: [0.55, 192, 0], expr: 'focus', drawn: true },
-    { lean: 1, main: [1.25, -4, 0], off: [0.95, 198, 0], expr: 'focus', fx: { loose: true } },
-    { lean: 0, main: [1.2, 2, 0], off: [0.85, 160, 0] },
-    { lean: 0, main: [1.05, 30, 0], off: [0.9, 125, 0] },
+    { lean: 0, main: [1.2, 8, 18], off: [0.9, 6, 0], expr: 'focus' },
+    { lean: -1, main: [1.25, 8, 18], off: [0.35, 200, 0], expr: 'focus', drawn: true },
+    { lean: -1, main: [1.25, 8, 18], off: [0.55, 192, 0], expr: 'focus', drawn: true },
+    { lean: 1, main: [1.25, 8, 18], off: [0.95, 198, 0], expr: 'focus', fx: { loose: true } },
+    { lean: 0, main: [1.2, 12, 30], off: [0.85, 160, 0] },
+    { lean: 0, main: [1.05, 30, 45], off: [0.9, 125, 0] },
   ],
   cast: [
-    { lean: -1, main: [1.0, -62, -8], off: [0.9, 125, 0], expr: 'focus' },
-    { lean: -1, main: [1.05, -92, 0], off: [0.9, 135, 0], expr: 'focus', fx: { charge: true }, headDy: -1 },
-    { lean: 2, main: [1.25, -18, 50], off: [0.9, 110, 0], expr: 'focus', fx: { burst: true }, step: 1 },
-    { lean: 2, main: [1.25, -12, 55], off: [0.9, 110, 0], expr: 'focus', step: 1 },
+    { lean: -1, main: [1.0, -135, -10], off: [0.9, 125, 0], expr: 'focus', behind: true },
+    { lean: -1, main: [1.05, -150, -15], off: [0.9, 135, 0], expr: 'focus', fx: { charge: true }, headDy: -1, behind: true },
+    { lean: 2, main: [1.25, 2, 64], off: [0.9, 110, 0], expr: 'focus', fx: { burst: true }, step: 1 },
+    { lean: 2, main: [1.25, 6, 66], off: [0.9, 110, 0], expr: 'focus', step: 1 },
     { lean: 1, main: [1.05, 28, 44], off: [0.9, 115, 0] },
-    { lean: 0, main: [0.95, 62, 30], off: [0.9, 115, 0] },
+    { lean: 0, main: [0.95, 62, 50], off: [0.9, 115, 0] },
   ],
 }
 
@@ -270,19 +296,19 @@ export const PERSONA_IDLE_MS: Readonly<Record<PersonaId, number>> = Object.fromE
 ) as Record<PersonaId, number>
 
 /**
- * The tics — none of them at the face. Saffra weighs a pinch of spice on her
- * scale; Odile smooths the bolt on her arm, at the waist; Brannoch lifts his
+ * The tics — none of them at the face. Saffra lifts her scale a little and
+ * watches it tip, and grins at the price; Odile smooths the bolt on her arm, at the waist; Brannoch lifts his
  * slate and chalks another cart; Hask blinks slowly and swishes his tail; Wren
  * holds the vial out to the side, in the light.
  */
 export const PERSONA_TIC: Readonly<Record<PersonaId, readonly Key[]>> = {
   saffra: [
-    { main: [0.85, 85, 0], off: [1.1, 85, 0] },
-    { main: [0.75, 112, 0], off: [1.5, 64, 0], expr: 'focus' },
-    { main: [0.75, 115, 0], off: [1.72, 57, 0], expr: 'focus', fx: { pinch: true } },
-    { main: [0.75, 115, 0], off: [1.72, 57, 0], expr: 'focus', fx: { pinch: true, weigh: true } },
-    { main: [0.75, 115, 0], off: [1.4, 70, 0], expr: 'happy', fx: { weigh: true } },
-    { main: [0.9, 75, 0], off: [1.0, 110, 0], expr: 'happy' },
+    { main: [0.85, 30, 0] },
+    { main: [0.85, 22, 0], expr: 'focus' },
+    { main: [0.85, 20, 0], expr: 'focus', fx: { weigh: true } },
+    { main: [0.85, 20, 0], expr: 'happy', fx: { weigh: true } },
+    { main: [0.85, 24, 0], expr: 'happy' },
+    { main: [0.85, 30, 0] },
   ],
   odile: [
     { main: [1.1, 120, 0], expr: 'smug' },
@@ -332,7 +358,7 @@ export const PERSONA_REACT: Readonly<Record<PersonaId, readonly Key[]>> = {
     { lean: 2, headDy: 1, headTilt: 4, main: [0.85, 118, 0], expr: 'happy' },
     { lean: 0, expr: 'smug' },
   ],
-  brannoch: [{ headDy: 3, headTilt: 5 }, { headDy: 1, headTilt: 2 }, { headDy: 0 }],
+  brannoch: [{ headDy: 2, headTilt: 6 }, { headDy: 1, headTilt: 2 }, { headDy: 0 }],
   hask: [
     { main: [1.1, 20, 100], fx: { tail: 2 } },
     { main: [1.15, 18, 165], fx: { tail: 3 } },
@@ -427,11 +453,11 @@ export function poseFor(race: RaceId, anim: AnimId, frame: number, motion: Motio
   // the arms hang from the torso's sides BELOW the head (an arm drawn in front of the head
   // must never start under the chin, where it reads as something at the mouth)
   const chin = headY + b.headRy
-  const shoulderY = Math.min(hipsY - 4, Math.max(torsoTop + 4, chin + b.armR + 3))
+  const shoulderY = Math.min(hipsY - 2, Math.max(torsoTop + 4, chin + b.armR + 1.5))
   const shoulderMain = { x: torsoX + b.torsoRx - 1.5, y: shoulderY }
   const shoulderOff = { x: torsoX - b.torsoRx + 1.5, y: shoulderY }
 
-  const rest = REST[grip]
+  const rest = { ...REST[grip], ...(persona ? PERSONA_REST[persona] : undefined) }
   const hand = (key: HandKey | undefined, base: HandKey, offset: boolean): HandKey =>
     !key ? base : offset ? [base[0] + key[0], base[1] + key[1], base[2] + key[2]] : key
   const offsetKeys = (anim === 'idle' || anim === 'walk') && IDLE_IS_OFFSET
@@ -447,12 +473,10 @@ export function poseFor(race: RaceId, anim: AnimId, frame: number, motion: Motio
     return { x: sh.x + Math.cos(rad) * b.armLen * key[0], y: sh.y + Math.sin(rad) * b.armLen * key[0], angle: key[2], facing: 1 }
   }
   let mainHand = place(shoulderMain, mk)
-  // at rest a big-headed people (a gnome) holds its weapon hand out past the face, so nothing rises in front of it
-  const headX = CX + lean + 1
+  // a resting hand hangs where its arm puts it (never pushed out sideways: that straightens the arm)
   const resting = anim === 'idle' || anim === 'walk' || anim === 'hit' || anim === 'cheer'
-  if (resting && mainHand.x < headX + b.headRx * 0.85) mainHand = { ...mainHand, x: headX + b.headRx * 0.85 }
   // the bigger the head, the further forward a resting one-hander leans (its blade clears the face)
-  if (resting && (grip === 'one' || grip === 'twin' || grip === 'bow')) mainHand = { ...mainHand, angle: Math.max(mainHand.angle, 50 + Math.max(0, b.headRx - 20) * 5) }
+  if (resting && (grip === 'one' || grip === 'twin' || grip === 'bow' || grip === 'two')) mainHand = { ...mainHand, angle: Math.max(mainHand.angle, 50 + Math.max(0, b.headRx - 20) * (grip === 'two' ? 8 : 5)) }
   let offHand = place(shoulderOff, ok)
   if (grip === 'two') {
     // the off hand closes on the shaft, a hand's breadth below the main
@@ -462,7 +486,8 @@ export function poseFor(race: RaceId, anim: AnimId, frame: number, motion: Motio
   } else if (grip === 'twin' && anim === 'attack') {
     // twin blades: the off blade follows the main a beat behind
     const prev = keys[(frame + keys.length - 1) % keys.length].main ?? rest.main
-    ok = [prev[0] * 0.9, 180 - prev[1], -prev[2]]
+    // the same stroke from the far shoulder, a beat behind (never mirrored up across the face)
+    ok = [prev[0] * 0.9, prev[1], prev[2] + 30]
     offHand = place(shoulderOff, ok)
   } else {
     offHand = { ...offHand, angle: ok[2] }
@@ -491,5 +516,6 @@ export function poseFor(race: RaceId, anim: AnimId, frame: number, motion: Motio
     expression: k.expr ?? 'neutral',
     fx: k.fx ?? {},
     lift,
+    behind: !!k.behind,
   }
 }
