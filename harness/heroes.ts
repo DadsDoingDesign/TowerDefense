@@ -1052,7 +1052,7 @@ function faces(): void {
   // proof that they never move in step: ten seconds of each face's clock
   card('motion-desync', 'Dock', 'Ten seconds: no two in step', 'Each row is one face over 10 s: the line is how far its head moves (its own shape and period), the blocks its tics (its own interval and phase). Judge that no two line up.', (gg, b) => {
     const x0 = b.x + 150, w = b.w - 162, T = 10000
-    const SHAPE: Record<PersonaId, string> = { saffra: 'quick bob', odile: 'slow breath', brannoch: 'weight shift', hask: 'sway + tail', wren: 'bob + sprout' }
+    const SHAPE: Record<PersonaId, string> = { saffra: 'toe-tap', odile: 'sway + cloak wave', brannoch: 'one slow breath', hask: 'still, tail lash', wren: 'vial glow' }
     gg.fillStyle = '#231c17'
     gg.fillRect(b.x, b.y, b.w, b.h)
     for (let sec = 0; sec <= 10; sec++) {

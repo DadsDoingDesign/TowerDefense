@@ -4851,3 +4851,71 @@ tall, so there is no room for 3×; 2× there matches the phone.
   easel crest in a purple world, until the rename lands.
 - The second-term gold rim lived on the dock's crest. In the dock it is now
   said only by the Rep line ("II · 3"); the rim stays on every crest.
+
+### 2026-10-18 — the dock faces, round 4: branded motion
+
+The designer, on the "dock in motion" card: "not that the movement isn't
+random, but it's not unique movement in a branded way for that character".
+Out of step was not enough. Each face now moves in its own KIND of way, so
+the motion alone says who it is (`render/hero/mini.ts`; the briefs sit above
+`MINI_FACES`):
+- **Saffra:** brisk, light, impatient. A quick double toe-tap with the
+  bandana tails bouncing, then a short wait (2.1 s). Her tic flips the pepper
+  sack off her palm, catches the weight, and she gives a sly look. Picked:
+  "Deal!", a point and a wink with a little hop. Her tic comes most often
+  (4.3 s).
+- **Odile:** fluid and never still. Even beats: her head leans, her arm
+  follows, and a wave runs down the cloak's back edge to its hem (3.3 s).
+  Her tic strokes the silk along its bolt with her eyes shut. Picked: a slow
+  half-bow, her arm swept low.
+- **Brannoch:** planted. One slow breath with a slow blink at the top, then
+  2.9 s of stillness (4.7 s). His tic lifts the slate, chalks a cart and
+  strikes the total. Picked: one gruff nod. His tic comes least often
+  (7.9 s).
+- **Hask:** coiled. He holds stone still, then his tail's tip lashes or
+  twitches, and his eye never shuts (3.9 s). His tic lifts the hook, a glint
+  runs to its point, then a snap and a lash. Picked: he snaps forward and
+  cocks his head snout-down, staring.
+- **Wren:** odd and ominous. His body never moves, and only the vial's
+  light swells and ebbs (5.3 s, the longest loop). His tic: a spore drifts up
+  and his eyes follow it. Picked: the brim sinks over his eyes, then tips
+  back for a slow look up.
+
+The engine gained per-frame idle holds (`idleMs`), a one-part `nudge`, the
+eyes' `look`, and `wink` / `hidden` eyes. `spriteAt` now takes WHEN from the
+dock face and WHICH frame from each size's own holds, scaled to fit.
+
+- **Round 1 (the stills at 8–10×):** the toe-tap was a two-pixel boot swap
+  nobody could see, so the near boot now lifts whole. Wren's "look up" hid
+  his eyes under the brim; now the brim tips back.
+- **Round 2 (side by side; px changed per 20 ms over 16 s as a signal):**
+  Saffra's settle bob was the biggest repeated change in the dock, so it is
+  now the bandana tails. Hask's tongue flicked in both the idle and the tic,
+  and was the brightest moving thing. Odile's sweep, at chest height, read as
+  Saffra's point, so it now sweeps low. Odile's silk end read as a leg under
+  the bolt and was cut. The tics overlapped too much, so they are shorter,
+  and the salt was re-searched (`TIC_SALT` 16744: never three ticking at
+  once in the first 12 s).
+- **Round 3 (the real dock on a fake clock, the blob card, the tests):** a
+  new "brand" test found Odile and Wren with the same signal (both changing
+  about every 0.4 s). Wren's idle is now a long dark, then a slow swell.
+  A new dock mouth test found Hask's raised shoulder inking his jaw (now the
+  forearm alone lifts) and his cocked jaw drawn under his shoulder (now the
+  arm is drawn first). The tongue flick went entirely: the designer's
+  round-2 rule ("nothing at the mouth"; the forked tongue was cut then) beats
+  the direction to add one. The dock test now covers loose pixels and
+  shown-on-demand parts too. Saffra's toss now peaks below her chin.
+- **Calm:** each idle is 1 px moves with held poses. Tics come every
+  4.3–7.9 s and Light halves them. Reduced motion, locked and hidden are
+  unchanged.
+- **Cards:** `docs/characters/cards/motion-r4/` (`npx tsx
+  scripts/dock-motion-cards.ts [--live]`).
+
+**Still weakest.**
+- Hask's tic is a 1 px lift and a 1 px glint. At the slot's 2× it is the
+  quietest tic and may not read as "turning the hook".
+- Wren's idle is a colour change only: as a flat shape he does not move
+  until his tic.
+- The post figures (`hero/post.ts`) run on the dock clock, so they now get
+  these periods and tic lengths, with their own frames stretched to fit.
+  Their motion still needs a branded port to match.

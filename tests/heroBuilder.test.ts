@@ -15,7 +15,7 @@ import { describe, expect, it } from 'vitest'
 import {
   ANIMS, CELL, FACES, FEET, ITEMS, LAYERS, LIVERIES, MINI_FACES, MINI_H, MINI_W, PERSONAS, PROPS, RACES, RACE_BODY, RACE_DEFAULTS, RACE_LIMITS,
   STATE_LAYERS, builderColours, composeFrame, composeStrip, framesFor, layerIndex, miniAt, miniFrame, miniFrames, resolveItem, resolveLook, rgbOf,
-  POST_FACES, POST_H, POST_W, paintSprite, postAt, postFrame, postFrames, postSize,
+  POST_FACES, POST_H, POST_W, paintSprite, postAt, postFrame, postFrames, postSize, DOCK_SIZE, miniMs,
   type AnimId, type PersonaId, type HeroFrame, type HeroLook, type LayerId, type RaceId,
 } from '../src/game/render/hero'
 import { OWN_OUTLINE } from '../src/game/render/hero/raster'
@@ -468,6 +468,72 @@ describe('hero builder: the dock figures', () => {
         let and = 0, or = 0
         for (let p = 0; p < ms[i].length; p++) { if (ms[i][p] && ms[j][p]) and++; if (ms[i][p] || ms[j][p]) or++ }
         expect(and / or, `${PERSONAS[i]} vs ${PERSONAS[j]}`).toBeLessThan(0.8)
+      }
+  })
+
+  it('nothing at the mouth: no arm, hand, prop, tongue or loose pixel over or ahead of the lower face, on any frame', () => {
+    for (const id of PERSONAS) {
+      const face = MINI_FACES[id]
+      // the same face with its arms and props, every part a frame can bring in, and every loose pixel taken away
+      const strip = (ks: typeof face.idle) => ks.map((k) => ({ ...k, extra: undefined }))
+      const bare = { ...face, parts: face.parts.filter((p) => p.group !== 'main' && p.group !== 'off' && !p.hidden), idle: strip(face.idle), tic: strip(face.tic), react: strip(face.react) }
+      const head = face.parts.find((p) => p.id === 'head')!
+      const ex = Math.min(...face.eyes.map((e) => e[0])), ey = Math.max(...face.eyes.map((e) => e[1]))
+      for (const a of ['idle', 'tic', 'react'] as const)
+        for (let fr = 0; fr < miniFrames(id, a); fr++) {
+          const k = (a === 'idle' ? face.idle : a === 'tic' ? face.tic : face.react)[fr]
+          const g = k.move?.head ?? [0, 0], n = k.nudge?.head ?? [0, 0], all = k.all ?? [0, 0]
+          const dx = g[0] + n[0] + all[0], dy = g[1] + n[1] + all[1]
+          const rows = k.swap?.head ?? head.rows
+          let front = 0, chin = 0
+          rows.forEach((row, ry) => [...row].forEach((ch, rx) => { if (ch !== '.') { front = Math.max(front, head.x + rx + dx); chin = Math.max(chin, head.y + ry + dy) } }))
+          const f = miniFrame(id, a, fr)
+          const b = paintSprite(bare, a, fr, false, DOCK_SIZE)
+          // the zone: the mouth band, the two rows under the eyes (never into the chin row, where shoulders sit); from the far eye to four px past the face’s front
+          for (let y = ey + dy + 2; y < Math.min(chin, ey + dy + 4); y++)
+            for (let x = ex + dx - 1; x <= Math.min(MINI_W - 1, front + 4); x++) {
+              const i = (y * MINI_W + x) * 4
+              expect([...f.rgba.subarray(i, i + 4)].join(), `${id} ${a}#${fr} at ${x},${y}`).toBe([...b.rgba.subarray(i, i + 4)].join())
+            }
+        }
+    }
+  })
+
+  it('moves in its own brand: holds that sum to its loop, no jitter, and a rhythm no other face has', () => {
+    for (const id of PERSONAS) {
+      const f = MINI_FACES[id]
+      if (f.idleMs) {
+        expect(f.idleMs.length, id).toBe(f.idle.length)
+        expect(f.idleMs.reduce((a, b) => a + b, 0), `${id} idle holds sum to the period`).toBe(f.period)
+      }
+      // no frame flickers by (60 ms is a deliberate flick at the dock's 2×), the tic 4–8 frames every 4–8 s, the reaction 3–5
+      for (const ms of [miniMs(id, 'idle'), f.ticMs, f.reactMs]) for (const m of ms) expect(m, id).toBeGreaterThanOrEqual(60)
+      expect(f.tic.length, id).toBeGreaterThanOrEqual(4)
+      expect(f.tic.length, id).toBeLessThanOrEqual(8)
+      expect(f.react.length, id).toBeGreaterThanOrEqual(3)
+      expect(f.react.length, id).toBeLessThanOrEqual(5)
+      expect(f.ticEvery, id).toBeGreaterThanOrEqual(4000)
+      expect(f.ticEvery, id).toBeLessThanOrEqual(8000)
+    }
+    // the motion as a signal, 20 s of the dock clock: how often the figure changes, its usual hold, its longest stillness
+    const sig = (id: PersonaId) => {
+      const holds: number[] = []
+      let changes = 0, still = 0, prev = ''
+      for (let t = 0; t < 20000; t += 10) {
+        const at = miniAt(id, t)
+        const key = Buffer.from(miniFrame(id, at.anim, at.frame).rgba).toString('base64')
+        if (prev && key !== prev) { changes++; holds.push(still); still = 0 } else still += 10
+        prev = key
+      }
+      holds.sort((a, b) => a - b)
+      return [changes, holds[holds.length >> 1], holds[holds.length - 1]]
+    }
+    const sigs = PERSONAS.map(sig)
+    // every pair differs by at least a quarter in at least one of the three: told apart by motion alone
+    for (let i = 0; i < sigs.length; i++)
+      for (let j = i + 1; j < sigs.length; j++) {
+        const apart = sigs[i].some((v, k) => Math.abs(v - sigs[j][k]) / Math.max(v, sigs[j][k]) >= 0.25)
+        expect(apart, `${PERSONAS[i]} ${sigs[i]} vs ${PERSONAS[j]} ${sigs[j]}`).toBe(true)
       }
   })
 })

@@ -176,11 +176,12 @@ nothing shipped changes).
 | Who | Came up selling pepper off a cart in the farm towns whose fields burn every summer; buys the smoke-singed sacks cheap | Buys bolts at the river-forest looms, sells them at the fords for twice the weight in coin | Counts the ore carts out of the quarry halls and back in, and has named every one | Works the smokehouses on the salt marsh's reed channels, weighing hides and salting the catch | Tends the glasshouses in the mushroom hollows and bottles whatever glows there |
 | Want / worry | The price before it turns / a wagon gone to smoke | Every coin the road can pay / a pulled thread | Every cart home whole / a cart in the ditch | The meat delivered fresh / rot, and the salt running out | The rare cuttings home whole / a cracked vial, and what spills |
 | Temperament | brisk, hot-tempered, generous | smooth, warm, calculating | gruff, terse, secretly sentimental | patient, cold-eyed, oddly courteous | quiet, patient, unsettlingly cheerful |
-| Tic | weighs her pepper sack in her hand (it sinks, never rises), grins | smooths the silk at her waist, eyes half shut | lifts the slate and chalks a cart home | a slow blink of his slit eyes, a tail swish | holds a vial out to the side, in the light |
+| Tic (dock, round 4) | flips the pepper sack off her palm and catches it, knows the price | strokes the silk along its bolt, eyes shut | lifts the slate, chalks a cart, strikes the total | lifts the hook, a glint runs to its point, the tail lashes | the vial flares, a spore drifts up, his eyes follow it |
 | Silhouette | lean + angular | tall + tapering, a long ear out sideways | squat + square | low + long: flat snout, thick tail | round + tall: a huge sprouting hat |
 | Prop | a burlap pepper sack (a balance reads as a crossbow at both sizes) | bolt of cream silk, a rose ribbon round it | chalked tally slate | a butcher's J hook | glowing green vial at his side |
-| Idle (shape, period) | quick bob, 0.83 s | slow breath, 1.57 s | weight shift side to side, 2.21 s | sway + tail swish, 1.93 s | bob, the hat's sprout lagging, 1.31 s |
-| Reaction (slot picked) | a hop and a wink | a half-bow, eyes shut | one curt nod | twirls the hook | dips, then lifts the vial |
+| Motion brand (dock, round 4) | brisk, light, impatient: snappy beats, short holds | fluid, unhurried, never still: even beats, the cloak following | planted, heavy: one slow breath, then stillness | coiled: stone still, then sudden; never blinks | odd, ominous: the body never moves, only the light |
+| Idle (dock) | a double toe-tap, the bandana's tails bouncing, 2.11 s | the head leans, a wave runs down the cloak, 3.30 s | one slow breath and a slow blink, 4.70 s | the tail's tip lashes, then twitches, 3.91 s | the vial's light swells and ebbs, lids sink, 5.30 s |
+| Reaction (slot picked) | "Deal!": a point and a wink, a little hop | a slow half-bow, the arm swept low | one gruff nod | snaps forward and cocks his head, staring | the brim sinks, then a slow look up from under it |
 
 **Round 2 rules for every face** (the designer's notes, applied to all five and
 the builder):
