@@ -19,9 +19,9 @@
 import { INK, RAMPS, RAMP_IDS, SHADOW_ALPHA, rgbOf, type RampId } from './palette'
 
 /** The cell every hero frame is drawn in (px). Feet stand on {@link FEET}. */
-export const CELL = 128
-export const FEET = 112
-export const CX = 64
+export const CELL = 176
+export const FEET = 138
+export const CX = 88
 
 // ── per-pixel flags ────────────────────────────────────────────────────────
 /** Not part of its layer's ink ring (glows, sparks, light). */
@@ -48,6 +48,17 @@ export class LayerBuf {
   readonly ramp = new Uint8Array(CELL * CELL)
   readonly tone = new Uint8Array(CELL * CELL)
   readonly flag = new Uint8Array(CELL * CELL)
+  /** The box anything was ever painted in (inclusive; empty when x1 < x0). */
+  bx0 = CELL
+  by0 = CELL
+  bx1 = -1
+  by1 = -1
+  touch(x: number, y: number): void {
+    if (x < this.bx0) this.bx0 = x
+    if (x > this.bx1) this.bx1 = x
+    if (y < this.by0) this.by0 = y
+    if (y > this.by1) this.by1 = y
+  }
   /** 0 = empty. */
   has(i: number): boolean {
     return this.ramp[i] !== 0
@@ -161,12 +172,15 @@ export class Pen {
     readonly handMask: Uint8Array | null = null,
   ) {}
 
-  /** A pen whose origin is (x, y) in this pen's frame, turned `deg` clockwise; `flip` mirrors local x. */
-  at(x: number, y: number, deg = 0, flip = false): Pen {
+  /**
+   * A pen whose origin is (x, y) in this pen's frame, turned `deg` clockwise,
+   * scaled `sc` (an item drawn once at its own size); `flip` mirrors local x.
+   */
+  at(x: number, y: number, deg = 0, flip = false, sc = 1): Pen {
     const r = (deg * Math.PI) / 180
-    const cs = Math.cos(r), sn = Math.sin(r)
+    const cs = Math.cos(r) * sc, sn = Math.sin(r) * sc
     const k = flip ? -1 : 1
-    // local child: R(deg)·S(k,1), then translate (x, y), then this.xf
+    // local child: R(deg)·S(k·sc, sc), then translate (x, y), then this.xf
     const la = cs * k, lb = sn * k, lc = -sn, ld = cs
     const m = this.xf
     const xf: Xf = {
@@ -249,13 +263,16 @@ export class Pen {
             // top: a panel facing the viewer, its top edge catching light
             nx = 0; ny = Math.max(-1, Math.min(1, v)) * 0.9; nz = Math.sqrt(1 - ny * ny)
           }
-          const [wx, wy] = this.dirWorld(nx, ny)
+          const [wx0, wy0] = this.dirWorld(nx, ny)
+          const sc = Math.sqrt(Math.abs(this.xf.a * this.xf.d - this.xf.b * this.xf.c)) || 1
+          const wx = wx0 / sc, wy = wy0 / sc
           const d = wx * LIGHT[0] + wy * LIGHT[1] + nz * LIGHT[2]
           tone = toneOf(d, !!o.gloss, x, y, streak)
         }
         this.buf.ramp[i] = ramp
         this.buf.tone[i] = tone
         this.buf.flag[i] = flags & ~F_ONLYON
+        this.buf.touch(x, y)
       }
   }
 
@@ -339,6 +356,7 @@ export class Pen {
       if (!this.buf.ramp[i]) return
       flags &= ~F_ONLYON
     }
+    this.buf.touch(x, y)
     if (mat === 'ink') {
       // ink is drawn on the layer's own pixels as tone 0 (needs a ramp so it counts as filled)
       this.buf.ramp[i] = this.buf.ramp[i] || RAMP_INDEX.get('cream')!
@@ -385,8 +403,9 @@ export class Pen {
    */
   texture(fn: (x: number, y: number, tone: number) => number | null, ramp?: string): this {
     const r = ramp ? RAMP_INDEX.get(this.mat(ramp))! : 0
-    for (let y = 0; y < CELL; y++)
-      for (let x = 0; x < CELL; x++) {
+    const b = this.buf
+    for (let y = Math.max(0, b.by0); y <= b.by1; y++)
+      for (let x = Math.max(0, b.bx0); x <= b.bx1; x++) {
         const i = y * CELL + x
         if (!this.buf.ramp[i] || this.buf.tone[i] === TONE_INK) continue
         const t = fn(x, y, this.buf.tone[i])
@@ -478,12 +497,14 @@ export function colourOf(buf: LayerBuf, i: number): string {
  * its fills. `ring` 0 skips the ring (light, glows).
  */
 export function stamp(out: Composite, buf: LayerBuf, owner: number, pick?: (i: number) => boolean, ring = 2): void {
+  if (buf.bx1 < buf.bx0) return
   const inked = new Uint8Array(CELL * CELL)
   const sel = (i: number) => buf.ramp[i] !== 0 && (!pick || pick(i))
+  const X0 = buf.bx0, X1 = buf.bx1, Y0 = buf.by0, Y1 = buf.by1
   if (ring > 0) {
     const k = ring >= 2 ? RING2 : RING1
-    for (let y = 0; y < CELL; y++)
-      for (let x = 0; x < CELL; x++) {
+    for (let y = Y0; y <= Y1; y++)
+      for (let x = X0; x <= X1; x++) {
         const i = y * CELL + x
         if (!sel(i) || buf.flag[i] & F_NOINK) continue
         for (const [dx, dy] of k) {
@@ -496,11 +517,13 @@ export function stamp(out: Composite, buf: LayerBuf, owner: number, pick?: (i: n
         }
       }
   }
-  for (let i = 0; i < CELL * CELL; i++) {
-    if (!sel(i)) continue
-    const a = buf.flag[i] & F_SOFT ? 150 : 255
-    put(out, i, buf.tone[i] === TONE_INK ? INK_RGB : rgbC(colourOf(buf, i)), a, owner)
-  }
+  for (let y = Y0; y <= Y1; y++)
+    for (let x = X0; x <= X1; x++) {
+      const i = y * CELL + x
+      if (!sel(i)) continue
+      const a = buf.flag[i] & F_SOFT ? 150 : 255
+      put(out, i, buf.tone[i] === TONE_INK ? INK_RGB : rgbC(colourOf(buf, i)), a, owner)
+    }
 }
 
 export function newComposite(): Composite {

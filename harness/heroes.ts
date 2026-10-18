@@ -4,7 +4,7 @@
  * the designer's sheets (`docs/characters/*.png`) and phone cards
  * (`docs/characters/cards/`).
  *
- * Run:  npx vite --port 5231  →  http://localhost:5231/harness/heroes.html
+ * Run:  npx vite --port 5257  →  http://localhost:5257/harness/heroes.html
  *       (`node scripts/hero-sheets.mjs` writes every sheet and card)
  *
  * Every hero pixel comes from `composeFrame` — the same pure compositor the
@@ -20,10 +20,11 @@ import { onSpritesReady, preloadSprites } from '../src/game/render/sprites'
 import { setActiveTheme } from '../src/game/render/themes'
 import { FIRST_MAP } from '../src/game/data/maps'
 import {
-  CELL, FEET, ITEMS, LAYERS, LIVERIES, RACES, RACE_DEFAULTS, RARITIES, STATUSES, TELLS, FRAME_COUNT, FRAME_MS,
-  composeFrame, resolveLook, layerIndex,
-  type AnimId, type HeroFrame, type HeroLook, type LayerId, type RaceId,
+  CELL, CX, FEET, ITEMS, LAYERS, LIVERIES, RACES, RACE_DEFAULTS, RARITIES, STATUSES, TELLS, FRAME_COUNT, FRAME_MS,
+  composeFrame, resolveLook, layerIndex, FACES, framesFor, frameMsFor,
+  type AnimId, type HeroFrame, type HeroLook, type LayerId, type PersonaId, type RaceId,
 } from '../src/game/render/hero'
+import { MINI_H, MINI_W, miniFrame, miniFrames, type MiniAnim } from '../src/game/render/hero/mini'
 import { torsoOutline } from '../src/game/render/hero/parts'
 
 const out = document.getElementById('out')!
@@ -81,7 +82,7 @@ const F = (look: HeroLook, anim: AnimId = 'idle', frame = 0) => composeFrame(loo
 
 /** Draw a frame with its feet at (x, y), scaled k. */
 function hero(g: CanvasRenderingContext2D, f: HeroFrame, x: number, y: number, k = 1): void {
-  g.drawImage(frameCanvas(f), Math.round(x - 64 * k), Math.round(y - FEET * k), CELL * k, CELL * k)
+  g.drawImage(frameCanvas(f), Math.round(x - CX * k), Math.round(y - FEET * k), CELL * k, CELL * k)
 }
 
 /** The union box of frames' opaque pixels (cell px). */
@@ -174,7 +175,8 @@ function ground(w: number, h: number, k: number, at = postOf(), dy = 0): [HTMLCa
 // ── outputs ────────────────────────────────────────────────────────────────
 
 interface SheetOut { file: string; canvas: HTMLCanvasElement }
-interface CardOut { id: string; group: 'Races' | 'Parts' | 'Swaps' | 'States' | 'Animation'; title: string; caption: string; file: string; canvas: HTMLCanvasElement; frames?: number; delays?: number[] }
+type Group = 'Company faces' | 'Dock' | 'Rig/Parts' | 'Swaps' | 'States' | 'Animation'
+interface CardOut { id: string; group: Group; people: string; title: string; caption: string; file: string; canvas: HTMLCanvasElement; frames?: number; delays?: number[] }
 const SHEETS: SheetOut[] = []
 const CARDS: CardOut[] = []
 
@@ -185,10 +187,11 @@ function sheet(file: string, c: HTMLCanvasElement, title: string): void {
 
 const CARD = 600
 /** A phone card: dark panel, the title on top, the caption under the art, the art in between. */
-function card(id: string, group: CardOut['group'], title: string, caption: string, draw: (g: CanvasRenderingContext2D, box: { x: number; y: number; w: number; h: number }) => void, w = CARD, h = CARD): HTMLCanvasElement {
+const slugG = (g: string) => g.toLowerCase().replace(/[^a-z]+/g, '-')
+function card(id: string, group: Group, title: string, caption: string, draw: (g: CanvasRenderingContext2D, box: { x: number; y: number; w: number; h: number }) => void, w = CARD, h = CARD, people = 'all'): HTMLCanvasElement {
   const [c, g] = canvas(w, h)
   paintCard(g, w, h, title, caption, group, draw)
-  CARDS.push({ id, group, title, caption, file: `${group.toLowerCase()}-${id}.png`, canvas: c })
+  CARDS.push({ id, group, people, title, caption, file: `${slugG(group)}-${id}.png`, canvas: c })
   return c
 }
 
@@ -209,7 +212,7 @@ function paintCard(g: CanvasRenderingContext2D, w: number, h: number, title: str
 }
 
 /** An animated card: every frame painted as its own full card, stacked (the script makes a GIF). */
-function animCard(id: string, title: string, caption: string, n: number, delays: number[], draw: (g: CanvasRenderingContext2D, box: { x: number; y: number; w: number; h: number }, i: number) => void): void {
+function animCard(id: string, title: string, caption: string, n: number, delays: number[], draw: (g: CanvasRenderingContext2D, box: { x: number; y: number; w: number; h: number }, i: number) => void, people = 'all'): void {
   const [c, g] = canvas(CARD, CARD * n)
   for (let i = 0; i < n; i++) {
     g.save()
@@ -217,7 +220,7 @@ function animCard(id: string, title: string, caption: string, n: number, delays:
     paintCard(g, CARD, CARD, title, caption, 'Animation', (gg, b) => draw(gg, b, i))
     g.restore()
   }
-  CARDS.push({ id, group: 'Animation', title, caption, file: `animation-${id}.gif`, canvas: c, frames: n, delays })
+  CARDS.push({ id, group: 'Animation', people, title, caption, file: `animation-${id}.gif`, canvas: c, frames: n, delays })
 }
 
 /** Fill a card's art box with real ground. */
@@ -260,16 +263,17 @@ function lineup(): void {
   for (const r of RACES) { hero(g1, F(BASE_KIT[r]), x, gy, 1); x += 110 }
   refFrame(g1, REFS.tnt, 6, 0, x + 10, gy + 8)
   refFrame(g1, REFS.knight, 6, 0, x + 130, gy + 6)
-  // 3×: the same, closer, without the tower
+  // 3×: the same, closer, in two rows: the torch goblin with three peoples, then two and the TNT goblin and the knight
   const k3 = 3
   const [c3, g3] = ground(W / k3, 420 / k3, k3, postOf(), -10)
-  const gy3 = 112
-  refFrame(g3, REFS.torch, 6, 0, 46, gy3 + 3, k3)
-  let x3 = 112
-  for (const r of RACES) { hero(g3, F(BASE_KIT[r]), x3 * k3, gy3 * k3, k3); x3 += 46 }
-  refFrame(g3, REFS.tnt, 6, 0, 400 * k3, (gy3 + 3) * k3, k3)
+  const gy3a = 64, gy3b = 134
+  refFrame(g3, REFS.torch, 6, 0, 52 * k3, (gy3a + 3) * k3, k3)
+  ;(['human', 'elf', 'dwarf'] as RaceId[]).forEach((r, i) => hero(g3, F(BASE_KIT[r]), (150 + i * 96) * k3, gy3a * k3, k3))
+  ;(['reptilian', 'gnome'] as RaceId[]).forEach((r, i) => hero(g3, F(BASE_KIT[r]), (110 + i * 96) * k3, gy3b * k3, k3))
+  refFrame(g3, REFS.tnt, 6, 0, 300 * k3, (gy3b + 3) * k3, k3)
+  refFrame(g3, REFS.knight, 6, 0, 392 * k3, (gy3b + 2) * k3, k3)
   // the sheet
-  const [c, g] = canvas(W, 90 + gh1 + 50 + 420 + 70)
+  const [c, g] = canvas(W, 120 + gh1 + 66 + 420 + 10)
   g.fillStyle = PANEL
   g.fillRect(0, 0, c.width, c.height)
   text(g, 'Five peoples in their base kit, beside the pack', 20, 44, 32, '#f2e8d8', 700, 'left', 'Georgia, serif')
@@ -286,7 +290,7 @@ function lineup(): void {
   // cards: each race base beside a CC0 goblin
   for (const r of RACES) {
     const d = RACE_DEFAULTS[r]
-    card(`race-${r}`, 'Races', `${PEOPLE_OF[r].title} — the base`, `Judge the silhouette and face beside the CC0 goblin at the same density (4×, and 1× in the corner). Default head "${d.heads[0]}", hair "${d.hairs[0]}".`, (gg, b) => {
+    card(`race-${r}`, 'Rig/Parts', `${PEOPLE_OF[r].title} — the base`, `Judge the silhouette and face beside the CC0 goblin at the same density (4×, and 1× in the corner). Default head "${d.heads[0]}", hair "${d.hairs[0]}".`, (gg, b) => {
       groundIn(gg, b, 4, -14)
       const fy = b.y + b.h - 50
       refFrame(gg, REFS.torch, 6, 0, b.x + 150, fy + 12, 4)
@@ -295,7 +299,7 @@ function lineup(): void {
       gg.fillRect(b.x + b.w - 150, b.y + 8, 142, 110)
       refFrame(gg, REFS.torch, 6, 0, b.x + b.w - 115, b.y + 110, 1)
       hero(gg, F({ race: r }), b.x + b.w - 50, b.y + 106, 1)
-    })
+    }, CARD, CARD, r)
   }
 }
 
@@ -304,19 +308,6 @@ function lineup(): void {
 const LAYER_LABEL: Readonly<Record<LayerId, string>> = {
   back: '1 back', offArm: '2 off-hand arm', legs: '3 legs & boots', body: '4 body (race)', armour: '5 body armour', head: '6 head (race face)',
   hair: '7 hair / headgear', mainArm: '8 main-hand arm', mainItem: '9 main-hand item', offItem: '10 off-hand item', fx: '11 FX tells',
-}
-
-/** One layer of a frame, alone (its pieces, inked as in the composite). */
-function layerAlone(f: HeroFrame, layer: LayerId): HTMLCanvasElement {
-  const [c, g] = canvas(CELL, CELL)
-  const id = g.createImageData(CELL, CELL)
-  const li = layerIndex(layer)
-  for (let i = 0; i < CELL * CELL; i++) {
-    if (f.owner[i] !== li) continue
-    for (let k = 0; k < 4; k++) id.data[i * 4 + k] = f.rgba[i * 4 + k]
-  }
-  g.putImageData(id, 0, 0)
-  return c
 }
 
 /** The pieces of a layer (before anything covers them), for the exploded view. */
@@ -372,7 +363,7 @@ function partsMap(): void {
   const look: HeroLook = { race: 'human', company: 'Peppercorn', gear: { main: 'Sword', off: 'Kite Shield', body: 'Mail' }, state: { level: 5, skills: ['Banner Bearer'], rarity: { main: 'rare' } } }
   const f = F(look)
   const P = f.pose
-  const [c, g] = canvas(W, 1500)
+  const [c, g] = canvas(W, 1560)
   g.fillStyle = PANEL
   g.fillRect(0, 0, W, c.height)
   text(g, 'The rig and the parts, exploded in draw order', 20, 44, 32, '#f2e8d8', 700, 'left', 'Georgia, serif')
@@ -441,9 +432,9 @@ function partsMap(): void {
   }
   // the exploded layers
   const ey = oy + CELL * k + 50
-  text(g, 'The same frame, layer by layer (3×) — each layer’s pieces as they are drawn, before anything in front covers them', 20, ey, 18, GOLD, 700)
+  text(g, 'The same frame, layer by layer (2×) — each layer’s pieces as they are drawn, before anything in front covers them', 20, ey, 18, GOLD, 700)
   const box = boxOf([f], 4)
-  const bw = (box.x1 - box.x0 + 1) * 3, bh = (box.y1 - box.y0 + 1) * 3
+  const bw = (box.x1 - box.x0 + 1) * 2, bh = (box.y1 - box.y0 + 1) * 2
   const per = Math.floor((W - 20) / (bw + 12))
   LAYERS.forEach((l, i) => {
     const cx = 20 + (i % per) * (bw + 12)
@@ -457,12 +448,12 @@ function partsMap(): void {
   sheet('docs/characters/parts-map.png', c, 'the rig, anchors and layers')
 
   // cards: each layer alone
-  card('rig-anchors', 'Parts', 'The rig: anchors', 'Every part hangs from these anchors; the peoples differ only in the body numbers between them. Judge whether each anchor sits where a part would attach.', (gg, b) => {
+  card('rig-anchors', 'Rig/Parts', 'The rig: anchors', 'Every part hangs from these anchors; the peoples differ only in the body numbers between them. Judge whether each anchor sits where a part would attach.', (gg, b) => {
     const kk = 3
     gg.drawImage(c, ox - 10, oy - 10, CELL * k + 20, CELL * k + 20, b.x + (b.w - (CELL * kk + 15)) / 2, b.y + 4, CELL * kk + 15, CELL * kk + 15)
   })
   LAYERS.forEach((l) => {
-    card(`layer-${l}`, 'Parts', `Layer ${LAYER_LABEL[l]}`, `What this layer draws on its own (4×), in its own ink ring; the full figure is in the corner. Judge that it is complete — no holes where other layers sit.`, (gg, b) => {
+    card(`layer-${l}`, 'Rig/Parts', `Layer ${LAYER_LABEL[l]}`, `What this layer draws on its own (4×), in its own ink ring; the full figure is in the corner. Judge that it is complete — no holes where other layers sit.`, (gg, b) => {
       const pcs = layerPieces(f, l)
       const kk = 4
       gg.drawImage(pcs, box.x0, box.y0, box.x1 - box.x0 + 1, box.y1 - box.y0 + 1, b.x + (b.w - (box.x1 - box.x0 + 1) * kk) / 2, b.y + 20, (box.x1 - box.x0 + 1) * kk, (box.y1 - box.y0 + 1) * kk)
@@ -487,20 +478,20 @@ const SWAP_KITS: [string, HeroLook['gear']][] = [
   ['Maul · Forge Apron', { main: 'Maul', body: 'Forge Apron' }],
   ['Wand · Tome · Hood', { main: 'Wand', off: 'Tome', body: 'Thornweave Hood' }],
 ]
-const ONE_KIT: HeroLook['gear'] = { main: 'Arming Sword', off: 'Kite Shield', body: 'Plate' }
+const ONE_KIT: NonNullable<HeroLook['gear']> = { main: 'Arming Sword', off: 'Kite Shield', body: 'Plate' }
 
 function swaps(): void {
   const W = 1344
-  const k = 3
-  const box = { x0: 20, y0: 30, x1: 112, y1: 118 }
+  const k = 2
+  const box = { x0: 40, y0: 48, x1: 140, y1: 144 }
   const cw = (box.x1 - box.x0 + 1) * k, ch = (box.y1 - box.y0 + 1) * k
   const per = Math.floor((W - 20) / (cw + 10))
   const rows1 = Math.ceil(SWAP_KITS.length / per)
-  const [c, g] = canvas(W, 120 + rows1 * (ch + 40) + 70 + (ch + 40) + 70 + (ch + 40) + 20)
+  const [c, g] = canvas(W, 120 + rows1 * (ch + 40) + 70 + 2 * (ch + 40) + 70 + 2 * (ch + 40) + 20)
   g.fillStyle = PANEL
   g.fillRect(0, 0, W, c.height)
   text(g, 'Swaps: gear maps to parts', 20, 44, 32, '#f2e8d8', 700, 'left', 'Georgia, serif')
-  text(g, 'One human across kits from every people (top); one kit across the five peoples (middle); one hire in each company’s colours (bottom). 3×.', 20, 74, 18, DIM)
+  text(g, 'One human across kits from every people (top); one kit across the five peoples (middle); one hire in each company’s colours (bottom). 2×.', 20, 74, 18, DIM)
   let y = 100
   const cell = (i: number, f: HeroFrame, label: string, yy: number) => {
     const x = 20 + (i % per) * (cw + 10)
@@ -515,11 +506,11 @@ function swaps(): void {
   text(g, `One kit — ${ONE_KIT.main} · ${ONE_KIT.off} · ${ONE_KIT.body} — on every people (each in its own company’s colours)`, 20, y, 18, GOLD, 700)
   y += 16
   RACES.forEach((r, i) => cell(i, F({ race: r, company: PEOPLE_OF[r].company, gear: ONE_KIT }), PEOPLE_OF[r].title, y))
-  y += ch + 70
+  y += 2 * (ch + 40) + 30
   text(g, 'One hire (a dwarf, Axe · Round Shield · Chainshirt) in each company’s livery', 20, y, 18, GOLD, 700)
   y += 16
   const cos = Object.keys(LIVERIES)
-  cos.forEach((co, i) => { if (i < per) cell(i, F({ race: 'dwarf', company: co, gear: { main: 'Axe', off: 'Round Shield', body: 'Chainshirt' } }), co, y) })
+  cos.forEach((co, i) => cell(i, F({ race: 'dwarf', company: co, gear: { main: 'Axe', off: 'Round Shield', body: 'Chainshirt' } }), co, y))
   sheet('docs/characters/swaps.png', c, 'kits and peoples')
 
   // cards
@@ -550,7 +541,7 @@ function stateRows(): { title: string; rows: StateRow[] }[] {
   const w = (st: HeroLook['state'], over: Partial<HeroLook> = {}): HeroLook => ({ ...STATE_BASE, ...over, state: st })
   return [
     { title: 'Rarity — the trim and the gem on the item (common → mythic)', rows: RARITIES.map((r) => ({ id: `rarity-${r}`, label: r, look: w({ rarity: { main: r, off: r } }), what: `the ${r} trim on the sword and the shield` })) },
-    { title: 'Level tier — the cape grows with the level', rows: [1, 3, 5, 8].map((l) => ({ id: `level-${l}`, label: `level ${l}`, look: w({ level: l }), what: `the cape at level ${l}` })) },
+    { title: 'Level tier — the cape grows with the level (shown without a shield, which hides most of it)', rows: [1, 3, 5, 8].map((l) => ({ id: `level-${l}`, label: `level ${l}`, look: w({ level: l }, { gear: { main: 'Sword', body: 'Mail' } }), what: `the cape at level ${l}` })) },
     { title: 'Skill tells', rows: TELLS.map((t) => ({ id: `tell-${t}`, label: t, look: w({ skills: [t] }, t === 'spark' || t === 'bloom' ? { race: 'gnome', company: 'Greenvial', gear: { main: 'Staff', body: 'Robe' } } : {}), frame: 2, what: `the ${t} tell` })) },
     { title: 'Status effects', rows: [...STATUSES.map((s) => ({ id: `status-${s}`, label: s, look: w({ status: [s] }), frame: 2, what: `the ${s} status` })), { id: 'status-wounded', label: 'wounded', look: w({ wounded: true }), frame: 2, what: 'a wound' }] },
   ]
@@ -558,8 +549,8 @@ function stateRows(): { title: string; rows: StateRow[] }[] {
 
 function states(): void {
   const W = 1344
-  const k = 3
-  const box = { x0: 14, y0: 18, x1: 118, y1: 120 }
+  const k = 2
+  const box = { x0: 36, y0: 38, x1: 144, y1: 146 }
   const cw = (box.x1 - box.x0 + 1) * k, ch = (box.y1 - box.y0 + 1) * k
   const per = Math.floor((W - 20) / (cw + 10))
   const groups = stateRows()
@@ -568,7 +559,7 @@ function states(): void {
   g.fillStyle = PANEL
   g.fillRect(0, 0, W, c.height)
   text(g, 'States: one hero, edited by status', 20, 44, 32, '#f2e8d8', 700, 'left', 'Georgia, serif')
-  text(g, 'A human (Sword · Kite Shield · Mail). Each state edits only its own layer (STATE_LAYERS, held by the tests). 3×.', 20, 74, 18, DIM)
+  text(g, 'A human (Sword · Kite Shield · Mail). Each state edits only its own layer (STATE_LAYERS, held by the tests). 2×.', 20, 74, 18, DIM)
   let y = 110
   for (const gp of groups) {
     text(g, gp.title, 20, y + 4, 18, GOLD, 700)
@@ -605,7 +596,7 @@ function animation(): void {
   const W = 1344
   const k = 2
   const rowsPerRace = ANIM_SHOWN.length
-  const box = { x0: 6, y0: 14, x1: 124, y1: 120 }
+  const box = { x0: 20, y0: 26, x1: 166, y1: 146 }
   const cw = (box.x1 - box.x0 + 1) * k, ch = (box.y1 - box.y0 + 1) * k
   const maxF = Math.max(...ANIM_SHOWN.map((a) => FRAME_COUNT[a]))
   const scale = Math.min(1, (W - 140) / (maxF * (cw + 4)))
@@ -651,11 +642,11 @@ function animation(): void {
 function variants(): void {
   for (const r of RACES) {
     const d = RACE_DEFAULTS[r]
-    for (const hd of d.heads) card(`head-${r}-${hd}`, 'Races', `${PEOPLE_OF[r].title} — head “${hd}”`, `The race face variant at 6×; the whole figure at 1× in the corner. Judge it reads as ${r} and the features don’t merge.`, (gg, b) => headCard(gg, b, { race: r, head: hd }))
-    for (const hr of d.hairs) card(`hair-${r}-${hr}`, 'Races', `${PEOPLE_OF[r].title} — hair “${hr}”`, `The hair / headgear variant at 6×; 1× in the corner. Judge the ear and face stay clear of it.`, (gg, b) => headCard(gg, b, { race: r, hair: hr }))
+    for (const hd of d.heads) card(`head-${r}-${hd}`, 'Rig/Parts', `${PEOPLE_OF[r].title} — head “${hd}”`, `The race face variant at 6×; the whole figure at 1× in the corner. Judge it reads as ${r} and the features don’t merge.`, (gg, b) => headCard(gg, b, { race: r, head: hd }))
+    for (const hr of d.hairs) card(`hair-${r}-${hr}`, 'Rig/Parts', `${PEOPLE_OF[r].title} — hair “${hr}”`, `The hair / headgear variant at 6×; 1× in the corner. Judge the ear and face stay clear of it.`, (gg, b) => headCard(gg, b, { race: r, hair: hr }))
   }
   // the greyscale silhouette test
-  card('silhouettes', 'Races', 'Silhouettes: the five peoples', 'Each people filled flat (top, 3×) and in greyscale (bottom). Judge that they read apart by shape alone.', (gg, b) => {
+  card('silhouettes', 'Rig/Parts', 'Silhouettes: the five peoples', 'Each people filled flat (top, 3×) and in greyscale (bottom). Judge that they read apart by shape alone.', (gg, b) => {
     const k = 3
     RACES.forEach((r, i) => {
       const f = F({ race: r })
@@ -701,7 +692,7 @@ function itemCards(): void {
     const R = resolveLook(look)
     const fam = slot === 'body' ? R.body?.family : slot === 'off' ? (R.off?.family ?? R.main?.family) : R.main?.family
     const what = slot === 'body' ? 'worn on the torso' : slot === 'off' ? 'in the off hand' : it.slot === 'twoHand' ? 'in both hands' : 'in the main hand'
-    card(`item-${slugOf(it.name)}`, 'Parts', it.name, `${PEOPLE_OF[race].title} · ${it.slot} · ${fam} family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.`, (gg, b) => {
+    card(`item-${slugOf(it.name)}`, 'Rig/Parts', it.name, `${PEOPLE_OF[race].title} · ${it.slot} · ${fam} family. Idle at 4×, the strike at 2× (left), 1× in the corner. Judge the grip and the silhouette.`, (gg, b) => {
       groundIn(gg, b, 4, -10)
       const f = F(look)
       hero(gg, f, b.x + b.w / 2 + 60, b.y + b.h - 40, 4)
@@ -712,7 +703,7 @@ function itemCards(): void {
   })
   // the generic fallbacks
   for (const [slot, name] of [['main', 'Mystery Blade'], ['off', 'Odd Trinket'], ['body', 'Strange Garb'], ['main', 'Unnamed Thing']] as const) {
-    card(`fallback-${slugOf(name)}`, 'Parts', `Fallback: “${name}”`, `Gear with no part of its own: ${name.includes('Blade') ? 'a keyword family (blade → sword)' : 'the slot’s generic part'}. Judge that the slot is never empty.`, (gg, b) => {
+    card(`fallback-${slugOf(name)}`, 'Rig/Parts', `Fallback: “${name}”`, `Gear with no part of its own: ${name.includes('Blade') ? 'a keyword family (blade → sword)' : 'the slot’s generic part'}. Judge that the slot is never empty.`, (gg, b) => {
       groundIn(gg, b, 4, -10)
       const f = F({ race: 'human', company: 'neutral', gear: { [slot]: name } })
       hero(gg, f, b.x + b.w / 2, b.y + b.h - 40, 4)
@@ -731,7 +722,7 @@ function gripCards(): void {
     ['Greatsword (both hands)', { race: 'dwarf', company: 'Ironvein', gear: { main: 'Greatsword' } }, 'idle', 0],
     ['Spear thrust', { race: 'reptilian', company: 'Butcherblock', gear: { main: 'Spear' } }, 'attack', 3],
   ]
-  card('grip-closeup', 'Parts', 'Grips: fingers over the handle', 'The fist is re-stamped over its grip, so the handle runs under the fingers; nothing floats, and no second fist shows. 8×, around each hand.', (gg, b) => {
+  card('grip-closeup', 'Rig/Parts', 'Grips: fingers over the handle', 'The fist is re-stamped over its grip, so the handle runs under the fingers; nothing floats, and no second fist shows. 8×, around each hand.', (gg, b) => {
     const k = 8
     looks.forEach(([label, look, anim, fr], i) => {
       const f = F(look, anim, fr)
@@ -751,7 +742,7 @@ function gripCards(): void {
   const cw = 70, ch = 84
   const W = 150 + bodies.length * cw + 20
   const H = 66 + 92 + 40 + offs.length * ch + 30
-  card('offhand-x-body', 'Parts', 'Every off hand × every body (1×)', 'Rows: off-hand pieces; columns: body pieces; a human with a Sword, at game density. Judge that no pairing clashes, floats or pastes on. Zoom in.', (gg, b) => {
+  card('offhand-x-body', 'Rig/Parts', 'Every off hand × every body (1×)', 'Rows: off-hand pieces; columns: body pieces; a human with a Sword, at game density. Judge that no pairing clashes, floats or pastes on. Zoom in.', (gg, b) => {
     bodies.forEach((bd, j) => {
       gg.save()
       gg.translate(b.x + 150 + j * cw + cw / 2, b.y + 30)
@@ -766,10 +757,156 @@ function gripCards(): void {
         gg.fillStyle = (i + j) % 2 ? '#5b8c54' : '#55844f'
         gg.fillRect(x, y, cw, ch)
         const f = F({ race: 'human', company: 'Peppercorn', gear: { main: 'Sword', off: of.startsWith('(') ? null : of, body: bd.startsWith('(') ? null : bd } })
-        gg.drawImage(frameCanvas(f), 64 - cw / 2 - 2, 112 - ch + 6, cw, ch, x, y, cw * k, ch * k)
+        gg.drawImage(frameCanvas(f), CX - cw / 2 - 2, FEET - ch + 6, cw, ch, x, y, cw * k, ch * k)
       })
     })
   }, W, H)
+}
+
+// ── 7 · the company faces: field, bust, dock ──────────────────────────────
+
+/** Dock order (COMPANY_IDS): spice, art, metals, silk, scrolls. */
+const DOCK_ORDER: PersonaId[] = ['saffra', 'hask', 'brannoch', 'odile', 'wren']
+
+const miniCache = new Map<string, HTMLCanvasElement>()
+function miniCanvas(id: PersonaId, anim: MiniAnim, f: number, locked = false): HTMLCanvasElement {
+  const key = `${id}|${anim}|${f}|${locked}`
+  const hit = miniCache.get(key)
+  if (hit) return hit
+  const fr = miniFrame(id, anim, f, locked)
+  const [c, g] = canvas(fr.w, fr.h)
+  g.putImageData(new ImageData(new Uint8ClampedArray(fr.rgba), fr.w, fr.h), 0, 0)
+  miniCache.set(key, c)
+  return c
+}
+
+/** A face's bust: head and shoulders cut from the field figure (as the shipped portraits are). */
+function bust(g: CanvasRenderingContext2D, f: HeroFrame, x: number, y: number, k: number): void {
+  // from the top of the figure (a hat included) to below the shoulders, square-ish, the head centred
+  const P = f.pose
+  const top = boxOf([f], 0).y0 - 2
+  const h = Math.round(P.torsoTop + 12 - top)
+  const w = Math.round(Math.max(56, h * 1.1))
+  const sx = Math.round(P.head.x - w / 2), sy = top
+  const kk = Math.max(1, Math.min(k, Math.floor((58 * k) / h)))
+  g.drawImage(frameCanvas(f), sx, sy, w, h, x + Math.round((64 * k - w * kk) / 2), y + Math.round((58 * k - h * kk) / 2), w * kk, h * kk)
+}
+
+function faces(): void {
+  const W = 1344
+  const [c, g] = canvas(W, 1200)
+  g.fillStyle = PANEL
+  g.fillRect(0, 0, W, c.height)
+  text(g, 'The company faces: field, bust and dock', 20, 44, 32, '#f2e8d8', 700, 'left', 'Georgia, serif')
+  text(g, 'Each company’s liaison, given a body on the hero rig. Field figure 1× and 3× (beside a CC0 goblin), the bust 2×, the dock figure (redrawn at 24 px) 1×, 2× and 6×.', 20, 74, 18, DIM)
+  // 1× strip on the ground with a goblin
+  const [g1c, g1] = ground(W, 150, 1, postOf(), -30)
+  refFrame(g1, REFS.torch, 6, 0, 120, 130)
+  FACES.forEach((fc, i) => hero(g1, F(fc.look), 260 + i * 120, 124, 1))
+  g.drawImage(g1c, 0, 92)
+  let y = 92 + 150 + 16
+  FACES.forEach((fc, i) => {
+    const x0 = 20 + i * 264
+    g.fillStyle = PANEL2
+    g.fillRect(x0, y, 252, 820)
+    text(g, fc.name, x0 + 12, y + 32, 26, '#f2e8d8', 700, 'left', 'Georgia, serif')
+    text(g, `${fc.companyName} · ${fc.role}${fc.proposal ? ' · PROPOSAL' : ''}`, x0 + 12, y + 54, 14, fc.proposal ? GOLD : DIM, 700)
+    // 3× field on ground
+    const [gc, gg] = ground(84, 100, 3, postOf(), -6)
+    hero(gg, F(fc.look), 42 * 3, 92 * 3, 3)
+    g.drawImage(gc, x0, y + 64)
+    // bust 2× + the dock figure
+    g.fillStyle = '#3a2f27'
+    g.fillRect(x0 + 6, y + 372, 128, 116)
+    bust(g, F(fc.look), x0 + 6, y + 372, 2)
+    g.drawImage(miniCanvas(fc.id, 'idle', 0), x0 + 150, y + 380, MINI_W * 2, MINI_H * 2)
+    g.drawImage(miniCanvas(fc.id, 'idle', 0), x0 + 210, y + 400, MINI_W, MINI_H)
+    g.drawImage(miniCanvas(fc.id, 'idle', 0), x0 + 66, y + 500, MINI_W * 5, MINI_H * 5)
+    text(g, 'bust 2×', x0 + 10, y + 504, 13, DIM)
+    text(g, 'dock 2× · 1×', x0 + 150, y + 452, 13, DIM)
+    text(g, 'dock 5×', x0 + 10, y + 640, 13, DIM)
+    let ty = y + 664
+    for (const line of [fc.brief.temperament, `Tic: ${fc.brief.tic}`, `Shape: ${fc.brief.silhouette}`]) ty = wrap(g, line, x0 + 12, ty, 230, 14, '#efe6d6', 1.25) + 4
+  })
+  sheet('docs/characters/faces.png', c, 'the five company faces')
+
+  for (const fc of FACES) {
+    const people = fc.look.race
+    card(`face-${fc.id}`, 'Company faces', `${fc.name} — ${fc.companyName} ${fc.role}`, `${fc.brief.temperament} Judge that the people, the trade and the temperament read at 1× (corner) without this caption.`, (gg, b) => {
+      groundIn(gg, b, 4, -12)
+      hero(gg, F(fc.look), b.x + b.w / 2 + 30, b.y + b.h - 36, 4)
+      refFrame(gg, REFS.torch, 6, 0, b.x + 70, b.y + b.h - 26, 2)
+      gg.fillStyle = 'rgba(0,0,0,0.35)'
+      gg.fillRect(b.x + b.w - 120, b.y + 8, 112, 104)
+      hero(gg, F(fc.look), b.x + b.w - 64, b.y + 104, 1)
+    }, CARD, CARD, people)
+    card(`brief-${fc.id}`, 'Company faces', `${fc.name}: the brief`, fc.proposal ? `PROPOSAL — ${fc.proposal}` : 'The person behind the design: who, want and worry, temperament, tic, shape, prop.', (gg, b) => {
+      gg.fillStyle = '#3a2f27'
+      gg.fillRect(b.x + 8, b.y + 8, 128 * 1.5, 116 * 1.5)
+      bust(gg, F(fc.look, 'react', 2), b.x + 8, b.y + 8, 3)
+      let ty = b.y + 30
+      const tx = b.x + 220, tw = b.w - 230
+      for (const [k, v] of [['Who', fc.brief.who], ['Want', fc.brief.want]] as const) {
+        text(gg, k, tx, ty, 14, GOLD, 700)
+        ty = wrap(gg, v, tx, ty + 18, tw, 14, '#efe6d6', 1.25) + 6
+      }
+      ty = Math.max(ty, b.y + 200)
+      for (const [k, v] of [['Temperament', fc.brief.temperament], ['Tic', fc.brief.tic], ['Silhouette', fc.brief.silhouette], ['Prop', fc.brief.prop]] as const) {
+        text(gg, k, b.x + 14, ty, 14, GOLD, 700)
+        ty = wrap(gg, v, b.x + 120, ty, b.w - 132, 15, '#efe6d6', 1.25) + 8
+      }
+    }, CARD, CARD, people)
+    for (const a of ['idle', 'tic', 'react'] as AnimId[]) {
+      const n = framesFor(a, fc.id)
+      const ms = frameMsFor(a, fc.id)
+      animCard(`${fc.id}-${a}`, `${fc.name} — ${a === 'react' ? 'reaction (slot picked)' : a}`, `${n} frames, ${a === 'tic' ? `plays every ~${fc.ticEvery} s` : a === 'idle' ? 'the loop' : 'once, on focus'}; 4× and 1× (corner). Judge the timing and that it says the temperament.`, n, ms, (gg, b, i) => {
+        groundIn(gg, b, 4, -12)
+        const f = F(fc.look, a, i)
+        hero(gg, f, b.x + b.w / 2, b.y + b.h - 36, 4)
+        hero(gg, f, b.x + b.w - 64, b.y + 104, 1)
+      }, people)
+    }
+    // the dock figure
+    card(`dock-${fc.id}`, 'Dock', `${fc.name} at dock size`, 'Redrawn at 24 px for the dock slot (shown 8×): idle, tic, reaction and locked, with the 2× slot size beside. Judge it is still a person, not a smudge.', (gg, b) => {
+      const k = 6
+      const cells: [MiniAnim, number, boolean, string][] = [['idle', 0, false, 'idle'], ['tic', 2, false, 'tic'], ['react', 1, false, 'picked'], ['idle', 0, true, 'locked']]
+      cells.forEach(([a, f, lock, lab], i) => {
+        const x = b.x + 8 + (i % 2) * 280, yy = b.y + 6 + Math.floor(i / 2) * 176
+        gg.fillStyle = '#3a2f27'
+        gg.fillRect(x, yy, MINI_W * k, MINI_H * k)
+        gg.drawImage(miniCanvas(fc.id, a, f, lock), x, yy, MINI_W * k, MINI_H * k)
+        gg.drawImage(miniCanvas(fc.id, a, f, lock), x + MINI_W * k + 14, yy + 40, MINI_W * 2, MINI_H * 2)
+        text(gg, lab, x + MINI_W * k + 14, yy + 30, 15, '#efe6d6', 700)
+      })
+    }, CARD, CARD, people)
+  }
+
+  // the dock in motion: five slots at their 2× size, idling, each tic on its own beat, one picked
+  const beats = 24
+  const ms = Array.from({ length: beats }, () => 160)
+  animCard('dock-motion', 'The dock in motion (2× slot size)', 'Five figures idling, each tic on its own beat, the third slot picked; the fifth locked. Judge it stays calm next to the map (atmosphere, not a show).', beats, ms, (gg, b, i) => {
+    gg.fillStyle = '#1d2a2a'
+    gg.fillRect(b.x, b.y, b.w, b.h)
+    const sw = 100
+    DOCK_ORDER.forEach((id, s) => {
+      const x = b.x + 22 + s * (sw + 6), y0 = b.y + 120
+      const picked = s === 2
+      gg.fillStyle = picked ? '#4a3a24' : '#2c3434'
+      gg.fillRect(x, y0, sw, 152)
+      gg.strokeStyle = picked ? GOLD : '#4f5e65'
+      gg.lineWidth = picked ? 4 : 2
+      gg.strokeRect(x, y0, sw, 152)
+      const locked = s === 4
+      const ticAt = [3, 9, 15, 21, 0][s]
+      const tn = miniFrames(id, 'tic')
+      let a: MiniAnim = 'idle', f = Math.floor(i / 2) % 4
+      if (picked && i < 4) { a = 'react'; f = i }
+      else if (!locked && i >= ticAt && i < ticAt + tn) { a = 'tic'; f = i - ticAt }
+      if (locked) { a = 'idle'; f = 0 }
+      gg.drawImage(miniCanvas(id, a, f, locked), x + (sw - MINI_W * 3) / 2, y0 + 14, MINI_W * 3, MINI_H * 3)
+      text(gg, locked ? 'locked' : `Rep ${[4, 2, 6, 3, 0][s]}`, x + sw / 2, y0 + 140, 16, locked ? DIM : '#f2e8d8', 800, 'center')
+    })
+  })
 }
 
 // ── build ──────────────────────────────────────────────────────────────────
@@ -813,6 +950,7 @@ async function build(): Promise<void> {
   run('variants', variants)
   run('items', itemCards)
   run('grips', gripCards)
+  run('faces', faces)
   if (!only || only.includes('cards')) {
     const wrapC = el('div', 'cards')
     for (const cd of CARDS) wrapC.append(cd.canvas)
@@ -824,7 +962,7 @@ async function build(): Promise<void> {
   w.__heroOut = {
     report,
     sheets: SHEETS.map((s) => ({ file: s.file, url: s.canvas.toDataURL('image/png') })),
-    cards: CARDS.map((cd) => ({ id: cd.id, group: cd.group, title: cd.title, caption: cd.caption, file: cd.file, url: cd.canvas.toDataURL('image/png'), frames: cd.frames, delays: cd.delays })),
+    cards: CARDS.map((cd) => ({ id: cd.id, group: cd.group, people: cd.people, title: cd.title, caption: cd.caption, file: cd.file, url: cd.canvas.toDataURL('image/png'), frames: cd.frames, delays: cd.delays })),
   }
   w.__heroReady = true
 }

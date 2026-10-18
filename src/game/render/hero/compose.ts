@@ -15,7 +15,7 @@ import {
   CELL, CX, FEET, LayerBuf, OWN_SHADOW, Pen, newComposite, outerLine, shadow, stamp,
   type Composite, type MatResolver,
 } from './raster'
-import { ANIMS, FRAME_COUNT, poseFor, type AnimId, type Pose, type RaceId } from './rig'
+import { ANIMS, FRAME_COUNT, framesFor, poseFor, type AnimId, type PersonaId, type Pose, type Posture, type RaceId } from './rig'
 import {
   LAYERS, LIVERIES, capeTier, gripOf, layerIndex, lookKey, motionOf, resolveItem, takesBothHands, tellsOf,
   type HeroLook, type ItemPart, type LayerId, type Rarity, type Status,
@@ -37,16 +37,18 @@ export interface RaceDefaults {
 }
 
 export const RACE_DEFAULTS: Readonly<Record<RaceId, RaceDefaults>> = {
-  human: { skin: 'skinTan', hair: 'hairBrown', heads: ['plain', 'stubble'], hairs: ['crop', 'tail'], skins: ['skinTan', 'skinUmber', 'skinRose'], hairInks: ['hairBrown', 'hairBlack', 'hairGinger', 'hairBlond'] },
+  human: { skin: 'skinTan', hair: 'hairBrown', heads: ['plain', 'stubble'], hairs: ['crop', 'tail', 'scarf'], skins: ['skinTan', 'skinUmber', 'skinRose'], hairInks: ['hairBrown', 'hairBlack', 'hairGinger', 'hairBlond'] },
   elf: { skin: 'skinRose', hair: 'hairBlond', heads: ['long', 'swept'], hairs: ['long', 'topknot'], skins: ['skinRose', 'skinPale', 'skinUmber'], hairInks: ['hairBlond', 'hairSilver', 'hairBlack'] },
   dwarf: { skin: 'skinTan', hair: 'hairBrown', heads: ['full', 'forked'], hairs: ['crop', 'bald'], skins: ['skinTan', 'skinRuddy', 'skinUmber'], hairInks: ['hairBrown', 'hairGinger', 'hairWhite', 'hairBlack'] },
   reptilian: { skin: 'scaleTeal', hair: 'red', heads: ['snout', 'frill'], hairs: ['crest', 'spines'], skins: ['scaleTeal', 'scaleOchre', 'moss'], hairInks: ['red', 'gold', 'plum'] },
-  gnome: { skin: 'skinRose', hair: 'hairWhite', heads: ['round', 'long'], hairs: ['tufts', 'cap'], skins: ['skinRose', 'skinTan', 'skinUmber'], hairInks: ['hairWhite', 'hairGinger', 'hairSilver'] },
+  gnome: { skin: 'skinRose', hair: 'hairWhite', heads: ['round', 'long'], hairs: ['cap', 'tufts', 'sproutcap'], skins: ['skinRose', 'skinTan', 'skinUmber'], hairInks: ['hairWhite', 'hairGinger', 'hairSilver'] },
 }
 
 export interface ResolvedLook extends Resolved {
   motion: ReturnType<typeof motionOf>
   grip: ReturnType<typeof gripOf>
+  persona?: PersonaId
+  posture: Posture
 }
 
 /** Which part fills each slot, which inks, which state. */
@@ -94,6 +96,8 @@ export function resolveLook(look: HeroLook): ResolvedLook {
     wounded: !!st.wounded,
     motion: motionOf(main),
     grip: gripOf(main, off),
+    persona: look.persona,
+    posture: look.posture ?? 'still',
   }
 }
 
@@ -124,7 +128,7 @@ export function composeFrame(look: HeroLook, anim: AnimId, frame: number): HeroF
 }
 
 function composeResolved(R: ResolvedLook, anim: AnimId, frame: number): HeroFrame {
-  const P = poseFor(R.race, anim, frame, R.motion, R.grip)
+  const P = poseFor(R.race, anim, frame, R.motion, R.grip, R.persona, R.posture)
   const marks: Marks = {}
   const layers = {} as Record<LayerId, Piece[]>
   const out: Composite = newComposite()
@@ -140,6 +144,11 @@ function composeResolved(R: ResolvedLook, anim: AnimId, frame: number): HeroFram
         const buf = new LayerBuf()
         pieces.push({ buf, ring: o.ring ?? 2, front: !!o.front })
         return new Pen(buf, o.mats ?? R.mats)
+      },
+      layerMask(): Uint8Array {
+        const m = new Uint8Array(CELL * CELL)
+        for (const pc of pieces) for (let i = 0; i < m.length; i++) if (pc.buf.ramp[i]) m[i] = 1
+        return m
       },
     }
   }
@@ -165,6 +174,12 @@ function composeResolved(R: ResolvedLook, anim: AnimId, frame: number): HeroFram
   for (let i = 0; i < CELL * CELL; i++) sil[i] = out.rgba[i * 4 + 3] === 255 && out.owner[i] !== OWN_SHADOW ? 1 : 0
   const fc = ctxFor('fx', sil)
   for (const part of LAYER_PARTS.fx) part(fc)
+  // FX stay inside the cell's 2 px margin (a frame is a cell: nothing is cut at its edge)
+  for (const pc of layers.fx)
+    for (let i = 0; i < CELL * CELL; i++) {
+      const x = i % CELL, y = (i / CELL) | 0
+      if (pc.buf.ramp[i] && (x < 3 || y < 3 || x > CELL - 4 || y > CELL - 4)) pc.buf.ramp[i] = 0
+    }
   const fi = layerIndex('fx')
   for (const pc of layers.fx) stamp(out, pc.buf, fi, undefined, pc.ring)
 
@@ -182,7 +197,7 @@ export function composeStrip(look: HeroLook, anim: AnimId): HeroFrame[] {
   const hit = CACHE.get(key)
   if (hit) return hit
   const R = resolveLook(look)
-  const frames = Array.from({ length: FRAME_COUNT[anim] }, (_, f) => composeResolved(R, anim, f))
+  const frames = Array.from({ length: framesFor(anim, R.persona) }, (_, f) => composeResolved(R, anim, f))
   if (CACHE.size >= CACHE_MAX) CACHE.delete(CACHE.keys().next().value!)
   CACHE.set(key, frames)
   return frames

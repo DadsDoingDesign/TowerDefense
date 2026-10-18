@@ -56,6 +56,8 @@ export interface DrawCtx {
   marks: Marks
   /** The opaque figure so far (FX only): 1 where layers 1–10 painted. */
   silhouette?: Uint8Array
+  /** This layer's pieces so far, unioned (1 = painted). */
+  layerMask?: () => Uint8Array
 }
 
 export type PartFn = (c: DrawCtx) => void
@@ -182,8 +184,19 @@ function eyes(pen: Pen, e: { x: number; y: number }[], expr: string, size: 2 | 3
       pen.px(X - d, Y - 1, 'ink', TONE_INK).px(X, Y, 'ink', TONE_INK).px(X - d, Y + 1, 'ink', TONE_INK)
       continue
     }
-    if (expr === 'happy') {
+    if (expr === 'happy' || (expr === 'wink' && k === 1)) {
       pen.px(X - 1, Y + 1, 'ink', TONE_INK).px(X, Y, 'ink', TONE_INK).px(X + 1, Y, 'ink', TONE_INK).px(X + 2, Y + 1, 'ink', TONE_INK)
+      continue
+    }
+    if (expr === 'closed') {
+      // eyes shut, savouring: a low arc
+      pen.px(X - 1, Y, 'ink', TONE_INK).px(X, Y + 1, 'ink', TONE_INK).px(X + 1, Y + 1, 'ink', TONE_INK).px(X + 2, Y, 'ink', TONE_INK)
+      continue
+    }
+    if (expr === 'smug') {
+      // half-lidded: the lid's line over a low pupil
+      pen.px(X - 1, Y - 1, 'ink', TONE_INK).px(X, Y - 1, 'ink', TONE_INK).px(X + 1, Y - 1, 'ink', TONE_INK).px(X + 2, Y - 1, 'ink', TONE_INK)
+      pen.px(X, Y + 1, 'ink', TONE_INK).px(X + 1, Y + 1, 'ink', TONE_INK)
       continue
     }
     const h = expr === 'focus' ? 2 : size
@@ -200,7 +213,8 @@ function eyes(pen: Pen, e: { x: number; y: number }[], expr: string, size: 2 | 3
 
 function mouth(pen: Pen, x: number, y: number, expr: string): void {
   const X = Math.round(x), Y = Math.round(y)
-  if (expr === 'happy') pen.px(X - 1, Y, 'ink', TONE_INK).px(X, Y + 1, 'ink', TONE_INK).px(X + 1, Y + 1, 'ink', TONE_INK).px(X + 2, Y, 'ink', TONE_INK)
+  if (expr === 'smug') pen.px(X, Y + 1, 'ink', TONE_INK).px(X + 1, Y + 1, 'ink', TONE_INK).px(X + 2, Y, 'ink', TONE_INK)
+  else if (expr === 'happy' || expr === 'wink') pen.px(X - 1, Y, 'ink', TONE_INK).px(X, Y + 1, 'ink', TONE_INK).px(X + 1, Y + 1, 'ink', TONE_INK).px(X + 2, Y, 'ink', TONE_INK)
   else if (expr === 'hurt') pen.px(X, Y, 'ink', TONE_INK).px(X + 1, Y, 'ink', TONE_INK).px(X, Y + 1, 'ink', TONE_INK).px(X + 1, Y + 1, 'ink', TONE_INK)
 }
 
@@ -306,6 +320,14 @@ export const head: PartFn = (c) => {
       ey.line(rx * 0.18 + 0.5, -ry * 0.12 - 2, rx * 0.18 + 0.5, -ry * 0.12 + 2, 'ink', TONE_INK, F_ONLYON)
     }
     h.line(rx * 0.18 - 4, -ry * 0.12 - 4, rx * 0.18 + 4, -ry * 0.12 - 5, 'ink', TONE_INK, F_ONLYON)
+    if (P.fx.tongue) {
+      // a forked tongue tasting the air, out of the mouth's corner at the snout tip
+      const tx = rx * 0.62 + (long ? 9.5 : 7), ty = ry * 0.45
+      const len = P.fx.tongue === 2 ? 8 : 4
+      const tg = headPen(c, { ring: 1 })
+      tg.line(tx, ty, tx + len, ty + 1, 'red', TONE_LIGHT).line(tx, ty + 1, tx + len, ty + 2, 'red', TONE_MID)
+      if (P.fx.tongue === 2) tg.line(tx + len, ty + 1, tx + len + 2, ty - 1, 'red', TONE_LIGHT).line(tx + len, ty + 2, tx + len + 2, ty + 4, 'red', TONE_MID)
+    }
     if (R.wounded) bandage(headPen(c, { ring: 1 }), -rx * 0.25, ry * 0.2)
   } else {
     // gnome: small high eyes, a rosy cheek, a white mustache, the big nose over it
@@ -366,13 +388,37 @@ export const hair: PartFn = (c) => {
     })
     return
   }
-  if (R.race === 'gnome' && v === 'cap') {
+  if (R.race === 'human' && v === 'scarf') {
+    // a headscarf knotted at the back, its tail hanging; a lock of hair at the temple
+    const f = P.frame % 6
+    const tail = headPen(c)
+    tail.poly([[-rx - 1, -ry * 0.05], [-rx - 4 - (f % 3), ry * 0.7], [-rx - 1 - (f % 3), ry * 1.05], [-rx + 3, ry * 0.4]], 'cloth', { shade: 'round' })
+    const pen = headPen(c)
+    pen.ellipse(-1.5, -ry * 0.22, rx + 2, ry * 0.86, 'cloth')
+    pen.ellipse(-rx * 0.45, ry * 0.12, rx * 0.6, ry * 0.62, 'cloth')
+    pen.cutEllipse(rx * 0.56, ry * 0.5, rx * 0.8, ry * 0.68)
+    pen.texture((_x, y) => {
+      const ly = y - P.head.y
+      return ly > -ry * 0.62 && ly < -ry * 0.46 ? TONE_LIGHT : null
+    }, 'trim')
+    headPen(c, { ring: 1 }).circle(-rx * 0.95, -ry * 0.12, 4, 'cloth', { shade: 'round' })
+    headPen(c, { ring: 1 }).ellipse(-rx * 0.06, -ry * 0.06, 2.6, 4, 'hair', { shade: 'round' })
+    return
+  }
+  if (R.race === 'gnome' && (v === 'cap' || v === 'sproutcap')) {
     const pen = headPen(c)
     pen.poly([[-rx - 2, -ry * 0.12], [rx + 1, -ry * 0.22], [rx * 0.35, -ry * 0.95], [-rx * 0.3, -ry - 12], [-rx * 0.95, -ry - 18], [-rx * 0.62, -ry - 6], [-rx * 0.85, -ry * 0.65]], 'cloth', { shade: 'round' }, { cx: -rx * 0.1, cy: -ry * 0.8, rx: rx + 2, ry: ry * 0.9 })
     pen.cutEllipse(rx * 0.55, ry * 0.36, rx * 0.86, ry * 0.58)
     earWindow(pen, c)
     pen.texture((_x, y) => (y - P.head.y > -ry * 0.42 && y - P.head.y < -ry * 0.24 ? TONE_LIGHT : null), 'trim')
     headPen(c, { ring: 1 }).ellipse(-rx * 0.72, ry * 0.25, 4.2, 5.5, 'hair')
+    if (v === 'sproutcap') {
+      // a sprout growing out of the bent tip
+      const sp = headPen(c, { ring: 1 })
+      const tx = -rx * 0.95, ty = -ry - 18
+      sp.line(tx, ty, tx - 1, ty - 5, 'leaf', TONE_MID)
+      sp.ellipse(tx - 4, ty - 6, 3.4, 1.8, 'leaf', { shade: 'round' }).ellipse(tx + 2, ty - 7, 3.4, 1.8, 'leaf', { shade: 'round' })
+    }
     return
   }
   if (R.race === 'gnome') {
@@ -421,7 +467,8 @@ function arm(c: DrawCtx, side: 'main' | 'off'): void {
   const h = side === 'main' ? P.mainHand : P.offHand
   const plate = R.body?.family === 'plate'
   const robe = R.body?.family === 'robe'
-  const sleeveMat = plate ? 'metal' : robe ? 'robeSleeve' : 'cloth'
+  const mail = R.body?.family === 'mail'
+  const sleeveMat = plate ? 'metal' : mail ? 'blade' : robe ? 'robeSleeve' : 'cloth'
   const dx = h.x - sh.x, dy = h.y - sh.y
   const d = Math.hypot(dx, dy) || 1
   const wrist = { x: h.x - (dx / d) * b.handR * 0.6, y: h.y - (dy / d) * b.handR * 0.6 }
@@ -462,10 +509,10 @@ export function itemMats(c: DrawCtx, it: ItemPart, slot: HandSlot): MatResolver 
       case 'head': return it.p?.blade ?? base('metal')
       case 'haft': return it.p?.haft ?? 'wood'
       case 'grip': return base('leather')
-      case 'itemTrim': return plain ? 'iron' : rank >= 3 ? 'gold' : rank >= 1 ? 'steel' : it.p?.trim ?? 'brass'
+      case 'itemTrim': return plain ? 'iron' : rank >= 3 ? 'gold' : rank >= 1 ? 'steel' : it.p?.trim ?? 'iron'
       case 'gem': return RARITY_GEM[rarity]
       case 'field': return it.p?.cloth ?? base('cloth')
-      case 'fieldTrim': return rank >= 3 ? 'gold' : it.p?.trim ?? base('trim')
+      case 'fieldTrim': return rank >= 3 ? 'gold' : rank >= 1 ? 'steel' : it.p?.trim ?? base('trim')
       case 'glowInk': return it.p?.glow ?? 'ember'
       case 'robeSleeve': return it.p?.cloth ?? base('cloth')
       default: return base(m)
@@ -483,14 +530,32 @@ function groundLen(_P: Pose, hand: { y: number; angle: number }, max: number): n
   return Math.max(4, Math.min(max, (FEET - 1 - hand.y) / cos))
 }
 
+/** Items are drawn once at their own size and scaled to the body (the rig's px are 1.2× the first draft's). */
+export const ITEM_SCALE = 1.2
+
 // ── weapons (main hand) ────────────────────────────────────────────────────
 
 type ItemFn = (c: DrawCtx, it: ItemPart, slot: HandSlot) => void
 
-/** A held item's pen: at the hand, turned to the hand's angle. */
-function handPen(c: DrawCtx, it: ItemPart, slot: HandSlot, o: PieceOpts = {}): Pen {
+/**
+ * A held item's pen: at the hand, turned to the hand's angle. `reach` (local
+ * px, up the item) stops a swing at the ground: a blade that would bury its
+ * tip below the feet is held at the angle where it meets them instead.
+ */
+function handPen(c: DrawCtx, it: ItemPart, slot: HandSlot, o: PieceOpts = {}, reach = 0): Pen {
   const h = slot === 'off' ? c.P.offHand : c.P.mainHand
-  return c.piece({ ...o, mats: itemMats(c, it, slot) }).at(h.x, h.y, h.angle)
+  return c.piece({ ...o, mats: itemMats(c, it, slot) }).at(h.x, h.y, groundedAngle(h, reach), false, ITEM_SCALE)
+}
+
+/** The hand's angle, or the one where an item `reach` long touches the ground (FEET + 1). */
+function groundedAngle(h: { x: number; y: number; angle: number }, reach: number): number {
+  if (!reach) return h.angle
+  const L = reach * ITEM_SCALE
+  const down = -Math.cos((h.angle * Math.PI) / 180) * L
+  const room = FEET + 1 - h.y
+  if (h.y + down <= FEET + 1 || room >= L) return h.angle
+  const a = (Math.acos(Math.max(-1, Math.min(1, -room / L))) * 180) / Math.PI
+  return h.angle >= 0 ? Math.min(h.angle, a) : Math.max(h.angle, -a)
 }
 
 function publishTip(c: DrawCtx, pen: Pen, slot: HandSlot, tipY: number): void {
@@ -524,18 +589,19 @@ const sword: ItemFn = (c, it, slot) => {
   const falchion = it.family === 'falchion'
   const len = (great ? 34 : falchion ? 20 : 23) * s
   const w = (great ? 3.3 : 2.5) * s
-  const blade = handPen(c, it, slot)
+  const reach = 5 + len + 6
+  const blade = handPen(c, it, slot, {}, reach)
   blade.poly(bladePoly(-5, len, w, sabre ? 5 * s : 0, falchion ? 2 : great ? 5 : 4, falchion ? 2.2 : 0), 'blade', { shade: 'cyl', gloss: true }, { cx: 0, cy: -5 - len / 2, rx: w + 1, ry: len / 2 })
   // the edge's light line
   blade.line(sabre ? 1 : -0.5, -7, (sabre ? 5 * s : 0) - 0.5, -5 - len + 2, 'blade', TONE_SPEC, F_ONLYON)
-  const guard = handPen(c, it, slot)
+  const guard = handPen(c, it, slot, {}, reach)
   const gw = (great ? 8.5 : it.p?.variant === 'arming' ? 7.5 : 6) * s
   if (it.p?.variant === 'arming') guard.poly([[-gw, -7.5], [-gw + 2, -5.5], [gw - 2, -5.5], [gw, -7.5], [gw, -4], [-gw, -4]], 'itemTrim', { shade: 'top' })
   else guard.rect(-gw, -6.5, gw * 2, 3, 'itemTrim', { shade: 'top', gloss: true })
   guard.rect(-1.7, -3.5, 3.4, great ? 15 : 7.5, 'grip', { shade: 'cyl' })
   guard.circle(0, great ? 12.5 : 5, great ? 2.8 : 2.4, 'itemTrim', { gloss: true })
   if (sabre) guard.line(gw - 1, -4, 3, 5, 'itemTrim', TONE_MID)
-  if (gemmed(c, slot)) handPen(c, it, slot, { ring: 1 }).circle(0, -5, 1.6, 'gem', { gloss: true })
+  if (gemmed(c, slot)) handPen(c, it, slot, { ring: 1 }, reach).circle(0, -5, 1.6, 'gem', { gloss: true })
   publishTip(c, blade, slot, -5 - len - 3)
 }
 
@@ -560,13 +626,16 @@ const hafted: ItemFn = (c, it, slot) => {
   const s = it.p?.size ?? 1
   const fam = it.family
   const two = fam === 'greataxe' || fam === 'maul'
-  const top = (two ? -32 : -21) * s
-  const butt = two ? groundLen(c.P, slot === 'off' ? c.P.offHand : c.P.mainHand, 14) : 6
-  const hp = handPen(c, it, slot)
+  // a heavy two-hander is choked up into the blow: the hands slide up the haft at impact
+  const slide = two && c.P.anim === 'attack' ? [0, 0, 6, 12, 10, 2][c.P.frame % 6] : 0
+  const top = (two ? -32 : -21) * s + slide
+  const butt = two ? (slide ? 10 + slide : groundLen(c.P, slot === 'off' ? c.P.offHand : c.P.mainHand, 14)) : 6
+  const reach = -top + (two ? 9 : 6) * s + 4
+  const hp = handPen(c, it, slot, {}, reach)
   if (fam === 'club') {
     hp.poly([[-1.8, 5], [1.8, 5], [4.6, top + 3], [-4.6, top + 3]], 'head', { shade: 'cyl' })
   } else hp.capsule(0, butt, 0, top + 2, two ? 2.1 : 1.8, 'haft')
-  const head = handPen(c, it, slot)
+  const head = handPen(c, it, slot, {}, reach)
   if (fam === 'axe' || fam === 'greataxe') {
     const bw = (two ? 11 : 9) * s, bh = (two ? 15 : 11) * s
     const beard = it.p?.variant === 'bearded'
@@ -614,11 +683,11 @@ const hafted: ItemFn = (c, it, slot) => {
   }
   if (fam === 'cleaver') {
     // a short grip under the blade
-    const g = handPen(c, it, slot)
+    const g = handPen(c, it, slot, {}, reach)
     g.rect(-1.6, -2, 3.2, 8, 'grip', { shade: 'cyl' })
     g.circle(0, 6.5, 1.6, 'itemTrim')
   }
-  if (gemmed(c, slot)) handPen(c, it, slot, { ring: 1 }).circle(0, top + (fam === 'cleaver' ? 6 : 4), 1.5, 'gem', { gloss: true })
+  if (gemmed(c, slot)) handPen(c, it, slot, { ring: 1 }, reach).circle(0, top + (fam === 'cleaver' ? 6 : 4), 1.5, 'gem', { gloss: true })
 }
 
 /** Poles: spears, polearms, banners. */
@@ -626,8 +695,10 @@ const pole: ItemFn = (c, it, slot) => {
   const s = it.p?.size ?? 1
   const fam = it.family
   const hand = slot === 'off' ? c.P.offHand : c.P.mainHand
-  const top = -38 * s
-  const butt = groundLen(c.P, hand, 18)
+  // at the thrust the hands slide back along the shaft (the pole runs out ahead, its butt behind)
+  const slide = c.P.anim === 'attack' && c.P.motion === 'thrust' ? [4, 6, 16, 16, 8, 0][c.P.frame % 6] : 0
+  const top = -38 * s + slide
+  const butt = slide ? 18 + slide : groundLen(c.P, hand, 18)
   const sh = handPen(c, it, slot)
   sh.capsule(0, butt, 0, top + 4, 1.6, 'haft')
   if (fam === 'harpoon') for (const y of [top + 9, top + 11, top + 13]) sh.line(-2, y, 2, y - 1, 'itemTrim', TONE_LIGHT)
@@ -738,11 +809,11 @@ const rod: ItemFn = (c, it, slot) => {
   const v = it.p?.variant
   const hand = slot === 'off' ? c.P.offHand : c.P.mainHand
   const staff = fam === 'staff'
-  const top = (staff ? -32 : -14) * s
+  const top = (staff ? -32 : -18) * s
   const butt = staff ? groundLen(c.P, hand, 16) : 4
   const sh = handPen(c, it, slot)
   if (v === 'rod') sh.capsule(0, butt, 0, top + 1, 1.6, 'itemTrim')
-  else sh.capsule(0, butt, 0, top + 2, staff ? 2 : 1.5, v === 'thorn' ? 'soot' : v === 'coil' ? 'brass' : 'haft')
+  else sh.capsule(0, butt, 0, top + 2, staff ? 2 : 1.7, v === 'thorn' ? 'soot' : v === 'coil' ? 'brass' : 'haft')
   if (v === 'thorn') for (const y of [top + 4, top + 8, top + 12]) sh.px(2, y, 'soot', TONE_LIGHT).px(-2, y + 2, 'soot', TONE_LIGHT)
   if (v === 'coil') for (let y = top + 3; y < butt - 2; y += 2) sh.line(-1.5, y, 1.5, y + 1, 'brass', TONE_SPEC, F_ONLYON)
   const head = handPen(c, it, slot)
@@ -776,23 +847,24 @@ const rod: ItemFn = (c, it, slot) => {
     head.ellipse(0, top - 4, 3.8, 5, 'gem', { gloss: true })
     tipY = top - 9
   } else {
-    head.circle(0, top - 1.5, 2.6, 'gem', { gloss: true })
-    tipY = top - 4
+    head.poly([[-3, top + 2], [3, top + 2], [0, top - 1]], 'itemTrim', { shade: 'round' })
+    head.circle(0, top - 2.5, 3.2, 'gem', { gloss: true })
+    tipY = top - 6
   }
   publishTip(c, head, slot, tipY)
 }
 
 const grimoire: ItemFn = (c, it, slot) => {
   const h = slot === 'off' ? c.P.offHand : c.P.mainHand
-  const pen = c.piece({ mats: itemMats(c, it, slot) })
-  const x = h.x + 3, y = h.y - 8
+  const pen = c.piece({ mats: itemMats(c, it, slot) }).at(h.x, h.y, 0, false, ITEM_SCALE)
+  const x = 3, y = -8
   pen.poly([[x - 10, y + 1], [x, y + 3], [x + 10, y + 1], [x + 10, y + 7], [x, y + 9], [x - 10, y + 7]], 'field', { shade: 'top' })
-  const pg = c.piece({ ring: 1, mats: itemMats(c, it, slot) })
+  const pg = c.piece({ ring: 1, mats: itemMats(c, it, slot) }).at(h.x, h.y, 0, false, ITEM_SCALE)
   pg.poly([[x - 9, y - 1], [x, y + 1.5], [x, y + 7], [x - 9, y + 4.5]], 'linen', { shade: 'top' })
   pg.poly([[x + 9, y - 1], [x, y + 1.5], [x, y + 7], [x + 9, y + 4.5]], 'linen', { shade: 'top' })
   for (let k = 0; k < 3; k++) pg.line(x - 7, y + 1 + k * 1.6, x - 2, y + 2.5 + k * 1.6, 'linen', TONE_SHADE, F_ONLYON).line(x + 2, y + 2.5 + k * 1.6, x + 7, y + 1 + k * 1.6, 'linen', TONE_SHADE, F_ONLYON)
   if (it.p?.emblem === 'leaf') pg.ellipse(x - 5, y + 3, 2, 1.3, 'leaf', { shade: TONE_MID, flags: F_ONLYON })
-  if (slot === 'main') { c.marks.mainTip = [x, y - 3]; c.marks.mainBase = [h.x, h.y]; c.marks.mainLen = 10 }
+  if (slot === 'main') { c.marks.mainTip = pen.toWorld(x, y - 3); c.marks.mainBase = [h.x, h.y]; c.marks.mainLen = 12 }
 }
 
 // ── off-hand pieces ────────────────────────────────────────────────────────
@@ -820,7 +892,7 @@ const shield: ItemFn = (c, it, slot) => {
   const s = it.p?.size ?? 1
   const h = c.P.offHand
   const fam = it.family
-  const pen = c.piece({ mats: itemMats(c, it, slot) }).at(h.x - 1, h.y - 1, 0)
+  const pen = c.piece({ mats: itemMats(c, it, slot) }).at(h.x - 1, h.y - 1, 0, false, ITEM_SCALE)
   let outline: Pt[]
   let inner: Pt[]
   const ell = (rx: number, ry: number, n = 20): Pt[] => Array.from({ length: n }, (_, i) => [Math.cos((i / n) * Math.PI * 2) * rx, Math.sin((i / n) * Math.PI * 2) * ry] as Pt)
@@ -854,7 +926,7 @@ const shield: ItemFn = (c, it, slot) => {
   }
   if (fam === 'shieldRound' || fam === 'buckler') pen.circle(0, 0, (fam === 'buckler' ? 2.6 : 3.2) * s, 'head', { gloss: true })
   emblem(pen, it.p?.emblem === 'scale' ? undefined : it.p?.emblem, fam === 'shieldRound' ? 0 : 0, fam === 'shieldRound' ? -5.5 * s : fam === 'pavise' ? -4 : 0)
-  if (gemmed(c, slot)) c.piece({ ring: 1, mats: itemMats(c, it, slot) }).circle(h.x - 1, h.y - 1 + (fam === 'shieldRound' || fam === 'buckler' ? 0 : -6 * s), 1.7, 'gem', { gloss: true })
+  if (gemmed(c, slot)) c.piece({ ring: 1, mats: itemMats(c, it, slot) }).at(h.x - 1, h.y - 1, 0, false, ITEM_SCALE).circle(0, fam === 'shieldRound' || fam === 'buckler' ? 0 : -6 * s, 1.7, 'gem', { gloss: true })
 }
 
 const heldSmall: ItemFn = (c, it, slot) => {
@@ -862,43 +934,108 @@ const heldSmall: ItemFn = (c, it, slot) => {
   const s = it.p?.size ?? 1
   const fam = it.family
   const m = itemMats(c, it, slot)
+  const at = (o: PieceOpts = {}) => c.piece({ mats: m, ...o }).at(h.x, h.y, 0, false, ITEM_SCALE)
   if (fam === 'orb') {
-    const glow = c.piece({ ring: 0, mats: m })
-    glow.circle(h.x, h.y - 9, 7.5, 'glowInk', { shade: TONE_LIGHT, flags: F_NOINK | F_SOFT })
-    c.piece({ mats: m }).circle(h.x, h.y - 9, 5, 'glowInk', { gloss: true })
+    const glow = at({ ring: 0 })
+    glow.circle(0, -9, 7.5, 'glowInk', { shade: TONE_LIGHT, flags: F_NOINK | F_SOFT })
+    at().circle(0, -9, 5, 'glowInk', { gloss: true })
   } else if (fam === 'tome') {
-    const p = c.piece({ mats: m }).at(h.x - 1, h.y - 4, -8)
+    const p = at().at(-1, -4, -8)
     p.rect(-5.5, -6.5, 11, 13, 'field', { shade: 'round' })
     p.rect(3.5, -5.5, 2, 11, 'linen', { shade: TONE_LIGHT, flags: F_ONLYON })
     p.rect(-5.5, -1, 3, 2.4, 'itemTrim', { shade: TONE_LIGHT, flags: F_ONLYON })
     emblem(p, it.p?.emblem, 0, -1)
   } else if (fam === 'pouch') {
-    const p = c.piece({ mats: m })
-    p.ellipse(h.x, h.y + 1, 5.5, 5, 'leather', { shade: 'round' })
-    p.rect(h.x - 4, h.y - 4, 8, 2, 'itemTrim', { shade: TONE_MID })
-    const lf = c.piece({ ring: 1 })
-    lf.ellipse(h.x - 2, h.y - 6, 1.6, 3.2, 'leaf').ellipse(h.x + 2, h.y - 6.5, 1.6, 3, 'leaf')
+    const p = at()
+    p.ellipse(0, 1, 5.5, 5, 'leather', { shade: 'round' })
+    p.rect(-4, -4, 8, 2, 'itemTrim', { shade: TONE_MID })
+    const lf = at({ ring: 1 })
+    if (it.p?.variant === 'spice') lf.ellipse(0, -5, 4.2, 2.4, 'red', { shade: 'round', gloss: true }).px(-1, -7, 'ember', TONE_LIGHT).px(2, -6, 'ember', TONE_LIGHT)
+    else lf.ellipse(-2, -6, 1.6, 3.2, 'leaf').ellipse(2, -6.5, 1.6, 3, 'leaf')
   } else if (fam === 'flask') {
     if (it.p?.variant === 'rack') {
-      const r = c.piece({ mats: m })
-      r.rect(h.x - 8, h.y - 1, 16, 3, 'wood', { shade: 'top' })
+      const r = at()
+      r.rect(-8, -1, 16, 3, 'wood', { shade: 'top' })
       for (const [dx, liq] of [[-5, 'venom'], [0, 'ember'], [5, 'aqua']] as const) {
-        const v = c.piece({ ring: 1 })
-        v.rect(h.x + dx - 1.8, h.y - 10, 3.6, 9, 'glass', { shade: 'cyl', gloss: true })
-        v.rect(h.x + dx - 1.8, h.y - 6, 3.6, 5, liq, { shade: 'cyl', flags: F_ONLYON })
-        v.rect(h.x + dx - 1.2, h.y - 12, 2.4, 2, 'wood', { shade: TONE_MID })
+        const v = at({ ring: 1 })
+        v.rect(dx - 1.8, -10, 3.6, 9, 'glass', { shade: 'cyl', gloss: true })
+        v.rect(dx - 1.8, -6, 3.6, 5, liq, { shade: 'cyl', flags: F_ONLYON })
+        v.rect(dx - 1.2, -12, 2.4, 2, 'wood', { shade: TONE_MID })
       }
     } else {
-      const v = c.piece({ mats: m })
+      if (it.p?.variant === 'glow') at({ ring: 0 }).circle(0, -2 - 5 * s, 9, 'glowInk', { shade: TONE_LIGHT, flags: F_NOINK | F_SOFT })
+      const v = at()
       const r = 5 * s
-      v.circle(h.x, h.y - 2 - r, r, 'glass', { gloss: true })
-      v.rect(h.x - 1.6, h.y - 2 - r * 2 - 4, 3.2, 5, 'glass', { shade: 'cyl' })
-      v.ellipse(h.x, h.y - 2 - r * 0.6, r * 0.95, r * 0.6, it.p?.glow ?? 'venom', { shade: 'round', flags: F_ONLYON })
-      v.rect(h.x - 1.8, h.y - 2 - r * 2 - 6, 3.6, 2.6, 'wood', { shade: TONE_MID })
-      if (it.p?.trim === 'gold') v.rect(h.x - 2.2, h.y - 2 - r * 2 - 1, 4.4, 1.6, 'gold', { shade: TONE_LIGHT })
+      v.circle(0, -2 - r, r, 'glass', { gloss: true })
+      v.rect(-1.6, -2 - r * 2 - 4, 3.2, 5, 'glass', { shade: 'cyl' })
+      v.ellipse(0, -2 - r * 0.6, r * 0.95, r * 0.6, it.p?.glow ?? 'venom', { shade: 'round', flags: F_ONLYON })
+      v.rect(-1.8, -2 - r * 2 - 6, 3.6, 2.6, 'wood', { shade: TONE_MID })
+      if (it.p?.trim === 'gold') v.rect(-2.2, -2 - r * 2 - 1, 4.4, 1.6, 'gold', { shade: TONE_LIGHT })
     }
   }
-  if (gemmed(c, slot) && fam !== 'orb') c.piece({ ring: 1, mats: m }).circle(h.x + 4, h.y - 3, 1.3, 'gem', { gloss: true })
+  if (gemmed(c, slot) && fam !== 'orb') at({ ring: 1 }).circle(4, -3, 1.3, 'gem', { gloss: true })
+}
+
+// ── the company faces' trade props ─────────────────────────────────────────
+
+/** A brass spice scale hanging from the fist: the beam rocks frame to frame. */
+const balance: ItemFn = (c, it, slot) => {
+  const h = slot === 'off' ? c.P.offHand : c.P.mainHand
+  const m = itemMats(c, it, slot)
+  const at = (o: PieceOpts = {}) => c.piece({ mats: m, ...o }).at(h.x, h.y, 0, false, ITEM_SCALE)
+  const tilt = [0, 1, 1, 0, -1, -1][c.P.frame % 6] * 0.8
+  const beam = at()
+  beam.rect(-1, 2, 2, 4, 'itemTrim', { shade: 'cyl' })
+  beam.poly([[-9, 6 + tilt], [9, 6 - tilt], [9, 7.6 - tilt], [-9, 7.6 + tilt]], 'itemTrim', { shade: 'top', gloss: true })
+  beam.circle(0, 6.6, 1.6, 'itemTrim', { gloss: true })
+  const str = at({ ring: 0 })
+  str.line(-8.5, 7.5 + tilt, -10, 13 + tilt, 'linen', TONE_LIGHT, F_NOINK).line(-8.5, 7.5 + tilt, -6, 13 + tilt, 'linen', TONE_LIGHT, F_NOINK)
+  str.line(8.5, 7.5 - tilt, 6, 13 - tilt, 'linen', TONE_LIGHT, F_NOINK).line(8.5, 7.5 - tilt, 11, 13 - tilt, 'linen', TONE_LIGHT, F_NOINK)
+  const pans = at({ ring: 1 })
+  pans.ellipse(-8, 14 + tilt, 4, 1.6, 'itemTrim', { gloss: true }).ellipse(8.5, 14 - tilt, 4, 1.6, 'itemTrim', { gloss: true })
+  pans.ellipse(-8, 12.6 + tilt, 2.6, 1.6, 'red', { shade: 'round' })
+}
+
+/** A bolt of silk lying along the off forearm, a length of it trailing. */
+const silkBolt: ItemFn = (c, it, slot) => {
+  const h = slot === 'off' ? c.P.offHand : c.P.mainHand
+  const m = itemMats(c, it, slot)
+  const at = (o: PieceOpts = {}) => c.piece({ mats: m, ...o }).at(h.x, h.y, 0, false, ITEM_SCALE)
+  const f = c.P.frame % 6
+  const tail = at()
+  tail.poly([[-7, -1], [-4, -1], [-6 - (f % 3) * 0.5, 9], [-10 - (f % 3) * 0.5, 12], [-9, 4]], 'field', { shade: 'round' })
+  const roll = at()
+  roll.capsule(-8, -2, 7, -6, 4.6, 'field', { gloss: true })
+  roll.line(-6, -5, 6, -8.5, 'field', TONE_SPEC, F_ONLYON)
+  const end = at({ ring: 1 })
+  end.ellipse(7.5, -6, 2.6, 4.4, 'field', { shade: TONE_LIGHT })
+  end.px(7.5, -6, 'field', TONE_SHADE).px(8, -7, 'field', TONE_SHADE)
+}
+
+/** A chalked tally slate in a wooden frame, held before the chest. */
+const ledger: ItemFn = (c, it, slot) => {
+  const h = slot === 'off' ? c.P.offHand : c.P.mainHand
+  const m = itemMats(c, it, slot)
+  const pen = c.piece({ mats: m }).at(h.x + 1, h.y - 6, -10, false, ITEM_SCALE)
+  pen.rect(-7, -8, 14, 16, 'wood', { shade: 'top' })
+  pen.rect(-5, -6, 10, 12, 'soot', { shade: TONE_MID, flags: F_ONLYON })
+  for (const x of [-3.5, -1.5, 0.5, 2.5]) pen.line(x, -4, x, 1, 'white', TONE_LIGHT, F_ONLYON)
+  pen.line(-4.5, 0, 3.5, -3.5, 'white', TONE_LIGHT, F_ONLYON)
+  pen.line(-3.5, 3, 1, 3, 'white', TONE_MID, F_ONLYON)
+}
+
+/** A small sack of marsh salt, its mouth open. */
+const saltSack: ItemFn = (c, it, slot) => {
+  const h = slot === 'off' ? c.P.offHand : c.P.mainHand
+  const m = itemMats(c, it, slot)
+  const at = (o: PieceOpts = {}) => c.piece({ mats: m, ...o }).at(h.x, h.y, 0, false, ITEM_SCALE)
+  const sack = at()
+  sack.ellipse(0, 3, 6.5, 6, 'bone', { shade: 'round' })
+  sack.rect(-3.5, -3, 7, 3, 'bone', { shade: TONE_MID })
+  sack.line(-3.5, -1, 3.5, -1, 'leather', TONE_SHADE, F_ONLYON)
+  const salt = at({ ring: 1 })
+  salt.ellipse(0, -3.5, 3.6, 2, 'white', { shade: 'round', gloss: true })
+  salt.px(4, -5, 'white', TONE_SPEC).px(-4, -6, 'white', TONE_SPEC)
 }
 
 // ── body pieces (armour layer) ─────────────────────────────────────────────
@@ -967,12 +1104,26 @@ const bodyPiece: ItemFn = (c, it, slot) => {
     pen.cutPoly([[cx + b.torsoRx * 0.05, P.torsoTop - 2], [cx + b.torsoRx * 0.55, P.torsoTop - 2], [cx + b.torsoRx * 0.35, P.hips.y - 3]])
     if (v === 'wrap') pen.line(cx - b.torsoRx, P.torsoTop + 3, cx + b.torsoRx, P.hips.y - 2, 'fieldTrim', TONE_LIGHT, F_ONLYON).line(cx - b.torsoRx, P.torsoTop + 4, cx + b.torsoRx, P.hips.y - 1, 'fieldTrim', TONE_MID, F_ONLYON)
   }
-  if (fam === 'mail') pen.texture((x, y, t) => (y % 2 === 0 && (x + (y % 4 === 0 ? 0 : 1)) % 2 === 0 ? (t >= TONE_LIGHT ? TONE_MID : TONE_SHADE) : null))
+  if (fam === 'mail') pen.texture((x, y, t) => {
+    // rings: each 4 × 3 cell is a small arc, rows staggered — mail, not brick
+    const row = Math.floor(y / 3), off = row % 2 ? 2 : 0
+    const cx = (x + off) % 4, cy = y % 3
+    const darker = t >= TONE_LIGHT ? TONE_MID : TONE_SHADE
+    if (cy === 2 && (cx === 1 || cx === 2)) return darker
+    if (cy === 1 && (cx === 0 || cx === 3)) return darker
+    return null
+  })
   if (fam === 'padded') pen.texture((x, y) => ((y - Math.round(P.torsoTop)) % 4 === 0 || (v !== 'hide' && (x - Math.round(cx)) % 5 === 0 && y % 2 === 0) ? TONE_SHADE : null))
   if (fam === 'scale') pen.texture((x, y) => ((x + (Math.floor(y / 3) % 2) * 2) % 4 === 0 && y % 3 === 0 ? TONE_SHADE : (x + (Math.floor(y / 3) % 2) * 2) % 4 === 1 && y % 3 === 1 ? TONE_LIGHT : null))
   if (fam === 'brigandine') {
-    pen.texture(() => TONE_MID, 'field')
-    pen.texture((x, y) => ((x - Math.round(cx)) % 4 === 0 && (y - Math.round(P.torsoTop)) % 4 === 2 ? TONE_SPEC : null), 'gold')
+    pen.texture((_x, _y, t) => (t >= TONE_LIGHT ? TONE_MID : TONE_SHADE), 'field')
+    pen.texture((x, y) => (((x - Math.round(cx)) % 5 + 5) % 5 === 0 && (((y - Math.round(P.torsoTop)) % 5) + 5) % 5 === 2 ? TONE_LIGHT : null), 'brass')
+  }
+  if (fam === 'mail' || fam === 'padded' || fam === 'scale' || fam === 'leather' || fam === 'brigandine') {
+    const by = P.hips.y - 4
+    const belt = c.piece({ ring: 1, mats: m })
+    belt.rect(cx - b.torsoRx - b.flare - 1, by, (b.torsoRx + b.flare + 1) * 2, 2.6, 'leather', { shade: 'top' })
+    belt.rect(cx + b.torsoRx * 0.3, by - 0.6, 3.2, 3.8, 'brass', { shade: TONE_LIGHT })
   }
   if (fam === 'leather') {
     pen.line(cx - b.torsoRx * 0.8, P.torsoTop + 1, cx + b.torsoRx * 0.75, P.hips.y - 3, 'itemTrim', TONE_MID, F_ONLYON)
@@ -1005,51 +1156,62 @@ export const cape: PartFn = (c) => {
   if (!cloak && tier === 0) return
   const long = cloak ? cloak.p?.variant !== 'short' : tier >= 2
   const m = cloak ? itemMats(c, cloak, 'body') : c.R.mats
+  const mat = cloak ? 'field' : 'cloth'
   const pen = c.piece({ mats: m })
-  const top = P.torsoTop + 1
-  const hem = long ? FEET - 4 - P.lift * 0.6 : P.hips.y + 2
-  const f = [0, 1, 1, 2, 1, 0][P.frame % 6] + (P.anim === 'attack' ? 2 : 0) + (cloak?.p?.variant === 'long' ? 2 : 0)
-  const x0 = P.back.x
+  // it rides up over both shoulders (the collar shows above the arms) and sweeps out behind
+  const top = P.torsoTop - 3
+  const hem = long ? FEET - 3 - P.lift * 0.6 : P.hips.y + 3
+  const f = [0, 1, 1, 2, 1, 0][P.frame % 6] + (P.anim === 'attack' || P.anim === 'walk' ? 2 : 0) + (cloak?.p?.variant === 'long' ? 3 : 0)
+  const x0 = P.torso.x
+  const reach = long ? 22 : 12
   const pts: Pt[] = [
-    [x0 + b.torsoRx * 0.9, top],
-    [x0 - b.torsoRx * 0.55, top - 1],
-    [x0 - b.torsoRx - 4 - f * 0.5, (top + hem) / 2],
-    [x0 - b.torsoRx - 6 - f, hem - 1],
-    [x0 - b.torsoRx * 0.4 - f * 0.5, hem + 1],
-    [x0 + b.torsoRx * 0.4, hem],
-    [x0 + b.torsoRx * 1.0, hem - 1],
+    [x0 + b.torsoRx + 2, top + 3],
+    [x0 + b.torsoRx * 0.4, top - 1],
+    [x0 - b.torsoRx * 0.5, top - 1],
+    [x0 - b.torsoRx - 4, top + 4],
+    [x0 - b.torsoRx - reach * 0.45 - f * 0.5, (top + hem) / 2 - 2],
+    [x0 - b.torsoRx - reach - f, hem - 6 - f],
+    [x0 - b.torsoRx - reach * 0.4 - f * 0.6, hem + 1],
+    [x0 - b.torsoRx * 0.2, hem],
+    [x0 + b.torsoRx * 0.7, hem - 1],
+    [x0 + b.torsoRx + 1, (top + hem) / 2],
   ]
-  pen.poly(pts, cloak ? 'field' : 'cloth', { shade: 'round' }, { cx: x0 - 2, cy: (top + hem) / 2, rx: b.torsoRx + 5, ry: (hem - top) / 2 + 2 })
-  // folds
-  pen.line(x0 - b.torsoRx * 0.4, top + 3, x0 - b.torsoRx - 2 - f, hem - 2, cloak ? 'field' : 'cloth', TONE_SHADE, F_ONLYON)
+  pen.poly(pts, mat, { shade: 'round' }, { cx: x0 - 4, cy: (top + hem) / 2, rx: b.torsoRx + reach, ry: (hem - top) / 2 + 2 })
+  // folds, falling from the shoulders
+  pen.line(x0 - b.torsoRx * 0.6, top + 5, x0 - b.torsoRx - reach * 0.7 - f, hem - 3, mat, TONE_SHADE, F_ONLYON)
+  pen.line(x0 - b.torsoRx * 0.1, top + 6, x0 - b.torsoRx * 0.5 - f * 0.4, hem - 1, mat, TONE_SHADE, F_ONLYON)
+  // the top tier (or a fine cloak): a trimmed hem
   if (tier >= 3 || (cloak && rankOf(R.rarity.body) >= 3)) pen.texture((_x, y) => (y >= hem - 3 ? TONE_LIGHT : null), cloak ? 'fieldTrim' : 'trim')
+  if (!cloak && tier >= 2) c.piece({ ring: 1 }).circle(x0 + b.torsoRx * 0.55, top + 2, 2, tier >= 3 ? 'gold' : 'steel', { gloss: true })
 }
 
 const quiver: ItemFn = (c, it, slot) => {
   const { P } = c
   const m = itemMats(c, it, slot)
-  const x = P.back.x - P.body.torsoRx * 0.55, y = P.torsoTop - 2
-  const fl = c.piece({ ring: 1, mats: m })
+  const x = 0, y = 0
+  const at = (o: PieceOpts = {}) => c.piece({ mats: m, ...o }).at(P.back.x - P.body.torsoRx * 0.55, P.torsoTop - 2, 0, false, ITEM_SCALE)
+  const fl = at({ ring: 1 })
   const star = it.p?.emblem === 'star'
   for (const [dx, dy] of [[-2, -9], [1, -11], [4, -9.5]] as const) {
     fl.poly([[x + dx + 4, y + dy + 3], [x + dx + 1, y + dy - 1], [x + dx + 6, y + dy - 2]], star ? 'gold' : it.p?.variant === 'barbed' ? 'red' : 'linen', { shade: 'round' })
   }
-  const q = c.piece({ mats: m })
+  const q = at()
   q.capsule(x - 6, y + 14, x + 4, y - 4, 3.6, 'leather')
   q.line(x - 3, y + 11, x + 3.5, y + 12, 'itemTrim', TONE_LIGHT, F_ONLYON).line(x + 1, y - 1, x + 7, y, 'itemTrim', TONE_LIGHT, F_ONLYON)
-  if (gemmed(c, slot)) c.piece({ ring: 1, mats: m }).circle(x, y + 6, 1.4, 'gem', { gloss: true })
+  if (gemmed(c, slot)) at({ ring: 1 }).circle(x, y + 6, 1.4, 'gem', { gloss: true })
 }
 
 const javelins: ItemFn = (c, it, slot) => {
   const { P } = c
   const m = itemMats(c, it, slot)
-  const x = P.back.x - 1, y = P.torsoTop
+  const x = 0, y = 0
+  const at = (o: PieceOpts = {}) => c.piece({ mats: m, ...o }).at(P.back.x - 1, P.torsoTop, 0, false, ITEM_SCALE)
   for (const dx of [-4, 0, 4]) {
-    const j = c.piece({ ring: 1, mats: m })
+    const j = at({ ring: 1 })
     j.line(x + dx - 3, y + 16, x + dx + 3, y - 12, 'wood', TONE_MID).line(x + dx - 2, y + 16, x + dx + 4, y - 12, 'wood', TONE_LIGHT)
     j.poly([[x + dx + 2, y - 11], [x + dx + 5, y - 18], [x + dx + 6, y - 11]], 'blade', { shade: 'round', gloss: true })
   }
-  const sl = c.piece({ mats: m })
+  const sl = at()
   sl.capsule(x - 6, y + 8, x + 6, y + 6, 2.6, 'leather')
 }
 
@@ -1071,18 +1233,36 @@ const WEAPON: Partial<Record<string, ItemFn>> = {
   axe: hafted, greataxe: hafted, hammer: hafted, maul: hafted, pick: hafted, club: hafted, cleaver: hafted, hook: hafted,
   spear: pole, halberd: pole, glaive: pole, harpoon: pole, banner: pole,
   bow, staff: rod, wand: rod, sceptre: rod, grimoire,
+  balance,
 }
 const OFFHAND: Partial<Record<string, ItemFn>> = {
   shieldRound: shield, shieldKite: shield, shieldHeater: shield, buckler: shield, pavise: shield,
   orb: heldSmall, tome: heldSmall, pouch: heldSmall, flask: heldSmall, dagger, offDagger: dagger, wand: rod,
+  silkBolt, ledger, saltSack, balance,
 }
 /** Off-hand items worn on the back instead of held. */
 const ON_BACK: Partial<Record<string, ItemFn>> = { quiver, javelins }
+
+/** A mythic piece glows: a soft light round everything its layer drew (outside its ink). */
+function mythicGlow(c: DrawCtx, slot: HandSlot): void {
+  if (RARITY_RANK[c.R.rarity[slot]] < 4 || !c.layerMask) return
+  const mask = c.layerMask()
+  const glow = c.piece({ ring: 0 })
+  for (let y = 3; y < CELL - 3; y++)
+    for (let x = 3; x < CELL - 3; x++) {
+      const i = y * CELL + x
+      if (mask[i]) continue
+      let d = 99
+      for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) if (mask[(y + dy) * CELL + x + dx]) d = Math.min(d, dx * dx + dy * dy)
+      if (d >= 5 && d <= 9) glow.px(x, y, 'ember', TONE_LIGHT, F_NOINK | F_SOFT)
+    }
+}
 
 export const mainItem: PartFn = (c) => {
   const it = c.R.main
   if (!it) return
   ;(WEAPON[it.family] ?? sword)(c, it, 'main')
+  mythicGlow(c, 'main')
 }
 
 export const offItem: PartFn = (c) => {
@@ -1090,6 +1270,7 @@ export const offItem: PartFn = (c) => {
   if (!it || ON_BACK[it.family]) return
   if (c.P.grip === 'two' || c.P.grip === 'bow') return
   ;(OFFHAND[it.family] ?? WEAPON[it.family] ?? shield)(c, it, 'off')
+  mythicGlow(c, 'off')
 }
 
 export const armour: PartFn = (c) => {
@@ -1112,10 +1293,12 @@ function smear(c: DrawCtx, which: 1 | 2): void {
   const { P } = c
   const pen = c.piece({ ring: 0 })
   const sh = P.shoulderMain
-  const len = (c.marks.mainLen ?? 14) + P.body.armLen
+  // the arc the blade's tip sweeps: from the shoulder to the real tip (scaled item and all)
+  const tip = c.marks.mainTip
+  const len = tip ? Math.hypot(tip[0] - sh.x, tip[1] - sh.y) : P.body.armLen + 14
   const [a0, a1] = which === 1 ? [-118, -38] : [-62, 30]
   const r0 = Math.max(6, len * 0.45), r1 = len + 2
-  for (let y = 0; y < CELL; y++)
+  for (let y = 0; y < FEET + 2; y++)
     for (let x = 0; x < CELL; x++) {
       const dx = x + 0.5 - sh.x, dy = y + 0.5 - sh.y
       const d = Math.hypot(dx, dy)
@@ -1174,6 +1357,13 @@ export const fx: PartFn = (c) => {
     for (const [dx, dy] of [[9, -4], [11, 2], [7, 6]] as const) sparkle(pen, tip[0] + dx, tip[1] + dy, magic)
   }
 
+  // a vial held up to the light
+  if (P.fx.glint && R.off) {
+    const pen = c.piece({ ring: 0 })
+    sparkle(pen, P.offHand.x + 4, P.offHand.y - 13, 'white', true)
+    sparkle(pen, P.offHand.x - 5, P.offHand.y - 8, 'venom')
+  }
+
   // skill tells on the weapon
   if (tip && base && R.main) {
     const along = (t: number): Pt => [base[0] + (tip[0] - base[0]) * t, base[1] + (tip[1] - base[1]) * t]
@@ -1213,10 +1403,13 @@ export const fx: PartFn = (c) => {
     for (const [dx, dy] of [[0, 0], [1, 1], [3, 0], [2, 1], [0, 3], [1, 2], [3, 3], [2, 2]] as const) pen.px(x + dx, y + dy, 'red', TONE_LIGHT)
   }
   if (R.tells.has('keen')) {
-    const pen = c.piece({ ring: 0 })
-    const ex = Math.round(hx + hrx * 0.66 + 1), ey = Math.round(hy + hr * 0.1)
-    for (let a = 0; a < 360; a += 30) pen.px(ex + Math.round(Math.cos((a * Math.PI) / 180) * 3.5), ey + Math.round(Math.sin((a * Math.PI) / 180) * 3.5), 'gold', TONE_LIGHT, F_NOINK)
-    pen.line(ex + 3, ey + 3, ex + 6, ey + 7, 'gold', TONE_MID, F_NOINK)
+    // a gold-rimmed lens over the far eye, its chain down to the collar
+    const ex = Math.round(hx + hrx * 0.72 + 1), ey = Math.round(hy + hr * 0.14)
+    const lens = c.piece({ ring: 1 })
+    lens.circle(ex, ey, 3.6, 'gold', { shade: TONE_LIGHT })
+    lens.circle(ex, ey, 2.2, 'glass', { shade: TONE_LIGHT, flags: F_ONLYON }).px(ex - 1, ey - 1, 'white', TONE_SPEC, F_ONLYON)
+    const ch = c.piece({ ring: 0 })
+    ch.line(ex + 2, ey + 3, ex + 1, ey + 10, 'gold', TONE_MID, F_NOINK)
   }
   if (R.tells.has('bloom')) {
     const pen = c.piece({ ring: 1 })

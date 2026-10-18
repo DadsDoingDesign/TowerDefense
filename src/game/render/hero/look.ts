@@ -15,7 +15,7 @@
  * Pure: no DOM.
  */
 import type { RampId } from './palette'
-import type { Grip, Motion, RaceId } from './rig'
+import type { Grip, Motion, PersonaId, Posture, RaceId } from './rig'
 
 // ── layers (the draw order) ────────────────────────────────────────────────
 
@@ -36,8 +36,10 @@ export type WeaponFamily =
   | 'spear' | 'halberd' | 'glaive' | 'harpoon' | 'banner'
   | 'bow' | 'staff' | 'wand' | 'sceptre' | 'grimoire'
 export type OffFamily = 'shieldRound' | 'shieldKite' | 'shieldHeater' | 'buckler' | 'pavise' | 'quiver' | 'orb' | 'tome' | 'pouch' | 'flask' | 'javelins' | 'offDagger'
+/** Trade props the company faces carry (not gear: they never fight). */
+export type PropFamily = 'balance' | 'silkBolt' | 'ledger' | 'saltSack'
 export type BodyFamily = 'mail' | 'padded' | 'leather' | 'brigandine' | 'plate' | 'robe' | 'apron' | 'cloak' | 'vest' | 'hood' | 'scale' | 'belt'
-export type Family = WeaponFamily | OffFamily | BodyFamily
+export type Family = WeaponFamily | OffFamily | BodyFamily | PropFamily
 
 /** Shape and ink knobs an item can set on its family's part. */
 export interface ItemParams {
@@ -139,7 +141,7 @@ export const ITEMS: readonly ItemSpec[] = [
   I('Anvil Shield', 'offHand', 'shieldRound', { size: 1.08, emblem: 'anvil', blade: 'iron' }),
   I('Deepforge Plate', 'body', 'plate', { variant: 'pauldrons', glow: 'ember' }),
   I('Ironheart Plate', 'body', 'plate', { variant: 'heavy', emblem: 'heart', trim: 'gold' }),
-  I('Mountainbreaker', 'twoHand', 'maul', { size: 1.22, trim: 'gold', variant: 'spike' }),
+  I('Mountainbreaker', 'twoHand', 'maul', { size: 1.15, trim: 'gold', variant: 'spike' }),
   I("Thane's Bulwark", 'offHand', 'pavise', { size: 1.1, trim: 'gold', emblem: 'anvil' }),
   // ── Reptilians (Butcherblock): spears, cleavers, hooks, leather and scale ──
   I('Spear', 'twoHand', 'spear'),
@@ -185,7 +187,18 @@ export const ITEMS: readonly ItemSpec[] = [
   I('Elixir of Plenty', 'offHand', 'flask', { size: 1.25, trim: 'gold', glow: 'gold' }),
 ]
 
-const BY_NAME = new Map(ITEMS.map((i) => [i.name.toLowerCase(), i]))
+/** The company faces' trade props, by name (`faces.ts`). */
+export const PROPS: readonly ItemSpec[] = [
+  I('Spice Scale', 'oneHand', 'balance', { trim: 'brass' }),
+  I('Spice Pouch', 'offHand', 'pouch', { variant: 'spice', glow: 'ember' }),
+  I('Silk Bolt', 'offHand', 'silkBolt', { cloth: 'linen' }),
+  I('Tally Slate', 'offHand', 'ledger'),
+  I('Salt Sack', 'offHand', 'saltSack'),
+  I('Glow Vial', 'offHand', 'flask', { glow: 'venom', variant: 'glow' }),
+  I("Broker's Sash", 'body', 'vest', { variant: 'wrap', cloth: 'red' }),
+]
+
+const BY_NAME = new Map([...ITEMS, ...PROPS].map((i) => [i.name.toLowerCase(), i]))
 
 /** Name keywords → family, for gear that has no part of its own yet. First match wins. */
 const KEYWORDS: readonly [RegExp, Family, GearSlot][] = [
@@ -401,6 +414,10 @@ export interface HeroLook {
   company?: string
   gear?: { main?: string | null; off?: string | null; body?: string | null }
   state?: HeroState
+  /** A company face: its own idle tempo, tic and reaction (`rig.PERSONA_*`). */
+  persona?: PersonaId
+  /** How it stands (`rig.Posture`). */
+  posture?: Posture
 }
 
 /** A stable cache key for a look (same look → same key, any field order). */

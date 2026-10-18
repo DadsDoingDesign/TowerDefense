@@ -62,7 +62,7 @@ export const RAMPS = {
   hairBrown: ['#5a4646', '#866353', '#b48355', '#dab570'],
   hairBlond: ['#a38250', '#dab570', '#efe1ab', '#fffce7'],
   hairGinger: ['#87465a', '#b16c4d', '#d9945f', '#ffcfb4'],
-  hairBlack: ['#161c2e', '#2a3e5d', '#404e75', '#737f8e'],
+  hairBlack: ['#2a3e5d', '#404e75', '#737f8e', '#bac1c8'],
   hairWhite: ['#737f8e', '#bac1c8', '#e1d4bd', '#ffffff'],
   hairSilver: ['#95809d', '#bac1c8', '#fffce7', '#ffffff'],
   // ── light, for tells (drawn without ink) ──────────────────────────────
