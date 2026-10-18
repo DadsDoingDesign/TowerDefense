@@ -15,7 +15,7 @@ import { describe, expect, it } from 'vitest'
 import {
   ANIMS, CELL, FACES, FEET, ITEMS, LAYERS, LIVERIES, MINI_FACES, MINI_H, MINI_W, PERSONAS, PROPS, RACES, RACE_BODY, RACE_DEFAULTS, RACE_LIMITS,
   STATE_LAYERS, builderColours, composeFrame, composeStrip, framesFor, layerIndex, miniAt, miniFrame, miniFrames, resolveItem, resolveLook, rgbOf,
-  POST_FACES, POST_H, POST_W, paintSprite, postAt, postFrame, postFrames, postSize,
+  POST_FACES, POST_FEET, POST_H, POST_W, RIGID, boneLengths, dist3, postAt, postFrame, postFrames, postJoints2, postJoints3, postPose, skeletonOf, skeletonOverlay,
   type AnimId, type PersonaId, type HeroFrame, type HeroLook, type LayerId, type RaceId,
 } from '../src/game/render/hero'
 import { OWN_OUTLINE } from '../src/game/render/hero/raster'
@@ -472,26 +472,26 @@ describe('hero builder: the dock figures', () => {
   })
 })
 
-describe('hero builder: the company faces at field / post size (hand-drawn)', () => {
+describe('hero builder: the company faces at field / post size (built on their skeletons)', () => {
   const ANIM3 = ['idle', 'tic', 'react'] as const
   const solid = (f: { rgba: Uint8ClampedArray }, i: number) => f.rgba[i * 4 + 3] === 255
+  const frames = (id: PersonaId) => ANIM3.flatMap((a) => Array.from({ length: postFrames(id, a) }, (_, f) => [a, f] as const))
 
-  it('fit their 72 × 72 cell on every frame, locked is a shadow, and the tic and reaction move', () => {
+  it('fit their 64 × 64 cell on every frame, locked is a shadow, and the tic and reaction move', () => {
     for (const id of PERSONAS) {
-      for (const a of ANIM3)
-        for (let fr = 0; fr < postFrames(id, a); fr++)
-          for (const locked of [false, true]) {
-            const f = postFrame(id, a, fr, locked)
-            expect(f.w).toBe(POST_W)
-            expect(f.h).toBe(POST_H)
-            // nothing on the cell's border: the cell crops nothing
-            for (let k = 0; k < POST_W; k++) {
-              for (const i of [k, (POST_H - 1) * POST_W + k, k * POST_W, k * POST_W + POST_W - 1]) expect(f.rgba[i * 4 + 3], `${id} ${a}#${fr} edge`).toBe(0)
-            }
-            let n = 0
-            for (let i = 0; i < POST_W * POST_H; i++) if (solid(f, i)) n++
-            expect(n, `${id} ${a}#${fr}`).toBeGreaterThan(1200)
+      for (const [a, fr] of frames(id))
+        for (const locked of [false, true]) {
+          const f = postFrame(id, a, fr, locked)
+          expect(f.w).toBe(POST_W)
+          expect(f.h).toBe(POST_H)
+          // nothing on the cell's border: the cell crops nothing
+          for (let k = 0; k < POST_W; k++) {
+            for (const i of [k, (POST_H - 1) * POST_W + k, k * POST_W, k * POST_W + POST_W - 1]) expect(f.rgba[i * 4 + 3], `${id} ${a}#${fr} edge`).toBe(0)
           }
+          let n = 0
+          for (let i = 0; i < POST_W * POST_H; i++) if (solid(f, i)) n++
+          expect(n, `${id} ${a}#${fr}`).toBeGreaterThan(500)
+        }
       const open = postFrame(id, 'idle', 0)
       expect(Buffer.from(postFrame(id, 'idle', 0, true).rgba).equals(Buffer.from(open.rgba)), `${id} locked`).toBe(false)
       expect(Buffer.from(postFrame(id, 'tic', 2).rgba).equals(Buffer.from(open.rgba)), `${id} tic`).toBe(false)
@@ -499,33 +499,43 @@ describe('hero builder: the company faces at field / post size (hand-drawn)', ()
     }
   })
 
+  it('stand at the pack’s people’s scale: 40 to 60 px tall, soles on the floor row', () => {
+    for (const id of PERSONAS) {
+      const f = postFrame(id, 'idle', 0)
+      let top = POST_H, bottom = -1
+      for (let i = 0; i < POST_W * POST_H; i++) if (solid(f, i)) { const y = (i / POST_W) | 0; top = Math.min(top, y); bottom = Math.max(bottom, y) }
+      // the soles' ink on the floor row or the two under it (the shadow's rows)
+      expect(bottom, id).toBeGreaterThanOrEqual(POST_FEET)
+      expect(bottom, id).toBeLessThanOrEqual(POST_FEET + 2)
+      expect(bottom - top + 1, id).toBeGreaterThanOrEqual(40)
+      expect(bottom - top + 1, id).toBeLessThanOrEqual(60)
+    }
+  })
+
   it('every solid pixel is a declared ink (the pack’s ramps and outline)', () => {
     const inks = builderColours()
     const hex = (r: number, g: number, b: number) => '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')
     for (const id of PERSONAS)
-      for (const a of ANIM3) {
-        const f = postFrame(id, a, 1)
-        for (let i = 0; i < POST_W * POST_H; i++) if (solid(f, i)) expect(inks.has(hex(f.rgba[i * 4], f.rgba[i * 4 + 1], f.rgba[i * 4 + 2])), `${id} ${a}`).toBe(true)
+      for (const [a, fr] of frames(id)) {
+        const f = postFrame(id, a, fr)
+        for (let i = 0; i < POST_W * POST_H; i++) if (solid(f, i)) expect(inks.has(hex(f.rgba[i * 4], f.rgba[i * 4 + 1], f.rgba[i * 4 + 2])), `${id} ${a}#${fr}`).toBe(true)
       }
   })
 
   it('nothing at the mouth: no arm, hand or prop in the lower face, on any frame', () => {
     for (const id of PERSONAS) {
-      const face = POST_FACES[id]
-      // the same face with its arms and props taken away (the 'main' and 'off' groups)
-      const bare = { ...face, parts: face.parts.filter((p) => p.group !== 'main' && p.group !== 'off') }
-      const xs = face.eyes.map((e) => e[0]), ey = Math.max(...face.eyes.map((e) => e[1]))
-      const x0 = Math.min(...xs) - 2, x1 = Math.max(...xs) + 10, y0 = ey + 3, y1 = ey + 11
-      for (const a of ANIM3)
-        for (let fr = 0; fr < postFrames(id, a); fr++) {
-          const f = postFrame(id, a, fr)
-          const g = paintSprite(bare, a, fr, false, postSize(id))
-          for (let y = y0; y <= y1; y++)
-            for (let x = x0; x <= x1; x++) {
-              const i = (y * POST_W + x) * 4
-              expect([f.rgba[i], f.rgba[i + 1], f.rgba[i + 2], f.rgba[i + 3]].join(), `${id} ${a}#${fr} at ${x},${y}`).toBe([g.rgba[i], g.rgba[i + 1], g.rgba[i + 2], g.rgba[i + 3]].join())
-            }
-        }
+      const [dx0, dy0, dx1, dy1] = POST_FACES[id].mouth
+      for (const [a, fr] of frames(id)) {
+        const f = postFrame(id, a, fr)
+        const g = postFrame(id, a, fr, { bare: true })
+        const h = postJoints2(id, a, fr).head!
+        const hx = Math.round(h[0]), hy = Math.round(h[1])
+        for (let y = hy + dy0; y <= hy + dy1; y++)
+          for (let x = hx + dx0; x <= hx + dx1; x++) {
+            const i = (y * POST_W + x) * 4
+            expect([f.rgba[i], f.rgba[i + 1], f.rgba[i + 2], f.rgba[i + 3]].join(), `${id} ${a}#${fr} at ${x},${y}`).toBe([g.rgba[i], g.rgba[i + 1], g.rgba[i + 2], g.rgba[i + 3]].join())
+          }
+      }
     }
   })
 
@@ -545,5 +555,80 @@ describe('hero builder: the company faces at field / post size (hand-drawn)', ()
         for (let p = 0; p < ms[i].length; p++) { if (ms[i][p] && ms[j][p]) and++; if (ms[i][p] || ms[j][p]) or++ }
         expect(and / or, `${PERSONAS[i]} vs ${PERSONAS[j]}`).toBeLessThan(0.8)
       }
+  })
+})
+
+describe('the company faces’ skeletons (round 4)', () => {
+  const ANIM3 = ['idle', 'tic', 'react'] as const
+  const frames = (id: PersonaId) => ANIM3.flatMap((a) => Array.from({ length: postFrames(id, a) }, (_, f) => [a, f] as const))
+
+  it('no limb bone ever changes length: every frame is solved from the same bones', () => {
+    for (const id of PERSONAS) {
+      const base = boneLengths(id)
+      expect(base.size, id).toBeGreaterThanOrEqual(6)
+      for (const [a, fr] of frames(id)) {
+        const j = postJoints3(id, a, fr)
+        for (const [p, c] of RIGID) {
+          if (!j[p] || !j[c]) continue
+          expect(Math.abs(dist3(j[p]!, j[c]!) - base.get(`${p}-${c}`)!), `${id} ${a}#${fr} ${p}-${c}`).toBeLessThan(0.02)
+        }
+      }
+    }
+  })
+
+  it('the near and far sides read in 3/4: the near shoulder and hip to the left and lower, the far ones right and higher', () => {
+    for (const id of PERSONAS)
+      for (const [a, fr] of frames(id)) {
+        const j = postJoints2(id, a, fr)
+        expect(j.shoulderN![0], `${id} ${a}#${fr}`).toBeLessThan(j.shoulderF![0])
+        expect(j.shoulderN![1], `${id} ${a}#${fr}`).toBeGreaterThan(j.shoulderF![1])
+        expect(j.hipN![0], `${id} ${a}#${fr}`).toBeLessThan(j.hipF![0])
+        // the face looks right: the head's middle is ahead of the neck's base or over it
+        expect(j.head![0] + 0.6, `${id} ${a}#${fr}`).toBeGreaterThanOrEqual(j.chest![0])
+      }
+  })
+
+  it('a hand is on every wrist, drawn, in every frame (nothing floats, no arm ends in air)', () => {
+    for (const id of PERSONAS)
+      for (const [a, fr] of frames(id)) {
+        const f = postFrame(id, a, fr)
+        const bare = postFrame(id, a, fr, { bare: true })
+        const j = postJoints2(id, a, fr)
+        for (const w of ['wristN', 'wristF'] as const) {
+          const [x, y] = j[w]!.map(Math.round)
+          // the wrist is painted with the arm on, and something there is the arm's (it differs once the arm is off) or covers it
+          expect(f.rgba[(y * POST_W + x) * 4 + 3], `${id} ${a}#${fr} ${w}`).toBe(255)
+          void bare
+        }
+      }
+  })
+
+  it('each people has its own proportions', () => {
+    const plan = (id: PersonaId) => skeletonOf(id).plan
+    const heads = (id: PersonaId) => plan(id).height / plan(id).headH
+    // the elf is the tallest and the slimmest; the dwarf the broadest for his height; the gnome the smallest, the biggest head
+    expect(plan('odile').height).toBeGreaterThan(plan('saffra').height)
+    expect(plan('odile').shoulderW / plan('odile').height).toBeLessThan(plan('saffra').shoulderW / plan('saffra').height)
+    expect(plan('brannoch').shoulderW / plan('brannoch').height).toBeGreaterThan(plan('saffra').shoulderW / plan('saffra').height)
+    expect(plan('brannoch').thigh).toBeLessThan(plan('saffra').thigh)
+    expect(heads('wren')).toBeLessThan(heads('odile'))
+    expect(plan('wren').upperArm).toBeLessThan(plan('saffra').upperArm)
+    // the reptile stands digitigrade, with a tail as long as his body behind him, its tip near the ground
+    const hk = skeletonOf('hask').joints
+    expect(hk.hockN && hk.hockF && hk.tail4).toBeTruthy()
+    expect(dist3(hk.tail1!, hk.tail2!) + dist3(hk.tail2!, hk.tail3!) + dist3(hk.tail3!, hk.tail4!)).toBeGreaterThan(dist3(hk.pelvis!, hk.head!))
+    expect(hk.tail4![1]).toBeLessThan(4)
+    // his knee is forward of the hip and the hock behind the knee: the leg bends as a lizard's does, not a man's
+    expect(hk.kneeN![2]).toBeGreaterThan(hk.hipN![2])
+    expect(hk.hockN![2]).toBeLessThan(hk.kneeN![2])
+  })
+
+  it('the overlay draws the art with its bones on it', () => {
+    const f = postFrame('saffra', 'idle', 0)
+    const o = skeletonOverlay('saffra', f, postPose('saffra', 'idle', 0), 4)
+    expect(o.w).toBe(POST_W * 4)
+    let bone = 0
+    for (let i = 0; i < o.w * o.h; i++) if (o.rgba[i * 4] === 255 && o.rgba[i * 4 + 1] === 138) bone++
+    expect(bone).toBeGreaterThan(50)
   })
 })

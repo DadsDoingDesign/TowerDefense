@@ -38,7 +38,7 @@ import { dirname, join, resolve } from 'node:path'
 import sharp from 'sharp'
 import { companyById, type CompanyId } from '../src/game/data/companies'
 import { companyStandardPalette, companyStandardRows } from '../src/game/data/companyStandard'
-import { postFrame } from '../src/game/render/hero/post'
+import { postFeetOf, postFrame, postJoints2 } from '../src/game/render/hero/post'
 import type { PersonaId } from '../src/game/render/hero/rig'
 
 const ROOT = resolve(import.meta.dirname, '..')
@@ -248,6 +248,8 @@ const P = {
   sheep: 'Resources/Sheep/HappySheep_Idle.png',
   fire: 'Effects/Fire/Fire.png',
   deco: (n: number) => `Deco/${String(n).padStart(2, '0')}.png`,
+  bridge: 'Terrain/Bridge/Bridge_All.png',
+  mine: 'Resources/Gold Mine/GoldMine_Active.png',
 }
 const cell = async (rel: string, col: number, row: number, size = 192) => trim(crop(await load(rel), col * size, row * size, size, size))
 
@@ -720,20 +722,11 @@ interface Anchors {
 }
 
 /**
- * `--faces <dir>`: every post bakes with its company's face at the counter in
- * place of the CC0 pawn (the review cards), and only the posts are written,
- * only into <dir>. The face stands as the pawn does: feet on the post's floor,
- * turned as the pawn is turned.
+ * `--faces <dir>`: only the liaisons' posts and the two proposed ones are
+ * written, and only into <dir> (the review cards' copies; nothing shipped).
  */
 const fi = process.argv.indexOf('--faces')
 const FACES_DIR = fi > 0 ? resolve(process.argv[fi + 1] ?? 'faces') : null
-function faceOr(id: PersonaId, pawn: Cv, turned: boolean): Cv {
-  if (!FACES_DIR) return pawn
-  const f = postFrame(id, 'idle', 0)
-  const c = new Cv(f.w, f.h)
-  c.d.set(f.rgba)
-  return turned ? flip(trim(c)) : trim(c)
-}
 
 async function bake(proposals: string | null): Promise<Record<string, Anchors>> {
   const flat = await load(P.flat)
@@ -900,280 +893,259 @@ async function bake(proposals: string | null): Promise<Record<string, Anchors>> 
     await write('recruit', c)
   }
 
-  // ---- the liaisons' posts (Draft 4 · D): each company's own stall on its
-  // own land, its standard on a pole to the left, its liaison behind the
-  // counter. Every post keeps one layout, so a city's band crops them alike:
-  // the liaison's head at y ≈ 70, the counter from y 108, the bubble's room to
-  // the right of the head (rows 40–80), the land behind and beside the stall.
-  const LX = 110
-  const FEET = 130
-  const liaisonPost = async (name: string, fig: Cv, draw: (c: Cv, top: number) => Promise<void>, lit?: (c: Cv) => void, dir = OUT) => {
+  // ---- the liaisons' posts (Draft 4 · D; rebuilt round 4, Oct 2026 — the designer: "the stands look really rough,
+  // can you make this feel more like the rest of the game"). Each company's post on its own land, BUILT FROM THE
+  // PACK: the company's house (Ironvein: the pack's mine) behind, a counter of the pack's bridge planks between two of
+  // its log stumps, the trade's wares on it, and the liaison standing IN FRONT, full length, at the pack's people's
+  // scale, on the ground with the pack's shadow. Every post keeps one layout, so a city's band crops them alike: the
+  // liaison's feet at (LX, FEET), the counter behind to the right, the room for the bubble right of the head.
+  const LX = 104
+  const FEET = 128
+  const bridge = await load(P.bridge)
+  /** A counter `w` wide from the pack's bridge: its planks stood up as the front, a deck board on top, a stump each end. */
+  const packCounter = (w: number): Cv => {
+    const c = new Cv(w + 20, 34)
+    const front = crop(bridge, 40, 28, Math.min(w, 116), 27)
+    for (let x = 0; x < w; x += front.w) c.draw(crop(front, 0, 0, Math.min(front.w, w - x), front.h), 10 + x, 7)
+    const top = crop(bridge, 5, 103, 53, 8)
+    for (let x = 0; x < w + 4; x += top.w - 1) c.draw(crop(top, 0, 0, Math.min(top.w, w + 4 - x), top.h), 8 + x, 1)
+    const stump = trim(crop(bridge, 112, 81, 16, 23))
+    c.draw(stump, 0, c.h - stump.h)
+    c.draw(stump, w + 20 - stump.w, c.h - stump.h)
+    return c
+  }
+  /** Who stands at the post: the cell, the middle of the feet in it, and the head (where the bubble's tail points). */
+  type Fig = { cv: Cv; fx: number; fy: number; head: Pt }
+  const faceFig = (id: PersonaId): Fig => {
+    const f = postFrame(id, 'idle', 0)
+    const cv = new Cv(f.w, f.h)
+    cv.d.set(f.rgba)
+    const ft = postFeetOf(id)
+    const h = postJoints2(id, 'idle', 0).head!
+    return { cv, fx: ft.x, fy: ft.y, head: [Math.round(h[0]), Math.round(h[1])] }
+  }
+  /** A CC0 pawn, trimmed with its own shadow (the posts whose liaison has no face yet). */
+  const pawnFig = (cv: Cv): Fig => ({ cv, fx: cv.w / 2, fy: cv.h - 3, head: [cv.w / 2, 20] })
+  const standFig = (c: Cv, f: Fig) => c.draw(f.cv, LX - f.fx, FEET - f.fy)
+  const liaisonPost = async (name: string, fig: Fig, draw: (c: Cv) => Promise<void>, lit?: (c: Cv) => void, dir = OUT) => {
     const c = scene()
-    const top = FEET - fig.h
-    await draw(c, top)
+    await draw(c)
+    standFig(c, fig)
     if (lit) lit(c)
-    // The speaker's mouth level, not a plume's tip: the bubble's tail points at the face.
-    if (dir === OUT) out[name] = { speaker: [OX + LX, Math.max(top, FEET - 60)] }
+    // the bubble's tail points at the face: the head's middle
+    if (dir === OUT) out[name] = { speaker: [OX + Math.round(LX - fig.fx + fig.head[0]), Math.round(FEET - fig.fy + fig.head[1])] }
     await write(name, c, dir)
   }
-  const flagAt = (c: Cv, company: CompanyId, x = 50) => stand(c, standard(company, 30), x, FEET + 2, 10)
-  const cloth = (company: CompanyId): [RGB, RGB] => {
-    const k = hex(companyById(company).color)
-    return [k, darker(k, 0.3)]
+  const flagAt = (c: Cv, company: CompanyId, x = 60) => stand(c, standard(company, 30), x, FEET - 6, 10)
+  /** The counter behind the liaison's far side, its feet at y `by`; returns its top (where the wares sit) and x span. */
+  const counterAt = (c: Cv, w = 78, by = FEET - 10): { top: number; x0: number; x1: number } => {
+    const k = packCounter(w)
+    const x0 = LX - 14
+    c.put(shadow(k.w + 4, 6, 60), x0 + k.w / 2, by + 3)
+    c.draw(k, x0, by - k.h)
+    return { top: by - k.h + 2, x0: x0 + 10, x1: x0 + 10 + w }
   }
+  const house = async (colour: 'Red' | 'Blue' | 'Yellow' | 'Purple') => trim(await load(`Factions/Knights/Buildings/House/House_${colour}.png`))
 
-  // Peppercorn Co. — Saffra's spice stall at the edge of its fields: chili
-  // rows behind, a charred strip where last summer's burn ran, sacks of spice
-  // and a brazier (the burning road).
+  // Peppercorn Co. — Saffra's post at the edge of its fields: the company's red house, chili rows behind, a charred
+  // strip where last summer's burn ran; sacks of spice on the counter and a brazier (the burning road).
   {
-    const fig = faceOr('saffra', await idle(P.pawn('Red')), false)
+    const fig = faceFig('saffra')
     await liaisonPost(
       'liaison-spice',
       fig,
-      async (c, top) => {
+      async (c) => {
         meadow(c, 51)
-        field(c, earth, 60, 98, 53)
-        yard(c, earth, 120, 132, 160, 30, 52)
+        field(c, earth, 50, 92, 53)
+        yard(c, earth, 120, 128, 160, 28, 52)
         await wings(c, 'day')
         c.put(await tree(1), 2, 62)
         c.put(await tree(3), 250, 58)
-        c.put(trim(await load(P.house)), -30, 72)
+        c.put(await house('Red'), LX + 52, FEET - 16)
         flagAt(c, 'spice')
-        const w = 108
-        const x0 = LX - w / 2
-        c.draw(post(56), x0 + 2, top - 14)
-        c.draw(post(56), x0 + w - 7, top - 14)
-        c.put(fig, LX, FEET)
-        c.draw(counter(w, 24, [hex('#c44a3a'), CREAM]), x0, 108)
-        for (const [i, k] of [[8, 0], [30, 1], [78, 2], [100, 3]] as const) c.draw(chilies(14 + (k % 2) * 5), x0 + i, top - 20)
-        c.draw(awning(w + 8, 14, hex(companyById('spice').color), CREAM), x0 - 4, top - 32)
-        c.put(sack([214, 72, 44]), x0 + 18, 112)
-        c.put(sack([236, 160, 52]), x0 + 40, 112)
-        c.put(sack([132, 92, 52]), x0 + 68, 112)
-        stand(c, sack([226, 196, 70], 18), 176, 140)
-        stand(c, sack([214, 72, 44], 18), 192, 147)
-        stand(c, brazier(), 212, 136, 16)
-        c.put(half(fireFrame), 212, 114)
+        const k = counterAt(c)
+        c.put(sack([214, 72, 44]), k.x0 + 30, k.top + 1)
+        c.put(sack([236, 160, 52]), k.x0 + 48, k.top + 1)
+        c.put(sack([132, 92, 52]), k.x0 + 66, k.top + 1)
+        stand(c, sack([226, 196, 70], 18), 206, 140)
+        stand(c, sack([214, 72, 44], 18), 222, 146)
+        stand(c, brazier(), 228, 126, 16)
+        c.put(half(fireFrame), 228, 104)
+        c.put(await deco(12), 64, 140)
         c.put(await deco(10), 18, 148)
       },
       (c) => {
         multiply(c, [255, 236, 212])
-        light(c, OX + 212, 110, 46, [255, 150, 60], 1.1)
+        light(c, OX + 228, 100, 46, [255, 150, 60], 1.1)
       },
     )
   }
 
-  // Easel House — Vell's canal gallery: a lavender tent, an easel and framed
-  // canvases, the canal at the bank's foot. (The slot becomes Butcherblock's:
-  // its smokehouse is a proposal, `--proposals`.)
+  // Easel House — Vell's canal gallery: the yellow house, framed canvases on the counter, an easel, the canal at the
+  // bank's foot. (The slot becomes Butcherblock's: its smokehouse is a proposal, `--proposals`.)
   {
-    const fig = flip(await idle(P.pawn('Purple')))
-    await liaisonPost('liaison-art', fig, async (c, top) => {
+    const fig = pawnFig(flip(await idle(P.pawn('Purple'))))
+    await liaisonPost('liaison-art', fig, async (c) => {
       meadow(c, 61)
       yard(c, earth, 120, 118, 150, 22, 62)
       await wings(c, 'day')
       c.put(await tree(2), 12, 70)
       c.put(await tree(0), 246, 66)
-      c.put(await tree(1), 196, 30)
-      const lav = hex(companyById('art').color)
-      c.put(tent(84, 58, mix(lav, CREAM, 0.35), darker(lav, 0.25)), LX + 6, top + 6)
+      c.put(await house('Yellow'), LX + 52, FEET - 16)
       flagAt(c, 'art')
-      c.put(fig, LX, FEET)
-      c.draw(counter(100, 24, cloth('art')), LX - 48, 108)
-      c.put(painting(16, 14, 0), LX - 28, 110)
-      c.put(painting(12, 16, 1), LX + 28, 110)
-      stand(c, easel(), 188, 134, 18)
-      stand(c, painting(18, 14, 2), 214, 136)
-      stand(c, crate(), 220, 147)
-      c.draw(canal(), -OX, 136)
+      const k = counterAt(c)
+      c.put(painting(16, 14, 0), k.x0 + 34, k.top + 1)
+      c.put(painting(12, 16, 1), k.x0 + 60, k.top + 1)
+      stand(c, easel(), 206, 134, 18)
+      stand(c, painting(18, 14, 2), 230, 138)
+      c.draw(canal(), -OX, 138)
     })
   }
 
-  // Ironvein — Brannoch's ore yard at the foot of its quarry: the cut cliff
-  // behind with a timbered adit and a cart of ore on its rails, a stone
-  // counter, ore heaps and an anvil in its forge glow.
+  // Ironvein — Brannoch's post at the foot of its quarry: the cut cliff behind, the pack's mine in it, a cart of ore
+  // on its rails, ore heaps on the counter, a forge and an anvil in its glow.
   {
-    const fig = faceOr('brannoch', await idle(P.warrior('Blue')), false)
+    const fig = faceFig('brannoch')
     await liaisonPost(
       'liaison-metals',
       fig,
-      async (c, top) => {
+      async (c) => {
         meadow(c, 71)
-        await quarry(c, 102)
-        yard(c, earth, 120, 128, 170, 34, 72)
+        await quarry(c, 96)
+        yard(c, earth, 120, 126, 170, 32, 72)
         await wings(c, 'wood')
         c.put(await tree(1), -4, 74)
         c.put(await tree(3), 262, 76)
-        c.put(adit(), 206, 104)
-        c.put(rails(46), 210, 116)
-        stand(c, oreCart(), 220, 116, 24)
-        c.put(await deco(5), 160, 104)
-        c.put(await deco(4), 248, 106)
+        c.put(trim(await load(P.mine)), LX + 64, FEET - 22)
+        c.put(rails(46), 222, 116)
+        stand(c, oreCart(), 234, 116, 24)
         flagAt(c, 'metals')
-        // A lean-to over the counter, slate and the company's blue.
-        c.draw(post(80), LX - 54, top - 12)
-        c.draw(post(80), LX + 49, top - 12)
-        c.put(fig, LX, FEET)
-        c.draw(stoneCounter(104, 24), LX - 52, 108)
-        c.draw(awning(116, 12, hex(companyById('metals').color), STONE.md), LX - 58, top - 24)
-        c.put(oreHeap(26, 12, [120, 176, 255]), LX - 28, 111)
-        c.put(oreHeap(20, 10, [246, 206, 96]), LX + 30, 111)
-        stand(c, forge(), 166, 140, 24)
-        stand(c, anvil(), 196, 146, 26)
-        stand(c, oreHeap(30, 14, [96, 150, 236]), 222, 148)
-        stand(c, crate(), 22, 142)
+        const k = counterAt(c)
+        c.put(oreHeap(22, 10, [120, 176, 255]), k.x0 + 36, k.top + 1)
+        c.put(oreHeap(18, 9, [246, 206, 96]), k.x0 + 62, k.top + 1)
+        stand(c, forge(), 30, 146, 24)
+        stand(c, anvil(), 214, 146, 26)
+        stand(c, oreHeap(30, 14, [96, 150, 236]), 240, 150)
         c.put(await deco(9), 252, 150)
       },
       (c) => {
         multiply(c, [214, 222, 236])
-        light(c, OX + 166, 126, 36, [255, 140, 60], 0.75)
+        light(c, OX + 30, 132, 36, [255, 140, 60], 0.75)
       },
     )
   }
 
-  // Rosethread — Odile's silk stall by the ford: the river behind with its
-  // stepping stones, reeds on the bank, bolts hung on a line and a loom.
+  // Rosethread — Odile's post by the ford: the river behind with its stones, reeds on the bank, the purple house,
+  // bolts on the counter and a loom.
   {
-    const fig = faceOr('odile', await idle(P.pawn('Yellow')), false)
-    await liaisonPost('liaison-silk', fig, async (c, top) => {
+    const fig = faceFig('odile')
+    await liaisonPost('liaison-silk', fig, async (c) => {
       meadow(c, 81)
-      await river(c, 66, 22)
-      yard(c, earth, 120, 130, 160, 30, 82)
+      await river(c, 60, 22)
+      yard(c, earth, 120, 128, 160, 28, 82)
       await wings(c, 'day')
       c.put(await tree(3), 4, 66)
       c.put(await tree(2), 254, 64)
-      c.put(await tree(0), 150, 48)
-      c.put(await tree(1), 40, 46)
-      for (const x of [-20, 30, 168, 238, 290]) c.draw(reeds(), x, 76)
+      for (const x of [-20, 18, 238, 290]) c.draw(reeds(), x, 70)
+      c.put(await house('Purple'), LX + 52, FEET - 16)
       flagAt(c, 'silk')
       const rose = hex(companyById('silk').color)
-      const line = top - 16
-      c.draw(post(48), LX - 52, line - 2)
-      c.draw(post(48), LX + 47, line - 2)
-      c.rect(OX + LX - 50, line, 98, 1, WD.dk)
-      const hung: RGB[] = [rose, CREAM, [196, 74, 96], GOLD, mix(rose, CREAM, 0.5), [150, 70, 120]]
-      hung.forEach((k, i) => c.draw(drape(13, 22 + ((i * 7) % 9), k), LX - 46 + i * 16, line + 1))
-      c.put(fig, LX, FEET)
-      c.draw(counter(100, 24, [mix(rose, CREAM, 0.3), rose]), LX - 48, 108)
-      c.put(bolts([rose, CREAM, GOLD]), LX - 26, 110)
-      c.put(bolts([[196, 74, 96], mix(rose, CREAM, 0.5)]), LX + 30, 110)
-      stand(c, loom(rose), 196, 138, 30)
-      stand(c, bolts([CREAM, rose, [150, 70, 120]]), 226, 146)
+      const k = counterAt(c)
+      c.put(bolts([rose, CREAM, GOLD]), k.x0 + 36, k.top + 1)
+      c.put(bolts([[196, 74, 96], mix(rose, CREAM, 0.5)]), k.x0 + 62, k.top + 1)
+      stand(c, loom(rose), 214, 140, 30)
       c.put(await deco(10), 22, 148)
     })
   }
 
-  // Moonquill — Wren's scriptorium by night: a rack of sealed scrolls, a
-  // lectern with the open ledger, candles and a warded stone. (The slot
-  // becomes Greenvial's: its glasshouse is a proposal, `--proposals`.)
+  // Moonquill — Wren's scriptorium by night: the blue house, the open ledger and candles on the counter, a warded
+  // stone. (The slot becomes Greenvial's: its glasshouse is a proposal, `--proposals`.)
   {
-    const fig = flip(await idle(P.pawn('Blue')))
+    const fig = pawnFig(flip(await idle(P.pawn('Blue'))))
     await liaisonPost(
       'liaison-scrolls',
       fig,
-      async (c, top) => {
+      async (c) => {
         meadow(c, 91)
         await wings(c, 'wood')
         c.put(await tree(0), 18, 70)
         c.put(await tree(2), 248, 72)
-        c.put(await tree(1), 60, 32)
-        c.put(await tree(3), 200, 28)
-        stand(c, scrollRack(72, 48), LX, top + 18, 64)
+        c.put(await house('Blue'), LX + 52, FEET - 16)
         flagAt(c, 'scrolls')
-        c.put(fig, LX, FEET)
-        c.draw(counter(100, 24, cloth('scrolls')), LX - 48, 108)
-        c.put(ledger(), LX - 20, 110)
-        c.put(candle(7), LX + 20, 110)
-        c.put(candle(5), LX + 26, 110)
-        c.put(candle(6), LX + 38, 110)
-        stand(c, monolith(20, 40, true), 200, 140, 18)
-        c.put(candle(5), 180, 146)
-        c.put(candle(7), 222, 146)
-        c.put(await deco(1), 236, 148)
+        const k = counterAt(c)
+        c.put(ledger(), k.x0 + 40, k.top + 1)
+        c.put(candle(7), k.x0 + 60, k.top + 1)
+        c.put(candle(5), k.x0 + 66, k.top + 1)
+        stand(c, monolith(20, 40, true), 214, 140, 18)
+        c.put(candle(5), 196, 146)
+        c.put(candle(7), 234, 146)
+        c.put(await deco(1), 246, 148)
         c.put(await deco(11), 30, 150)
       },
       (c) => {
         multiply(c, [96, 104, 168])
-        light(c, OX + LX + 10, 96, 70, [255, 180, 90], 1.2, 0.8)
-        light(c, OX + 200, 112, 40, [120, 230, 240], 0.9)
+        light(c, OX + LX + 40, 92, 70, [255, 180, 90], 1.2, 0.8)
+        light(c, OX + 214, 112, 40, [120, 230, 240], 0.9)
         vignette(c, 0.45)
       },
     )
   }
 
-  // ---- PROPOSALS (not shipped): the posts of the two companies that take
-  // Easel House's and Moonquill's slots, for the designer's review cards. The
-  // person at the counter is the slot's current one: a character is being
-  // drawn for each on the new rig, so the post leaves the same room for them.
+  // ---- PROPOSALS (not shipped): the posts of the two companies that take Easel House's and Moonquill's slots, with
+  // the faces proposed for them (Hask, Wren), for the designer's review cards.
   if (proposals) {
-    // Butcherblock — the smokehouse on the salt marsh: a reed channel behind
-    // with its jetty, a plank smokehouse breathing smoke, meat on hooks, salt
-    // sacks, and a butcher's block for a counter.
-    const marshFig = faceOr('hask', flip(await idle(P.pawn('Purple'))), true)
+    // Butcherblock — the smokehouse on the salt marsh: a reed channel behind with its jetty, a plank smokehouse
+    // breathing smoke, the pack's meat on the counter, salt sacks.
     await liaisonPost(
       'proposal-butcherblock',
-      marshFig,
-      async (c, top) => {
+      faceFig('hask'),
+      async (c) => {
         meadow(c, 101)
-        await river(c, 82, 20, true)
-        yard(c, earth, 120, 136, 160, 26, 102)
+        await river(c, 74, 20, true)
+        yard(c, earth, 120, 132, 160, 26, 102)
         await wings(c, 'day')
         c.put(await tree(2), 0, 70)
         c.put(await tree(0), 262, 66)
-        for (const x of [-30, 10, 52, 150, 236, 270]) c.draw(reeds(), x, 86)
-        c.draw(jetty(), 196, 98)
-        stand(c, smokehouse(), 190, 112, 60)
-        c.put(smoke(), 198, 58)
-        stand(c, pennant([118, 84, 60], [214, 196, 152], 'cleaver'), 50, FEET + 2, 10)
-        c.draw(post(56), LX - 52, top - 14)
-        c.draw(post(56), LX + 47, top - 14)
-        c.rect(OX + LX - 50, top - 10, 98, 2, WD.dk)
+        for (const x of [-30, 10, 236, 270]) c.draw(reeds(), x, 80)
+        stand(c, smokehouse(), LX + 60, FEET - 14, 60)
+        c.put(smoke(), LX + 68, FEET - 72)
+        stand(c, pennant([118, 84, 60], [214, 196, 152], 'cleaver'), 60, FEET - 4, 10)
+        const k = counterAt(c)
         const meat = trim(await load('Resources/Resources/M_Idle.png'))
-        for (const x of [LX - 36, LX + 26]) {
-          c.rect(OX + x, top - 9, 1, 10, IRON)
-          c.put(half(meat), x, top + 12)
-        }
-        c.put(marshFig, LX, FEET)
-        c.draw(butcherBlock(104, 24), LX - 52, 108)
-        c.put(cleaver(), LX + 30, 109)
-        c.put(sack([244, 240, 228], 14), LX - 30, 112)
-        stand(c, sack([244, 240, 228], 18), 214, 142)
-        stand(c, sack([236, 232, 220], 18), 230, 148)
-        c.put(await deco(14), 196, 146)
+        c.put(half(meat), k.x0 + 36, k.top + 1)
+        c.put(cleaver(), k.x0 + 52, k.top + 1)
+        c.put(sack([244, 240, 228], 14), k.x0 + 66, k.top + 1)
+        stand(c, sack([244, 240, 228], 18), 218, 142)
+        stand(c, sack([236, 232, 220], 18), 234, 148)
+        c.put(await deco(14), 200, 146)
         c.put(await deco(15), 30, 148)
       },
       (c) => {
         multiply(c, [222, 226, 214])
-        mist(c, 76, 92)
+        mist(c, 70, 88)
       },
       proposals,
     )
-    // Greenvial — the glasshouse in a hidden garden: a glasshouse behind
-    // the stall, vines up its posts, potions on the counter, mushrooms in the
-    // hollow, spores glowing at dusk.
-    const gardenFig = faceOr('wren', flip(await idle(P.pawn('Blue'))), true)
+    // Greenvial — the glasshouse in a hidden garden: the glasshouse behind the counter, potions on it, the pack's
+    // mushrooms in the hollow, spores glowing at dusk.
     await liaisonPost(
       'proposal-greenvial',
-      gardenFig,
-      async (c, top) => {
+      faceFig('wren'),
+      async (c) => {
         meadow(c, 111)
         yard(c, earth, 120, 132, 150, 26, 112)
         await wings(c, 'wood')
         c.put(await tree(0), 4, 70)
         c.put(await tree(2), 258, 68)
-        stand(c, glasshouse(), 208, 118, 80)
-        stand(c, pennant([96, 150, 92], [236, 226, 170], 'vial'), 50, FEET + 2, 10)
-        c.draw(vined(post(56)), LX - 52, top - 14)
-        c.draw(vined(post(56)), LX + 47, top - 14)
-        c.draw(awning(110, 12, [96, 150, 92], [236, 226, 170]), LX - 55, top - 26)
-        c.put(gardenFig, LX, FEET)
-        c.draw(counter(100, 24, [[96, 150, 92], [64, 108, 70]]), LX - 48, 108)
-        for (const [x, k] of [[-30, 0], [-20, 1], [-10, 2], [22, 1], [32, 0]] as const) c.put(vial(k), LX + x, 110)
-        for (const [x, y, n] of [[170, 146, 2], [184, 148, 1], [226, 142, 2], [252, 146, 3], [30, 148, 2], [44, 150, 1]] as const) c.put(await deco(n), x, y)
+        stand(c, glasshouse(), LX + 58, FEET - 14, 80)
+        stand(c, pennant([96, 150, 92], [236, 226, 170], 'vial'), 60, FEET - 4, 10)
+        const k = counterAt(c)
+        for (const [x, kk] of [[30, 0], [40, 1], [50, 2], [62, 1], [72, 0]] as const) c.put(vial(kk), k.x0 + x, k.top + 1)
+        for (const [x, y, n] of [[200, 146, 2], [214, 148, 1], [232, 142, 3], [252, 146, 2], [30, 148, 2], [44, 150, 1]] as const) c.put(await deco(n), x, y)
       },
       (c) => {
         multiply(c, [176, 196, 176])
-        for (const [x, y, r] of [[176, 134, 8], [228, 128, 8], [36, 136, 7], [150, 96, 5], [232, 84, 5], [92, 58, 4], [196, 70, 4]] as const) light(c, OX + x, y, r * 3, [200, 255, 140], 0.9)
+        for (const [x, y, r] of [[200, 134, 8], [232, 128, 8], [36, 136, 7], [150, 96, 5], [232, 84, 5], [92, 58, 4], [196, 70, 4]] as const) light(c, OX + x, y, r * 3, [200, 255, 140], 0.9)
         vignette(c, 0.3)
       },
       proposals,
@@ -1231,16 +1203,6 @@ function sack(spice: RGB, n = 14): Cv {
     for (let x = Math.round(mid - r); x < Math.round(mid + r); x++) c.px(x, y + 1, y === 0 ? mix(spice, [255, 255, 255], 0.35) : x < mid ? spice : darker(spice, 0.18))
   }
   return outline(c)
-}
-function chilies(h: number): Cv {
-  const c = new Cv(5, h)
-  for (let y = 0; y < h; y++) c.px(2, y, WD.dk)
-  for (let y = 3; y < h - 2; y += 4) {
-    c.rect(0, y, 2, 3, [214, 60, 44])
-    c.rect(3, y + 1, 2, 3, [236, 92, 52])
-    c.px(2, y, [90, 150, 60])
-  }
-  return c
 }
 /** A standing iron brazier, coals glowing in its bowl. */
 function brazier(): Cv {
@@ -1311,24 +1273,6 @@ async function quarry(c: Cv, foot: number): Promise<void> {
   for (let x = -c.ox - 64; x < c.w; x += 64) c.draw(face, x, foot - face.h)
   // a shadow at its foot, where the yard meets the rock
   for (let x = 0; x < c.w; x++) for (let y = foot; y < foot + 3; y++) c.px(x, y, [22, 28, 46, 70 - (y - foot) * 20])
-}
-/** A mine's adit cut into the cliff: a timber frame round the dark. */
-function adit(): Cv {
-  const c = new Cv(36, 38)
-  for (let y = 4; y < 38; y++)
-    for (let x = 5; x < 31; x++) {
-      const arch = y < 9 ? Math.abs(x - 17.5) < 8 + (y - 4) * 2 : true
-      if (arch) c.px(x, y, y < 14 ? [34, 28, 34] : y < 26 ? [44, 34, 38] : [58, 44, 44])
-    }
-  for (const x of [1, 31]) {
-    c.rect(x, 4, 4, 34, WD.md)
-    c.rect(x, 4, 1, 34, WD.lt)
-    c.rect(x + 3, 4, 1, 34, WD.dk)
-  }
-  c.rect(0, 1, 36, 4, WD.md)
-  c.rect(0, 1, 36, 1, WD.hi)
-  c.rect(0, 4, 36, 1, WD.dk)
-  return outline(c)
 }
 /** Two rails on their sleepers, running out of the adit. */
 function rails(w: number): Cv {
@@ -1524,27 +1468,6 @@ function canal(): Cv {
   }
   return c
 }
-function stoneCounter(w: number, h: number): Cv {
-  const c = new Cv(w, h)
-  c.rect(0, 0, w, 4, STONE.hi)
-  c.rect(0, 4, w, h - 4, STONE.md)
-  for (let y = 8; y < h; y += 6) c.rect(0, y, w, 1, STONE.dk)
-  for (let y = 4; y < h; y += 6) for (let x = (y / 6) % 2 ? 4 : 10; x < w; x += 14) c.rect(x, y + 1, 1, 5, STONE.dk)
-  c.rect(0, h - 3, w, 3, STONE.sh)
-  c.rect(10, 4, w - 20, 6, [93, 139, 226])
-  c.rect(10, 9, w - 20, 1, [58, 92, 168])
-  return outline(c)
-}
-function drape(w: number, h: number, k: RGB): Cv {
-  const c = new Cv(w, h + 2)
-  for (let x = 0; x < w; x++) {
-    const fold = x % 4 === 0 ? darker(k, 0.2) : x % 4 === 1 ? mix(k, [255, 255, 255], 0.25) : k
-    const len = h + ((x * 3) % 3)
-    for (let y = 0; y < len; y++) c.px(x, y, fold)
-  }
-  c.rect(0, 0, w, 1, darker(k, 0.35))
-  return outline(c)
-}
 function bolts(ks: RGB[]): Cv {
   const c = new Cv(18, ks.length * 4)
   ks.forEach((k, i) => {
@@ -1553,26 +1476,6 @@ function bolts(ks: RGB[]): Cv {
     c.rect(i % 2, y, 17, 1, mix(k, [255, 255, 255], 0.35))
     c.rect(i % 2 ? 16 : 15, y, 2, 4, darker(k, 0.25))
   })
-  return outline(c)
-}
-function scrollRack(w: number, h: number): Cv {
-  const c = new Cv(w, h)
-  c.rect(0, 0, w, h, WD.dk)
-  c.rect(0, 0, w, 3, WD.lt)
-  const cols = 6
-  const rows = 4
-  const cw = Math.floor((w - 4) / cols)
-  const ch = Math.floor((h - 6) / rows)
-  for (let j = 0; j < rows; j++)
-    for (let i = 0; i < cols; i++) {
-      const x = 2 + i * cw
-      const y = 4 + j * ch
-      c.rect(x, y, cw - 1, ch - 1, WD.sh)
-      if ((i * 5 + j * 3) % 7 === 6) continue
-      c.rect(x + 2, y + 2, cw - 5, ch - 5, CREAM)
-      c.px(x + 2 + Math.floor((cw - 5) / 2), y + 2 + Math.floor((ch - 5) / 2), [200, 184, 146])
-      if ((i + j) % 3 === 0) c.rect(x + cw - 4, y + ch - 4, 2, 2, RED)
-    }
   return outline(c)
 }
 function ledger(): Cv {
@@ -1650,34 +1553,6 @@ function smoke(): Cv {
         if (x * x + y * y <= r * r) c.px(cx + x, cy + y, x + y < -r * 0.4 ? [236, 230, 214, a] : [196, 190, 178, a])
   return c
 }
-/** A plank jetty out over the channel, on two posts. */
-function jetty(): Cv {
-  const c = new Cv(40, 12)
-  for (let x = 0; x < 40; x++) c.rect(x, 0, 1, 4, x % 6 === 5 ? WD.dk : x < 8 ? WD.lt : WD.md)
-  c.rect(0, 0, 40, 1, WD.hi)
-  c.rect(0, 3, 40, 1, WD.sh)
-  for (const x of [4, 32]) {
-    c.rect(x, 4, 3, 8, WD.dk)
-    c.rect(x, 4, 1, 8, WD.md)
-  }
-  return outline(c)
-}
-/** A butcher's block for a counter: end grain on top, planked front. */
-function butcherBlock(w: number, h: number): Cv {
-  const c = new Cv(w, h)
-  c.rect(0, 0, w, 6, WD.hi)
-  for (let x = 0; x < w; x += 13) {
-    c.rect(x, 0, 1, 6, WD.md)
-    c.px(x + 6, 2, WD.lt)
-    c.px(x + 7, 3, WD.lt)
-  }
-  c.rect(0, 5, w, 1, WD.md)
-  c.rect(0, 6, w, h - 6, WD.md)
-  for (let x = 8; x < w; x += 16) c.rect(x, 6, 1, h - 6, WD.dk)
-  c.rect(0, 6, 3, h - 6, WD.lt)
-  c.rect(0, h - 3, w, 3, WD.sh)
-  return outline(c)
-}
 function cleaver(): Cv {
   const c = new Cv(14, 7)
   c.rect(0, 0, 9, 6, STONE.lt)
@@ -1730,24 +1605,6 @@ function glasshouse(): Cv {
   // the brick sill
   for (let y = 48; y < 60; y++) for (let x = 0; x < 78; x++) c.px(x, y, (y - 48) % 4 === 3 || (x + ((y - 48) >> 2) * 4) % 9 === 0 ? [120, 70, 56] : x < 30 ? [192, 116, 88] : [168, 98, 76])
   return outline(c)
-}
-/** A post with a vine climbing it. */
-function vined(p: Cv): Cv {
-  const c = new Cv(p.w + 4, p.h)
-  c.draw(p, 2, 0)
-  for (let y = 2; y < p.h - 2; y += 1) {
-    const x = 2 + Math.round((Math.sin(y / 5) + 1) * ((p.w - 1) / 2))
-    c.px(x, y, LEAF.dk)
-    if (y % 6 === 0) {
-      c.rect(x - 2, y - 1, 2, 2, LEAF.lt)
-      c.px(x - 2, y + 1, LEAF.md)
-    }
-    if (y % 6 === 3) {
-      c.rect(x + 1, y, 2, 2, LEAF.md)
-      c.px(x + 2, y + 2, LEAF.dk)
-    }
-  }
-  return c
 }
 /** A potion on the counter: green, gold or rose, corked. */
 function vial(k: 0 | 1 | 2): Cv {
