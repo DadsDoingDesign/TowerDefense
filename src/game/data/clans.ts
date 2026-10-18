@@ -5,8 +5,8 @@
  * Each company's road has its own clan: the same three factions of five tiers
  * (`enemies.ts`), dressed and named for that road's world —
  *
- *  - Peppercorn → the **Cinder Clan**, ember-and-spice raiders: flame crests,
- *    soot-black iron, firepots, chilli-stemmed kegs.
+ *  - Peppercorn → the **Cinder Clan**, ember-and-spice raiders: hoods that
+ *    burn at the tip, soot-black iron, firepots, chilli-stemmed spice kegs.
  *  - Easel House → the **Smudge Gang**, paint-splattered scavengers: bucket
  *    helmets, brushes for weapons, paint-tube packs, dripping paint tins.
  *  - Ironvein → the **Deepdelve**, miners in riveted iron: lamp helmets,
@@ -78,7 +78,7 @@ export const CLANS: readonly Clan[] = [
     id: 'cinder',
     company: 'spice',
     name: 'Cinder Clan',
-    tell: 'Flame crests and soot iron; the torch burns on, the kegs grow a chilli stem.',
+    tell: 'Hoods that burn at the tip and soot iron; the torch burns on, the kegs wear a chilli stem and a spice label.',
     units: {
       torch: ['Ember Runt', 'Cinder Goblin', 'Pepper Raider', 'Blaze Berserker', 'Chief Scorchgut'],
       tnt: ['Spark Whelp', 'Firepot Bomber', 'Kiln Smasher', 'Ash Sapper', 'The Cayenne King'],
@@ -86,16 +86,16 @@ export const CLANS: readonly Clan[] = [
     },
     specialists: { shaman: 'Ember Shaman', bearer: 'Hearth Bearer' },
     looks: {
-      torch: ['flame crest, torch', '+ soot pauldron', '+ chilli banner', 'tall triple crest', 'horned fire crown, ember mantle'],
-      tnt: ['flame crest, firepot pack, firepot', '+ soot pauldron', '+ chilli banner', 'tall triple crest', 'horned fire crown, ember standard'],
-      barrel: ['chilli stem, flame mark', '+ soot hoops', '+ iron flame fins', '+ taller stem', 'brimstone crown, flame fins'],
+      torch: ['burning hood tip, torch', '+ soot pauldron', '+ chilli banner', 'taller flame', 'horned fire crown, ember mantle'],
+      tnt: ['burning cap, firepot pack, firepot', '+ soot pauldron', '+ chilli banner', 'taller flame', 'horned fire crown, ember standard'],
+      barrel: ['chilli stem, spice label', '+ ember studs', '+ ember fins', '+ taller stem', 'brimstone crown, ember fins'],
     },
   },
   {
     id: 'smudge',
     company: 'art',
     name: 'Smudge Gang',
-    tell: 'Paint buckets for helmets, brushes for weapons, paint dripping off everything.',
+    tell: 'Paint-poured buckets for helmets, brushes for weapons, paint dripping off everything.',
     units: {
       torch: ['Smudge Runt', 'Dauber', 'Splatter Raider', 'Brush Berserker', 'Old Gesso'],
       tnt: ['Pigment Whelp', 'Paint Bomber', 'Varnish Wrecker', 'Turps Sapper', 'The Lacquer King'],
@@ -103,9 +103,9 @@ export const CLANS: readonly Clan[] = [
     },
     specialists: { shaman: 'Smear Shaman', bearer: 'Canvas Bearer' },
     looks: {
-      torch: ['paint bucket helm, brush', '+ palette pauldron', '+ canvas flag', 'stacked bucket helm', 'brush crown, splattered smock'],
-      tnt: ['paint bucket helm, tube pack, paint bomb', '+ palette pauldron', '+ canvas flag', 'stacked bucket helm', 'brush crown, easel standard'],
-      barrel: ['bucket handle, drip mark', '+ paint drips', '+ brush handles', '+ second handle', 'brush crown, drips'],
+      torch: ['paint-poured bucket helm, brush', '+ palette pauldron', '+ canvas flag', 'stacked bucket helm', 'brush crown, splattered smock'],
+      tnt: ['paint-poured bucket helm, tube pack, paint bomb', '+ palette pauldron', '+ canvas flag', 'stacked bucket helm', 'brush crown, easel standard'],
+      barrel: ['wire bail, paint splotch', '+ paint drips', '+ paint tubes', '+ brush in the tin', 'brush crown, drips'],
     },
   },
   {
@@ -139,7 +139,7 @@ export const CLANS: readonly Clan[] = [
     looks: {
       torch: ['brimmed hat, rose, needle', '+ ribbon pauldron', '+ pennant', 'plumed hat', 'rose crown, silk train'],
       tnt: ['brimmed hat, spool pack, thread bomb', '+ ribbon pauldron', '+ pennant', 'plumed hat', 'rose crown, silk standard'],
-      barrel: ['spool flanges, thread band', '+ needle', '+ wider flanges', '+ rose on top', 'rose crown, flanges'],
+      barrel: ['reel flanges, wound thread', '+ needle', '+ loose thread end', '+ rose on top', 'rose crown, flanges'],
     },
   },
   {
@@ -155,8 +155,8 @@ export const CLANS: readonly Clan[] = [
     specialists: { shaman: 'Moon Shaman', bearer: 'Ward Bearer' },
     looks: {
       torch: ['crescent horns, moon mask, quill staff', '+ rune pauldron', '+ scroll pole', 'full-moon horns', 'moon halo crown, star mantle'],
-      tnt: ['crescent horns, scroll case, hex vial', '+ rune pauldron', '+ scroll pole', 'full-moon horns', 'moon halo crown, star standard'],
-      barrel: ['crescent lid, rune mark', '+ star studs', '+ rune stones', '+ taller crescent', 'full-moon crown, rune stones'],
+      tnt: ['crescent horns, moonlit goggles, scroll cases, hex vial', '+ rune pauldron', '+ scroll pole', 'full-moon horns', 'moon halo crown, star standard'],
+      barrel: ['crescent moon lid, moon-and-stars plate', '+ star studs', '+ rune stones', '+ star by the moon', 'full-moon crown, rune stones'],
     },
   },
 ]

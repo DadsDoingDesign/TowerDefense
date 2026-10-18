@@ -4449,3 +4449,19 @@ Assets with any axis under 4: 68 → 26.
 - `docs/item-assets/` and `docs/peoples/` still show the old cells. The main session re-renders them after the merge.
 
 **Cards.** `docs/ui-audit-2026-10/asset-critique/icons/cards/` holds 47 cards (880 KB) and `manifest.json`.
+### 2026-10-18 — asset critique: the enemies, three rounds
+
+The designer: "do 3 rounds of critiques to improve every asset along a rubric of aesthetics, brand, and its job". This pass covered the goblin clans (75 baked strips: 5 clans × torch / bomber / keg × tiers 1–5), the field's elite and armour badge, the tier ticks, the boss plate and the run map's armour tab: 79 assets, each scored A / B / J from 1 to 5 per round. Every round was judged on the real bake at 1×, 3× and 8× beside the CC0 goblins, and in a real crowded battle on each company's road (`scripts/enemy-clans-critique.mjs`, 390 × 844). Engine ids, stats and RNG order are untouched, and the stats snapshot is unchanged.
+- **Round 1.** Every clan's tier-2 shoulder piece sat on the torch goblin's nose and the bomber's mouth. It now sits on the back shoulder and the basket strap. The keg fixes: the stencil holes are mended (grass showed through), the hoop glints take the clan's metal, side pieces are strapped on (`lugs`), the paint tin's bail is an unbroken arc on rivets, and Silkcut's reel has 3/4-view flanges and striped thread instead of a dithered checker. Hexmoon's bomber gets its goggles back, with moonlit lenses (`Recipe.recolor`).
+- **Round 2.** An island count over every frame found that the bomber's fist floated in walk frames 3–5. The cut's ink cleanup had erased the arm, which the art draws as a bare ink line. It also found a stick butt dangling under the fist, fuse tips poking out of every hat, crumbs by every keg lid, bombs hovering over the fist, and a floating standard. Islands went from 241 to 52, and the 52 left are intended (the torch's sparks and the champion crown's flame tongues). Brand fixes: Cinder's crest is now the hood's own tip burning (the candle row read as a crown, the champion's mark), and the keg carries a Peppercorn spice label. Hexmoon's mask is on the face. Silkcut wears both flanges from tier 1.
+- **Round 3.** Smudge's pail has paint poured over it. Hexmoon's urn has a fat crescent moon and a moon-and-stars plate. The armour badge's ring now wears the map tab's armour colour (`src/game/data/armourInk.ts`, held to `--armour-*` by `tests/armourInk.test.ts`).
+- **Means**, before → after: A 2.32 → 4.00, B 3.48 → 4.13, J 3.28 → 4.00. Assets under 4 on any axis: 74 → 0.
+- **Benchmarks.** Kingdom Rush and BTD6 per-world enemies keep the faction shape and let the costume carry the world. Ours do the same: the greyscale shots part the clans by headgear alone.
+- **Frame time** stays in the same band (crowded wave, phone: 2.7–5.7 ms of JS per frame).
+- **Proposals, not shipped.** Gnawbone Pack (Butcherblock) and Sporecap Rot (Greenvial) are baked through the same ladder (`scripts/enemy-clans-proposals.ts`, `enemy-clans.ts --proposals`).
+- **Left** (`docs/ui-audit-2026-10/asset-critique/enemies/SCORECARD.md`, "Still weakest"):
+  - on the down-swing the bomb sits on the fist rather than in it;
+  - the shoulder pads ride the head's track;
+  - Silkcut's and Hexmoon's hoop glints are blotchy;
+  - at 320 px the tier-2 and tier-3 ornaments are 1–2 px.
+- **Cards:** `docs/ui-audit-2026-10/asset-critique/enemies/cards/` (28 cards and `manifest.json`).
