@@ -3,8 +3,8 @@ import { COMPANY_IDS } from '../src/game/data/companies'
 import { FIELD_SEASONS, fieldSeasonFor } from '../src/game/data/fieldSeasons'
 import { fieldFor, FIRST_MAP, KILN_MAP } from '../src/game/data/maps'
 import type { GameMap } from '../src/game/types'
-import { clearGrid, EdgeBand, isClear } from '../src/game/render/edgeFx'
-import { WeatherLayer } from '../src/game/render/weatherFx'
+import { clearGrid, EDGE_PEAK, EdgeBand, isClear } from '../src/game/render/edgeFx'
+import { FLASH_GAP_S, OVER_GAME, WEATHER_PEAK, WeatherLayer } from '../src/game/render/weatherFx'
 import { AUTO_DOWN_MS, AUTO_UP_MS, fxAutoLight, fxLevel, noteFxFrame, onFxLevel, resetFxQuality, setFxSettings } from '../src/game/render/fxQuality'
 import { drawnRoad, gradeEnvironment, seasonPropsFor } from '../src/game/render/terrain'
 import { ACCENT_KEEP, ACCENT_PAINT, ACCENT_SHIFT } from '../src/game/render/season'
@@ -93,7 +93,7 @@ describe('the season a battle wears', () => {
       expect(!!(s.foliage || s.broadleaf), `${c} scenery`).toBe(true)
       expect(s.props?.length ?? 0, `${c} props`).toBeGreaterThan(0)
       expect(s.weather.count, `${c} weather`).toBeGreaterThan(0)
-      expect(s.weather.count).toBeLessThanOrEqual(60)
+      expect(s.weather.count).toBeLessThanOrEqual(18)
       for (const r of [...(s.foliage?.ramps ?? []), s.foliage?.bush, ...(s.broadleaf?.ramps ?? [])]) if (r) expect(r).toHaveLength(5)
       if (s.rocks) expect(s.rocks).toHaveLength(4)
     }
@@ -147,7 +147,7 @@ describe('the edge band never touches the game', () => {
         const { ctx, rects } = recorder()
         for (let f = 0; f < 150; f++) band.frame(ctx, map, view, 1, FIELD_SEASONS[co], 'full', 1000 / 60)
         expect(rects.length).toBeGreaterThan(0)
-        expect(band.count).toBeLessThanOrEqual(40)
+        expect(band.count).toBeLessThanOrEqual(new EdgeBand().caps.desk)
         const road = drawnRoad(map)
         const T = map.tile ?? 40
         const edge = 26 * 1.4 + 6
@@ -208,7 +208,7 @@ describe('the season’s weather keeps the game on top', () => {
     return { ctx: ctx as unknown as CanvasRenderingContext2D, rects }
   }
   for (const co of COMPANY_IDS) {
-    it(`${co}: capped (~60 on a phone), halved by Light, gone under reduced motion and the house look`, () => {
+    it(`${co}: capped (≤ 18 on a phone), halved by Light, gone under reduced motion and the house look`, () => {
       const map = FIRST_MAP
       const phone = { x0: 0, y0: 0, w: 640, h: 1100 }
       const run = (level: 'full' | 'light' | 'off') => {
@@ -223,7 +223,7 @@ describe('the season’s weather keeps the game on top', () => {
       }
       const full = run('full')
       expect(full).toBeGreaterThan(0)
-      expect(full).toBeLessThanOrEqual(60)
+      expect(full).toBeLessThanOrEqual(18)
       expect(full).toBeLessThanOrEqual(WeatherLayer.cap(FIELD_SEASONS[co], true, 'full'))
       expect(run('light')).toBeLessThanOrEqual(Math.ceil(full / 2) + 1)
       expect(run('off')).toBe(0)
@@ -232,11 +232,57 @@ describe('the season’s weather keeps the game on top', () => {
       expect(none.count).toBe(0)
     })
   }
-  it('is faint over the game: a particle over the road, a slot or the wagon is drawn at a third of its strength at most', () => {
+  it('the calm pass: every season at 40–50% of its old weather, the game kept clearer, everything fainter', () => {
+    // The counts before the calm pass (Oct 2026), a phone at Full.
+    const OLD = { spice: 30, art: 30, metals: 40, silk: 18, scrolls: 40 } as const
+    for (const c of COMPANY_IDS) {
+      const n = FIELD_SEASONS[c].weather.count
+      expect(n / OLD[c], c).toBeGreaterThanOrEqual(0.4)
+      expect(n / OLD[c], c).toBeLessThanOrEqual(0.5)
+    }
+    // Ironvein's rain was the loudest: it comes down the most.
+    expect(FIELD_SEASONS.metals.weather.count / OLD.metals).toBeLessThanOrEqual(0.4)
+    expect(FIELD_SEASONS.metals.weather.clouds!.alpha).toBeLessThanOrEqual(0.1)
+    expect(FIELD_SEASONS.silk.weather.fog!.alpha).toBeLessThanOrEqual(0.5)
+    expect(OVER_GAME).toBeLessThanOrEqual(0.2)
+    expect(WEATHER_PEAK).toBeLessThanOrEqual(0.7)
+    expect(EDGE_PEAK).toBeLessThanOrEqual(0.7)
+    // The edge band: 45% of its old caps (24 and 40).
+    const band = new EdgeBand()
+    expect(band.caps.phone).toBeLessThanOrEqual(11)
+    expect(band.caps.desk).toBeLessThanOrEqual(18)
+  })
+  it('the far flash is Full only and rare: none before its first gap, none ever on Light', () => {
+    const map = FIRST_MAP
+    const view = { x0: 0, y0: 0, w: 640, h: 1100 }
+    const flashes = (level: 'full' | 'light', secs: number) => {
+      let n = 0
+      const ctx = {
+        globalAlpha: 1,
+        fillStyle: '#000',
+        imageSmoothingEnabled: false,
+        fillRect() {
+          if (this.fillStyle === '#e8f0ff' && this.globalAlpha > 0) n++
+        },
+        rect: () => {},
+        beginPath: () => {},
+        fill: () => {},
+        drawImage: () => {},
+      }
+      const w = new WeatherLayer()
+      for (let t = 0; t < secs; t += 0.05) w.frame(ctx as unknown as CanvasRenderingContext2D, map, view, 0.5, FIELD_SEASONS.metals, level, 50)
+      return n
+    }
+    expect(FLASH_GAP_S).toBeGreaterThanOrEqual(40)
+    expect(flashes('full', FLASH_GAP_S - 1)).toBe(0)
+    expect(flashes('light', 240)).toBe(0)
+    expect(flashes('full', 240)).toBeGreaterThan(0)
+  })
+  it('is faint over the game: a particle over the road, a slot or the wagon is drawn at under a fifth of its strength', () => {
     const map = KILN_MAP
     const view = { x0: -60, y0: -40, w: map.width + 120, h: map.height + 80 }
     const g = clearGrid(map)
-    for (const co of ['spice', 'art'] as const) {
+    for (const co of ['spice', 'art', 'metals', 'scrolls'] as const) {
       const w = new WeatherLayer()
       const { ctx, rects } = recorder()
       for (let f = 0; f < 300; f++) w.frame(ctx, map, view, 1, FIELD_SEASONS[co], 'full', 1000 / 60)
@@ -244,7 +290,7 @@ describe('the season’s weather keeps the game on top', () => {
       const deep = (x: number, y: number) => [-10, 0, 10].every((dx) => [-10, 0, 10].every((dy) => !isClear(g, x + dx, y + dy)))
       const over = rects.filter((r) => deep(r.x, r.y))
       expect(over.length).toBeGreaterThan(0)
-      for (const r of over) expect(r.a).toBeLessThanOrEqual(0.34 + 1 / 24)
+      for (const r of over) expect(r.a).toBeLessThanOrEqual(OVER_GAME + 1 / 24)
     }
   })
 })

@@ -4204,3 +4204,428 @@ The designer: "Consider an audit of the motion design and animations throughout.
 - Moonquill is the calmest world, which is calm by nature.
 - Rosethread's ribbons are the one wide moving shape on a home.
 - The battle's own draw is the remaining cost on a slow phone.
+
+### 2026-10-18 — Peoples & Trades: every item's and skill's look (draft art)
+
+The designer asked to see each item's and each skill's unique visual assets for the world rework. Five peoples, 100 items and 50 skills. It is proposal art and none of it ships: the atlas, the item and skill tables and every number are untouched.
+
+**What was made.**
+- **Icons**: 125 new 16 × 16 cells in the atlas palette and outline (`scripts/peoples-art.ts`, with one file per people). The 25 kept items keep their shipped cells. Kingscale Shield and Greenvial Herbal are re-themed.
+- **On the tower**: every item is held or worn by the same knight on a Green Line post. The draw is the real `drawSentinel` → `heroFigure`: the real fists, cuts, body dresser and bake.
+- **Seams**: drafts reach the draw through two seams the game never sets. `HeroGear.art` puts a held picture in the fist. `HeroGear.bodyStyle` is a body piece as data (`bodyLayer.BodyStyle`), built from the shipped parts plus a pattern, sash, apron, pouches and a hood.
+- **Skills**: each has an icon, a small tell on the hero and a mid-hit frame on a keg on the road. The hit uses the real FX for burn, chill, shock, drain, stun, execute, splash, pierce, chains, the proc rings, the held arc, the snare and floaters. Poison, bleed, roots, gold and the tells themselves are drafted in the pack's look, pixel-doubled like the held gear.
+- **Sheets**: `docs/peoples/<people>-{items,skills}.png`, 10 sheets totalling 1 MB, from `harness/peoples.html` and `scripts/peoples-sheets.mjs`.
+
+**Checks.** `tests/peoplesArt.test.ts`:
+- 150 icons, no two closer than 24 px. The closest pairs are 39 px: the Spear against the shipped Staff, and the shipped Wand against the shipped Sceptre.
+- Every draft body piece fits every frame with 0 overflow. This caught a hood sprig poking out of an attack frame.
+- No two body pieces, shipped or draft, dress the knight alike.
+- The game never sets either seam.
+
+The harness reports that no tell touches a goblin's HP bar.
+
+**Two rounds.**
+- **Round 1.** The goblins hid behind the hero, and a torch goblin's flame covered its face, so the targets became a compact keg standing back to front with the hero. The tells were 1-px marks, invisible at the real scale; they are now pixel-doubled. Tells had touched the HP bar (the aura, the orbits); the auras and orbits now sit at a smaller radius. Miner's Pick read as a slingshot. Spiced Blade was 38 px from the Sword. Arc Spark looked like Thornbloom on the hero. Shields were clipped at the frame's edge.
+- **Round 2.** Floaters were moved off the bar and words dropped. Pips were redrawn solid (they had dithered into a checker). The Hide Wrap icon became a pelt. Brew Belt's vials were enlarged.
+
+**Benchmarks.** Slay the Spire's relics: one bold silhouette and two or three inks. The drafts hold to that, and the tiers climb from plain to gold-trimmed. Kingdom Rush's hero gear: oversized and chunky. Ours is held at the shipped `GEAR_SCALE`, about a third of the knight's height. It reads on the sheet at 3×, but on a phone it is small.
+
+**Left for the designer.**
+- The kept cells (the shipped wand, sceptre, staff, grimoire, tome and robe) are not re-themed. The Gnomes therefore read as a family through their new items only.
+- The Spear's thin diagonal sits 39 px from the shipped Staff. It differs in its bone tip and red binding, not in silhouette.
+- One knight wears everything: the brief asked for a neutral hero, and the sheet is a comparison. Per-people bodies would be new art.
+
+### 2026-10-18 — the knight's body under the cut shield, filled
+
+The designer: "The shield shape matters as it covers part of the body, and when it's small it looks odd since the body is missing." The painted shield covered the lower-left of the helmet, the side of the tunic and its outline, the near arm, in the swing a leg, and a bite of the ground shadow. `cutOffHand` cut all of it with the shield. So every knight whose off hand held something smaller than the shield (a Tome, Quiver, Focus or Buckler), or nothing (a two-hander, an empty hand), stood sliced down one side. This was live in the game, not only in the drafts. No rule, number or RNG draw changed.
+
+**The fix: fill in the body.** No CC0 unit in the repo shows the knight's body without its shield (the old build's Warrior paints it in every row), so the body is rebuilt from the knight itself. `scripts/shield-fill-lib.ts` mirrors it part by part about the middle of the helmet's untouched rows; the figure faces the viewer, so it is near-symmetric:
+- **Helmet**: the hidden lower-left takes the mirror of its right edge, row by row. It takes its colours from its own left edge in the lowest untouched row: the brown shade, then the tan. The art had painted brown along the shield's edge; that is inside the head now, so it becomes tan.
+- **Tunic**: the hidden side runs under the helmet's side and curves as its right side curves. It wears its right side's shades, edge for edge, and the same outline.
+- **Near hand**: the idle strip uses the sword hand at the hip, mirrored. In the attack strip, where the sword hand is up or out, the idle hand hangs at the rebuilt side.
+- **Leg**: where the shield hid the near leg, the far leg is mirrored.
+- **Shadow**: the bite is closed by the mirror of its right half, about the shadow's own axis.
+- **Outline**: new paint that faces empty space gets the pack's ink, and any ink the cut kept that now edges nothing is removed.
+
+**How it ships.**
+- `npm run anchors` writes the difference as a per-frame patch, `shieldFill.generated.ts` (12.7 KB), which `gearMarks.cutAndFill` applies after the cut.
+- `anchors:check` fails if the patch is stale or if any rebuilt frame breaks one of these rules (`fillProblems`): a hole the art does not have, an open outline, a stray island, a colour the knight does not wear, or a write over art the cut kept.
+- The rebuilt strips have their own torso rows (`fighter_{idle,atk}_bare`), so Mail, Plate, Robe and Cloak dress the whole tunic.
+- `offHandPlan` sends a knight with a real Shield down the old path: no cut, no patch, its own torso. Pixel for pixel, it is the painted art.
+- Tests: `tests/attackLook.test.ts`, "the body under the shield".
+
+**Round 1** (`harness/kit.html?shield=1`, the real `drawSentinel` → `heroFigure`; 1×, 3× and 8×):
+- The tunic mirrored about the helmet made the leaning wind-up frames pear-shaped (44 px wide). It now follows the helmet's side instead.
+- The helmet had a double shade band: the new one, plus the brown the art had painted along the shield. The old band is now repainted tan.
+- The leg pass deleted the legs it had drawn, because a leg is all ink and the stray-ink pass removed ink-only pixels. Legs are now exempt.
+- The attack strip's near hand floated far left. It now hangs at the side.
+- A shadow fleck stood under the shield's old tip.
+- In swing frame 4 the tunic showed through the chin. A row where the art shows body beside the chin now ends the head above it.
+
+**Round 2**:
+- The leg rule mistook the sword's pommel for a leg in one idle frame, which drew a loop of ink in the air.
+- A thin near leg (the shield had trimmed its top) was left detached in the last swing frame. Now the far leg is mirrored wherever the shield stood over the near one.
+- The hand covered the rebuilt tunic in the low swing frames. It now overlaps only the tunic's outline.
+
+Re-shot afterwards:
+- all 8 off hands (empty, Greatsword, Tome, Quiver, Focus, Buckler, Pavise, Shield) × no body / Mail / Plate / Robe / Cloak, idle and three swing frames;
+- the app's party bar and field (`scripts/kit-look.mjs`, 390 × 844 and 1280 × 800). The Greatsword knight's bust is whole, and Ironheart dresses both shoulders.
+
+**Benchmark.** Against the painted-shield knight, the bare knight reads as the same figure with the shield gone. Its silhouette is the egg helmet over a short tunic with a fist each side, in the pack's 2 px contour, like the Tiny Swords pawn. Kingdom Rush's heroes keep their silhouette whatever they hold, and so does the knight now. The held piece still hangs from the shield's old grip (`fistL`). In the swing it sits over the body, as before.
+
+**Shots.** `docs/ui-audit-2026-10/shield-fill/`:
+- `before-after-3x.png`: idle, five off hands;
+- `swing-before-after.png`: Focus through the swing at 3×, and Focus and empty at 1×;
+- `armour-after.png`: six off hands × five bodies.
+
+The Peoples & Trades sheets in `docs/peoples/` were regenerated (`scripts/peoples-sheets.mjs`). Nine of ten changed: every knight holding a drafted off-hand piece or a two-hander is whole now. `humans-skills` is unchanged.
+
+**Left.** The atlas piece is held at one point (`fistL`) for every frame. Through the swing it covers the chest, and in idle the rebuilt fist shows under it. Per-frame off-hand grips would be the next step.
+**Review cards (one asset at a time, for a phone).** `node scripts/peoples-sheets.mjs --cards` shoots `harness/peoples.html?cards` into `docs/peoples/cards/`: 150 cards (100 items, 50 skills), 3.2 MB in all, and `manifest.json` (`{ id, group, people, title, level, status, caption, file }`). The cell art is the same as the sheets'. Each card shows the icon at 6×, the name, the level tag and a NEW / RENAMED / KEPT tag. Signature skills also carry SIGNATURE, and a renamed skill says "was …" beside its name. Under that is the hero at 5×, crisp, with the people and the effect in one line from `docs/peoples/roster.json`.
+- **Sizes.** Items are 600 × 694. Skills are 600 × 984, because the keg stands on the road below the hero and a 5× frame of both is 160 logical px tall. At 390 px wide a skill card is 640 tall, so it still fits a phone screen.
+- **Checks.** Looked at on a 390 px downscale, the names, tags and art read at 26 px or larger. The effect line is 17 px; the longest (Spicy Peps) shrinks to about 11 px. The script exits non-zero if any name or line clips; none do.
+- **Left.** On a two-goblin skill (splash, pierce, chain) the second keg's HP bar sits over the first keg. That is the game's own layering, and the sheets do the same, but at 5× it is plain to see.
+
+### 2026-10-18 — the knight's filled body, round 2 (the designer marked all three round-1 shots FIX)
+
+The designer's notes: "the helmet looks bulbous now and the arm looks awkward"; held pieces "float above it"; "still rough edges where filled in"; "kinda tacky looking still". The coordinator's close critique was the pass/fail test, nine points: (1) the head bulges into a lopsided egg; (2) the near hand is a tan blob, a growth; (3) the off-hand pieces are pinned at one spot over the cheek; (4–7) Mail, Plate, Robe and Cloak look pasted on; (8) the Greatsword is a tiny blade on a brown block, and the arm kinks where the painted sword was cut; (9) the bar is the untouched Shield row. No rule, number or RNG draw changed.
+
+**What changed** (`scripts/shield-fill-lib.ts`; nothing is mirrored across the figure any more, because it is in 3/4 view):
+- **Helmet**: it goes on from its widest painted row above the shield in one rounded arc (a squircle quarter) into the chin. It is never wider than the painted head, and `anchors:check` now fails on a "swollen head". The shade band is the painted side's width and thins into the chin. The ink is redrawn at the art's 3 px across a side and 2 px along the chin.
+- **Tunic**: its back is narrow. It runs straight down from under the chin to a hem that stands as far past the near leg as the art's hem stands past the far one. The shoulder and the hem corner are rounded. It has a shadow-ink rim with the row's own ink inside, and it sits behind the helmet.
+- **Near hand**: none. That arm hangs behind the body. Round 2 first tried the pawn's own fist, tucked at the side. On the sheet it still read as a growth, so it was cut.
+- **Off-hand piece** (option B, shape fit, picked for every off-hand piece): it is drawn per frame where the painted shield stood, its right edge on the shield's edge against the body, at the shield's mid-height. It follows the body through the swing, with the hand behind it as the art's is. Option A, the piece gripped at the hidden hand by the tunic, sat lower and over the body, and read as pasted on the hip. A second weapon in the off hand is still gripped (`holdOf` 'hand'). The anchors are generated with the patch (`StripFill.grips`) and checked by the tests.
+- **New checks** in `fillProblems`: a fat contour (more than 5 px deep), lone px, and a head wider than the painted one.
+
+**Rounds**
+- **Round 2a**: the arc was a Hermite curve leaving the visor-slit row at a slant, so idle frame 3 started too far in. It now leaves the widest row, upright. The attack frames' tunic was a hard box with a dark block, so the shoulder and hem corner were rounded and the row's ink carried in.
+- **Round 2b**: the helmet's contour dilated into the gap between helmet and sword arm and shut a pocket (attack frame 0). The contour is now drawn only from the new part, and writes stay within 12 px of the hole. The fist's ring brought the pawn's tunic outline with it, so its contour is drawn in place. Notches of 1 px are inked shut.
+- **Round 2c**: the fist was cut (above). The tunic's top contour doubled the chin's, so it is not drawn under the chin.
+
+**Against the nine points**
+- (1) Pass: no swelling. `helmet-proof.png` overlays the rebuilt contour on the shield-on art, and it runs on or inside the shield's edge.
+- (2) Pass: no blob.
+- (3) Pass, in that the piece now stands where the shield stood, every frame. As with the painted shield, no arm shows. The Focus orb on its stand still reads a little odd at the side.
+- (4–7) Fail, unchanged: the body pieces are the separate body-layer overlays, and this round did not redraw them.
+- (8) Fail, unchanged: the main-hand swap is outside this fix.
+
+**Shots**: `docs/ui-audit-2026-10/shield-fill/round2/` holds six phone cards, 654–772 px wide: idle, swing, grip close-up, every combo, option A vs B and the helmet proof, plus `manifest.json`. The Peoples & Trades sheets (9 of 10) and 139 of the 150 review cards were regenerated.
+
+**Weakest**: in a single frame the bare knight passes for Pixel Frog's at 1× and 3×. At 8× the tunic's back is plainer than the painted front. The windup frames' big tunic still has a flat dark left half.
+
+### 2026-10-18 — the knight ships as option (b): only what passes the bar
+The coordinator chose (b) after round 2.
+- **No body piece on the figure.** `bodyLayer.BODY_ON_FIGURE` is off, so Mail, Plate, Robe and Cloak no longer dress the field figure or the busts cut from it, and the piece shows in the UI only. The dresser and `bodyAnchors.generated.ts` stay for the character builder, and `anchors:check` still fits them.
+- **The knight keeps the painted sword** for every melee weapon (Sword, Axe, Greatsword, Warhammer, Saffron Brand) and for an empty weapon hand. Cutting it left the arm kinked round a missing hilt, and the atlas cell read as a small blade on a brown block. The enchantment glint stays on the painted tip, and the art's own swing plays.
+- **The other looks**, checked in `harness/kit.html?weapons=1` at 3× and 4×:
+  - The archer's Dagger floated beside a body whose fist had gone with the bow, so it now draws no cell (`Rig.markMain`).
+  - The caster's wand, rod, sceptre, staff and books sit in its bare fists and read, so they are unchanged.
+- **Checked** at 1×, 2×, 3× and 8× in `?shipped=1`, and in the app at 390 × 844: the field, the busts and a crowded wave. Every knight cell now reads like the painted art, apart from the off-hand piece, which stands where the shield stood. `round2/shipped-look.png` shows every off hand × the shipped weapon cases at 2×, plus a 1× battle crop.
+- **Regenerated:** 8 Peoples sheets and 90 cards. The body-piece cards now show the bare knight, and the kept melee weapons show the painted sword. Draft weapons, which enter through the review seam `HeroGear.art`, still show their draft picture.
+### 2026-10-18 — Our own characters: the hero builder and the company faces (prototype)
+
+The designer asked for our own characters in place of the cut-up CC0 knight, built like a component: swappable by gear, editable by status. A further ask was a face for each company, to stand in the home dock. It is a prototype and nothing ships. It lives in `src/game/render/hero/` (rig, parts, compositor, the faces, the dock figures), with the harness `harness/heroes.html`, the sheets and cards in `docs/characters/`, and the spec in `docs/characters/README.md`.
+
+**Measured first.** The CC0 build sets the targets:
+- outline `#161c2e` at 2 px between parts and 2–3 px outside;
+- three tones plus white specular per material;
+- a chibi head roughly equal to the body;
+- mitten fists;
+- an ink shadow at alpha 80;
+- idle 6 frames, attack 6.
+
+The pack's knights are lit from the top on the side they face. The skill's "upper left" was not followed; this is noted in the README.
+
+**Round 1 (1× and 3×, on the Green Line beside the CC0 tower, goblins and knight).**
+- **Too small.** The heroes were 63 px against the knight's 95 and a goblin's 80. Bodies went ×1.2, items through a scaled pen.
+- **Muddy faces.** The light sat faces in shade; the light and thresholds were tuned to the pack's large lit areas.
+- **Features merged.** A 2 px ring on every feature merged the gnome's eye into its nose. Faces now use 1 px rings and separate placement.
+- **Heads.** Heads became asymmetric 3/4 skulls, never balloons.
+- **Gnome.** It read as a bald egg; the hat is now its default.
+- **Dwarf.** It was one ginger blob; it is now brown-bearded on tan.
+- **Mail.** It read as a checker (dither), then as bricks; it is now staggered rings, with mail sleeves and a belt worn over it.
+
+**Round 2 (3×; the faces, swaps and states sheets).**
+- **Monochrome faces.** Saffra was red on red, and Odile's bolt vanished into her cloak. Both were re-inked.
+- **Odile's hair.** Her silver hair read as a chef's hat; she has raven hair now.
+- **Crop bug.** Every sheet crop was stale after the cell grew, which cut off the feet.
+- **Level tier invisible.** The cape hid behind the shield and body. It is now wider, sweeps past the shield and rides the shoulders. On a kite-shield hero it still mostly hides; this is noted as a risk.
+- **Rarity didn't read.** Rarity now climbs iron → steel → gold, with a gem from rare up and a thin glow on mythic. A mythic-glow bug that filled the cell was caught here.
+- **Brigandine.** It read as polka dots; it is now dark cloth with sparse rivets.
+- **Keen Eye.** It was invisible; it is now a lens.
+
+**Round 3 (4× and 8× crops beside the CC0 knight and goblin).**
+- **Outline weight and grip.** Both now match the pack.
+- **Skin read as a beard.** The tan skin's mid (`#d9945f`) read as a beard on the jaw. One new tone, `#eaa98a`, was added.
+- **Noisy hair.** The streak jitter was noisier than the pack's clean bands, so it was reduced.
+- **Gambeson.** Its quilting read as a check; it is now quilted rows.
+- **Wind-up.** The swing's wind-up crossed the face; it now rides over the head.
+- **Dock overlap.** The mock in the real app showed the 48 px dock figure sitting on its slot's Rep line. The proposal is +16 px per slot.
+
+**Checks** (`tests/heroBuilder.test.ts`, 35 tests). The tests caught six fit failures before any render did. All were fixed in the rig, not by loosening checks:
+- smears and spear thrusts past the cell;
+- a dwarf's two-hander driving into the ground (swings now stop at the ground);
+- hafted two-handers and polearms overreaching (the hands now slide along the shaft);
+- Wren's hat at the dock cell's edge.
+
+They cover:
+- every roster item and prop on every people at its widest frames, and every frame of every animation for five kits;
+- no clipping, one connected figure, the item in its hand, the body piece on the body;
+- the draw order holds;
+- each state touches only its `STATE_LAYERS`;
+- liveries swap inks, never shapes;
+- unknown gear falls back;
+- every solid pixel is a declared ink;
+- the races' silhouettes stay apart (IoU < 0.86; worst human–reptilian 0.83);
+- the faces and the dock figures.
+
+**Benchmarks.**
+- **Tiny Swords:** the 1× field card is the test, and they sit with the knight and goblins as one set.
+- **Kingdom Rush heroes:** ours are as big as the creeps and read by silhouette first; KR's are painted larger and richer.
+- **Legends of Kingdom Rush paper-dolls:** the same idea (gear swaps the part), and ours keeps the outline closed round each piece, which LoKR's doesn't need at its size.
+
+**Still not on par.**
+- The shading is flatter than the pack's. It has fewer specular dashes, and its bands are computed, not hand-laid; at 8× it shows.
+- The skill tells (spark, rage, bloom) are small at 1×.
+- A shield-bearer's cape tier barely shows.
+- The human's hair cap still reads a little like a helmet.
+- The dock figures had two 8× rounds (round 1: Brannoch's dome split in two tones, Odile's white hair; both fixed). Their hands are 2 px mittens with no arms, the pack's own convention at that size; the designer has not seen them yet.
+
+### 2026-10-18 — the icon family: three rounds of critique (aesthetics, brand, job)
+
+The designer: "do 3 rounds of critiques to improve every asset along a rubric of aesthetics, brand, and its job". This pass covered the icons: 30 atlas item cells, 21 skill marks, 125 Peoples & Trades draft icons, 50 draft tells, and 10 places the shell shows them at real size. That is 236 assets, each scored 1–5 for aesthetics, brand and job, with a one-line reason. The scorecard is `docs/ui-audit-2026-10/asset-critique/icons/SCORECARD.md`. No rule, number, stat, name or RNG draw changed.
+
+**How each round was judged.**
+- The atlas came from the generator, the drafts from `artRGBA` and `harness/peoples.html` (the real `drawSentinel`), and the figure from `harness/kit.html`.
+- The running app was shot through Playwright (vite :5251) at 390 × 844 (DPR 2) and 1280 × 800: the Codex items and skills tabs, the Pack grid, Gear, the hero card, the merchant shelf, the spoils hand and the upgrade panel.
+- Every icon was viewed at 1×, 2×, 3×, 6× and 8× on wood and on parchment, beside the CC0 pickups and system icons.
+
+**Round 1: what misread.**
+- Atlas: the Robe was a ghost, the Plate a tooth, the Grimoire a framed gem, the Banner an archery target, and the Shield flat. They are now a robe with sleeves and a belt, a cuirass, a violet book in the Tome's family, a hanging swallowtail banner, and a three-step steel ramp.
+- Haste pointed left (rewind) on every Speed and Rush skill. It now points forward, and Slow mirrors it.
+- `skillHeadline` read the multipliers first, so 18 skills drew a mark their own first words contradict (Heavy Blows "Hits 25% harder" showed the speed chevrons; Snare and Anchor showed the chill flake; Finisher and Reaper the slashes). The named effects now come first, damage before speed. `tests/skills.test.ts` pins 15 of them. This one change fixes the Codex skill tiles, the hero card's slots, the pick strip's tokens, the track and the home card.
+- The hero card's "Swings" sword was drawn at 14 px, which dropped two rows and columns. It is 16 px now.
+- Fifteen drafts were redrawn: a spider (Overgrowth), the range reticle (Cold Snap), a lollipop (Snare), a bird (Quick Hands), the chill flake (Starweave), a bone (Rally), loose chevrons (Banner Bearer), a spring (Bounty), a robot head (Hard Hitter), a tangle (Javelin Sling), a TV (Smokehouse Apron), a ring (Shortbow), a creature (Barbed Quiver), a jellyfish (Moonsilk Mantle) and a bush (Mossweave Robe).
+- Three tell marks made checkers. The flake pip's corners touched only diagonally. Starweave's white stars sat on white. The pennant's emblem was ringed pixel by pixel. `pixLine` is now 4-connected, so roots and chains are solid lines.
+- The Cloak first became a cape with folds, which read as a melon. It ended the round as a hooded figure.
+
+**Round 2: noise and flat ramps.**
+- Dithered body pieces and shields became drawn textures:
+  - Chainshirt: steel bands with a belt;
+  - Stoneskin Mail: stone slabs in a brick bond;
+  - Deepforge Plate: a molten seam;
+  - Round Shield: two-pixel planks;
+  - Woven Vest: rows and lacing;
+  - Scale Hide: staggered scales.
+- The Warhammer got a ramp.
+- Execute had become a guillotine frame in round 1, which read as a picture at 48 px. It is now the blade falling on a nearly empty HP bar.
+- Relic is a locket. Berserk, Venom Spit, Herb Pouch, Thornweave Hood, Thornrod and Worldroot Staff were redrawn, and the ties on Smokehouse Apron were cut.
+
+**Round 3: re-score everything, then fix what still scored under 4.**
+- Silkwind had read as a bird twice. It is now the Cloak's figure in violet, with its hem kicked right.
+- The Gator Buckler had read as an urchin. It is now a rimmed buckler with a bony ridge.
+- The Spiced Blade had the Sword's outline. It now has a wavy red edge and a flame at the tip.
+- The Moonsilk Mantle became a capelet with a silver hem.
+
+**Scores, before → after (236 assets).**
+
+| Axis | Before | After |
+|---|---|---|
+| Aesthetics | 7 at 2, 41 at 3 | 3 at 3 |
+| Brand | 2 at 3 | unchanged |
+| Job | 23 at 2, 32 at 3 | 21 at 3 |
+
+Assets with any axis under 4: 68 → 26.
+
+**Checks.** `tests/bodyLayer.test.ts` passes: every redrawn body cell still holds its `BODY_INK` colours, so the tile and the figure agree. `tests/peoplesArt.test.ts` passes: the 150 draft icons are still at least 24 px apart, and the closest pair is the Sword and the Spiced Blade at 38. Weapon grips did not move.
+
+**Left (the scorecard's "still weakest" list).**
+- The four casting sticks differ by their tips alone.
+- Skill marks are effect marks: five Rush skills share one chevron in the Codex.
+- The Moonsilk Mantle is still a dome at 1×.
+- The Mail is a checker, and the Saffron Brand is busier than its row.
+- The Codex and Easel cells are the retired houses' marks.
+- Berserk and Venom Spit read as a monster and a fish.
+- `docs/item-assets/` and `docs/peoples/` still show the old cells. The main session re-renders them after the merge.
+
+**Cards.** `docs/ui-audit-2026-10/asset-critique/icons/cards/` holds 47 cards (880 KB) and `manifest.json`.
+### 2026-10-18 — asset critique: the enemies, three rounds
+
+The designer: "do 3 rounds of critiques to improve every asset along a rubric of aesthetics, brand, and its job". This pass covered the goblin clans (75 baked strips: 5 clans × torch / bomber / keg × tiers 1–5), the field's elite and armour badge, the tier ticks, the boss plate and the run map's armour tab: 79 assets, each scored A / B / J from 1 to 5 per round. Every round was judged on the real bake at 1×, 3× and 8× beside the CC0 goblins, and in a real crowded battle on each company's road (`scripts/enemy-clans-critique.mjs`, 390 × 844). Engine ids, stats and RNG order are untouched, and the stats snapshot is unchanged.
+- **Round 1.** Every clan's tier-2 shoulder piece sat on the torch goblin's nose and the bomber's mouth. It now sits on the back shoulder and the basket strap. The keg fixes: the stencil holes are mended (grass showed through), the hoop glints take the clan's metal, side pieces are strapped on (`lugs`), the paint tin's bail is an unbroken arc on rivets, and Silkcut's reel has 3/4-view flanges and striped thread instead of a dithered checker. Hexmoon's bomber gets its goggles back, with moonlit lenses (`Recipe.recolor`).
+- **Round 2.** An island count over every frame found that the bomber's fist floated in walk frames 3–5. The cut's ink cleanup had erased the arm, which the art draws as a bare ink line. It also found a stick butt dangling under the fist, fuse tips poking out of every hat, crumbs by every keg lid, bombs hovering over the fist, and a floating standard. Islands went from 241 to 52, and the 52 left are intended (the torch's sparks and the champion crown's flame tongues). Brand fixes: Cinder's crest is now the hood's own tip burning (the candle row read as a crown, the champion's mark), and the keg carries a Peppercorn spice label. Hexmoon's mask is on the face. Silkcut wears both flanges from tier 1.
+- **Round 3.** Smudge's pail has paint poured over it. Hexmoon's urn has a fat crescent moon and a moon-and-stars plate. The armour badge's ring now wears the map tab's armour colour (`src/game/data/armourInk.ts`, held to `--armour-*` by `tests/armourInk.test.ts`).
+- **Means**, before → after: A 2.32 → 4.00, B 3.48 → 4.13, J 3.28 → 4.00. Assets under 4 on any axis: 74 → 0.
+- **Benchmarks.** Kingdom Rush and BTD6 per-world enemies keep the faction shape and let the costume carry the world. Ours do the same: the greyscale shots part the clans by headgear alone.
+- **Frame time** stays in the same band (crowded wave, phone: 2.7–5.7 ms of JS per frame).
+- **Proposals, not shipped.** Gnawbone Pack (Butcherblock) and Sporecap Rot (Greenvial) are baked through the same ladder (`scripts/enemy-clans-proposals.ts`, `enemy-clans.ts --proposals`).
+- **Left** (`docs/ui-audit-2026-10/asset-critique/enemies/SCORECARD.md`, "Still weakest"):
+  - on the down-swing the bomb sits on the fist rather than in it;
+  - the shoulder pads ride the head's track;
+  - Silkcut's and Hexmoon's hoop glints are blotchy;
+  - at 320 px the tier-2 and tier-3 ornaments are 1–2 px.
+- **Cards:** `docs/ui-audit-2026-10/asset-critique/enemies/cards/` (28 cards and `manifest.json`).
+### 2026-10-18 — the places, three rounds of critique (stops, posts, shop front, signs, bubble)
+
+The designer: "do 3 rounds of critiques to improve every asset along a rubric of aesthetics, brand, and its job". This entry covers the places family: 13 assets and 2 proposals. Each was scored 1–5 for aesthetics (would Pixel Frog build it from the pack?), brand (warm storybook, and the company's own land) and job (on a 390 phone: where you are, who speaks, room for the sign, the bubble and the goods). The people standing in the posts are the character rig's, so they were kept, and every post leaves them the same room. No rule, number or RNG draw changed.
+
+The scorecard, round by round, is `docs/ui-audit-2026-10/asset-critique/places/SCORECARD.md`. Every round was rendered in the running app with `scripts/places-shots.mjs` (390 × 844 and 1280 × 800). That script also measures each bubble against its sign and its scene. The scene PNGs were checked at 1×, 2× and 4×.
+
+**Round 0 failed in four ways, everywhere.**
+- The yards were the pack's lemon beach sand, laid as rectangles.
+- No drawn prop had a shadow.
+- The props were too small beside 59 px pawns: a tent shorter than a person, a 14 px crate.
+- The meadow's 64 px tile repeated.
+
+The worst single failures:
+- On a phone, the hiring sergeant's three-line lines ran off the scene's top.
+- The merchant's counter was empty, and the ware floated over the clerk's hat.
+- Three of the campfire's props were hidden behind people.
+- Four posts were one stall in one pine wood. Ironvein had no quarry, Rosethread had no river or loom, and Peppercorn had no fields.
+
+**What changed.**
+- **The ground and the props.**
+  - The ground is trodden earth: the sand tile re-inked pixel for pixel, laid in ellipses with noisy, grass-nicked rims.
+  - The meadow has patches in its own greens.
+  - Every drawn prop is at the people's scale and stands on a shadow.
+- **The stops.**
+  - The merchant is a kit stall (a rack of blades, a helm, a shield), its ware in the raised hands.
+  - The campfire stands on a stone hearth, its pot on a spit.
+  - The shrine stands on worn flagstones.
+  - The hiring yard is a drill yard (a rack of arms, a straw man, a hire at practice). Its flag went: the sign is its pennant.
+- **The posts.**
+  - Peppercorn's stall is at the edge of its chili fields, with the burn's strip.
+  - Ironvein's stands at its quarry: the pack's cliff, an adit, an ore cart, a forge.
+  - Rosethread's stands by its ford: the river, its stones, reeds, a loom.
+- **The bubble.** Anchors are at faces, and the bake marks a tall speaker `beside`, so the bubble stays inside the scene.
+- **The signs.** The shop's sign uses the city's sign tokens.
+- **The shop front.**
+  - "Cargo is whole" reads on its tag: it was cream on cream.
+  - The shelf's and the counter's washes are tokens.
+
+**The proposals.** Butcherblock's salt-marsh smokehouse and Greenvial's glasshouse garden come from `npx tsx scripts/stop-scenes.ts --proposals <dir>`. They are never written to `public/` or the anchors.
+
+**Benchmark.** Kingdom Rush's shops and camps are a place with one figure. Each one's silhouette says its trade before any word, and its ground has worn paths and shadows. The posts now differ by land (field, quarry, ford), not only by colour. The stops sit on the same dirt as the battle road.
+
+**Cards.** `docs/ui-audit-2026-10/asset-critique/places/cards/` holds 15 cards, 620 KB. Each shows before over after on a phone, a 2× crop and the scores, with a `manifest.json`. They are made by `scripts/places-cards.mjs`.
+
+**Still weakest.**
+- The Easel House and Moonquill posts score brand 2 until the proposals are picked.
+- At 52 px, the receipt cameo is a hat. That is the character rig's.
+- On a phone, the bubble covers each post's back-right.
+- The fire's, the shrine's and the yard's signs are literal materials. That is a § 8 rule 7 break, older than this pass, which needs the designer's yes for the exceptions table.
+### 2026-10-18 — the marks critique: crests, flags, the home map and the shell's pixel marks (3 rounds)
+
+The designer asked for three rounds of critique on every asset, against aesthetics, brand and job. This entry covers the marks family: 41 assets. The scorecard is `docs/ui-audit-2026-10/asset-critique/marks/SCORECARD.md`, with every asset × round. **Mean score 3.64 → 4.02.** Assets with an axis under 4: 19 → 3, and those 3 are outside this pass's reach.
+
+**How it was judged.**
+- **Running app.** Playwright at 390 × 844 @2× and 1280 × 800 on:
+  - the home with each company focused, and Buy Company;
+  - terms, charter, militia, track, livery, standings, Codex, receipt;
+  - a battle, for the wagon's flag.
+- **Marks alone.** The new harness `harness/marks.html` draws every mark from the shipping rows and components at 1×, 2×, 4× and 8×, on wood, panel, parchment and map ground. `?proposal=1` adds the unshipped proposals.
+
+**Round 1 (worst first).**
+- **Ironvein crest.** A brown rock with a 3 px blue vein, a grey sack at dock size. Now a blue-steel pick over a lump of ore with its blue crystal.
+- **Peppercorn crest.** The chili read as a pickle. Now it hangs from its cap and curls to its tip.
+- **Rosethread, Moonquill and Easel House crests.** The spool loses its dotted "jar" winding. The quill-blade becomes a feather. The easel's daubs become a painting.
+- **Company standards.** Every logo is drawn in its company's colour, so on the standard it was only an outline. A patch of deeper dye, one cell round the logo, now sews it on. This is a deliberate change to the plain standard; `tests/companyKits.test.ts` now holds the patch.
+- **Small lock.** Its outline-only shackle vanished on dark wood; it now has its own steel. The 16 px locked padlock moved off cool slate to the same warm parchment.
+- **Coin.** The 7 × 7 coin was a gold square; it is now round.
+- **Codex tile frames.** `#fff` / `#000` became tokens.
+- **Emblems.** Eight 5 × 5 emblems that read as something else were redrawn.
+
+**Round 2 (zoomed to 8×).**
+- **Sovereign crest and Crown.** Two jewels over a dark band read as a *smiling face*. The new crown has a raised centre point and one ruby. The shield's point no longer hangs a two-row stem.
+- **Gold rim.** It was a 1 px hairline in the *themed* `--accent`, so it showed lime under Peppercorn. It is now one crest pixel wide (`--rim`) in `--gold`.
+- **Map.** Towns are houses with pitched roofs, not crates. Pines are lit from the left.
+
+**Round 3.**
+- **Map peaks.** They read as tents; they now have a summit, a shoulder and a ragged snowline.
+- **Town roofs.** Warm terracotta.
+- **Checks.** Everything re-shot. `scripts/home-stability.mjs` passes after every round: no wiggle, and the terrain bakes once.
+
+**Benchmark.**
+- Against the Tiny Swords icon set and the atlas, the five crests are now one family:
+  - one `#161c2e` outline, light from the upper left, 2–3-step ramps;
+  - each company's colour is the largest mass;
+  - five distinct silhouettes at 16 px (curve, framed board, T-pick, I-spool, diagonal feather).
+- Against Slay the Spire's and Hades' small marks: each reads as one object, never a scene.
+
+**Proposals (not shipped; cards only, drawn by `harness/marksProposals.ts`).**
+- **Butcherblock:** a haunch on the bone in brine red `#c25b6b`.
+- **Greenvial:** a sprouting potion flask in bottle jade `#2fa58a`.
+- Both colours are ≥ ΔE 15 from every reserved hue. Their standards are built with the shipping `standardRowsFor`.
+
+**Left.**
+- Rare `#5fb0c4` sits ΔE 4 from the CTA teal; this needs the designer (card `rarity-teal`).
+- The run's atlas coin is lemon and differs from the shell's (`fw-icons`, another agent's).
+- At the livery's 4× the patch reads as a doubled outline.
+- The 5 × 5 emblems are at their resolution floor.
+- `harvest-cc0 --check` could not reach the network (403). No pack file was added: every mark here is hand-drawn rows.
+
+**Cards.** `docs/ui-audit-2026-10/asset-critique/marks/cards/`: 19 cards plus `manifest.json`.
+### 2026-10-18 — the battlefield's static art, three rounds of critique
+
+The designer: "do 3 rounds of critiques to improve every asset along a rubric of aesthetics, brand, and its job". This pass covered the battlefield's static art: the terrain bake, the roads, the danger ground, the five field seasons and their props, the overlays, the wagon and the gate, and the shots and hits. The moving weather and edge band were another pass's. No rule, number or RNG draw changed. The dressing (`buildDressing`) is untouched, and every new placement is a hash of position, the field and the season.
+
+**How it was looked at.** `scripts/battlefield-critique.mjs` renders each company's road with its own danger ground, the house look, and both hand-made benches. It draws the 1:1 bake, then real battles (setup, a hero armed, mid-wave) at 390 × 844 and 1280 × 800. Shots were read at 1× and in 3× crops. The BEFORE set came from an untouched export of the starting commit on a second dev server. The scores (A/B/J, 1–5) and what changed per asset and round are in `docs/ui-audit-2026-10/asset-critique/battlefield/SCORECARD.md`.
+
+**Round 1.**
+- **The seam.** The seasons' keep-mask held a 4 px verge round the road and a square 2 px past each danger tile. That left a ring of summer grass round every road and patch in the frost's snow and the harvest's straw. It now keeps exactly the drawn road and each piece's drawn shape.
+- **Frost.** The snow is a step down from paper white, so a cream helmet stands off it. The pines keep a green body with snow on the lit boughs; before, they were grey-white cones.
+- **Spring.** The blossom ramp gained a dark step (before, the trees read as cotton puffs). The wood gained reed beds and brackish pools.
+- **Overcast.** Cut quarry stone stands in the wood. Puddles are fewer and lie in the ground; before, they were blue discs by the road.
+- **Misty morning.** Less haze. Willows stand among the pines.
+- **Late summer.** Props stand in clumps (a harvested field, then plain wood), and pepper plants stand among them.
+- **Lakes.** A bank shadow and a deeper middle.
+- **Burns.** A browned, ragged rim.
+
+**Round 2.**
+- **The wagon.** Round, spoked wheels (the old wheels were flat ovals). It stands in a clearing in the bake, not on baked treetops.
+- **The road.** A sunken lane, with the caravans' broken wheel tracks.
+- **The gate.** A standing palisade of sharpened stakes; before, the planks lay flat across the road.
+- **Cursed ground.** Sunken.
+- **Spring.** Wet sedge in the meadow, and taller reeds.
+- **Frost.** Rings of glowing mushrooms in the hollows.
+
+**Round 3.**
+- The near autumn trees turn yellow, not green.
+- Rounder burns, with an ember ring.
+- Spring has more reeds and less blossom.
+
+**Benchmarks.** Kingdom Rush and the Tiny Swords showcase: the lane and the slots stay the cleanest things on the field, decoration frames the margins, and props are grounded with shadows. The danger ground still has to fill its tiles, so its silhouette is the grid's.
+
+**Still weakest.** The art slot's salt marsh and the scrolls slot's mushroom hollows are hints, carried by scenery. Their seasons stay spring and frost, which the designer asked for by name. Making them full lands is the designer's call: a field-wide reed-channel layer for the marsh, and new set pieces for the gardens. Small props (pools, glowing caps, sunflowers) are flecks at 1×.
+
+**Cards.** `docs/ui-audit-2026-10/asset-critique/battlefield/cards/` holds 13 cards and `manifest.json`, built by `scripts/battlefield-cards.mjs`.
+
+**Checks.** The typecheck, `npm test` (1258 tests, including `fieldWorlds`, `fieldGen`, `fields` and `caravan`) and `build:checks` are green. `scripts/harvest-cc0.ts --check` could not reach the GitHub API from this sandbox. No asset file was added: every new prop is procedural.
+### 2026-10-18 — the company worlds, calmed
+
+The designer: the company effects are "a bit overwhelming now that I'm playing more". The goal was **felt, not watched**: the map, the roads and the words are the show, and the worlds are atmosphere at the edge of attention, like Slay the Spire's map, Hades' menus and Into the Breach. Full was retuned for every company, and Light follows from it. No gameplay, number or RNG draw changed.
+
+**What changed.**
+- **Ambient particles.** The cap is 24 on a phone and 40 on a desk, down from 60 and 110. Peppercorn has 11 embers (from 40) and Ironvein 18 sparks (from 60). Drift is slower, and each world draws its particles at a `peak` of 0.5–0.7 with no white-hot pixels.
+- **Glows** breathe over 8 s, at a third of their old strength.
+- **Frames, strips and crest** are still. The CTA alone keeps a 7% shimmer every 9 s.
+- **Switch-in:** a 350 ms crossfade under a faint, still wash of the world.
+- **Press bursts** stay on the CTA's face, at 20 particles or fewer.
+- **Battle:** the weather is at 40–50% of its old count. The sheets are narrower, sparser and fainter, and they skip the game's cells. Fog and clouds are fainter, and the flash comes 45–90 s apart, on Full only. The edge band is at 45% of its old count and 70% of its strength.
+
+**Measured** (`scripts/motion-audit.mjs`, phone, before → after; the full tables are in `docs/ui-audit-2026-10/motion/AUDIT.md`):
+- Home ambient: Peppercorn 0.30 → 0.05 Hz and Ironvein 0.29 → 0.05 Hz. Every world now sits at the house look's 0.04–0.07 Hz, which is the roads' own traffic.
+- The card and the CTA: from 0.03–0.36 Hz to 0 Hz.
+- The press on the CTA: Peppercorn 2.26 → 0.32 Hz and Ironvein 2.69 → 0.51 Hz.
+- Ironvein's battle edge: 0.80 → 0.45 Hz, and the rain's cover of the stage 5.7% → 0.5%.
+
+**Rounds.**
+1. The first fill is staggered through its lives, because a screen of embers fading in and out together pulsed. Easel House got a few small splats back. Ironvein's press is one seam, a third of the way, where it was both seams for the full length.
+2. The battles are seeded, so before and after fight on the same road. Rosethread's ribbon dropped to an eighth's strength, because it pulled the eye where it crossed the focused road. The rain went back up to 0.3, enough to be felt. The sheets skip the road's way in and the wagon. The flame line is a little taller.
+3. Easel House and Ironvein were re-measured with the final code. Each world still reads as itself in a still frame: a flame horizon and a crest, anvils, splats, petals and a ribbon, the moon.
+
+**Benchmark.** Like Slay the Spire's map, the home's one moving thing is now the roads' traffic. The world sits at the edges, as in Hades' hub. Into the Breach keeps its weather at its margins, and so does Ironvein now: rain at the edges, the lane untouched.
+
+**Left.** Ironvein's rain is still the busiest battle margin, at 0.45 Hz against 0.1–0.2, though it is faint. Rosethread's fog changes the most pixels, though at low contrast. The still anvils and the moon are the highest-contrast world art left, and they do not move.
+
+**Cards** for the designer's phone: `docs/ui-audit-2026-10/motion-calm/`. There are ten animated WebPs (home and battle per company, BEFORE over AFTER, 3.5 s) and a `manifest.json`. Rebuild them with `node scripts/motion-cards.mjs <before audit> <after audit> <out>`.

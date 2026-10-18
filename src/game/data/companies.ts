@@ -164,8 +164,11 @@ export const FIRST_COMPANY: CompanyId = 'spice'
 /**
  * The Sovereign Route's emblem (the endgame charter): a crown — no company's
  * road, so no company's crest. Drawn on the same shield in the Sovereign cyan.
+ * `g` gold, `w` its lit points, `y` the band, `r` one ruby. (The marks
+ * critique, Oct 2026: the old crown's two paper jewels over an outline band
+ * read as a smiling face.) The trade war's `Crown` is its top six rows.
  */
-export const SOVEREIGN_EMBLEM: readonly string[] = ['........', 'g..gg..g', 'gg.gg.gg', 'gggggggg', 'gpggggpg', 'gggggggg', '.oooooo.', '........']
+export const SOVEREIGN_EMBLEM: readonly string[] = ['...ww...', 'w..gg..w', 'gg.gg.gg', 'gggggggg', 'gggggggg', 'yyyrryyy', '........', '........']
 
 /** A locked company's emblem: a question mark. */
 export const UNKNOWN_EMBLEM: readonly string[] = ['..pppp..', '.pp..pp.', '.....pp.', '....pp..', '...pp...', '...pp...', '........', '...pp...']
@@ -189,117 +192,117 @@ export interface CompanyLogo {
 
 export const COMPANY_LOGOS: Readonly<Record<CompanyId | 'locked', CompanyLogo>> = {
   spice: {
-    // a chili pepper with a green stem
+    // a chili hanging from its green cap, curling to its tip (the marks critique, Oct 2026: the old one read as a pickle)
     rows: [
       '................',
-      '..........oo....',
-      '.........oGGo...',
-      '........oGgGo...',
-      '......ooogGo....',
-      '.....ohhhooo....',
-      '....ohllhhhdo...',
-      '...ohlhhhhhdo...',
-      '...ohlhhhhddo...',
-      '..ohhhhhhddo....',
-      '..ohhhhhdddo....',
-      '.ohhhhhddo......',
-      '.ohhhhddo.......',
-      '.ohhddoo........',
-      '..oddo..........',
-      '...oo...........',
+      '..........oGo...',
+      '........ooGo....',
+      '.......oggggo...',
+      '......oGGGGGGo..',
+      '.....ohllhhhhdo.',
+      '.....ohlhhhhhdo.',
+      '.....ohhhhhhhdo.',
+      '......ohhhhhddo.',
+      '......ohhhhhdo..',
+      '......ohhhhhdo..',
+      '......ohhhhddo..',
+      '....oohhhhddo...',
+      '..oohhhhdddo....',
+      '.odddddddoo.....',
+      '..ooooooo.......',
     ],
     palette: { G: '#276740', d: '#8fa83a', g: '#38b251', h: '#c6e05a', l: '#fffce7', o: '#161c2e' },
   },
   art: {
-    // an easel holding a painted canvas
+    // an easel holding a painting — a sun over a green hill — in a wooden frame
     rows: [
       '.......oo.......',
-      '......oWWo......',
-      '..oooooooooooo..',
-      '..ohhhhhhhhhho..',
-      '..ohlhhhhhrrho..',
-      '..ohhhhhhrrrho..',
-      '..ohhyyhhhhhho..',
-      '..ohyyyhhbbhho..',
-      '..ohhhhhbbbddo..',
-      '..ohddddddddo...',
-      '..oooooooooooo..',
-      '....owo..owo....',
-      '...owo....owo...',
-      '...owo....owo...',
-      '..owo......owo..',
-      '..ooo......ooo..',
+      '......owWo......',
+      '.oooooooooooooo.',
+      '.owwwwwwwwwwwwo.',
+      '.owhhhhhhhyyhWo.',
+      '.owhhhhhhyyyyWo.',
+      '.owhhhhhhhyyhWo.',
+      '.owhhhgggghhhWo.',
+      '.owhhggggggghWo.',
+      '.owgGGgggGGGgWo.',
+      '.owWWWWWWWWWWWo.',
+      '.oooooooooooooo.',
+      '...owo.oo.owo...',
+      '...owo.oo.owo...',
+      '..owo..oo..owo..',
+      '..ooo..oo..ooo..',
     ],
-    palette: { W: '#866353', b: '#5d8be2', d: '#8d6fd0', h: '#c6a4ff', l: '#fffce7', o: '#161c2e', r: '#f76666', w: '#a38250', y: '#ffed44' },
+    palette: { G: '#276740', W: '#866353', g: '#38b251', h: '#c6a4ff', o: '#161c2e', w: '#a38250', y: '#ffed44' },
   },
   metals: {
-    // a pickaxe over an ore rock with a vein
+    // a blue-steel pick over a lump of ore with its blue vein (the old one was a brown rock: no blue to read at dock size)
     rows: [
       '................',
-      '..ooooooo.......',
-      '.osssssssoo.....',
-      '..oooowWosso....',
-      '......owWooso...',
-      '.......owWoso...',
-      '.......owWo.o...',
-      '.....oooowWo....',
-      '...oorrrrowWo...',
-      '..orrhhrrrowWo..',
-      '.orrrrhhrrrowo..',
-      '.orRrrrhrRrroo..',
-      '.orrRrrrrrRrro..',
-      '.oRRrRRRrRRRro..',
-      '..oRRRRRRRRRo...',
-      '...ooooooooo....',
+      '..oooooo........',
+      '.ocbbbbboo......',
+      '.oBbbbbbbboo....',
+      '..oooooowbbBo...',
+      '.......owWobBo..',
+      '......owWo.obBo.',
+      '.....owWo...oBo.',
+      '....owWo.....oo.',
+      '...owWooooooo...',
+      '..owWorrcbbrro..',
+      '.owWorrcbbBrrro.',
+      '.oWorrrbbBBrRRo.',
+      '..orrRrrBrrRRRo.',
+      '..oRRRRRRRRRRo..',
+      '...oooooooooo...',
     ],
-    palette: { R: '#6f5a48', W: '#866353', h: '#5d8be2', o: '#161c2e', r: '#9e8776', s: '#bac1c8', w: '#a38250' },
+    palette: { B: '#3c5fae', R: '#6f5a48', W: '#866353', b: '#5d8be2', c: '#b8d0ff', o: '#161c2e', r: '#9e8776', w: '#a38250' },
   },
   silk: {
-    // a spool of silk with a needle through the thread
+    // a spool of silk between wooden flanges, its loose thread run through a needle
     rows: [
       '................',
-      '...oooooooooo...',
-      '...owwwwwwwwo...',
-      '...oooooooooo...',
-      '....ohhhhhho....',
-      '....ohlhhhdo..o.',
-      '....ohhhhhdo.oso',
-      '....ohlhhhdooso.',
-      '....ohhhhhdoso..',
-      '....ohlhhhdso...',
-      '....ohhhhhsdo...',
-      '....ohhhhsddo...',
-      '...oooooooooo...',
-      '...owwwwwwwwo...',
-      '...oooooooooo...',
-      '................',
+      '.oooooooooooo...',
+      '.owwwwwwwwwwo...',
+      '.oWWWWWWWWWWo...',
+      '..ohllhhhhdo....',
+      '..ohlhhhhhdo..o.',
+      '..ohlhhhhhdo.oso',
+      '..ohlhhhhhdooso.',
+      '..ohlhhhhhdoso..',
+      '..ohlhhhhddso...',
+      '..ohlhhhhdsho...',
+      '..ohlhhhhsdo....',
+      '.oooooooooooo...',
+      '.owwwwwwwwwwo...',
+      '.oWWWWWWWWWWo...',
+      '.oooooooooooo...',
     ],
-    palette: { d: '#a8718a', h: '#dba5b9', l: '#fffce7', o: '#161c2e', s: '#bac1c8', w: '#a38250' },
+    palette: { W: '#866353', d: '#a8718a', h: '#dba5b9', l: '#fffce7', o: '#161c2e', s: '#bac1c8', w: '#a38250' },
   },
   scrolls: {
-    // a crescent moon behind a quill
+    // a quill feather — its vane, rachis and bare shaft — in front of a crescent moon (the old quill read as a blade)
     rows: [
-      '................',
-      '.....ooo......o.',
-      '...oommoo....oho',
-      '..ommMMoo...ohho',
-      '.ommMoo....ohlho',
-      '.omMo.....ohlhdo',
-      'omMo.....ohlhdo.',
-      'omMo....ohlhdo..',
-      'omMo...ohlhdo...',
-      'omMo..ohlhdo....',
-      '.omMo.ohhdo.....',
-      '.ommMoohdo......',
-      '..ommMoooo......',
-      '...oommoo.......',
-      '.....ooo........',
-      '................',
+      '..........ooooo.',
+      '.....ooooolllddo',
+      '...oommolollddo.',
+      '..ommMollllddho.',
+      '.ommMoollldhhho.',
+      '.omMololldhhho..',
+      'omMoollldhhhho..',
+      'omMoollddhhoo...',
+      'omMoolldhhho....',
+      'omMooldhhho.....',
+      '.omMooddhho.....',
+      '.ommodhoo.......',
+      '..ooodo.........',
+      '...odo..........',
+      '...odo..........',
+      '....o...........',
     ],
     palette: { M: '#d08c41', d: '#a9b0c4', h: '#e4e8f2', l: '#fffce7', m: '#ffed44', o: '#161c2e' },
   },
   locked: {
-    // a padlock
+    // a padlock, in the small lock's warm parchment and steel (it was cool slate)
     rows: [
       '................',
       '.....oooooo.....',
@@ -318,7 +321,7 @@ export const COMPANY_LOGOS: Readonly<Record<CompanyId | 'locked', CompanyLogo>> 
       '..oooooooooooo..',
       '................',
     ],
-    palette: { d: '#4b5563', h: '#737f8e', l: '#fffce7', o: '#161c2e', s: '#bac1c8' },
+    palette: { d: '#94784e', h: '#c9b48c', l: '#ece0c8', o: '#161c2e', s: '#d8d2c4' },
   },
 }
 
@@ -326,6 +329,7 @@ export const COMPANY_LOGOS: Readonly<Record<CompanyId | 'locked', CompanyLogo>> 
  * The crest's pixel rows: a 16 × 18 heater shield (`o` outline, `l` light top,
  * `c` field, `d` shaded right edge) with the 8 × 8 emblem set into it.
  */
+const SHIELD_HALF = [7, 7, 6, 5, 4, 3, 2, 1]
 export function crestRows(emblem: readonly string[]): string[] {
   const W = 16
   const H = 18
@@ -333,7 +337,9 @@ export function crestRows(emblem: readonly string[]): string[] {
   const inside = (x: number, y: number): boolean => {
     if (y < 0 || y >= H) return false
     if (y < 10) return x >= 1 && x <= 14
-    const half = 7 - Math.floor((y - 9) * 0.85)
+    // The point tapers a step a row to a two-cell tip (it used to hang a
+    // two-row stem under the point).
+    const half = SHIELD_HALF[y - 10]
     return x >= 8 - half && x <= 7 + half
   }
   for (let y = 0; y < H; y++) {

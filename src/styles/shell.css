@@ -2753,7 +2753,7 @@
  * own outline (four hard drop-shadows; no blur, so it stays pixel art).
  */
 .crest.rim {
-  filter: drop-shadow(1px 0 0 var(--accent)) drop-shadow(-1px 0 0 var(--accent)) drop-shadow(0 1px 0 var(--accent)) drop-shadow(0 -1px 0 var(--accent));
+  filter: drop-shadow(var(--rim, 1px) 0 0 var(--gold)) drop-shadow(calc(-1 * var(--rim, 1px)) 0 0 var(--gold)) drop-shadow(0 var(--rim, 1px) 0 var(--gold)) drop-shadow(0 calc(-1 * var(--rim, 1px)) 0 var(--gold));
 }
 
 /* ------------------------------------------------------------ the Assisted tag */

@@ -87,6 +87,28 @@ export class PixelPen implements Pen {
     }
   }
 
+  /**
+   * This buffer becomes `next` at strength `mix` over `prev` at `1 − mix`
+   * (source-over, straight alpha): a crossfade between two backdrops.
+   */
+  crossfade(prev: Uint8ClampedArray, next: Uint8ClampedArray, mix: number): void {
+    const d = this.data
+    const k = Math.max(0, Math.min(1, mix))
+    for (let i = 0; i < d.length; i += 4) {
+      const na = (next[i + 3] / 255) * k
+      const pa = (prev[i + 3] / 255) * (1 - k) * (1 - na)
+      const oa = na + pa
+      if (oa <= 0) {
+        d[i + 3] = 0
+        continue
+      }
+      d[i] = (next[i] * na + prev[i] * pa) / oa
+      d[i + 1] = (next[i + 1] * na + prev[i + 1] * pa) / oa
+      d[i + 2] = (next[i + 2] * na + prev[i + 2] * pa) / oa
+      d[i + 3] = oa * 255
+    }
+  }
+
   /** Clear a box to transparent. */
   clearRect(x: number, y: number, w: number, h: number): void {
     const x0 = Math.max(0, x | 0)

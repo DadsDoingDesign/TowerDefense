@@ -9,24 +9,24 @@
  * language — crisp pixels, a small palette, nothing smooth:
  *
  *   - Peppercorn Co. — FIRE: a charred, burnt-through edge split by ember
- *     cracks that flicker, a live coal at each corner; flames on its CTA and
+ *     cracks, a live coal at each corner; flames on its CTA and
  *     flame tongues licking up from the card's top edge (its crest).
  *   - Easel House — PAINT: a scalloped brush stroke in three paints with a
  *     wet lip and a drip, a paint blob at each corner; wet paint on its CTA.
  *   - Ironvein — FORGE: riveted iron plates (a joint and a rivet every eight
  *     pixels), a bolt at each corner, a molten seam on the inside that glows.
- *   - Rosethread — SILK: satin with a sheen sliding along it, an embroidered
+ *   - Rosethread — SILK: satin with a sheen on it, an embroidered
  *     running stitch, a rose worked at each corner; a ribbon on its CTA.
- *   - Moonquill — ARCANE NIGHT: a silver line over a band of runes that pass
- *     their light along, a star at each corner; glowing runes on its CTA.
+ *   - Moonquill — ARCANE NIGHT: a silver line over a band of runes, one lit,
+ *     a star at each corner; glowing runes on its CTA.
  *
  * The frames are 4 px thick (8 CSS px) and each has its own corner piece and
  * its own SHAPE — ragged, scalloped, riveted, stitched, inscribed — so a
  * glance tells them apart even in greyscale.
  *
  * Everything here is PIXEL ROWS (one character a pixel, `.` clear) and a
- * palette: the frames (a 9-slice for `border-image`, a few animation frames
- * each), the CTA's top strip (a sprite sheet of frames), and the rune glyphs
+ * palette: the frame (a 9-slice for `border-image`), the CTA's top strip, the
+ * card's crest, and the rune glyphs
  * the ambient layer drifts. `themeArtDom.ts` rasterises them once into CSS
  * variables; nothing is a file and nothing is third-party (procedural, our own).
  *
@@ -111,19 +111,21 @@ const piece = (art: Rows) => (cx: number, cy: number): string | null => {
   return ch === '.' ? null : ch
 }
 
-/** The world of each company: its frame, CTA strip and effect palette. */
+/**
+ * The world of each company: its frame, CTA strip and effect palette — each
+ * ONE still image (the calm pass, Oct 2026: they were flipbooks, flickering on
+ * the card, the pick card and the CTA; the designer found the worlds "a bit
+ * overwhelming"). The drawing functions take a variant `f`; the worlds wear
+ * the first.
+ */
 export interface WorldArt {
-  /** The frame's 9-slice, one image per animation frame (a flipbook). */
-  frames: Rows[]
-  /** The CTA strip's frames (each `STRIP_W` × `STRIP_H`), stacked into one sheet. */
-  strip: Rows[]
-  /** The card's crest frames (each `CREST_W` × `CREST_H`), if the world has one. */
-  crest?: Rows[]
+  /** The frame's 9-slice. */
+  frame: Rows
+  /** The CTA strip (`STRIP_W` × `STRIP_H`), repeated along the button's top. */
+  strip: Rows
+  /** The card's crest (`CREST_W` × `CREST_H`), if the world has one. */
+  crest?: Rows
   palette: Palette
-  /** How long one full flipbook of the frame takes, in ms. */
-  frameMs: number
-  /** How long one full loop of the CTA strip takes, in ms. */
-  stripMs: number
 }
 
 const sideN = (s: Side) => (s === 'top' ? 1 : s === 'right' ? 2 : s === 'bottom' ? 3 : 4)
@@ -367,26 +369,12 @@ function arcaneStrip(f: number): Rows {
   return rows(g)
 }
 
-const STRIP_FRAMES = 4
-
 const WORLDS: Record<CompanyId, WorldArt> = {
-  spice: {
-    frames: [0, 1, 2].map(fireFrame),
-    strip: Array.from({ length: STRIP_FRAMES }, (_, f) => fireStrip(f)),
-    crest: Array.from({ length: STRIP_FRAMES }, (_, f) => fireCrest(f)),
-    palette: FIRE,
-    // The motion audit (Oct 2026): the card's frame stepped every 200 ms, the
-    // fastest loop beside any words on the home; 250 ms still flickers as fire.
-    frameMs: 750,
-    stripMs: 480,
-  },
-  // …and Easel House's frame and strip barely moved (a hundredth of the
-  // others' motion on the card and the CTA): the paint glint travels and the
-  // flecks hop a little sooner.
-  art: { frames: [0, 1, 2].map(paintFrame), strip: Array.from({ length: STRIP_FRAMES }, (_, f) => paintStrip(f)), palette: PAINT, frameMs: 1200, stripMs: 1000 },
-  metals: { frames: [0, 1, 2].map(forgeFrame), strip: Array.from({ length: STRIP_FRAMES }, (_, f) => forgeStrip(f)), palette: FORGE, frameMs: 1500, stripMs: 560 },
-  silk: { frames: [0, 1, 2].map(silkFrame), strip: Array.from({ length: STRIP_FRAMES }, (_, f) => silkStrip(f)), palette: SILK, frameMs: 1800, stripMs: 1200 },
-  scrolls: { frames: [0, 1, 2].map(arcaneFrame), strip: Array.from({ length: 3 }, (_, f) => arcaneStrip(f)), palette: ARCANE, frameMs: 2400, stripMs: 1500 },
+  spice: { frame: fireFrame(0), strip: fireStrip(0), crest: fireCrest(0), palette: FIRE },
+  art: { frame: paintFrame(0), strip: paintStrip(0), palette: PAINT },
+  metals: { frame: forgeFrame(0), strip: forgeStrip(0), palette: FORGE },
+  silk: { frame: silkFrame(0), strip: silkStrip(0), palette: SILK },
+  scrolls: { frame: arcaneFrame(0), strip: arcaneStrip(0), palette: ARCANE },
 }
 
 /** A company's world art. */

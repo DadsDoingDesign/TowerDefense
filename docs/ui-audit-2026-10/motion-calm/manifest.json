@@ -1,0 +1,82 @@
+[
+  {
+    "id": "home-spice",
+    "group": "Effects",
+    "people": "Peppercorn Co.",
+    "title": "Peppercorn Co. · Home",
+    "caption": "A quarter of the embers, one pixel and slow; a low flame line; frames and crest still",
+    "file": "home-spice.webp"
+  },
+  {
+    "id": "home-art",
+    "group": "Effects",
+    "people": "Easel House",
+    "title": "Easel House · Home",
+    "caption": "Small splats and flecks in place of big blobs; faint washes; frames still",
+    "file": "home-art.webp"
+  },
+  {
+    "id": "home-metals",
+    "group": "Effects",
+    "people": "Ironvein",
+    "title": "Ironvein · Home",
+    "caption": "A third of the sparks in low slow arcs; the anvils glow, never flash; frames still",
+    "file": "home-metals.webp"
+  },
+  {
+    "id": "home-silk",
+    "group": "Effects",
+    "people": "Rosethread",
+    "title": "Rosethread · Home",
+    "caption": "Two in five petals, falling at half speed; fainter, slower ribbons; frames still",
+    "file": "home-silk.webp"
+  },
+  {
+    "id": "home-scrolls",
+    "group": "Effects",
+    "people": "Moonquill",
+    "title": "Moonquill · Home",
+    "caption": "Fewer, slower stars and runes; a still, fainter beam; frames still",
+    "file": "home-scrolls.webp"
+  },
+  {
+    "id": "battle-spice",
+    "group": "Effects",
+    "people": "Peppercorn Co.",
+    "title": "Peppercorn Co. · Battle",
+    "caption": "Dust, fluff and leaves at under half the count and two thirds the strength",
+    "file": "battle-spice.webp"
+  },
+  {
+    "id": "battle-art",
+    "group": "Effects",
+    "people": "Easel House",
+    "title": "Easel House · Battle",
+    "caption": "Petals at under half the count, slower; the road and slots clearer",
+    "file": "battle-art.webp"
+  },
+  {
+    "id": "battle-metals",
+    "group": "Effects",
+    "people": "Ironvein",
+    "title": "Ironvein · Battle",
+    "caption": "Rain at 40%, a narrower, fainter sheet at the edges; fainter clouds; a rarer flash",
+    "file": "battle-metals.webp"
+  },
+  {
+    "id": "battle-silk",
+    "group": "Effects",
+    "people": "Rosethread",
+    "title": "Rosethread · Battle",
+    "caption": "Fog half as thick in four banks; dew at under half the count",
+    "file": "battle-silk.webp"
+  },
+  {
+    "id": "battle-scrolls",
+    "group": "Effects",
+    "people": "Moonquill",
+    "title": "Moonquill · Battle",
+    "caption": "Snow at under half the count; a narrower, fainter sheet at the edges",
+    "file": "battle-scrolls.webp"
+  }
+]

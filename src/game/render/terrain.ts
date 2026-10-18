@@ -27,9 +27,10 @@ import type { Vec2 } from '../core/vec'
 import type { GameMap } from '../types'
 import type { FieldSeason, PropKind, PropRule, PropWhere } from '../data/fieldSeasons'
 import { pixmap } from './pixmap'
+import { CARAVAN_BOX, caravanLayout } from './caravan'
 import { ACCENT_KEEP, ACCENT_PAINT, ACCENT_SHIFT, markAccent, seasonFinish, seasonGround, seasonOnDeco, spriteAlpha } from './season'
 import { broadleaf, propArt, repaintFoliage, repaintRock, seasonArtStamp } from './seasonArt'
-import { hash01, hashStr } from './seasonHash'
+import { hash01, hashStr, valueNoise } from './seasonHash'
 import { onSpritesReady, spriteFor } from './sprites'
 import { getActiveStyle } from './themes'
 import { darken, lighten, mix, roundRect, strokePolyline, toRgb } from './paint'
@@ -270,6 +271,11 @@ export function drawField(ctx: CanvasRenderingContext2D, map: GameMap, view?: { 
 const WATER = '#47aba9'
 const FOAM = '#c6f0db'
 const FOAM_EDGE = '#458597'
+/** A burn's corner radius (Oct 2026 asset critique: 12, a tray; now nearer a round scorch). */
+const FIRE_R = 15
+/** The bank's shadow on the water, and the lake's deeper middle (the pack's water, a step and a half step down). */
+const WATER_SHADE = '#357f86'
+const WATER_DEEP = '#40a0a1'
 
 type Rect = { x0: number; y0: number; x1: number; y1: number }
 type Tile = NonNullable<GameMap['tiles']>[number]
@@ -312,6 +318,24 @@ function pieceShape(map: GameMap, is: (t: Tile) => boolean, inset: number, r: nu
     }
   }
   return { cores: [...cores.values()], bridges }
+}
+
+/** A piece's shape as ONE path (for a clip): the same cores and bridges {@link fillShape} fills. */
+function shapePath(ctx: CanvasRenderingContext2D, s: { cores: Rect[]; bridges: Rect[] }, r: number): void {
+  ctx.beginPath()
+  for (const c of s.cores) {
+    const w = c.x1 - c.x0
+    const h = c.y1 - c.y0
+    if (w <= 0 || h <= 0) continue
+    const rr = Math.max(0, Math.min(r, w / 2, h / 2))
+    ctx.moveTo(c.x0 + rr, c.y0)
+    ctx.arcTo(c.x1, c.y0, c.x1, c.y1, rr)
+    ctx.arcTo(c.x1, c.y1, c.x0, c.y1, rr)
+    ctx.arcTo(c.x0, c.y1, c.x0, c.y0, rr)
+    ctx.arcTo(c.x0, c.y0, c.x1, c.y0, rr)
+    ctx.closePath()
+  }
+  for (const b of s.bridges) if (b.x1 > b.x0 && b.y1 > b.y0) ctx.rect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0)
 }
 
 function fillShape(ctx: CanvasRenderingContext2D, s: { cores: Rect[]; bridges: Rect[] }, r: number): void {
@@ -390,6 +414,26 @@ function drawTerrainGround(ctx: CanvasRenderingContext2D, map: GameMap, green: s
       ctx.fillStyle = col
       fillShape(ctx, pieceShape(map, (t) => t.block === 'water', inset, r), r)
     }
+    // Depth (Oct 2026 asset critique: the lake was one flat teal, a pool
+    // poured into a tray): the bank's shadow along the far and the lit side
+    // (light from the upper left), so the water sits BELOW the grass, and a
+    // deeper middle.
+    {
+      const r = Math.max(6, Math.round(18 * k * 1.4))
+      const core = pieceShape(map, (t) => t.block === 'water', 7, r)
+      ctx.save()
+      shapePath(ctx, core, r)
+      ctx.clip()
+      ctx.fillStyle = WATER_SHADE
+      fillShape(ctx, core, r)
+      ctx.translate(2, 3)
+      ctx.fillStyle = WATER
+      fillShape(ctx, core, r)
+      ctx.translate(-2, -3)
+      ctx.fillStyle = WATER_DEEP
+      fillShape(ctx, pieceShape(map, (t) => t.block === 'water', 15, Math.max(4, r - 6)), Math.max(4, r - 6))
+      ctx.restore()
+    }
     // A few flat ripples, the way the pack's water is lit, kept inside each
     // tile's water.
     ctx.strokeStyle = 'rgba(198,240,219,0.55)'
@@ -409,10 +453,60 @@ function drawTerrainGround(ctx: CanvasRenderingContext2D, map: GameMap, green: s
   if (tiles.some((t) => t.block === 'fire')) {
     // Scorched earth: charcoal, with a warm rim where the grass is burning back.
     const fire = (t: Tile) => t.block === 'fire'
+    // Burnt grass round the rim (Oct 2026 asset critique: the patch was a
+    // clean rounded tray): the meadow browned in the tile's margin, and the
+    // rim's edge eaten into by char, so the burn is ragged where it meets
+    // the grass.
+    ctx.fillStyle = 'rgba(62, 36, 16, 0.3)'
+    fillShape(ctx, pieceShape(map, fire, 0, 17), 17)
     ctx.fillStyle = '#6b3a1c'
-    fillShape(ctx, pieceShape(map, fire, 3, 12), 12)
+    fillShape(ctx, pieceShape(map, fire, 3, FIRE_R), FIRE_R)
+    for (const t of tiles) {
+      if (!fire(t)) continue
+      const x0 = Math.round(t.pos.x - T / 2)
+      const y0 = Math.round(t.pos.y - T / 2)
+      for (let y = 1; y < T - 1; y++)
+        for (let x = 1; x < T - 1; x++) {
+          const edge = Math.min(x, y, T - 1 - x, T - 1 - y)
+          if (edge > 6) continue
+          const h = hash01((x0 + x) >> 1, y0 + y, 47)
+          if (h > 0.3) continue
+          ctx.fillStyle = edge <= 3 ? '#4a2c18' : '#2b1d17'
+          ctx.fillRect(x0 + x, y0 + y, 1, 1)
+        }
+    }
+    // The line where the grass is still burning: a thin ember ring round the char.
+    ctx.fillStyle = '#b04a20'
+    fillShape(ctx, pieceShape(map, fire, 5, FIRE_R - 2), FIRE_R - 2)
     ctx.fillStyle = '#2b1d17'
-    fillShape(ctx, pieceShape(map, fire, 6, 9), 9)
+    fillShape(ctx, pieceShape(map, fire, 6, FIRE_R - 3), FIRE_R - 3)
+    {
+      // The char lit from the upper left: a soot shadow under the far rim,
+      // pale ash drifted against the near one, and ash flecks across it.
+      const char = pieceShape(map, fire, 6, FIRE_R - 3)
+      ctx.save()
+      shapePath(ctx, char, FIRE_R - 3)
+      ctx.clip()
+      ctx.fillStyle = '#17100c'
+      fillShape(ctx, char, FIRE_R - 3)
+      ctx.translate(2, 2)
+      ctx.fillStyle = '#2b1d17'
+      fillShape(ctx, char, FIRE_R - 3)
+      ctx.translate(-2, -2)
+      for (const t of tiles) {
+        if (!fire(t)) continue
+        const x0 = Math.round(t.pos.x - T / 2)
+        const y0 = Math.round(t.pos.y - T / 2)
+        for (let y = 0; y < T; y += 2)
+          for (let x = 0; x < T; x += 2) {
+            const r = hash01(x0 + x, y0 + y, 49)
+            if (r > 0.05) continue
+            ctx.fillStyle = r < 0.012 ? '#5a4a40' : '#3e3028'
+            ctx.fillRect(x0 + x, y0 + y, 2, 2)
+          }
+      }
+      ctx.restore()
+    }
     for (const t of tiles) {
       if (!fire(t)) continue
       const seed = mulberry32((t.col * 7919 + t.row * 104729) >>> 0)
@@ -463,6 +557,20 @@ function drawCursedGround(ctx: CanvasRenderingContext2D, map: GameMap): void {
   fillShape(ctx, pieceShape(map, cursedOf, 2, 12), 12)
   ctx.fillStyle = CURSE_SOIL
   fillShape(ctx, pieceShape(map, cursedOf, 5, 9), 9)
+  {
+    // Sunken (Oct 2026 asset critique): the blight lies a little below the
+    // meadow, a shade under its far and lit-side rims.
+    const soil = pieceShape(map, cursedOf, 5, 9)
+    ctx.save()
+    shapePath(ctx, soil, 9)
+    ctx.clip()
+    ctx.fillStyle = '#2a261e'
+    fillShape(ctx, soil, 9)
+    ctx.translate(2, 2)
+    ctx.fillStyle = CURSE_SOIL
+    fillShape(ctx, soil, 9)
+    ctx.restore()
+  }
   for (const group of clusters(map, cursedOf)) {
     const core = boundsOf(group, T, 5)
     const seed = mulberry32((group[0].col * 3571 + group[0].row * 7919 + 17) >>> 0)
@@ -669,12 +777,23 @@ function drawSpriteTerrain(
     ctx.lineWidth = DIRT_W
     strokePolyline(ctx, pts)
   } else {
-    ctx.strokeStyle = fillColor
+    // A sunken lane (Oct 2026 asset critique: it was one flat stroke): the
+    // dirt a step darker, then the dirt again a little narrower and nudged
+    // down-right, so its far and lit-side banks hold a shade, as a trodden
+    // track lies a little below the meadow under a light from the upper left.
+    ctx.strokeStyle = darken(fillColor, 0.2)
     ctx.lineWidth = DIRT_W
+    strokePolyline(ctx, pts)
+    ctx.save()
+    ctx.translate(1, 1.5)
+    ctx.strokeStyle = fillColor
+    ctx.lineWidth = DIRT_W - 3
     strokePolyline(ctx, pts)
     ctx.strokeStyle = lighten(fillColor, 0.1)
     ctx.lineWidth = DIRT_W / 2
     strokePolyline(ctx, pts)
+    ctx.restore()
+    drawCartTracks(ctx, pts, fillColor)
   }
   drawPathDetail(ctx, dr, fillColor, green)
 
@@ -688,9 +807,78 @@ function drawSpriteTerrain(
     seasonGround(ctx, W.w, W.h, bs.season, bs.keep.mask, bs.accent, bs.salt)
     ctx.setTransform(m)
   }
+  drawWagonClearing(ctx, map)
   const scenery = bs ? seasonScenery(map, dr, bs.season, bs.salt) : null
   if (bs && scenery) for (const p of scenery.flat) drawProp(ctx, p, bs)
-  drawDecos(ctx, dr, scenery)
+  drawDecos(ctx, dr, scenery, wagonBox(map))
+}
+
+/**
+ * The wagon's clearing (Oct 2026 asset critique): the caravan stood in the
+ * forest margin over the baked treetops, a cart pasted on canopies with a
+ * brown wash under it. Now nothing of the scenery is drawn inside its box,
+ * and the bake lays a trodden clearing there for it to stand in.
+ */
+function wagonBox(map: GameMap): Rect {
+  const at = caravanLayout(map)
+  const pad = 4
+  return { x0: at.x + CARAVAN_BOX.left - pad, y0: at.y + CARAVAN_BOX.top - pad, x1: at.x + CARAVAN_BOX.right + pad, y1: at.y + CARAVAN_BOX.bottom + pad }
+}
+function drawWagonClearing(ctx: CanvasRenderingContext2D, map: GameMap): void {
+  const b = wagonBox(map)
+  const cx = (b.x0 + b.x1) / 2
+  const cy = b.y1 - 12
+  const rx = (b.x1 - b.x0) * 0.62
+  const ry = 22
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 1)
+  g.addColorStop(0, 'rgba(96, 74, 44, 0.62)')
+  g.addColorStop(0.72, 'rgba(96, 74, 44, 0.5)')
+  g.addColorStop(1, 'rgba(96, 74, 44, 0)')
+  ctx.save()
+  ctx.translate(cx, cy)
+  ctx.scale(rx, ry)
+  ctx.fillStyle = g
+  ctx.beginPath()
+  ctx.arc(0, 0, 1, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.restore()
+  // Wheel ruts into it from the road side, and a few tufts trodden flat.
+  ctx.fillStyle = 'rgba(58, 42, 24, 0.4)'
+  for (let x = b.x0 + 6; x < b.x1 - 6; x += 3) {
+    if (hash01(Math.round(x), Math.round(cy), 57) < 0.3) continue
+    ctx.fillRect(Math.round(x), Math.round(cy + 2), 2, 1)
+    ctx.fillRect(Math.round(x), Math.round(cy + 8), 2, 1)
+  }
+}
+const inBox = (b: Rect, x0: number, y0: number, x1: number, y1: number): boolean => x1 > b.x0 && x0 < b.x1 && y1 > b.y0 && y0 < b.y1
+
+/**
+ * The caravans' wheel tracks down the lane (a merchant road), broken where
+ * the dirt has filled them, and a few pebbles, lit on top. Placed by a hash of
+ * position along the drawn road — the dressing's own stream is untouched.
+ */
+function drawCartTracks(ctx: CanvasRenderingContext2D, pts: Vec2[], fill: string): void {
+  const track = withAlpha(darken(fill, 0.24), 0.3)
+  let k = 0
+  for (const s of samplePath(pts, 2, () => true)) {
+    k++
+    const run = hash01(k >> 4, 0, 61) < 0.8
+    if (run) {
+      ctx.fillStyle = track
+      for (const o of [-7, 7]) ctx.fillRect(Math.round(s.x + s.nx * o - 1), Math.round(s.y + s.ny * o - 1), 2, 2)
+    }
+    if (hash01(k, 1, 62) < 0.024) {
+      const o = (hash01(k, 2, 63) - 0.5) * 22
+      const x = Math.round(s.x + s.nx * o)
+      const y = Math.round(s.y + s.ny * o)
+      ctx.fillStyle = withAlpha(darken(fill, 0.35), 0.8)
+      ctx.fillRect(x, y + 1, 3, 1)
+      ctx.fillStyle = lighten(fill, 0.22)
+      ctx.fillRect(x, y - 1, 3, 2)
+      ctx.fillStyle = lighten(fill, 0.4)
+      ctx.fillRect(x, y - 1, 1, 1)
+    }
+  }
 }
 
 /** Where the lattice's lines fall: the grid's top-left corner, field px. */
@@ -1064,11 +1252,20 @@ function keepMask(map: GameMap, W: WorldBox): { mask: Uint8Array; canvas: HTMLCa
   g.lineJoin = 'round'
   g.lineCap = 'round'
   g.strokeStyle = '#fff'
-  g.lineWidth = ROAD_W + 8
+  // Exactly the drawn road, and exactly each danger piece's drawn shape (Oct
+  // 2026 asset critique): a kept verge round them — 4 px of the road's sides,
+  // a square 2 px past each tile — left a ring of summer grass round every
+  // road and patch in the frost's snow and the harvest's straw, a seam.
+  g.lineWidth = ROAD_W
   strokePolyline(g, drawnRoad(map))
   g.fillStyle = '#fff'
-  const T = map.tile ?? 40
-  for (const t of map.tiles ?? []) if (t.block === 'water' || t.block === 'fire' || t.danger) g.fillRect(t.pos.x - T / 2 - 2, t.pos.y - T / 2 - 2, T + 4, T + 4)
+  const k = (map.tile ?? 40) / 80
+  const water = (t: Tile) => t.block === 'water'
+  const fire = (t: Tile) => t.block === 'fire'
+  const rW = Math.max(6, Math.round(23 * k * 1.4))
+  fillShape(g, pieceShape(map, water, 2, rW), rW)
+  fillShape(g, pieceShape(map, fire, 3, FIRE_R), FIRE_R)
+  fillShape(g, pieceShape(map, cursedOf, 2, 12), 12)
   const data = g.getImageData(0, 0, W.w, W.h).data
   const out = new Uint8Array(W.w * W.h)
   for (let i = 0; i < out.length; i++) out[i] = data[i * 4 + 3] > 0 ? 1 : 0
@@ -1131,6 +1328,8 @@ function seasonScenery(map: GameMap, dr: Dressing, season: FieldSeason, salt: nu
     })
     for (const c of worldLattice(map, W, road).cells) {
       if (c.kind !== 'forest') continue
+      // In clumps, when the season says so: a field of bales, a reed bed.
+      if (season.clump && valueNoise(c.x, c.y, season.clump, salt + 17) > 0.5) continue
       const i = Math.floor((c.x - lat.x) / T)
       const j = Math.floor((c.y - lat.y) / T)
       const rule = pick('forest', hash01(i, j, salt))
@@ -1215,7 +1414,7 @@ function nearPlay(map: GameMap): (x: number, y: number) => boolean {
 }
 
 /** The props that lie flat on the ground (drawn before the scenery; never in the depth order). */
-const FLAT_PROPS = new Set<PropKind>(['flowers', 'puddle', 'mud', 'lily', 'leaves'])
+const FLAT_PROPS = new Set<PropKind>(['flowers', 'puddle', 'mud', 'lily', 'leaves', 'pool'])
 
 /** One prop, its foot at (x, y): flat ones centred there, upright ones standing on it. */
 function drawProp(ctx: CanvasRenderingContext2D, p: PlacedProp, bs: BakeSeason): void {
@@ -1298,19 +1497,26 @@ function drawLongShadows(ctx: CanvasRenderingContext2D, bs: BakeSeason, items: {
   ctx.globalAlpha = a0
 }
 
-function drawDecos(ctx: CanvasRenderingContext2D, dr: Dressing, scenery: Scenery | null = null): void {
+function drawDecos(ctx: CanvasRenderingContext2D, dr: Dressing, scenery: Scenery | null = null, clear: Rect | null = null): void {
   if (!getActiveStyle().sprites) return
   const bs = bakeSeason
   const season = bs?.season ?? null
   // The season's upright props stand in the scenery's depth order; the
-  // shrubs they stand in for are gone.
+  // shrubs they stand in for are gone. Nothing stands in the wagon's clearing.
   type Item = { y: number; deco?: Deco; prop?: PlacedProp }
   const items: Item[] = []
   dr.decos.forEach((d, idx) => {
-    if (!scenery?.swapped.has(idx)) items.push({ y: d.y, deco: d })
+    if (scenery?.swapped.has(idx)) return
+    const sz = clear ? decoSize(d) : null
+    if (clear && sz && inBox(clear, d.x - sz.w / 2, d.y - sz.h, d.x + sz.w / 2, d.y)) return
+    items.push({ y: d.y, deco: d })
   })
   if (scenery) {
-    for (const p of scenery.upright) items.push({ y: p.y, prop: p })
+    for (const p of scenery.upright) {
+      const art = clear ? propArt(p.kind, p.v) : null
+      if (clear && art && inBox(clear, p.x - art.w / 2, p.y - art.h, p.x + art.w / 2, p.y)) continue
+      items.push({ y: p.y, prop: p })
+    }
     items.sort((a, b) => a.y - b.y)
   }
   if (bs) drawLongShadows(ctx, bs, items)
@@ -1490,12 +1696,14 @@ function redWeight(hue: number): number {
 
 /**
  * A near tree's hue (`season.ACCENT_SHIFT`): the tiers' warm arc, 340° round
- * to 68°, laid in order onto 75–90° (rust to ochre, amber to olive) — the
+ * to 68°, laid in order onto 70–78° (rust to ochre, amber to a yellowing olive) — the
  * green side of yellow, short of the pines' and the meadow's green; -1 for a
  * hue outside it, which is kept.
  */
-const SHIFT_LO = 75
-const SHIFT_HI = 90
+// 70–78° (Oct 2026 asset critique; it was 75–90°): the near maples read as
+// yellowing birch, not as summer trees standing in an autumn wood.
+const SHIFT_LO = 70
+const SHIFT_HI = 78
 function shiftedHue(hue: number): number {
   const h = hue >= 340 ? hue - 360 : hue
   if (h < -20 || h > GOLD_HI) return -1

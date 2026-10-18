@@ -1,0 +1,1502 @@
+[
+  {
+    "id": "humans-item-sword",
+    "group": "Items",
+    "people": "humans",
+    "title": "Sword",
+    "level": 1,
+    "status": "kept",
+    "caption": "Swings up close; a little attack speed",
+    "file": "humans-item-sword.png"
+  },
+  {
+    "id": "humans-item-arming-sword",
+    "group": "Items",
+    "people": "humans",
+    "title": "Arming Sword",
+    "level": 1,
+    "status": "new",
+    "caption": "Swings up close; hits a little harder",
+    "file": "humans-item-arming-sword.png"
+  },
+  {
+    "id": "humans-item-shield",
+    "group": "Items",
+    "people": "humans",
+    "title": "Shield",
+    "level": 1,
+    "status": "kept",
+    "caption": "Holds 2; attack speed and crit",
+    "file": "humans-item-shield.png"
+  },
+  {
+    "id": "humans-item-kite-shield",
+    "group": "Items",
+    "people": "humans",
+    "title": "Kite Shield",
+    "level": 1,
+    "status": "new",
+    "caption": "Holds 2; slows what it holds 15%",
+    "file": "humans-item-kite-shield.png"
+  },
+  {
+    "id": "humans-item-mail",
+    "group": "Items",
+    "people": "humans",
+    "title": "Mail",
+    "level": 1,
+    "status": "kept",
+    "caption": "Reach and a wider blast",
+    "file": "humans-item-mail.png"
+  },
+  {
+    "id": "humans-item-gambeson",
+    "group": "Items",
+    "people": "humans",
+    "title": "Gambeson",
+    "level": 1,
+    "status": "new",
+    "caption": "Holds 1 more enemy",
+    "file": "humans-item-gambeson.png"
+  },
+  {
+    "id": "humans-item-falchion",
+    "group": "Items",
+    "people": "humans",
+    "title": "Falchion",
+    "level": 2,
+    "status": "new",
+    "caption": "Wide swing strikes enemies beside",
+    "file": "humans-item-falchion.png"
+  },
+  {
+    "id": "humans-item-spiced-blade",
+    "group": "Items",
+    "people": "humans",
+    "title": "Spiced Blade",
+    "level": 2,
+    "status": "new",
+    "caption": "Hits burn 8/s for 2s",
+    "file": "humans-item-spiced-blade.png"
+  },
+  {
+    "id": "humans-item-halberd",
+    "group": "Items",
+    "people": "humans",
+    "title": "Halberd",
+    "level": 2,
+    "status": "new",
+    "caption": "Reaches farther; hits two in a line",
+    "file": "humans-item-halberd.png"
+  },
+  {
+    "id": "humans-item-banner-pole",
+    "group": "Items",
+    "people": "humans",
+    "title": "Banner Pole",
+    "level": 2,
+    "status": "new",
+    "caption": "Heroes near it hit 10% harder",
+    "file": "humans-item-banner-pole.png"
+  },
+  {
+    "id": "humans-item-heater-shield",
+    "group": "Items",
+    "people": "humans",
+    "title": "Heater Shield",
+    "level": 2,
+    "status": "new",
+    "caption": "Holds 3",
+    "file": "humans-item-heater-shield.png"
+  },
+  {
+    "id": "humans-item-brigandine",
+    "group": "Items",
+    "people": "humans",
+    "title": "Brigandine",
+    "level": 2,
+    "status": "new",
+    "caption": "Every hit harder",
+    "file": "humans-item-brigandine.png"
+  },
+  {
+    "id": "humans-item-greatsword",
+    "group": "Items",
+    "people": "humans",
+    "title": "Greatsword",
+    "level": 3,
+    "status": "kept",
+    "caption": "Much harder and farther, a little slower",
+    "file": "humans-item-greatsword.png"
+  },
+  {
+    "id": "humans-item-pepperport-sabre",
+    "group": "Items",
+    "people": "humans",
+    "title": "Pepperport Sabre",
+    "level": 3,
+    "status": "new",
+    "caption": "Much more attack speed; crits burn",
+    "file": "humans-item-pepperport-sabre.png"
+  },
+  {
+    "id": "humans-item-captains-shield",
+    "group": "Items",
+    "people": "humans",
+    "title": "Captain's Shield",
+    "level": 3,
+    "status": "new",
+    "caption": "Holds 3; heroes near it attack faster",
+    "file": "humans-item-captains-shield.png"
+  },
+  {
+    "id": "humans-item-aegis",
+    "group": "Items",
+    "people": "humans",
+    "title": "Aegis",
+    "level": 3,
+    "status": "kept",
+    "caption": "Attack speed",
+    "file": "humans-item-aegis.png"
+  },
+  {
+    "id": "humans-item-sergeants-cuirass",
+    "group": "Items",
+    "people": "humans",
+    "title": "Sergeant's Cuirass",
+    "level": 3,
+    "status": "new",
+    "caption": "Reach, every hit harder",
+    "file": "humans-item-sergeants-cuirass.png"
+  },
+  {
+    "id": "humans-item-saffron-brand",
+    "group": "Items",
+    "people": "humans",
+    "title": "Saffron Brand",
+    "level": 4,
+    "status": "kept",
+    "caption": "Every hit burns 20/s for 3s",
+    "file": "humans-item-saffron-brand.png"
+  },
+  {
+    "id": "humans-item-pepperport-standard",
+    "group": "Items",
+    "people": "humans",
+    "title": "Pepperport Standard",
+    "level": 4,
+    "status": "new",
+    "caption": "Heroes near it hit 20% harder; hits burn",
+    "file": "humans-item-pepperport-standard.png"
+  },
+  {
+    "id": "humans-item-saltmarsh-warplate",
+    "group": "Items",
+    "people": "humans",
+    "title": "Saltmarsh Warplate",
+    "level": 4,
+    "status": "new",
+    "caption": "Holds 1 more; harder hits; thorns burn",
+    "file": "humans-item-saltmarsh-warplate.png"
+  },
+  {
+    "id": "humans-skill-spicy-peps",
+    "group": "Skills",
+    "people": "humans",
+    "title": "Spicy Peps",
+    "level": 2,
+    "status": "renamed",
+    "caption": "Every hit burns 10/s for 3s, +15% attack speed",
+    "file": "humans-skill-spicy-peps.png"
+  },
+  {
+    "id": "humans-skill-hard-hitter",
+    "group": "Skills",
+    "people": "humans",
+    "title": "Hard Hitter",
+    "level": 1,
+    "status": "kept",
+    "caption": "Hits 15% harder",
+    "file": "humans-skill-hard-hitter.png"
+  },
+  {
+    "id": "humans-skill-charge",
+    "group": "Skills",
+    "people": "humans",
+    "title": "Charge",
+    "level": 1,
+    "status": "kept",
+    "caption": "+60% attack speed first 15s of a wave",
+    "file": "humans-skill-charge.png"
+  },
+  {
+    "id": "humans-skill-hold-fast",
+    "group": "Skills",
+    "people": "humans",
+    "title": "Hold Fast",
+    "level": 1,
+    "status": "kept",
+    "caption": "Holds 1 more",
+    "file": "humans-skill-hold-fast.png"
+  },
+  {
+    "id": "humans-skill-shield-wall",
+    "group": "Skills",
+    "people": "humans",
+    "title": "Shield Wall",
+    "level": 2,
+    "status": "kept",
+    "caption": "Holds 2 more, wider circle",
+    "file": "humans-skill-shield-wall.png"
+  },
+  {
+    "id": "humans-skill-wildfire",
+    "group": "Skills",
+    "people": "humans",
+    "title": "Wildfire",
+    "level": 2,
+    "status": "kept",
+    "caption": "Burn 12/s 3s, splash 15 wider",
+    "file": "humans-skill-wildfire.png"
+  },
+  {
+    "id": "humans-skill-firebrand",
+    "group": "Skills",
+    "people": "humans",
+    "title": "Firebrand",
+    "level": 2,
+    "status": "kept",
+    "caption": "Thorns burn what it holds",
+    "file": "humans-skill-firebrand.png"
+  },
+  {
+    "id": "humans-skill-banner-bearer",
+    "group": "Skills",
+    "people": "humans",
+    "title": "Banner Bearer",
+    "level": 2,
+    "status": "new",
+    "caption": "Heroes near it attack 20% faster",
+    "file": "humans-skill-banner-bearer.png"
+  },
+  {
+    "id": "humans-skill-rally",
+    "group": "Skills",
+    "people": "humans",
+    "title": "Rally",
+    "level": 3,
+    "status": "kept",
+    "caption": "Heroes near it hit 50% harder",
+    "file": "humans-skill-rally.png"
+  },
+  {
+    "id": "humans-skill-weaponmaster",
+    "group": "Skills",
+    "people": "humans",
+    "title": "Weaponmaster",
+    "level": 3,
+    "status": "kept",
+    "caption": "+20% dmg, +20% crit, +60% crit dmg",
+    "file": "humans-skill-weaponmaster.png"
+  },
+  {
+    "id": "elves-item-bow",
+    "group": "Items",
+    "people": "elves",
+    "title": "Bow",
+    "level": 1,
+    "status": "kept",
+    "caption": "Shoots from far away",
+    "file": "elves-item-bow.png"
+  },
+  {
+    "id": "elves-item-shortbow",
+    "group": "Items",
+    "people": "elves",
+    "title": "Shortbow",
+    "level": 1,
+    "status": "new",
+    "caption": "Shoots faster, not as far",
+    "file": "elves-item-shortbow.png"
+  },
+  {
+    "id": "elves-item-dagger",
+    "group": "Items",
+    "people": "elves",
+    "title": "Dagger",
+    "level": 1,
+    "status": "kept",
+    "caption": "Quick thrown strikes; most attack speed",
+    "file": "elves-item-dagger.png"
+  },
+  {
+    "id": "elves-item-quiver",
+    "group": "Items",
+    "people": "elves",
+    "title": "Quiver",
+    "level": 1,
+    "status": "kept",
+    "caption": "Attack speed",
+    "file": "elves-item-quiver.png"
+  },
+  {
+    "id": "elves-item-cloak",
+    "group": "Items",
+    "people": "elves",
+    "title": "Cloak",
+    "level": 1,
+    "status": "kept",
+    "caption": "Much more reach",
+    "file": "elves-item-cloak.png"
+  },
+  {
+    "id": "elves-item-silk-wrap",
+    "group": "Items",
+    "people": "elves",
+    "title": "Silk Wrap",
+    "level": 1,
+    "status": "new",
+    "caption": "Crit chance",
+    "file": "elves-item-silk-wrap.png"
+  },
+  {
+    "id": "elves-item-longbow",
+    "group": "Items",
+    "people": "elves",
+    "title": "Longbow",
+    "level": 2,
+    "status": "new",
+    "caption": "Reaches farthest; a little slower",
+    "file": "elves-item-longbow.png"
+  },
+  {
+    "id": "elves-item-twin-knives",
+    "group": "Items",
+    "people": "elves",
+    "title": "Twin Knives",
+    "level": 2,
+    "status": "new",
+    "caption": "Every 3rd strike hits twice",
+    "file": "elves-item-twin-knives.png"
+  },
+  {
+    "id": "elves-item-focus",
+    "group": "Items",
+    "people": "elves",
+    "title": "Focus",
+    "level": 2,
+    "status": "kept",
+    "caption": "Crit chance",
+    "file": "elves-item-focus.png"
+  },
+  {
+    "id": "elves-item-barbed-quiver",
+    "group": "Items",
+    "people": "elves",
+    "title": "Barbed Quiver",
+    "level": 2,
+    "status": "new",
+    "caption": "Shots pierce 1 more",
+    "file": "elves-item-barbed-quiver.png"
+  },
+  {
+    "id": "elves-item-woven-vest",
+    "group": "Items",
+    "people": "elves",
+    "title": "Woven Vest",
+    "level": 2,
+    "status": "new",
+    "caption": "Reach and crit",
+    "file": "elves-item-woven-vest.png"
+  },
+  {
+    "id": "elves-item-thornweave-hood",
+    "group": "Items",
+    "people": "elves",
+    "title": "Thornweave Hood",
+    "level": 2,
+    "status": "new",
+    "caption": "Hits slow 15%",
+    "file": "elves-item-thornweave-hood.png"
+  },
+  {
+    "id": "elves-item-recurve-bow",
+    "group": "Items",
+    "people": "elves",
+    "title": "Recurve Bow",
+    "level": 3,
+    "status": "new",
+    "caption": "Every 4th shot crits",
+    "file": "elves-item-recurve-bow.png"
+  },
+  {
+    "id": "elves-item-loomwarden-bow",
+    "group": "Items",
+    "people": "elves",
+    "title": "Loomwarden Bow",
+    "level": 3,
+    "status": "new",
+    "caption": "Shots split to a second enemy",
+    "file": "elves-item-loomwarden-bow.png"
+  },
+  {
+    "id": "elves-item-rangers-dirk",
+    "group": "Items",
+    "people": "elves",
+    "title": "Ranger's Dirk",
+    "level": 3,
+    "status": "new",
+    "caption": "Crits hit 50% harder",
+    "file": "elves-item-rangers-dirk.png"
+  },
+  {
+    "id": "elves-item-starfeather-quiver",
+    "group": "Items",
+    "people": "elves",
+    "title": "Starfeather Quiver",
+    "level": 3,
+    "status": "new",
+    "caption": "Attack speed and reach",
+    "file": "elves-item-starfeather-quiver.png"
+  },
+  {
+    "id": "elves-item-moonsilk-mantle",
+    "group": "Items",
+    "people": "elves",
+    "title": "Moonsilk Mantle",
+    "level": 3,
+    "status": "new",
+    "caption": "Reach and attack speed",
+    "file": "elves-item-moonsilk-mantle.png"
+  },
+  {
+    "id": "elves-item-silkwind-cloak",
+    "group": "Items",
+    "people": "elves",
+    "title": "Silkwind Cloak",
+    "level": 4,
+    "status": "kept",
+    "caption": "Reach, wider blast, +15% attack speed",
+    "file": "elves-item-silkwind-cloak.png"
+  },
+  {
+    "id": "elves-item-starstring-longbow",
+    "group": "Items",
+    "people": "elves",
+    "title": "Starstring Longbow",
+    "level": 4,
+    "status": "new",
+    "caption": "Pierces its whole path; +crit",
+    "file": "elves-item-starstring-longbow.png"
+  },
+  {
+    "id": "elves-item-whisperfang",
+    "group": "Items",
+    "people": "elves",
+    "title": "Whisperfang",
+    "level": 4,
+    "status": "new",
+    "caption": "Each kill readies its next strike",
+    "file": "elves-item-whisperfang.png"
+  },
+  {
+    "id": "elves-skill-starweave",
+    "group": "Skills",
+    "people": "elves",
+    "title": "Starweave",
+    "level": 2,
+    "status": "renamed",
+    "caption": "+25% reach, +15% crit, +25% crit dmg",
+    "file": "elves-skill-starweave.png"
+  },
+  {
+    "id": "elves-skill-quick-hands",
+    "group": "Skills",
+    "people": "elves",
+    "title": "Quick Hands",
+    "level": 1,
+    "status": "kept",
+    "caption": "Attacks 15% faster",
+    "file": "elves-skill-quick-hands.png"
+  },
+  {
+    "id": "elves-skill-keen-eye",
+    "group": "Skills",
+    "people": "elves",
+    "title": "Keen Eye",
+    "level": 1,
+    "status": "kept",
+    "caption": "+10% crit, +50% crit dmg",
+    "file": "elves-skill-keen-eye.png"
+  },
+  {
+    "id": "elves-skill-long-reach",
+    "group": "Skills",
+    "people": "elves",
+    "title": "Long Reach",
+    "level": 1,
+    "status": "kept",
+    "caption": "Reaches 20% farther",
+    "file": "elves-skill-long-reach.png"
+  },
+  {
+    "id": "elves-skill-pin-down",
+    "group": "Skills",
+    "people": "elves",
+    "title": "Pin Down",
+    "level": 1,
+    "status": "kept",
+    "caption": "Hits held enemies 30% harder",
+    "file": "elves-skill-pin-down.png"
+  },
+  {
+    "id": "elves-skill-long-shot",
+    "group": "Skills",
+    "people": "elves",
+    "title": "Long Shot",
+    "level": 2,
+    "status": "kept",
+    "caption": "+50% reach, pierce 1",
+    "file": "elves-skill-long-shot.png"
+  },
+  {
+    "id": "elves-skill-split-shot",
+    "group": "Skills",
+    "people": "elves",
+    "title": "Split Shot",
+    "level": 2,
+    "status": "kept",
+    "caption": "Attacks pass through 1 more",
+    "file": "elves-skill-split-shot.png"
+  },
+  {
+    "id": "elves-skill-deadeye",
+    "group": "Skills",
+    "people": "elves",
+    "title": "Deadeye",
+    "level": 2,
+    "status": "kept",
+    "caption": "Every 4th attack crits",
+    "file": "elves-skill-deadeye.png"
+  },
+  {
+    "id": "elves-skill-snare",
+    "group": "Skills",
+    "people": "elves",
+    "title": "Snare",
+    "level": 2,
+    "status": "kept",
+    "caption": "Lays a burning, slowing snare on the path",
+    "file": "elves-skill-snare.png"
+  },
+  {
+    "id": "elves-skill-volley",
+    "group": "Skills",
+    "people": "elves",
+    "title": "Volley",
+    "level": 3,
+    "status": "kept",
+    "caption": "Every 2nd attack pierces the whole path",
+    "file": "elves-skill-volley.png"
+  },
+  {
+    "id": "dwarves-item-axe",
+    "group": "Items",
+    "people": "dwarves",
+    "title": "Axe",
+    "level": 1,
+    "status": "kept",
+    "caption": "Hits also strike enemies beside",
+    "file": "dwarves-item-axe.png"
+  },
+  {
+    "id": "dwarves-item-hand-hammer",
+    "group": "Items",
+    "people": "dwarves",
+    "title": "Hand Hammer",
+    "level": 1,
+    "status": "new",
+    "caption": "Hits hard; small stun chance",
+    "file": "dwarves-item-hand-hammer.png"
+  },
+  {
+    "id": "dwarves-item-miners-pick",
+    "group": "Items",
+    "people": "dwarves",
+    "title": "Miner's Pick",
+    "level": 1,
+    "status": "new",
+    "caption": "Hits plated enemies 25% harder",
+    "file": "dwarves-item-miners-pick.png"
+  },
+  {
+    "id": "dwarves-item-round-shield",
+    "group": "Items",
+    "people": "dwarves",
+    "title": "Round Shield",
+    "level": 1,
+    "status": "new",
+    "caption": "Holds 2; thorns",
+    "file": "dwarves-item-round-shield.png"
+  },
+  {
+    "id": "dwarves-item-chainshirt",
+    "group": "Items",
+    "people": "dwarves",
+    "title": "Chainshirt",
+    "level": 1,
+    "status": "new",
+    "caption": "Holds 1 more",
+    "file": "dwarves-item-chainshirt.png"
+  },
+  {
+    "id": "dwarves-item-forge-apron",
+    "group": "Items",
+    "people": "dwarves",
+    "title": "Forge Apron",
+    "level": 1,
+    "status": "new",
+    "caption": "Thorns",
+    "file": "dwarves-item-forge-apron.png"
+  },
+  {
+    "id": "dwarves-item-bearded-axe",
+    "group": "Items",
+    "people": "dwarves",
+    "title": "Bearded Axe",
+    "level": 2,
+    "status": "new",
+    "caption": "Cleaves a wider circle",
+    "file": "dwarves-item-bearded-axe.png"
+  },
+  {
+    "id": "dwarves-item-maul",
+    "group": "Items",
+    "people": "dwarves",
+    "title": "Maul",
+    "level": 2,
+    "status": "new",
+    "caption": "Slow, very hard hits that splash",
+    "file": "dwarves-item-maul.png"
+  },
+  {
+    "id": "dwarves-item-pavise",
+    "group": "Items",
+    "people": "dwarves",
+    "title": "Pavise",
+    "level": 2,
+    "status": "kept",
+    "caption": "Holds 3, attacks slower",
+    "file": "dwarves-item-pavise.png"
+  },
+  {
+    "id": "dwarves-item-rune-shield",
+    "group": "Items",
+    "people": "dwarves",
+    "title": "Rune Shield",
+    "level": 2,
+    "status": "new",
+    "caption": "Holds 2; hits warded 25% harder",
+    "file": "dwarves-item-rune-shield.png"
+  },
+  {
+    "id": "dwarves-item-plate",
+    "group": "Items",
+    "people": "dwarves",
+    "title": "Plate",
+    "level": 2,
+    "status": "kept",
+    "caption": "Every hit harder",
+    "file": "dwarves-item-plate.png"
+  },
+  {
+    "id": "dwarves-item-stoneskin-mail",
+    "group": "Items",
+    "people": "dwarves",
+    "title": "Stoneskin Mail",
+    "level": 2,
+    "status": "new",
+    "caption": "Holds 1 more; thorns",
+    "file": "dwarves-item-stoneskin-mail.png"
+  },
+  {
+    "id": "dwarves-item-warhammer",
+    "group": "Items",
+    "people": "dwarves",
+    "title": "Warhammer",
+    "level": 3,
+    "status": "kept",
+    "caption": "Hardest of all, slower",
+    "file": "dwarves-item-warhammer.png"
+  },
+  {
+    "id": "dwarves-item-greataxe",
+    "group": "Items",
+    "people": "dwarves",
+    "title": "Greataxe",
+    "level": 3,
+    "status": "new",
+    "caption": "Cleaves everything around it",
+    "file": "dwarves-item-greataxe.png"
+  },
+  {
+    "id": "dwarves-item-quarry-breaker",
+    "group": "Items",
+    "people": "dwarves",
+    "title": "Quarry Breaker",
+    "level": 3,
+    "status": "new",
+    "caption": "Hits crack armour and slow",
+    "file": "dwarves-item-quarry-breaker.png"
+  },
+  {
+    "id": "dwarves-item-anvil-shield",
+    "group": "Items",
+    "people": "dwarves",
+    "title": "Anvil Shield",
+    "level": 3,
+    "status": "new",
+    "caption": "Holds 4; stuns what it holds",
+    "file": "dwarves-item-anvil-shield.png"
+  },
+  {
+    "id": "dwarves-item-deepforge-plate",
+    "group": "Items",
+    "people": "dwarves",
+    "title": "Deepforge Plate",
+    "level": 3,
+    "status": "new",
+    "caption": "Harder hits that splash",
+    "file": "dwarves-item-deepforge-plate.png"
+  },
+  {
+    "id": "dwarves-item-ironheart-plate",
+    "group": "Items",
+    "people": "dwarves",
+    "title": "Ironheart Plate",
+    "level": 4,
+    "status": "kept",
+    "caption": "Reach, wider blast, +15% damage",
+    "file": "dwarves-item-ironheart-plate.png"
+  },
+  {
+    "id": "dwarves-item-mountainbreaker",
+    "group": "Items",
+    "people": "dwarves",
+    "title": "Mountainbreaker",
+    "level": 4,
+    "status": "new",
+    "caption": "Every hit splashes and stuns",
+    "file": "dwarves-item-mountainbreaker.png"
+  },
+  {
+    "id": "dwarves-item-thanes-bulwark",
+    "group": "Items",
+    "people": "dwarves",
+    "title": "Thane's Bulwark",
+    "level": 4,
+    "status": "new",
+    "caption": "Holds 5; thorns x2",
+    "file": "dwarves-item-thanes-bulwark.png"
+  },
+  {
+    "id": "dwarves-skill-bolder-bash",
+    "group": "Skills",
+    "people": "dwarves",
+    "title": "Bolder Bash",
+    "level": 2,
+    "status": "new",
+    "caption": "Every hit splashes 20 wider, +20% damage",
+    "file": "dwarves-skill-bolder-bash.png"
+  },
+  {
+    "id": "dwarves-skill-cleave",
+    "group": "Skills",
+    "people": "dwarves",
+    "title": "Cleave",
+    "level": 1,
+    "status": "kept",
+    "caption": "Hits strike enemies near the target",
+    "file": "dwarves-skill-cleave.png"
+  },
+  {
+    "id": "dwarves-skill-riposte",
+    "group": "Skills",
+    "people": "dwarves",
+    "title": "Riposte",
+    "level": 1,
+    "status": "kept",
+    "caption": "Held enemies take 80% more thorns",
+    "file": "dwarves-skill-riposte.png"
+  },
+  {
+    "id": "dwarves-skill-heavy-blows",
+    "group": "Skills",
+    "people": "dwarves",
+    "title": "Heavy Blows",
+    "level": 2,
+    "status": "kept",
+    "caption": "+25% damage, +10% speed",
+    "file": "dwarves-skill-heavy-blows.png"
+  },
+  {
+    "id": "dwarves-skill-ore-sense",
+    "group": "Skills",
+    "people": "dwarves",
+    "title": "Ore Sense",
+    "level": 2,
+    "status": "kept",
+    "caption": "Holds 1 more, +20% damage",
+    "file": "dwarves-skill-ore-sense.png"
+  },
+  {
+    "id": "dwarves-skill-stunning-bash",
+    "group": "Skills",
+    "people": "dwarves",
+    "title": "Stunning Bash",
+    "level": 2,
+    "status": "kept",
+    "caption": "18% stun chance",
+    "file": "dwarves-skill-stunning-bash.png"
+  },
+  {
+    "id": "dwarves-skill-anchor",
+    "group": "Skills",
+    "people": "dwarves",
+    "title": "Anchor",
+    "level": 2,
+    "status": "kept",
+    "caption": "Holds 1 more, slows, thorns x3",
+    "file": "dwarves-skill-anchor.png"
+  },
+  {
+    "id": "dwarves-skill-bulwark",
+    "group": "Skills",
+    "people": "dwarves",
+    "title": "Bulwark",
+    "level": 3,
+    "status": "kept",
+    "caption": "Holds 3 more, slows 45%",
+    "file": "dwarves-skill-bulwark.png"
+  },
+  {
+    "id": "dwarves-skill-momentum",
+    "group": "Skills",
+    "people": "dwarves",
+    "title": "Momentum",
+    "level": 3,
+    "status": "kept",
+    "caption": "+15% speed per held enemy",
+    "file": "dwarves-skill-momentum.png"
+  },
+  {
+    "id": "dwarves-skill-warden-of-ash",
+    "group": "Skills",
+    "people": "dwarves",
+    "title": "Warden of Ash",
+    "level": 3,
+    "status": "kept",
+    "caption": "Holds 2 more, thorns x3, burn 26/s",
+    "file": "dwarves-skill-warden-of-ash.png"
+  },
+  {
+    "id": "reptilians-item-spear",
+    "group": "Items",
+    "people": "reptilians",
+    "title": "Spear",
+    "level": 1,
+    "status": "new",
+    "caption": "Strikes close, pierces the enemy behind",
+    "file": "reptilians-item-spear.png"
+  },
+  {
+    "id": "reptilians-item-fang-knife",
+    "group": "Items",
+    "people": "reptilians",
+    "title": "Fang Knife",
+    "level": 1,
+    "status": "new",
+    "caption": "Hits poison 6/s",
+    "file": "reptilians-item-fang-knife.png"
+  },
+  {
+    "id": "reptilians-item-bone-club",
+    "group": "Items",
+    "people": "reptilians",
+    "title": "Bone Club",
+    "level": 1,
+    "status": "new",
+    "caption": "Hits hard; small stun",
+    "file": "reptilians-item-bone-club.png"
+  },
+  {
+    "id": "reptilians-item-buckler",
+    "group": "Items",
+    "people": "reptilians",
+    "title": "Buckler",
+    "level": 1,
+    "status": "kept",
+    "caption": "Holds 1; lots of speed and crit",
+    "file": "reptilians-item-buckler.png"
+  },
+  {
+    "id": "reptilians-item-leather",
+    "group": "Items",
+    "people": "reptilians",
+    "title": "Leather",
+    "level": 1,
+    "status": "new",
+    "caption": "Attack speed, a little reach",
+    "file": "reptilians-item-leather.png"
+  },
+  {
+    "id": "reptilians-item-hide-wrap",
+    "group": "Items",
+    "people": "reptilians",
+    "title": "Hide Wrap",
+    "level": 1,
+    "status": "new",
+    "caption": "Thorns",
+    "file": "reptilians-item-hide-wrap.png"
+  },
+  {
+    "id": "reptilians-item-cleaver",
+    "group": "Items",
+    "people": "reptilians",
+    "title": "Cleaver",
+    "level": 2,
+    "status": "new",
+    "caption": "Hits bleed 10/s",
+    "file": "reptilians-item-cleaver.png"
+  },
+  {
+    "id": "reptilians-item-meat-hook",
+    "group": "Items",
+    "people": "reptilians",
+    "title": "Meat Hook",
+    "level": 2,
+    "status": "new",
+    "caption": "Hits held enemies 30% harder",
+    "file": "reptilians-item-meat-hook.png"
+  },
+  {
+    "id": "reptilians-item-harpoon",
+    "group": "Items",
+    "people": "reptilians",
+    "title": "Harpoon",
+    "level": 2,
+    "status": "new",
+    "caption": "Mid range; hits slow 30%",
+    "file": "reptilians-item-harpoon.png"
+  },
+  {
+    "id": "reptilians-item-gator-buckler",
+    "group": "Items",
+    "people": "reptilians",
+    "title": "Gator Buckler",
+    "level": 2,
+    "status": "new",
+    "caption": "Holds 2; thorns",
+    "file": "reptilians-item-gator-buckler.png"
+  },
+  {
+    "id": "reptilians-item-javelin-sling",
+    "group": "Items",
+    "people": "reptilians",
+    "title": "Javelin Sling",
+    "level": 2,
+    "status": "new",
+    "caption": "Every 4th attack throws a piercing javelin",
+    "file": "reptilians-item-javelin-sling.png"
+  },
+  {
+    "id": "reptilians-item-scale-hide",
+    "group": "Items",
+    "people": "reptilians",
+    "title": "Scale Hide",
+    "level": 2,
+    "status": "new",
+    "caption": "Thorns; holds 1 more",
+    "file": "reptilians-item-scale-hide.png"
+  },
+  {
+    "id": "reptilians-item-glaive",
+    "group": "Items",
+    "people": "reptilians",
+    "title": "Glaive",
+    "level": 3,
+    "status": "new",
+    "caption": "Wide sweep; hits bleed",
+    "file": "reptilians-item-glaive.png"
+  },
+  {
+    "id": "reptilians-item-bonecrusher",
+    "group": "Items",
+    "people": "reptilians",
+    "title": "Bonecrusher",
+    "level": 3,
+    "status": "new",
+    "caption": "Hardest swing; kills under 15%",
+    "file": "reptilians-item-bonecrusher.png"
+  },
+  {
+    "id": "reptilians-item-venom-fang",
+    "group": "Items",
+    "people": "reptilians",
+    "title": "Venom Fang",
+    "level": 3,
+    "status": "new",
+    "caption": "Hits poison 14/s",
+    "file": "reptilians-item-venom-fang.png"
+  },
+  {
+    "id": "reptilians-item-stalker-leathers",
+    "group": "Items",
+    "people": "reptilians",
+    "title": "Stalker Leathers",
+    "level": 3,
+    "status": "new",
+    "caption": "+30% speed for 2s after a kill",
+    "file": "reptilians-item-stalker-leathers.png"
+  },
+  {
+    "id": "reptilians-item-smokehouse-apron",
+    "group": "Items",
+    "people": "reptilians",
+    "title": "Smokehouse Apron",
+    "level": 3,
+    "status": "new",
+    "caption": "Kills pay 2 more gold",
+    "file": "reptilians-item-smokehouse-apron.png"
+  },
+  {
+    "id": "reptilians-item-kingscale-shield",
+    "group": "Items",
+    "people": "reptilians",
+    "title": "Kingscale Shield",
+    "level": 4,
+    "status": "renamed",
+    "caption": "Holds 4; speed and crit (was Gilded Easel)",
+    "file": "reptilians-item-kingscale-shield.png"
+  },
+  {
+    "id": "reptilians-item-wyrmtooth-spear",
+    "group": "Items",
+    "people": "reptilians",
+    "title": "Wyrmtooth Spear",
+    "level": 4,
+    "status": "new",
+    "caption": "Pierces the whole path; hits poison",
+    "file": "reptilians-item-wyrmtooth-spear.png"
+  },
+  {
+    "id": "reptilians-item-butcher-kings-cleaver",
+    "group": "Items",
+    "people": "reptilians",
+    "title": "Butcher-King's Cleaver",
+    "level": 4,
+    "status": "new",
+    "caption": "Kills frenzy it: +40% speed 3s",
+    "file": "reptilians-item-butcher-kings-cleaver.png"
+  },
+  {
+    "id": "reptilians-skill-blood-price",
+    "group": "Skills",
+    "people": "reptilians",
+    "title": "Blood Price",
+    "level": 2,
+    "status": "renamed",
+    "caption": "Kills pay 4 more gold; hits slow 25%",
+    "file": "reptilians-skill-blood-price.png"
+  },
+  {
+    "id": "reptilians-skill-poisoned-tips",
+    "group": "Skills",
+    "people": "reptilians",
+    "title": "Poisoned Tips",
+    "level": 1,
+    "status": "kept",
+    "caption": "Hits poison 10/s",
+    "file": "reptilians-skill-poisoned-tips.png"
+  },
+  {
+    "id": "reptilians-skill-bloodrush",
+    "group": "Skills",
+    "people": "reptilians",
+    "title": "Bloodrush",
+    "level": 1,
+    "status": "kept",
+    "caption": "Kill: +25% speed 1.5s",
+    "file": "reptilians-skill-bloodrush.png"
+  },
+  {
+    "id": "reptilians-skill-bounty",
+    "group": "Skills",
+    "people": "reptilians",
+    "title": "Bounty",
+    "level": 1,
+    "status": "kept",
+    "caption": "Kills pay 3 more gold",
+    "file": "reptilians-skill-bounty.png"
+  },
+  {
+    "id": "reptilians-skill-killing-spree",
+    "group": "Skills",
+    "people": "reptilians",
+    "title": "Killing Spree",
+    "level": 2,
+    "status": "kept",
+    "caption": "Kill: +45% speed 2s",
+    "file": "reptilians-skill-killing-spree.png"
+  },
+  {
+    "id": "reptilians-skill-finisher",
+    "group": "Skills",
+    "people": "reptilians",
+    "title": "Finisher",
+    "level": 2,
+    "status": "kept",
+    "caption": "Kills under 15% outright",
+    "file": "reptilians-skill-finisher.png"
+  },
+  {
+    "id": "reptilians-skill-venom-spit",
+    "group": "Skills",
+    "people": "reptilians",
+    "title": "Venom Spit",
+    "level": 2,
+    "status": "new",
+    "caption": "Every 3rd attack poisons 3 nearby",
+    "file": "reptilians-skill-venom-spit.png"
+  },
+  {
+    "id": "reptilians-skill-berserk",
+    "group": "Skills",
+    "people": "reptilians",
+    "title": "Berserk",
+    "level": 3,
+    "status": "kept",
+    "caption": "+40% damage, +25% speed",
+    "file": "reptilians-skill-berserk.png"
+  },
+  {
+    "id": "reptilians-skill-reaper",
+    "group": "Skills",
+    "people": "reptilians",
+    "title": "Reaper",
+    "level": 3,
+    "status": "kept",
+    "caption": "Kills under 28% outright",
+    "file": "reptilians-skill-reaper.png"
+  },
+  {
+    "id": "reptilians-skill-hexblade",
+    "group": "Skills",
+    "people": "reptilians",
+    "title": "Hexblade",
+    "level": 3,
+    "status": "kept",
+    "caption": "20% stun, slows 45%",
+    "file": "reptilians-skill-hexblade.png"
+  },
+  {
+    "id": "gnomes-item-wand",
+    "group": "Items",
+    "people": "gnomes",
+    "title": "Wand",
+    "level": 1,
+    "status": "kept",
+    "caption": "Burst at a group; a little speed",
+    "file": "gnomes-item-wand.png"
+  },
+  {
+    "id": "gnomes-item-rod",
+    "group": "Items",
+    "people": "gnomes",
+    "title": "Rod",
+    "level": 1,
+    "status": "kept",
+    "caption": "Burst; reaches farther",
+    "file": "gnomes-item-rod.png"
+  },
+  {
+    "id": "gnomes-item-sprout-wand",
+    "group": "Items",
+    "people": "gnomes",
+    "title": "Sprout Wand",
+    "level": 1,
+    "status": "new",
+    "caption": "Burst slows 15%",
+    "file": "gnomes-item-sprout-wand.png"
+  },
+  {
+    "id": "gnomes-item-tome",
+    "group": "Items",
+    "people": "gnomes",
+    "title": "Tome",
+    "level": 1,
+    "status": "kept",
+    "caption": "Every hit harder",
+    "file": "gnomes-item-tome.png"
+  },
+  {
+    "id": "gnomes-item-herb-pouch",
+    "group": "Items",
+    "people": "gnomes",
+    "title": "Herb Pouch",
+    "level": 1,
+    "status": "new",
+    "caption": "Every 10 kills win back 1% cargo",
+    "file": "gnomes-item-herb-pouch.png"
+  },
+  {
+    "id": "gnomes-item-robe",
+    "group": "Items",
+    "people": "gnomes",
+    "title": "Robe",
+    "level": 1,
+    "status": "kept",
+    "caption": "Much wider blast",
+    "file": "gnomes-item-robe.png"
+  },
+  {
+    "id": "gnomes-item-sceptre",
+    "group": "Items",
+    "people": "gnomes",
+    "title": "Sceptre",
+    "level": 2,
+    "status": "kept",
+    "caption": "Burst; crits more",
+    "file": "gnomes-item-sceptre.png"
+  },
+  {
+    "id": "gnomes-item-thornrod",
+    "group": "Items",
+    "people": "gnomes",
+    "title": "Thornrod",
+    "level": 2,
+    "status": "new",
+    "caption": "Bursts poison 8/s",
+    "file": "gnomes-item-thornrod.png"
+  },
+  {
+    "id": "gnomes-item-spark-coil",
+    "group": "Items",
+    "people": "gnomes",
+    "title": "Spark Coil",
+    "level": 2,
+    "status": "new",
+    "caption": "Bursts jump to 1 more",
+    "file": "gnomes-item-spark-coil.png"
+  },
+  {
+    "id": "gnomes-item-flask",
+    "group": "Items",
+    "people": "gnomes",
+    "title": "Flask",
+    "level": 2,
+    "status": "new",
+    "caption": "Hits splash a slowing brew",
+    "file": "gnomes-item-flask.png"
+  },
+  {
+    "id": "gnomes-item-mossweave-robe",
+    "group": "Items",
+    "people": "gnomes",
+    "title": "Mossweave Robe",
+    "level": 2,
+    "status": "new",
+    "caption": "Blasts slow 20%",
+    "file": "gnomes-item-mossweave-robe.png"
+  },
+  {
+    "id": "gnomes-item-brew-belt",
+    "group": "Items",
+    "people": "gnomes",
+    "title": "Brew Belt",
+    "level": 2,
+    "status": "new",
+    "caption": "Heroes near it attack 10% faster",
+    "file": "gnomes-item-brew-belt.png"
+  },
+  {
+    "id": "gnomes-item-staff",
+    "group": "Items",
+    "people": "gnomes",
+    "title": "Staff",
+    "level": 3,
+    "status": "kept",
+    "caption": "Much harder, wider burst",
+    "file": "gnomes-item-staff.png"
+  },
+  {
+    "id": "gnomes-item-grimoire",
+    "group": "Items",
+    "people": "gnomes",
+    "title": "Grimoire",
+    "level": 3,
+    "status": "kept",
+    "caption": "Harder burst, quicker",
+    "file": "gnomes-item-grimoire.png"
+  },
+  {
+    "id": "gnomes-item-bloomstaff",
+    "group": "Items",
+    "people": "gnomes",
+    "title": "Bloomstaff",
+    "level": 3,
+    "status": "new",
+    "caption": "Bursts sprout roots that hold 2",
+    "file": "gnomes-item-bloomstaff.png"
+  },
+  {
+    "id": "gnomes-item-philter-rack",
+    "group": "Items",
+    "people": "gnomes",
+    "title": "Philter Rack",
+    "level": 3,
+    "status": "new",
+    "caption": "Heroes near it hit 15% harder",
+    "file": "gnomes-item-philter-rack.png"
+  },
+  {
+    "id": "gnomes-item-alchemists-coat",
+    "group": "Items",
+    "people": "gnomes",
+    "title": "Alchemist's Coat",
+    "level": 3,
+    "status": "new",
+    "caption": "Blasts burn and slow",
+    "file": "gnomes-item-alchemists-coat.png"
+  },
+  {
+    "id": "gnomes-item-greenvial-herbal",
+    "group": "Items",
+    "people": "gnomes",
+    "title": "Greenvial Herbal",
+    "level": 4,
+    "status": "renamed",
+    "caption": "Burst jumps to 2 more (was Moonquill Codex)",
+    "file": "gnomes-item-greenvial-herbal.png"
+  },
+  {
+    "id": "gnomes-item-worldroot-staff",
+    "group": "Items",
+    "people": "gnomes",
+    "title": "Worldroot Staff",
+    "level": 4,
+    "status": "new",
+    "caption": "Every burst roots what it hits 1s",
+    "file": "gnomes-item-worldroot-staff.png"
+  },
+  {
+    "id": "gnomes-item-elixir-of-plenty",
+    "group": "Items",
+    "people": "gnomes",
+    "title": "Elixir of Plenty",
+    "level": 4,
+    "status": "new",
+    "caption": "Kills win back cargo; nearby heroes faster",
+    "file": "gnomes-item-elixir-of-plenty.png"
+  },
+  {
+    "id": "gnomes-skill-thornbloom",
+    "group": "Skills",
+    "people": "gnomes",
+    "title": "Thornbloom",
+    "level": 2,
+    "status": "renamed",
+    "caption": "Hits jump to 1 more and slow 25%",
+    "file": "gnomes-skill-thornbloom.png"
+  },
+  {
+    "id": "gnomes-skill-arc-spark",
+    "group": "Skills",
+    "people": "gnomes",
+    "title": "Arc Spark",
+    "level": 1,
+    "status": "kept",
+    "caption": "Hits jump to 1 more for 45%",
+    "file": "gnomes-skill-arc-spark.png"
+  },
+  {
+    "id": "gnomes-skill-frostbite",
+    "group": "Skills",
+    "people": "gnomes",
+    "title": "Frostbite",
+    "level": 1,
+    "status": "kept",
+    "caption": "Hits slow 25%",
+    "file": "gnomes-skill-frostbite.png"
+  },
+  {
+    "id": "gnomes-skill-blessing",
+    "group": "Skills",
+    "people": "gnomes",
+    "title": "Blessing",
+    "level": 2,
+    "status": "kept",
+    "caption": "Heroes near it hit 40% harder",
+    "file": "gnomes-skill-blessing.png"
+  },
+  {
+    "id": "gnomes-skill-siphon",
+    "group": "Skills",
+    "people": "gnomes",
+    "title": "Siphon",
+    "level": 2,
+    "status": "kept",
+    "caption": "+50% damage; damage wins back cargo",
+    "file": "gnomes-skill-siphon.png"
+  },
+  {
+    "id": "gnomes-skill-cold-snap",
+    "group": "Skills",
+    "people": "gnomes",
+    "title": "Cold Snap",
+    "level": 2,
+    "status": "kept",
+    "caption": "+25% damage on slowed",
+    "file": "gnomes-skill-cold-snap.png"
+  },
+  {
+    "id": "gnomes-skill-overgrowth",
+    "group": "Skills",
+    "people": "gnomes",
+    "title": "Overgrowth",
+    "level": 2,
+    "status": "new",
+    "caption": "Blasts leave slowing roots",
+    "file": "gnomes-skill-overgrowth.png"
+  },
+  {
+    "id": "gnomes-skill-last-rites",
+    "group": "Skills",
+    "people": "gnomes",
+    "title": "Last Rites",
+    "level": 3,
+    "status": "kept",
+    "caption": "Every 5th kill wins back 5% cargo",
+    "file": "gnomes-skill-last-rites.png"
+  },
+  {
+    "id": "gnomes-skill-tinkers-spark",
+    "group": "Skills",
+    "people": "gnomes",
+    "title": "Tinker's Spark",
+    "level": 3,
+    "status": "new",
+    "caption": "Every 5th attack jumps to 3 more",
+    "file": "gnomes-skill-tinkers-spark.png"
+  },
+  {
+    "id": "gnomes-skill-stormcaller",
+    "group": "Skills",
+    "people": "gnomes",
+    "title": "Stormcaller",
+    "level": 3,
+    "status": "kept",
+    "caption": "Hits jump to 2 more, +35% damage",
+    "file": "gnomes-skill-stormcaller.png"
+  }
+]

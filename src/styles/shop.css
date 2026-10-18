@@ -21,9 +21,9 @@
   border: 1px solid var(--sign-rim);
   border-radius: 3px;
   background:
-    linear-gradient(180deg, rgba(255, 220, 170, 0.18) 0 2px, transparent 2px, rgba(0, 0, 0, 0.3)),
+    linear-gradient(180deg, color-mix(in srgb, var(--sign-ink) 18%, transparent) 0 2px, transparent 2px, color-mix(in srgb, var(--shade) 30%, transparent)),
     var(--sign-wood);
-  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.4);
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--shade) 40%, transparent);
 }
 .shop .pk-tok {
   background: color-mix(in srgb, var(--shade) 40%, transparent);
@@ -53,7 +53,10 @@
   background: var(--paper);
   color: var(--paper-ink);
 }
-.shop .pk-label {
+.shop .pk-label,
+.shop .pk-tok.unavailable .pk-label {
+  /* On the paper tag even when the service is out ("Cargo is whole"): the
+     shared parts' muted ink was cream on cream there (asset critique, Oct 2026). */
   color: var(--paper-ink-2);
 }
 .shop-wares .pk-foot {
@@ -77,10 +80,10 @@
   border: 1px solid var(--sign-rim);
   border-radius: var(--r-md);
   background:
-    linear-gradient(180deg, rgba(255, 220, 170, 0.12) 0 2px, transparent 2px),
-    repeating-linear-gradient(90deg, transparent 0 46px, rgba(0, 0, 0, 0.12) 46px 48px),
+    linear-gradient(180deg, color-mix(in srgb, var(--sign-ink) 12%, transparent) 0 2px, transparent 2px),
+    repeating-linear-gradient(90deg, transparent 0 46px, color-mix(in srgb, var(--shade) 12%, transparent) 46px 48px),
     var(--sign-wood);
-  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.4);
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--shade) 40%, transparent);
 }
 .shop-counter .pk-tok {
   flex-direction: row;

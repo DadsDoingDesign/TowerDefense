@@ -188,20 +188,23 @@ export const CHARGES = {
   bird: ['p...p', 'pp.pp', '.ppp.', '..p..', '.....'],
   wheat: ['p.p.p', '.ppp.', 'p.p.p', '.ppp.', '..p..'],
   // The companies' emblems (Draft 4 § C), three each, earned by standing.
-  chili: ['....p', '...p.', '.ppp.', 'ppp..', 'pp...'],
-  flame: ['..p..', '.pp..', '.ppp.', 'ppppp', '.ppp.'],
-  sack: ['.p.p.', '..p..', '.ppp.', 'ppppp', 'ppppp'],
+  // The marks critique (Oct 2026) redrew the eight that read as something
+  // else at 3x: the gem and the palette as skulls, the rose as a key, the
+  // chili and the quill as a slash, the flame, the sack and the candle as blobs.
+  chili: ['...p.', '..pp.', '..pp.', '.pp..', 'pp...'],
+  flame: ['.p...', '.pp.p', 'ppppp', 'ppppp', '.ppp.'],
+  sack: ['.p.p.', '..p..', '.ppp.', 'ppppp', '.ppp.'],
   brush: ['...p.', '...p.', '..p..', '.ppp.', '.ppp.'],
   frame: ['ppppp', 'p...p', 'p.p.p', 'p...p', 'ppppp'],
-  palette: ['.ppp.', 'p.p.p', 'ppppp', 'pp.pp', '.ppp.'],
+  palette: ['.ppp.', 'ppppp', 'p.ppp', 'pp...', '.ppp.'],
   pick: ['.ppp.', 'p.p.p', '..p..', '..p..', '..p..'],
   anvil: ['pppp.', '.pppp', '..p..', '.ppp.', 'ppppp'],
-  gem: ['.ppp.', 'p.p.p', 'ppppp', '.ppp.', '..p..'],
+  gem: ['.....', '.ppp.', 'ppppp', '.ppp.', '..p..'],
   spool: ['ppppp', '.ppp.', '.p.p.', '.ppp.', 'ppppp'],
-  rose: ['.ppp.', 'pp.pp', '.ppp.', '..p..', '.pp..'],
+  rose: ['.ppp.', 'ppppp', '.ppp.', 'pp.p.', '..p..'],
   moth: ['pp.pp', 'ppppp', '..p..', 'ppppp', 'pp.pp'],
-  quill: ['..ppp', '.ppp.', '.pp..', '.p...', 'p....'],
-  candle: ['..p..', '.....', '.ppp.', '.ppp.', 'ppppp'],
+  quill: ['...pp', '..ppp', '.pp.p', '.p.p.', 'p....'],
+  candle: ['..p..', '.....', '.ppp.', '.ppp.', '.ppp.'],
   eye: ['.....', '.ppp.', 'pp.pp', '.ppp.', '.....'],
 } as const
 export type Charge = keyof typeof CHARGES

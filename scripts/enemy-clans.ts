@@ -46,13 +46,15 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import sharp, { type OverlayOptions } from 'sharp'
 import { CLAN_IDS, TIERS, type ClanId, type Faction } from '../src/game/data/clans'
-import { INK, MASTER, recipeFor, type Part } from './enemy-clans-art'
+import { INK, MASTER, recipeFor, type Part, type Recipe } from './enemy-clans-art'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const PACK = join(ROOT, 'public', 'assets', 'sprites', 'tinyswords')
 const GEN = join(ROOT, 'src', 'game', 'render', 'enemyClans.generated.ts')
 const CHECK = process.argv.includes('--check')
 const SHEET = process.argv.includes('--sheet') ? process.argv[process.argv.indexOf('--sheet') + 1] : null
+/** `--proposals <dir>`: bake the proposal kits (`enemy-clans-proposals.ts`) into `dir` — review art, never shipped. */
+const PROPOSALS = process.argv.includes('--proposals') ? process.argv[process.argv.indexOf('--proposals') + 1] : null
 
 /** Headroom (and a keg's side room), in source px. */
 export const PAD: Readonly<Record<Faction, { top: number; side: number }>> = {
@@ -204,15 +206,27 @@ function centreOf(im: Img, fw: number, f: number, cols: ReadonlySet<number>, box
 function cut(im: Img, fw: number, f: number, cols: ReadonlySet<number>, box: readonly [number, number, number, number]): void {
   const [x0, y0, x1, y1] = box
   const ox = f * fw
+  const gone = new Set<number>()
   for (let y = Math.max(0, y0); y <= Math.min(im.h - 1, y1); y++)
-    for (let x = Math.max(0, x0); x <= Math.min(fw - 1, x1); x++) if (solid(im, ox + x, y) && cols.has(rgbAt(im, ox + x, y))) clear(im, ox + x, y)
+    for (let x = Math.max(0, x0); x <= Math.min(fw - 1, x1); x++)
+      if (solid(im, ox + x, y) && cols.has(rgbAt(im, ox + x, y))) {
+        clear(im, ox + x, y)
+        gone.add(y * fw + x)
+      }
+  /** Within two px of a pixel this cut took: only that ink outlined it. */
+  const byCut = (x: number, y: number): boolean => {
+    for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) if (gone.has((y + j) * fw + x + i)) return true
+    return false
+  }
   // Ink is an outline: once what it outlined is gone, it goes too (two passes
-  // take a two-pixel-thick stroke).
+  // take a two-pixel-thick stroke). Only ink beside the cut: an arm drawn as a
+  // bare ink line (the bomber's, swung down in frames 3–5) outlines nothing
+  // either, and went with the stick until round 2 — the fist floated.
   for (let pass = 0; pass < 2; pass++) {
     const drop: [number, number][] = []
     for (let y = Math.max(0, y0 - 2); y <= Math.min(im.h - 1, y1 + 2); y++)
       for (let x = Math.max(0, x0 - 2); x <= Math.min(fw - 1, x1 + 2); x++) {
-        if (!isInk(im, ox + x, y)) continue
+        if (!isInk(im, ox + x, y) || !byCut(x, y)) continue
         let keep = false
         for (let j = -1; j <= 1 && !keep; j++)
           for (let i = -1; i <= 1 && !keep; i++) {
@@ -243,7 +257,7 @@ function cut(im: Img, fw: number, f: number, cols: ReadonlySet<number>, box: rea
  * borders the air (the body's own outline). The hole then closes from its rim
  * in, each pixel taking its painted neighbours' commonest colour.
  */
-function mend(im: Img, fw: number, f: number, box: readonly [number, number, number, number], sealTop = false): void {
+function mend(im: Img, fw: number, f: number, box: readonly [number, number, number, number], sealTop = false, sealAll = false): void {
   const [x0, y0, x1, y1] = [Math.max(0, box[0]), Math.max(0, box[1]), Math.min(fw - 1, box[2]), Math.min(im.h - 1, box[3])]
   const ox = f * fw
   const id = (x: number, y: number) => y * fw + x
@@ -259,7 +273,7 @@ function mend(im: Img, fw: number, f: number, box: readonly [number, number, num
       while (stack.length) {
         const [cx, cy] = stack.pop()!
         run.push(id(cx, cy))
-        if (cx === x0 || cx === x1 || (cy === y0 && !sealTop) || cy === y1) open = true
+        if (!sealAll && (cx === x0 || cx === x1 || (cy === y0 && !sealTop) || cy === y1)) open = true
         for (const [i, j] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
           const nx = cx + i
           const ny = cy + j
@@ -310,6 +324,50 @@ function mend(im: Img, fw: number, f: number, box: readonly [number, number, num
       hole.delete(h)
     }
   }
+}
+
+/**
+ * Clear every opaque island of at most `max` px that does not touch the
+ * frame's body (its largest island): crumbs a cut left (a fuse's last
+ * pixel, a stick's outline) or a part's stray pixel. Round 2 of the asset
+ * critique found 1–5 px crumbs beside every keg's lid and every bomber's hand.
+ */
+function despeckle(im: Img, fw: number, f: number, max: number): void {
+  const ox = f * fw
+  const seen = new Uint8Array(fw * im.h)
+  const islands: number[][] = []
+  for (let y = 0; y < im.h; y++)
+    for (let x = 0; x < fw; x++) {
+      if (seen[y * fw + x] || !solid(im, ox + x, y)) continue
+      const run: number[] = []
+      const stack = [y * fw + x]
+      seen[y * fw + x] = 1
+      while (stack.length) {
+        const id = stack.pop()!
+        run.push(id)
+        const cx = id % fw
+        const cy = Math.floor(id / fw)
+        for (let j = -1; j <= 1; j++)
+          for (let i = -1; i <= 1; i++) {
+            const nx = cx + i
+            const ny = cy + j
+            if (nx < 0 || ny < 0 || nx >= fw || ny >= im.h || seen[ny * fw + nx] || !solid(im, ox + nx, ny)) continue
+            seen[ny * fw + nx] = 1
+            stack.push(ny * fw + nx)
+          }
+      }
+      islands.push(run)
+    }
+  islands.sort((a, b) => b.length - a.length)
+  for (const run of islands.slice(1))
+    if (run.length <= max)
+      for (const id of run) {
+        const x = id % fw
+        const y = Math.floor(id / fw)
+        clear(im, ox + x, y)
+        // its soft halo goes with it
+        for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) if (x + i >= 0 && x + i < fw && alpha(im, ox + x + i, y + j) > 0 && alpha(im, ox + x + i, y + j) <= 200) clear(im, ox + x + i, y + j)
+      }
 }
 
 /** Lay one part with its top-left at frame-local (px, py), inked, `under` filling only empty pixels. */
@@ -400,14 +458,14 @@ export interface Baked {
   fh: number
 }
 
-async function bakeOne(clan: ClanId, faction: Faction, tier: number, pal: readonly RGB[]): Promise<Baked> {
+async function bakeOne(clan: ClanId, faction: Faction, tier: number, pal: readonly RGB[], recipeOf: (f: Faction, t: number) => Recipe = (f, t) => recipeFor(clan, f, t)): Promise<Baked> {
   const still = faction === 'barrel'
   const srcName = still ? `barrel${tier}` : `${faction}${tier}_walk`
   const src = await load(join(PACK, `${srcName}.png`))
   const pad = PAD[faction]
   const { im, fw } = grow(src, FRAME_W[faction], pad.top, pad.side)
   const frames = im.w / fw
-  const recipe = recipeFor(clan, faction, tier)
+  const recipe = recipeOf(faction, tier)
   const T = pad.top
   const S = pad.side
   // Anchors first, all on the untouched strip (frame 0 is the reference).
@@ -422,15 +480,19 @@ async function bakeOne(clan: ClanId, faction: Faction, tier: number, pal: readon
     const { head, tip, hand } = anchors[f]
     if (faction === 'torch' && recipe.cuts.includes('flame')) cut(im, fw, f, FLAME, [0, 0, 50, 30 + T])
     if (faction === 'tnt') {
-      if (recipe.cuts.includes('sticks')) cut(im, fw, f, STICKS, shift([0, -6, 33, 32], head.dx, head.dy + T))
-      if (recipe.cuts.includes('stick')) cut(im, fw, f, STICK, shift([63, 0, 89, 52], head.dx, head.dy + T))
+      if (recipe.cuts.includes('sticks')) cut(im, fw, f, STICKS, shift([0, -6, 44, 32], head.dx, head.dy + T)) // to 44: the fuse tips over the head (round 2: a pink tick poked out of every hat)
+      if (recipe.cuts.includes('stick')) cut(im, fw, f, STICK, shift([63, 0, 89, 68], head.dx, head.dy + T)) // to 68: the swung-down stick's butt (round 2: a pink stub dangled under the fist in frames 3–5)
     }
     if (faction === 'barrel' && recipe.cuts.includes('fuse')) {
       cut(im, fw, f, FUSE, [S + 18, T - 2, S + 34, T + 28])
       // The stencilled TNT goes too, under the clan's mark.
-      cut(im, fw, f, set('#ffffff'), [S + 10, T + 46, S + 41, T + 58])
-      mend(im, fw, f, [S + 10, T + 46, S + 41, T + 58])
+      cut(im, fw, f, set('#ffffff'), [S + 10, T + 47, S + 41, T + 57])
+      // The stencil sits inside the staves: every gap it leaves is a hole to
+      // close (round 1: the gaps touching the box's edge were left open, so
+      // the grass showed through the keg).
+      mend(im, fw, f, [S + 10, T + 47, S + 41, T + 57], false, true)
     }
+    despeckle(im, fw, f, 6)
     // The body's own top, once the cuts are made (the plain flame is gone).
     for (let y = 0; y < Math.min(top, im.h); y++) {
       let row = false
@@ -445,15 +507,29 @@ async function bakeOne(clan: ClanId, faction: Faction, tier: number, pal: readon
       // stays the tier's, its hardware becomes the clan's.
       const light = nearest(pal, hex(MASTER[recipe.bands.light]))
       const dark = nearest(pal, hex(MASTER[recipe.bands.dark]))
+      // The hoops' white glints take the clan's `hi` (round 1: they stayed
+      // white on soot and iron hoops — a glint brighter than the metal).
+      const hi = nearest(pal, hex(MASTER[recipe.bands.hi ?? recipe.bands.light]))
       const from = new Map([
         [key(...hex('#efe1ab')), light],
         [key(...hex('#d5b583')), dark],
+        [key(...hex('#ffffff')), hi],
       ])
       for (let y = 0; y < im.h; y++)
         for (let x = 0; x < fw; x++) {
           if (!solid(im, f * fw + x, y)) continue
           const to = from.get(rgbAt(im, f * fw + x, y))
           if (to) put(im, f * fw + x, y, to)
+        }
+    }
+    for (const rc of recipe.recolor ?? []) {
+      const [bx0, by0, bx1, by1] = shift(rc.box, S + head.dx, T + head.dy)
+      const to = new Map(Object.entries(rc.map).map(([from, l]) => [key(...hex(from)), nearest(pal, hex(MASTER[l]))]))
+      for (let y = Math.max(0, by0); y <= Math.min(im.h - 1, by1); y++)
+        for (let x = Math.max(0, bx0); x <= Math.min(fw - 1, bx1); x++) {
+          if (!solid(im, f * fw + x, y)) continue
+          const c = to.get(rgbAt(im, f * fw + x, y))
+          if (c) put(im, f * fw + x, y, c)
         }
     }
     for (const part of recipe.parts) {
@@ -474,12 +550,27 @@ async function bakeOne(clan: ClanId, faction: Faction, tier: number, pal: readon
     // The rope lay ON the lid: mend the lid where it was, from the staves
     // round it (the box starts under the lid's rim, so its top is sealed).
     if (faction === 'barrel' && recipe.cuts.includes('fuse')) mend(im, fw, f, [S + 16, T + 18, S + 36, T + 30], true)
+    despeckle(im, fw, f, 2)
   }
   return { role: `${clan}_${srcName}`, png: await encode(im), top: +(top / im.h).toFixed(4), fw, fh: im.h }
 }
 const shift = (b: readonly [number, number, number, number], dx: number, dy: number) => [b[0] + dx, b[1] + dy, b[2] + dx, b[3] + dy] as const
 
+async function proposals(dir: string): Promise<void> {
+  const pal = await packPalette()
+  const { PROPOSAL_KITS } = await import('./enemy-clans-proposals')
+  const { recipeFromKit } = await import('./enemy-clans-art')
+  for (const [id, kit] of Object.entries(PROPOSAL_KITS))
+    for (const faction of ['torch', 'tnt', 'barrel'] as const)
+      for (const t of TIERS) {
+        const b = await bakeOne(id as ClanId, faction, t, pal, (f, tier) => recipeFromKit(kit(), f, tier))
+        writeFileSync(join(dir, `${b.role}.png`), b.png)
+      }
+  console.log(`[enemy-clans] proposals → ${dir}`)
+}
+
 async function main(): Promise<void> {
+  if (PROPOSALS) return proposals(PROPOSALS)
   const pal = await packPalette()
   const out: Baked[] = []
   for (const clan of CLAN_IDS) for (const faction of ['torch', 'tnt', 'barrel'] as const) for (const t of TIERS) out.push(await bakeOne(clan, faction, t, pal))

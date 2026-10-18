@@ -401,24 +401,142 @@ function flowers(s: number, palette: readonly string[]): Px {
   return p
 }
 
+/**
+ * A rain puddle lying IN the ground (Oct 2026 asset critique: the old one, a
+ * bright sky-blue oval with no rim, read as a disc floating over the grass):
+ * smaller, a two-lobed wobbly outline, a wet-mud lip on the near side, the
+ * overcast's grey sky in it and one glint — the water sits a value below the
+ * grass, as a hollow does.
+ */
 function puddle(s: number): Px {
-  const w = 24 + (s % 3) * 6
-  const h = 10 + (s % 2) * 3
+  const w = 16 + (s % 3) * 5
+  const h = 8 + (s % 2) * 2
+  const p = new Px(w, h)
+  const lobe = 0.3 + (s % 4) * 0.1
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      const u = (x + 0.5) / w
+      const v = (y + 0.5 - h / 2) / (h / 2)
+      // Two lobes: a pinched waist so it is not an ellipse.
+      const half = Math.max(Math.sin(Math.PI * Math.min(1, u / lobe) * 0.5) * 0.85, Math.sin(Math.PI * Math.max(0, (u - lobe) / (1 - lobe)) * 0.5 + Math.PI / 2) * 0.95)
+      const edge = Math.min(half, Math.sin(Math.PI * u)) + (hash01(x >> 1, s, 79) - 0.5) * 0.14
+      if (Math.abs(v) > edge) continue
+      const rim = Math.abs(v) > edge - 0.34
+      // The near (lower) rim is wet mud; the far rim the water's dark edge.
+      const c = rim ? (v > 0 ? '#2c2a22' : '#3a454c') : v < -0.2 ? '#8a9cac' : '#4e5e6c'
+      p.set(x, y, c)
+    }
+  // One glint along the sky's band.
+  const gy = Math.floor(h * 0.36)
+  for (let x = Math.floor(w * 0.34); x < Math.floor(w * 0.34) + 3; x++) if (p.on(x, gy)) p.set(x, gy, '#d6e2ea')
+  return p
+}
+
+/**
+ * A brackish marsh pool (the art slot's salt marsh): dark green-brown water
+ * with a pale salt rim on the far side, lighter where it catches the sky.
+ */
+function pool(s: number): Px {
+  const w = 20 + (s % 3) * 5
+  const h = 10 + (s % 2) * 2
   const p = new Px(w, h)
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++) {
-      const wob = (hash01(x >> 2, s, 79) - 0.5) * 0.22
-      const q = ((x + 0.5 - w / 2) / (w / 2)) ** 2 + ((y + 0.5 - h / 2) / (h / 2)) ** 2 + wob
+      const q = ((x + 0.5 - w / 2) / (w / 2)) ** 2 + ((y + 0.5 - h / 2) / (h / 2)) ** 2 + (hash01(x >> 2, y >> 1, 90 + s) - 0.5) * 0.24
       if (q > 1) continue
-      // Dark water, with the pale sky caught along its far (upper) edge.
-      const sky = y < h * 0.4
-      const c = q > 0.8 ? (y > h / 2 ? '#26301f' : '#3a4656') : sky ? (y < h * 0.22 ? '#c0d6f2' : '#8eaedc') : '#3e5a86'
+      const far = y < h / 2
+      const c = q > 0.74 ? (far ? '#c8c6a8' : '#2a3424') : far && q < 0.5 && y < h * 0.36 ? '#6a8a72' : '#36503e'
       p.set(x, y, c)
     }
-  // A glint, and a ripple.
-  const gy = Math.floor(h * 0.3)
-  for (let x = Math.floor(w * 0.3); x < Math.floor(w * 0.3) + 4; x++) p.set(x, gy, '#f4f9fc')
-  for (let x = Math.floor(w * 0.58); x < Math.floor(w * 0.58) + 3; x++) p.set(x, h - 4, '#6a8ab8')
+  for (let x = Math.floor(w * 0.4); x < Math.floor(w * 0.4) + 3; x++) if (p.on(x, Math.floor(h * 0.34))) p.set(x, Math.floor(h * 0.34), '#a8c4ac')
+  return p
+}
+
+/**
+ * A pepper plant (Peppercorn's spice fields): a round leafy bush lit from the
+ * upper left, hung with red and orange pods, each with its own highlight.
+ */
+function pepper(s: number): Px {
+  const W = 15
+  const H = 15
+  const p = new Px(W, H)
+  const LEAF = ['#24442a', '#3a6430', '#56863a', '#82aa4c'] as const
+  for (let y = 2; y < H - 1; y++)
+    for (let x = 0; x < W; x++) {
+      const q = ((x + 0.5 - W / 2) / (W / 2 - 0.5)) ** 2 + ((y + 0.5 - 8) / 6.2) ** 2 + (hash01(x >> 1, y >> 1, 91 + s) - 0.5) * 0.3
+      if (q > 1) continue
+      const lit = (W / 2 - x) * 0.09 + (8 - y) * 0.11 + (hash01(x, y, 92 + s) - 0.5) * 0.35
+      p.set(x, y, LEAF[lit > 0.55 ? 3 : lit > 0.05 ? 2 : lit > -0.45 ? 1 : 0])
+    }
+  // The stem at the foot.
+  p.set(7, H - 1, '#3a2a1a')
+  p.set(8, H - 1, '#3a2a1a')
+  // Pods: two pixels long, hanging, a highlight on the lit side.
+  const n = 4 + (s % 3)
+  for (let k = 0; k < n; k++) {
+    const x = 2 + Math.floor(hash01(k, s, 93) * 11)
+    const y = 4 + Math.floor(hash01(k, s, 94) * 7)
+    const ripe = hash01(k, s, 95) < 0.65
+    p.set(x, y, ripe ? '#e0583a' : '#ec8a32')
+    p.set(x, y + 1, ripe ? '#a83224' : '#c0601e')
+    p.set(x, y + 2, ripe ? '#7a2018' : '#8a4416')
+    if (x > 0) p.set(x - 1, y, ripe ? '#f49a7a' : '#f6c06a')
+  }
+  p.outline()
+  return p
+}
+
+/**
+ * A ring of small glowing mushrooms (the scrolls slot's hollows — Greenvial's
+ * in the world bible): three to five pale caps with a lit rim and a soft
+ * glow round each, on short stems, so a hollow in the snow-dark wood reads
+ * as tended, a little magic.
+ */
+function glowcap(s: number): Px {
+  const W = 21
+  const H = 13
+  const p = new Px(W, H)
+  const n = 3 + (s % 3)
+  const caps: [number, number][] = []
+  for (let k = 0; k < n; k++) caps.push([3 + Math.floor((k / n) * 14 + hash01(k, s, 96) * 3), 4 + Math.floor(hash01(k, s, 97) * 4)])
+  for (const [x, y] of caps) {
+    // A short pale stem, then a domed cap: a lit top, a mid body, a dark rim.
+    for (let yy = y + 1; yy < Math.min(H - 1, y + 4); yy++) p.set(x, yy, '#e6dcc4')
+    for (let dx = -2; dx <= 2; dx++) p.set(x + dx, y, Math.abs(dx) === 2 ? '#1f7a74' : '#3fc2b0')
+    for (let dx = -1; dx <= 1; dx++) p.set(x + dx, y - 1, dx < 1 ? '#bff8ea' : '#3fc2b0')
+  }
+  p.outline('#1c2a30')
+  // The glow, round them where nothing is drawn: a soft halo of spores.
+  for (const [x, y] of caps)
+    for (let dy = -3; dy <= 2; dy++)
+      for (let dx = -3; dx <= 3; dx++) if (Math.abs(dx) + Math.abs(dy) <= 4 && !p.on(x + dx, y + dy)) p.set(x + dx, y + dy, '#7fe8d6', 64)
+  return p
+}
+
+/**
+ * Cut quarry stone (Ironvein): two or three dressed blocks stacked, each with
+ * a lit top, a mid face and a dark side (light from the upper left), chisel
+ * marks on the faces, in the pack's rock ramp (repainted as the season's).
+ */
+function blocks(s: number): Px {
+  const W = 22
+  const H = 17
+  const p = new Px(W, H)
+  const R = ['#3a4a52', '#56707a', '#7c98a0', '#b4c8cc'] as const
+  const block = (x0: number, y0: number, w: number, h: number, top: number) => {
+    for (let y = y0; y < y0 + h; y++)
+      for (let x = x0; x < x0 + w; x++) {
+        const isTop = y < y0 + top
+        const side = x >= x0 + w - 2
+        const c = isTop ? (x < x0 + 2 ? R[3] : R[2]) : side ? R[0] : (x + y * 3 + s) % 7 === 0 ? R[0] : R[1]
+        p.set(x, y, c)
+      }
+  }
+  // The back block, then the front, then (sometimes) one on top.
+  block(9, 5, 12, 9, 3)
+  block(1, 8, 12, 9, 3)
+  if (s % 2 === 0) block(4, 1, 9, 8, 3)
+  p.outline()
   return p
 }
 
@@ -436,15 +554,30 @@ function mud(s: number): Px {
   return p
 }
 
+/**
+ * A reed bed (Oct 2026 asset critique: the old tuft, 11 x 16 in two greens,
+ * read as a dark smudge at a phone's scale): blades in three greens lit on
+ * their left, leaning out from the clump, and bulrush heads on some stems.
+ */
 function reeds(s: number): Px {
-  const p = new Px(11, 16)
-  const n = 5 + (s % 3)
+  const W = 15
+  const H = 22
+  const p = new Px(W, H)
+  const n = 7 + (s % 3)
   for (let k = 0; k < n; k++) {
-    const x0 = 1 + Math.floor(hash01(k, s, 82) * 9)
-    const hgt = 7 + Math.floor(hash01(k, s, 83) * 8)
-    const lean = hash01(k, s, 84) < 0.5 ? -1 : 1
-    for (let i = 0; i < hgt; i++) p.set(x0 + (i > hgt * 0.6 ? lean : 0), 15 - i, i % 3 === 0 ? '#7a9a4a' : '#5a7a36')
-    if (hash01(k, s, 85) < 0.45) for (let i = 0; i < 3; i++) p.set(x0 + lean, 15 - hgt + i, i === 0 ? '#7a5434' : '#5a3a22')
+    const x0 = 3 + Math.floor(hash01(k, s, 82) * 9)
+    const hgt = 9 + Math.floor(hash01(k, s, 83) * 11)
+    const lean = (hash01(k, s, 84) - 0.5) * 0.5 + (x0 - W / 2) * 0.05
+    const lit = hash01(k, s, 98) < 0.4
+    for (let i = 0; i < hgt; i++) {
+      const x = x0 + Math.round(lean * i)
+      p.set(x, H - 1 - i, i < 3 ? '#3e5a2a' : lit ? (i > hgt - 4 ? '#a6c46a' : '#86a852') : i % 4 === 0 ? '#6a8a40' : '#557434')
+    }
+    if (hash01(k, s, 85) < 0.4 && hgt > 12) {
+      const x = x0 + Math.round(lean * (hgt - 3))
+      for (let i = 0; i < 4; i++) p.set(x, H - hgt + i, i === 0 ? '#9a6a3e' : '#6a4426')
+      p.set(x, H - hgt - 1, '#86a852')
+    }
   }
   p.outline(OUTLINE, false)
   return p
@@ -540,6 +673,19 @@ export function propArt(kind: PropKind, seed: number): PropArt | null {
     case 'mud':
       p = mud(v)
       upright = false
+      break
+    case 'pool':
+      p = pool(v)
+      upright = false
+      break
+    case 'pepper':
+      p = pepper(v)
+      break
+    case 'blocks':
+      p = blocks(v)
+      break
+    case 'glowcap':
+      p = glowcap(v)
       break
     case 'lily':
       p = lily(v)

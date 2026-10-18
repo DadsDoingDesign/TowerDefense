@@ -89,28 +89,38 @@ just ez boring crap". A company theme is a place, not a palette: on top of
 its tokens each company brings a WORLD, all in pixels (crisp squares, a few
 colours, alpha in eighths, dithered glows), all procedural.
 
-| World | Frame (`themeArt.ts`, 4 px at the sheet's double, its own corner) | Ambient (`fxWorlds.ts`) | Press burst (on the CTA) | Switch-in |
+**The calm pass** (Oct 2026; the designer: "a bit overwhelming now that I'm
+playing more"): the worlds are **felt, not watched**. The map, the roads and
+the words are the show; a world is atmosphere at the edge of attention, slow,
+sparse and low in contrast, the way Slay the Spire's map, Hades' menus and
+Into the Breach move. Each world keeps its shape, at a lower volume.
+
+| World | Frame (`themeArt.ts`, 4 px at the sheet's double, its own corner; still) | Ambient (`fxWorlds.ts`) | Press burst (on the CTA's face) | Switch-in (350 ms) |
 |---|---|---|---|---|
-| Peppercorn — fire | Charred, burnt-through edge split by flickering ember cracks; a live coal at each corner; flame tongues licking up from the card's top (its crest) | Fat embers (2–3 px, white-hot heart, red halo) rising with a sway, crowded round the focused road and at the foot; flame tongues all along the dock's top out of a dithered heat glow | Flames flare up the CTA's face from its foot; embers off its ends | A wall of flame up the screen |
-| Easel House — paint | A scalloped brush stroke in three paints, a wet lip, a drip, a paint blob at each corner | Bold splats that land, run and dry (never on the focused road), drips, flecks, watercolour washes | A bold inked splat at the CTA's nearer end, another paint at the far end, drips and droplets | A brush wipe |
-| Ironvein — forge | A bevelled iron band, a rivet every eight pixels, a bolt at each corner, a molten seam that breathes | Three anvils along the dock's top throwing sparks in gravity arcs (white-yellow cores, orange tails), a little ash, the forge glow | A white-hot flash running out along both CTA seams; sparks in low arcs off it | A hammer-strike flash and a ring of sparks |
-| Rosethread — silk | Satin with a sliding sheen, an embroidered running stitch, a rose at each corner; a satin sheen sweeps the card and the CTA | Rose petals tumbling down; two ribbons flowing across, a stitch and a sheen running along them | A running stitch sews itself along the CTA; petals off its ends | A ribbon sweep |
-| Moonquill — arcane night | A silver line over a band of runes passing their light along, a star at each corner | A crescent moon and its dithered beam, twinkling stars, runes drifting up, quill strokes | Sparkle rings and an inked rune at each end of the CTA | A moonlit shimmer sweeping down |
+| Peppercorn — fire | Charred, burnt-through edge split by ember cracks; a live coal at each corner; still flame tongues on the card's top (its crest) | A few small embers (1–2 px, no white heart) rising slowly beside the focused road and at the foot; a low flame line along the dock's top over a faint heat glow | A few flames up the CTA's face, a few embers off the press | A faint warmth off the floor |
+| Easel House — paint | A scalloped brush stroke in three paints, a wet lip, a drip, a paint blob at each corner | Flecks drifting, now and then a small splat that dries (never on the focused road), faint washes | An inked splat at the CTA's nearer end, a drip, a few droplets | A faint lilac stroke |
+| Ironvein — forge | A bevelled iron band, a rivet every eight pixels, a bolt at each corner, a molten seam | Three anvils along the dock's top, a few sparks in low slow arcs, ash drifting | A molten flash along both CTA seams, a handful of sparks | A faint glow round the strike |
+| Rosethread — silk | Satin with a sheen, an embroidered running stitch, a rose at each corner | Rose petals tumbling slowly; two faint ribbons across the map, a still stitch and a slow sheen | A running stitch along the CTA's foot, a few petals | A faint ribbon |
+| Moonquill — arcane night | A silver line over a band of runes, one lit, a star at each corner | A crescent moon and its still beam, stars twinkling slowly, runes drifting up | Sparkles and an inked rune at the CTA's nearer end | A faint silver sky |
 
 Rules the worlds keep: **every world reads in one still, at a glance, in
-greyscale** (each has its own shape — a flame line, blotches, anvils, a
-ribbon, a moon); **effects never cross text** — the ambient layer sits behind
-the panels and is cleared under every word and panel, and a press burst is
-clipped to its CTA and its margins (`burstClip`: barely above, never into the
-panel's rows) and cleared under the label; **no wiggle** — frames are
-`border-image`, the crest and strips are pseudo-elements, the particles a
-canvas: pixels change, boxes never; **reduced motion** stops every particle,
-burst, switch-in, flipbook, strip, crest and sheen (the frames stay, still);
-**high contrast** dims the particles, the theme's lifted ramp wins;
-**performance** — one rAF loop, asleep when the tab is hidden or nothing
-moves, the ambient drawn in software at 24 fps and capped at 60 particles on
-a phone; the frame flickers only on the panels you act on; the battle HUD's
-trims are still.
+greyscale** (each has its own shape — a flame line, flecks and splats, anvils,
+a ribbon, a moon); **felt, not watched** — at most 24 ambient particles on a
+phone and 40 on a desk, each drawn at its world's `peak` (no pixel brighter
+than the words near it), glows that breathe over 8 s, frames, strips and
+crest still, and the CTA's faint shimmer (one pale band every 9 s) the only
+loop in the chrome; **effects never cross text** — the ambient layer sits
+behind the panels and is cleared under every word and panel, and a press
+burst is clipped to its CTA's own face (`burstClip`) and cleared under the
+label; **a switch-in is a crossfade** — the old world fades out as the new
+one fades in over 350 ms, under a faint, still wash of the world; **no
+wiggle** — frames are `border-image`, the crest and strips are
+pseudo-elements, the particles a canvas: pixels change, boxes never;
+**reduced motion** stops every particle, burst, switch-in and the shimmer
+(the frames stay, still); **high contrast** dims the particles, the theme's
+lifted ramp wins; **performance** — one rAF loop, asleep when the tab is
+hidden or nothing moves, the ambient drawn in software at 24 fps; the battle
+HUD's trims are still.
 
 **On the battlefield** (the designer: "Edges only", "Map should have
 seasonal themes tho for battles", then "map seasons should have more visual
@@ -132,13 +142,16 @@ standing spot keep their own look, upright props stand only on forest tiles,
 and the environment grade still runs after it (a season's own accents keep
 their hue through its gold cut, a little less saturated than the units). The
 weather (`render/weatherFx.ts`) is drawn under the wagon and the units, faint
-over the game (a third of its strength, nothing lands there) and full on the
-clear ground at the margins; the fog and the flash never thicken over the
-road's way in or the wagon. The world's particles still drift in their thin
-band at the view's edges, at half their old share beside the weather.
+over the game (under a fifth of its strength, few spawn there, nothing lands
+there) and fuller on the clear ground at the margins; the fog and the flash
+never thicken over the road's way in or the wagon. Since the calm pass it is
+40–50% of its old count, its sheets narrow and faint, its fog and clouds
+fainter, and the flash rarer (45–90 s apart, Full only). The world's
+particles still drift in their thin band at the view's edges (6 on a phone,
+9 on a desk beside the weather).
 
-**Effects: Full / Light** (Settings, `fxQuality`): Light halves the particles
-and their cadence, drops the glows and stills the frames; on Full a device
+**Effects: Full / Light** (Settings, `fxQuality`): Light halves Full's
+particles and their cadence, drops the glows and the CTA's shimmer; on Full a device
 that cannot hold 45 fps steps down to Light by itself and back once it has
 headroom (with hysteresis). On the battlefield Light halves the weather's
 particles and fog banks, keeps one sheet of rain or snow and drops the cloud

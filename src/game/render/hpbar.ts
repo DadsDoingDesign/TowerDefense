@@ -26,6 +26,7 @@
  */
 import { fxNow } from './fx'
 import { getViewScale } from './frame'
+import { ARMOUR_INK } from '../data/armourInk'
 import { drawEliteMark, type EliteMark } from './plaques'
 
 /** Fill height and outline, in CSS px. 2.5 + 2×1 = 4.5 CSS px of bar. */
@@ -168,7 +169,10 @@ export function drawEnemyBar(
     ctx.fillStyle = 'rgba(20,12,6,0.92)'
     ctx.fill()
     ctx.lineWidth = Math.max(1, G.px * 0.9)
-    ctx.strokeStyle = '#e0ac4c'
+    // Armour rings in its own colour, the run map tab's (`ARMOUR_INK`), so a
+    // Warded node on the map and the Warded goblin in the lane are one thing;
+    // Swift keeps the elite gold.
+    ctx.strokeStyle = elite === 'plated' ? ARMOUR_INK.plated : elite === 'warded' ? ARMOUR_INK.warded : '#e0ac4c'
     ctx.stroke()
     const mh = r * 1.1
     const stroke = elite === 'swift' ? Math.max(mh * 0.24, 1.15 * G.px) : 0

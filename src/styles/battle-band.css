@@ -337,8 +337,11 @@
 .sh-hcard-tag.bad {
   color: var(--bad-text);
 }
+/* 16, never 14: the atlas is drawn at 16 and shown at whole multiples only
+   (`.fw-i`); at 14 `pixelated` dropped two columns and two rows, so the
+   sword's outline broke on one side (Oct 2026 icon critique). */
 .sh-hcard-tag .fw-i {
-  --fw-i-size: 14px;
+  --fw-i-size: var(--icon-sm);
 }
 .sh-hcard-lvn {
   flex: none;

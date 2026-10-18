@@ -16,18 +16,29 @@
  *
  *  - **in its fists** ({@link Rig}): the weapon's grip in the right fist, the
  *    off-hand piece in the left, measured off the idle strips;
- *  - **instead of the painted weapon, never beside it**: a hero holding what
- *    the art paints (a knight's sword, an archer's bow) keeps the painted one;
- *    a hero holding anything else has the painted weapon CUT from its idle
- *    strip before the bake, and its own item in the fist — and its attack
- *    strip (which swings the painted weapon) is not played; the item lunges
+ *  - **the painted weapon where it stands in, never a cell beside it**: a
+ *    hero holding what the art paints keeps the painted one — and the
+ *    knight's painted sword stands in for EVERY melee weapon (axe,
+ *    greatsword, warhammer, the Saffron Brand) and for an empty hand
+ *    (`Rig.paintedFor`, `paintedBare`): an atlas cell in that fist read as a
+ *    small blade on a brown block with the arm kinked where the sword was
+ *    cut. Anything else has the painted weapon CUT from its idle strip and
+ *    its own cell in the fist only where that reads (`Rig.markMain`: the
+ *    robed look's bare fists, yes; the hooded look, whose fist goes with its
+ *    bow, draws none) — and its attack strip is not played; the item lunges
  *    at the target instead (`units.drawSentinel`);
  *  - **and the same for the off hand**: the armoured look paints a shield on
  *    its left arm. A hero whose off hand holds anything else — a buckler, a
  *    tome, a second blade — or nothing at all (a two-hander, an empty hand)
  *    has that shield cut from BOTH its strips ({@link cutOffHand}), and holds
  *    its own piece, if any, in the left fist. A knight with a greatsword is
- *    not still carrying the shield the art came with;
+ *    not still carrying the shield the art came with. The shield covered part
+ *    of the knight — the side of the helmet and tunic, the near arm, a leg,
+ *    a bite of the shadow — so the cut would leave the knight sliced down one
+ *    side; the body it hid is rebuilt in the knight's own pixels, frame by
+ *    frame, from a patch baked at build time ({@link cutAndFill},
+ *    `scripts/shield-fill-lib.ts`), so the same knight stands there with the
+ *    shield simply gone, whatever the left fist holds;
  *  - **pixel-doubled once, never scaled at draw time**: each cell is baked to a
  *    32 × 32 canvas by nearest-neighbour and blitted at a whole logical px with
  *    no transform, the 1:1 invariant every field sprite keeps (`blit.ts`).
@@ -49,7 +60,8 @@ import { iconCell, itemIcon, type IconKey } from '../data/iconAtlas'
 import type { Archetype, Equipment, Sentinel } from '../types'
 import { EFFECT_INK, leadEffect, type HitEffect } from './attackLook'
 import { mergeMods } from '../data/archetypeTree'
-import { isBodyKey, type BodyKey } from './bodyLayer'
+import { isBodyKey, type BodyKey, type BodyStyle } from './bodyLayer'
+import { SHIELD_FILL } from './shieldFill.generated'
 
 /** What a hero carries, as atlas cells, plus the glint its weapon wears. */
 export interface HeroGear {
@@ -59,6 +71,25 @@ export interface HeroGear {
   body: BodyKey | null
   /** The lead on-hit effect the WEAPON's own enchantments carry, or null. */
   glint: HitEffect | null
+  /**
+   * A picture held INSTEAD of an atlas cell, per hand — a 16 × 16 cell and
+   * its grip. Never set by {@link heroGear}: it is how a draft item (the
+   * Peoples & Trades proposal, `harness/peoples.ts`) is tried in the real
+   * fists. A hand with `art` and a null key still cuts the painted piece.
+   */
+  art?: { main?: HeldArt; off?: HeldArt }
+  /** A draft body piece as data (`bodyLayer.BodyStyle`), worn instead of `body`. Never set by {@link heroGear}. */
+  bodyStyle?: BodyStyle
+  /** How the off hand holds its piece instead of the table's way ({@link holdOf}): a review seam. Never set by {@link heroGear}. */
+  hold?: Hold
+}
+
+/** A held picture that is not an atlas cell: its 16 × 16 pixels and where it is gripped. */
+export interface HeldArt {
+  cell: HTMLCanvasElement
+  grip: Pt
+  /** How the off hand holds it ({@link holdOf}); default `cover`. */
+  hold?: Hold
 }
 
 /**
@@ -128,6 +159,24 @@ interface Rig {
   fistR: Pt
   fistL: Pt
   paintedMain: IconKey | null
+  /**
+   * The weapons the painted one STANDS IN FOR ({@link paintsMain}): a hero
+   * holding any of them keeps the painted weapon, uncut, and no mark is drawn.
+   * An atlas cell in the fist of a figure painted this big read as a small
+   * blade on a brown block, with the arm kinked where the painted weapon was
+   * cut (the designer's review, Oct 2026), so the swap is made only where it
+   * reads natively.
+   */
+  paintedFor: readonly IconKey[]
+  /** The painted weapon stays when the weapon hand is empty too: cutting it leaves the arm kinked round a missing hilt. */
+  paintedBare: boolean
+  /**
+   * Whether a weapon the art does not paint is drawn as its atlas cell in the
+   * fist. Only where it reads natively: the robed look's bare fists hold a
+   * wand or a staff; the hooded look has no fist left once its bow is cut, so
+   * a dagger there would float — it draws none.
+   */
+  markMain: boolean
   paintedOff: IconKey | null
   tip: Pt | null
   unpaint: readonly Rect[]
@@ -149,6 +198,10 @@ const TINY_SWORDS: Readonly<Record<Archetype, Rig>> = {
     fistR: { x: 21, y: -21 },
     fistL: { x: -26, y: -24 },
     paintedMain: 'blade',
+    // every melee weapon: the sword, an axe, a greatsword, a warhammer, the Saffron Brand
+    paintedFor: ['blade', 'axe', 'greatblade', 'hammer', 'brand'],
+    paintedBare: true,
+    markMain: false,
     paintedOff: 'shield',
     tip: { x: 39, y: -60 },
     unpaint: [
@@ -163,6 +216,9 @@ const TINY_SWORDS: Readonly<Record<Archetype, Rig>> = {
     fistR: { x: 25, y: -13 },
     fistL: { x: -24, y: -11 },
     paintedMain: 'bow',
+    paintedFor: ['bow'],
+    paintedBare: false,
+    markMain: false,
     paintedOff: null,
     tip: { x: 22, y: -50 },
     unpaint: [
@@ -178,6 +234,9 @@ const TINY_SWORDS: Readonly<Record<Archetype, Rig>> = {
     fistR: { x: 20, y: -13 },
     fistL: { x: -18, y: -12 },
     paintedMain: null,
+    paintedFor: [],
+    paintedBare: false,
+    markMain: true,
     paintedOff: null,
     tip: null,
     unpaint: [],
@@ -186,7 +245,7 @@ const TINY_SWORDS: Readonly<Record<Archetype, Rig>> = {
 }
 
 /** A pack with no measured rig: the marks at a generic hand height, nothing unpainted. */
-const GENERIC: Rig = { measured: false, fistR: { x: 18, y: -16 }, fistL: { x: -18, y: -16 }, paintedMain: null, paintedOff: null, tip: null, unpaint: [], offCut: false }
+const GENERIC: Rig = { measured: false, fistR: { x: 18, y: -16 }, fistL: { x: -18, y: -16 }, paintedMain: null, paintedFor: [], paintedBare: false, markMain: true, paintedOff: null, tip: null, unpaint: [], offCut: false }
 
 /** The rig for a pack's look. Only Tiny Swords (the default theme) is measured. */
 export const rigFor = (pack: string | undefined, look: Archetype): Rig => (pack === 'tinyswords' ? TINY_SWORDS[look] : GENERIC)
@@ -211,9 +270,19 @@ const GRIP: Partial<Record<IconKey, Pt>> = {
 }
 const gripOf = (k: IconKey): Pt => GRIP[k] ?? { x: 8, y: 11 }
 
+/**
+ * Is the art's painted weapon the picture of this hero's weapon? It is for
+ * the weapon itself and for every weapon it stands in for ({@link
+ * Rig.paintedFor}). Never for a draft's held picture (`HeroGear.art`).
+ */
+export function paintsMain(rig: Rig, gear: Pick<HeroGear, 'main' | 'art'>): boolean {
+  if (gear.art?.main || rig.paintedMain === null) return false
+  return gear.main === null ? rig.paintedBare : gear.main === rig.paintedMain || rig.paintedFor.includes(gear.main)
+}
+
 /** Does this hero's weapon hand hide the art's painted weapon? */
 export function unpaints(rig: Rig, gear: HeroGear): boolean {
-  return rig.unpaint.length > 0 && rig.paintedMain !== null && gear.main !== rig.paintedMain
+  return rig.unpaint.length > 0 && rig.paintedMain !== null && gear.main !== rig.paintedMain && !paintsMain(rig, gear)
 }
 
 /**
@@ -234,16 +303,110 @@ export interface Cut {
 const unpainted = new WeakMap<object, Map<string, HTMLCanvasElement>>()
 
 /**
- * A strip with the painted weapon and/or off-hand piece cut out (see
- * {@link Rig.unpaint}, {@link Rig.offCut}). One canvas per source strip and
- * cut, kept: `pixmap()` caches its bake by source IDENTITY, so a stable canvas
- * is baked once and never again.
+ * The body the painted shield hid, rebuilt per frame at build time
+ * (`scripts/shield-fill-lib.ts`, written by `npm run anchors` into
+ * `shieldFill.generated.ts`, checked by `anchors:check`): one strip's patch.
+ * `frames[f]` is runs `y, x, codes` in the frame's own px, one palette index
+ * per pixel (`FILL_CODES`); a 0-alpha colour clears.
  */
-export function unpaintedStrip(src: HTMLImageElement | HTMLCanvasElement, rig: Rig, frames: number, cut: Cut): HTMLImageElement | HTMLCanvasElement {
+export interface StripFill {
+  /** The strip the patch was made for; any other size is never patched. */
+  w: number
+  h: number
+  /** Packed `0xRRGGBBAA`. */
+  palette: readonly number[]
+  /**
+   * Per frame, where the off-hand piece is held on the rebuilt knight, in
+   * logical px from the hero's origin: `[handX, handY, coverX, coverY]` — the
+   * near hand, hidden behind the body at the tunic's side ({@link Hold}
+   * `hand`), and the painted shield's edge against the body — its right
+   * edge, at its middle height (`cover`).
+   */
+  grips: readonly (readonly [number, number, number, number])[]
+  frames: readonly (readonly (number | string)[])[]
+}
+export type ShieldFills = Readonly<Record<string, Readonly<Record<string, StripFill>>>>
+
+/** The palette index alphabet of a {@link StripFill}'s codes. */
+export const FILL_CODES = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
+/** The rebuilt-body patch for a pack's strip, or null (nothing measured: the cut is left as it is). */
+export const shieldFillFor = (pack: string | undefined, strip: string): StripFill | null => (pack ? SHIELD_FILL[pack]?.[strip] ?? null : null)
+
+/** The torso table's key for a strip with its painted shield cut and the body rebuilt (`bodyAnchors.generated.ts`). */
+export const bareStrip = (strip: string): string => `${strip}_bare`
+
+/**
+ * What the off hand does to a strip (`role`, e.g. `fighter_idle`) of a pack's
+ * look: whether the painted piece is cut ({@link unpaintsOff}), the patch that
+ * rebuilds the body under it, and the torso table the body piece dresses it
+ * from. A hero holding the painted piece itself (a knight with a Shield) gets
+ * no cut, no patch and the strip's own torso: the art exactly as painted.
+ */
+export function offHandPlan(pack: string | undefined, rig: Rig, gear: HeroGear | undefined, role: string): { cut: boolean; fill: StripFill | null; torso: string } {
+  const cut = !!gear && unpaintsOff(rig, gear)
+  const fill = cut ? shieldFillFor(pack, role) : null
+  return { cut, fill, torso: fill ? bareStrip(role) : role }
+}
+
+/**
+ * Write one frame's patch into RGBA pixels, in place (columns `x0 ..` of a
+ * strip `w` wide). Pure: the anchors script, the tests and the canvas path
+ * all go through it. Returns the pixels written.
+ */
+export function applyShieldFill(d: { [i: number]: number; length: number }, w: number, x0: number, fill: StripFill, f: number): number {
+  const runs = fill.frames[f]
+  if (!runs) return 0
+  let n = 0
+  for (let i = 0; i + 2 < runs.length; i += 3) {
+    const y = runs[i] as number
+    const x = runs[i + 1] as number
+    const codes = runs[i + 2] as string
+    for (let j = 0; j < codes.length; j++) {
+      const c = fill.palette[FILL_CODES.indexOf(codes[j])]
+      const o = (y * w + x0 + x + j) * 4
+      d[o] = c >>> 24
+      d[o + 1] = (c >>> 16) & 255
+      d[o + 2] = (c >>> 8) & 255
+      d[o + 3] = c & 255
+      n++
+    }
+  }
+  return n
+}
+
+/**
+ * Cut the painted off-hand piece from every frame of a strip's RGBA pixels and,
+ * when a patch is given (and made for this size), rebuild the body it hid.
+ * In place. The canvas path ({@link unpaintedStrip}) and the build check share it.
+ */
+export function cutAndFill(d: { [i: number]: number; length: number }, w: number, h: number, frames: number, fill: StripFill | null): void {
+  const cw = Math.round(w / frames)
+  const patch = fill && fill.w === w && fill.h === h && fill.frames.length === frames ? fill : null
+  for (let f = 0; f < frames; f++) {
+    cutOffHand(d, w, h, f * cw, Math.min(cw, w - f * cw))
+    if (patch) applyShieldFill(d, w, f * cw, patch, f)
+  }
+}
+
+/**
+ * A strip with the painted weapon and/or off-hand piece cut out (see
+ * {@link Rig.unpaint}, {@link Rig.offCut}) — and, where the off hand is cut,
+ * the body under it rebuilt (`fill`, {@link shieldFillFor}). One canvas per
+ * source strip and cut, kept: `pixmap()` caches its bake by source IDENTITY,
+ * so a stable canvas is baked once and never again.
+ */
+export function unpaintedStrip(
+  src: HTMLImageElement | HTMLCanvasElement,
+  rig: Rig,
+  frames: number,
+  cut: Cut,
+  fill: StripFill | null = null,
+): HTMLImageElement | HTMLCanvasElement {
   const main = cut.main && rig.unpaint.length > 0
   const off = cut.off && rig.offCut
   if (typeof document === 'undefined' || (!main && !off)) return src
-  const key = `${main ? 'm' : ''}${off ? 'o' : ''}`
+  const key = `${main ? 'm' : ''}${off ? (fill ? 'of' : 'o') : ''}`
   let byCut = unpainted.get(src)
   const hit = byCut?.get(key)
   if (hit) return hit
@@ -260,7 +423,7 @@ export function unpaintedStrip(src: HTMLImageElement | HTMLCanvasElement, rig: R
   if (main) for (let f = 0; f < frames; f++) for (const r of rig.unpaint) g.clearRect(f * cw + r.x, r.y, Math.min(r.w, cw - r.x), r.h)
   if (off) {
     const img = g.getImageData(0, 0, w, h)
-    for (let f = 0; f < frames; f++) cutOffHand(img.data, w, h, f * cw, Math.min(cw, w - f * cw))
+    cutAndFill(img.data, w, h, frames, fill)
     g.putImageData(img, 0, 0)
   }
   if (!byCut) unpainted.set(src, (byCut = new Map()))
@@ -286,7 +449,9 @@ const isInk = (d: ArrayLike<number>, o: number): boolean =>
  *     touch an untouched painted pixel goes; ink that does is the BODY's
  *     outline and stays. The contour bake rings whatever is left.
  *
- * The ground shadow is translucent, so it is never ink and never cut.
+ * The ground shadow is translucent, so it is never ink and never cut. What
+ * the shield hid of the body is NOT restored here: {@link cutAndFill} writes
+ * the build-time patch that does that over the result.
  */
 export function cutOffHand(d: { [i: number]: number; length: number }, w: number, h: number, x0: number, cw: number): number {
   const at = (x: number, y: number) => (y * w + x) * 4
@@ -421,11 +586,27 @@ function cellCanvas(key: IconKey): HTMLCanvasElement | null {
   return c
 }
 
+const bakedArt = new WeakMap<HTMLCanvasElement, HTMLCanvasElement>()
+/** A held picture's cell, pixel-doubled once like an atlas cell. */
+function artCanvas(art: HeldArt): HTMLCanvasElement | null {
+  const hit = bakedArt.get(art.cell)
+  if (hit) return hit
+  const c = document.createElement('canvas')
+  c.width = SIDE
+  c.height = SIDE
+  const g = c.getContext('2d')
+  if (!g) return null
+  g.imageSmoothingEnabled = false
+  g.drawImage(art.cell, 0, 0, CELL, CELL, 0, 0, SIDE, SIDE)
+  bakedArt.set(art.cell, c)
+  return c
+}
+
 /** Blit one mark with its grip on (gx, gy), at a whole logical px. */
-function hold(ctx: CanvasRenderingContext2D, key: IconKey, gx: number, gy: number): { x: number; y: number } | null {
-  const c = cellCanvas(key)
+function hold(ctx: CanvasRenderingContext2D, key: IconKey | null, gx: number, gy: number, art?: HeldArt): { x: number; y: number } | null {
+  const c = art ? artCanvas(art) : key ? cellCanvas(key) : null
   if (!c) return null
-  const g = gripOf(key)
+  const g = art ? art.grip : gripOf(key!)
   const x = Math.round(gx - g.x * GEAR_SCALE)
   const y = Math.round(gy - g.y * GEAR_SCALE)
   ctx.drawImage(c, x, y)
@@ -437,9 +618,66 @@ function hold(ctx: CanvasRenderingContext2D, key: IconKey, gx: number, gy: numbe
  * front — unless the art already paints that very thing there (the armoured
  * look's shield). The context is at the hero's origin.
  */
-export function drawOffHand(ctx: CanvasRenderingContext2D, rig: Rig, gear: HeroGear): void {
-  if (!gear.off || gear.off === rig.paintedOff) return
-  hold(ctx, gear.off, rig.fistL.x, rig.fistL.y)
+export function drawOffHand(ctx: CanvasRenderingContext2D, rig: Rig, gear: HeroGear, grip?: StripFill['grips'][number]): void {
+  const art = gear.art?.off
+  const key = art ? null : gear.off
+  if (!art && (!key || key === rig.paintedOff)) return
+  if (!grip) {
+    hold(ctx, key, rig.fistL.x, rig.fistL.y, art)
+    return
+  }
+  if (holdOf(key, gear) === 'hand') {
+    hold(ctx, key, grip[0], grip[1], art)
+    return
+  }
+  // Where the painted shield stood: against the body as the shield's edge was,
+  // at its middle height — the hand behind it, as the art's is.
+  const c = art ? artCanvas(art) : cellCanvas(key!)
+  if (!c) return
+  const b = opaqueBox(c)
+  ctx.drawImage(c, Math.round(grip[2] - b.x1), Math.round(grip[3] - (b.y0 + b.y1) / 2))
+}
+
+const boxes = new WeakMap<HTMLCanvasElement, { x0: number; x1: number; y0: number; y1: number }>()
+/** The painted box of a held picture's canvas (memo per canvas). */
+function opaqueBox(c: HTMLCanvasElement): { x0: number; x1: number; y0: number; y1: number } {
+  const hit = boxes.get(c)
+  if (hit) return hit
+  let box = { x0: 0, x1: c.width - 1, y0: 0, y1: c.height - 1 }
+  const d = c.getContext('2d')?.getImageData(0, 0, c.width, c.height).data
+  if (d) {
+    let x0 = Infinity
+    let x1 = -1
+    let y0 = Infinity
+    let y1 = -1
+    for (let y = 0; y < c.height; y++)
+      for (let x = 0; x < c.width; x++)
+        if (d[(y * c.width + x) * 4 + 3] >= 128) {
+          x0 = Math.min(x0, x)
+          x1 = Math.max(x1, x)
+          y0 = Math.min(y0, y)
+          y1 = Math.max(y1, y)
+        }
+    if (x1 >= 0) box = { x0, x1, y0, y1 }
+  }
+  boxes.set(c, box)
+  return box
+}
+
+/**
+ * How the rebuilt knight holds an off-hand piece (`StripFill.grips`):
+ *  - `cover`: where the painted shield stood, over the same footprint, so the
+ *    piece takes the shield's place and the hand is behind it, as the art's
+ *    is — the shields, the books, the quiver, the banner, every board;
+ *  - `hand`: gripped at its own grip by the near hand, at the tunic's side —
+ *    a second weapon (every key with a {@link GRIP}).
+ */
+export type Hold = 'hand' | 'cover'
+const HAND_HELD = new Set<IconKey>(Object.keys(GRIP) as IconKey[])
+export function holdOf(key: IconKey | null, gear: Pick<HeroGear, 'hold' | 'art'>): Hold {
+  if (gear.hold) return gear.hold
+  if (gear.art?.off) return gear.art.off.hold ?? 'cover'
+  return key && HAND_HELD.has(key) ? 'hand' : 'cover'
 }
 
 /**
@@ -459,12 +697,15 @@ export function drawMainHand(
   /** The art's own attack strip is playing: its painted weapon is mid-swing, away from `tip`. */
   attacking = false,
 ): void {
-  if (!gear.main) return
-  if (gear.main === rig.paintedMain) {
+  const art = gear.art?.main
+  if (!gear.main && !art) return
+  if (paintsMain(rig, gear)) {
     if (gear.glint && rig.tip && !attacking) drawGlint(ctx, gear.glint, rig.tip.x, rig.tip.y, now, still)
     return
   }
-  const at = hold(ctx, gear.main, rig.fistR.x + lungeX, rig.fistR.y + lungeY)
+  // A cell that would not read in this look's fist is not drawn at all (`Rig.markMain`).
+  if (!art && !rig.markMain) return
+  const at = hold(ctx, gear.main, rig.fistR.x + lungeX, rig.fistR.y + lungeY, art)
   if (at && gear.glint) drawGlint(ctx, gear.glint, at.x + SIDE - 6, at.y + 6, now, still)
 }
 

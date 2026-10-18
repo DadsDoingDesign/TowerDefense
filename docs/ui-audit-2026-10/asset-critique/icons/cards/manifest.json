@@ -1,0 +1,378 @@
+[
+  {
+    "id": "overview",
+    "group": "Icons",
+    "people": "",
+    "title": "The icon family",
+    "caption": "All 176 icons after the pass at 32 px, changed ones underlined in gold; judge them as one family.",
+    "file": "overview.png"
+  },
+  {
+    "id": "atlas-execute",
+    "group": "Icons",
+    "people": "",
+    "title": "Execute (skill mark)",
+    "caption": "The blade falling on a nearly empty HP bar (red sliver, steel empty): the rule, drawn. Judge it at 16 and 32 px.",
+    "file": "atlas-execute.png"
+  },
+  {
+    "id": "atlas-haste",
+    "group": "Icons",
+    "people": "",
+    "title": "Haste & Slow (skill marks)",
+    "caption": "Haste points right (forward, like Start Wave), slow takes the left; the pair stays mirrored. Mirrored with haste. Judge it at 16 and 32 px.",
+    "file": "atlas-haste.png"
+  },
+  {
+    "id": "atlas-hammer",
+    "group": "Icons",
+    "people": "",
+    "title": "Warhammer",
+    "caption": "Head shaded from the upper left (cream catch-light, mid, dark under-edge). Judge it at 16 and 32 px.",
+    "file": "atlas-hammer.png"
+  },
+  {
+    "id": "atlas-grimoire",
+    "group": "Icons",
+    "people": "",
+    "title": "Grimoire",
+    "caption": "A violet book like the Tome's family - page edges, gold corners, gold eye sigil, clasp. Judge it at 16 and 32 px.",
+    "file": "atlas-grimoire.png"
+  },
+  {
+    "id": "atlas-shield",
+    "group": "Icons",
+    "people": "",
+    "title": "Shield",
+    "caption": "Three-step steel ramp from the upper left; same silhouette. Judge it at 16 and 32 px.",
+    "file": "atlas-shield.png"
+  },
+  {
+    "id": "atlas-plate",
+    "group": "Icons",
+    "people": "",
+    "title": "Plate",
+    "caption": "A cuirass - shoulder caps, neck notch, waist band, fauld; steel ramp. Keeps the BODY_INK inks. Judge it at 16 and 32 px.",
+    "file": "atlas-plate.png"
+  },
+  {
+    "id": "atlas-cloth",
+    "group": "Icons",
+    "people": "",
+    "title": "Robe (cloth)",
+    "caption": "A robe - sleeves apart from the body, V neck, cord belt, floor-length skirt. Same three parchment inks. Judge it at 16 and 32 px.",
+    "file": "atlas-cloth.png"
+  },
+  {
+    "id": "atlas-banner",
+    "group": "Icons",
+    "people": "",
+    "title": "Banner",
+    "caption": "A hanging banner - crossbar, red cloth, gold lozenge, swallowtail, pole through the notch. Judge it at 16 and 32 px.",
+    "file": "atlas-banner.png"
+  },
+  {
+    "id": "atlas-relic",
+    "group": "Icons",
+    "people": "",
+    "title": "Relic",
+    "caption": "A gold locket on a chain with a red gem. Clear object; still close to a flask at 1x. Judge it at 16 and 32 px.",
+    "file": "atlas-relic.png"
+  },
+  {
+    "id": "atlas-cloak",
+    "group": "Icons",
+    "people": "",
+    "title": "Cloak",
+    "caption": "Tried a cape with folds (a melon) - replaced the same round by a hooded figure: narrow hood, dark face slot, clasp, shoulders, cape, red lining. Judge it at 16 and 32 px.",
+    "file": "atlas-cloak.png"
+  },
+  {
+    "id": "atlas-silkwind",
+    "group": "Icons",
+    "people": "",
+    "title": "Silkwind Cloak",
+    "caption": "The new Cloak's hooded figure in violet, gold lining, hem kicked right, wind streaks: Cloak's sibling. Judge it at 16 and 32 px.",
+    "file": "atlas-silkwind.png"
+  },
+  {
+    "id": "humans-spiced-blade",
+    "group": "Icons",
+    "people": "Peppercorn",
+    "title": "Spiced Blade",
+    "caption": "A wavy red edge and a flame at the tip change the outline; steel back. Judge it at 16 and 32 px.",
+    "file": "humans-spiced-blade.png"
+  },
+  {
+    "id": "humans-hard-hitter",
+    "group": "Icons",
+    "people": "Peppercorn",
+    "title": "Hard Hitter",
+    "caption": "A steel fist - knuckle row, fold line, thumb across, cuff, red impact sparks. Judge it at 16 and 32 px.",
+    "file": "humans-hard-hitter.png"
+  },
+  {
+    "id": "humans-banner-bearer",
+    "group": "Icons",
+    "people": "Peppercorn",
+    "title": "Banner Bearer",
+    "caption": "A red swallowtail pennant on its pole beside gold haste chevrons (the speed it gives). Judge it at 16 and 32 px.",
+    "file": "humans-banner-bearer.png"
+  },
+  {
+    "id": "humans-rally",
+    "group": "Icons",
+    "people": "Peppercorn",
+    "title": "Rally",
+    "caption": "A curved war horn - flared bell with a dark mouth, gold band, leather mouthpiece, sound marks. Judge it at 16 and 32 px.",
+    "file": "humans-rally.png"
+  },
+  {
+    "id": "elves-shortbow",
+    "group": "Icons",
+    "people": "Rosethread",
+    "title": "Shortbow",
+    "caption": "A small diagonal D-bow, green grip, straight string: smaller than Bow and Longbow. Judge it at 16 and 32 px.",
+    "file": "elves-shortbow.png"
+  },
+  {
+    "id": "elves-barbed-quiver",
+    "group": "Icons",
+    "people": "Rosethread",
+    "title": "Barbed Quiver",
+    "caption": "A violet silk quiver, teal strap, two barbed steel heads. The heads still read a little like ears. Judge it at 16 and 32 px.",
+    "file": "elves-barbed-quiver.png"
+  },
+  {
+    "id": "elves-woven-vest",
+    "group": "Icons",
+    "people": "Rosethread",
+    "title": "Woven Vest",
+    "caption": "One vest - woven rows, cream lacing down the front. At 1x it is a green slab. Judge it at 16 and 32 px.",
+    "file": "elves-woven-vest.png"
+  },
+  {
+    "id": "elves-thornweave-hood",
+    "group": "Icons",
+    "people": "Rosethread",
+    "title": "Thornweave Hood",
+    "caption": "A 3/4 hood, the face opening to the right, thorns on the crown. Judge it at 16 and 32 px.",
+    "file": "elves-thornweave-hood.png"
+  },
+  {
+    "id": "elves-moonsilk-mantle",
+    "group": "Icons",
+    "people": "Rosethread",
+    "title": "Moonsilk Mantle",
+    "caption": "A capelet - neck hole, gold clasp, crescent, silver hem. Clear object; still could be a dome. Judge it at 16 and 32 px.",
+    "file": "elves-moonsilk-mantle.png"
+  },
+  {
+    "id": "elves-starweave",
+    "group": "Icons",
+    "people": "Rosethread",
+    "title": "Starweave",
+    "caption": "A four-point silver star threaded by a violet needle line - a woven star. Judge it at 16 and 32 px.",
+    "file": "elves-starweave.png"
+  },
+  {
+    "id": "elves-quick-hands",
+    "group": "Icons",
+    "people": "Rosethread",
+    "title": "Quick Hands",
+    "caption": "A violet silk glove with cream motion lines, teal cuff. Judge it at 16 and 32 px.",
+    "file": "elves-quick-hands.png"
+  },
+  {
+    "id": "elves-snare",
+    "group": "Icons",
+    "people": "Rosethread",
+    "title": "Snare",
+    "caption": "A noose snare - bent sapling, cord with an ember, the loop lying on the ground. Judge it at 16 and 32 px.",
+    "file": "elves-snare.png"
+  },
+  {
+    "id": "dwarves-round-shield",
+    "group": "Icons",
+    "people": "Ironvein",
+    "title": "Round Shield",
+    "caption": "Two-pixel planks, steel rim and boss. Judge it at 16 and 32 px.",
+    "file": "dwarves-round-shield.png"
+  },
+  {
+    "id": "dwarves-chainshirt",
+    "group": "Icons",
+    "people": "Ironvein",
+    "title": "Chainshirt",
+    "caption": "Banded steel shirt, short sleeves, leather belt with a gold buckle, ragged hem. Judge it at 16 and 32 px.",
+    "file": "dwarves-chainshirt.png"
+  },
+  {
+    "id": "dwarves-stoneskin-mail",
+    "group": "Icons",
+    "people": "Ironvein",
+    "title": "Stoneskin Mail",
+    "caption": "A vest of stone slabs in a brick bond, mortar lines. Judge it at 16 and 32 px.",
+    "file": "dwarves-stoneskin-mail.png"
+  },
+  {
+    "id": "dwarves-deepforge-plate",
+    "group": "Icons",
+    "people": "Ironvein",
+    "title": "Deepforge Plate",
+    "caption": "Dark steel cuirass with a molten seam down the centre. Judge it at 16 and 32 px.",
+    "file": "dwarves-deepforge-plate.png"
+  },
+  {
+    "id": "reptilians-gator-buckler",
+    "group": "Icons",
+    "people": "Butcherblock",
+    "title": "Gator Buckler",
+    "caption": "A buckler - wooden rim, green face shaded from the upper left, a bony ridge. Judge it at 16 and 32 px.",
+    "file": "reptilians-gator-buckler.png"
+  },
+  {
+    "id": "reptilians-javelin-sling",
+    "group": "Icons",
+    "people": "Butcherblock",
+    "title": "Javelin Sling",
+    "caption": "One javelin in flight - bone tip, red fletching, speed lines. Judge it at 16 and 32 px.",
+    "file": "reptilians-javelin-sling.png"
+  },
+  {
+    "id": "reptilians-scale-hide",
+    "group": "Icons",
+    "people": "Butcherblock",
+    "title": "Scale Hide",
+    "caption": "Staggered scale rows; still busy at 3x. Judge it at 16 and 32 px.",
+    "file": "reptilians-scale-hide.png"
+  },
+  {
+    "id": "reptilians-smokehouse-apron",
+    "group": "Icons",
+    "people": "Butcherblock",
+    "title": "Smokehouse Apron",
+    "caption": "Ties cut for a belt with a gold buckle. Judge it at 16 and 32 px.",
+    "file": "reptilians-smokehouse-apron.png"
+  },
+  {
+    "id": "reptilians-bounty",
+    "group": "Icons",
+    "people": "Butcherblock",
+    "title": "Bounty",
+    "caption": "A stack of four coins, rims shaded. Judge it at 16 and 32 px.",
+    "file": "reptilians-bounty.png"
+  },
+  {
+    "id": "reptilians-venom-spit",
+    "group": "Icons",
+    "people": "Butcherblock",
+    "title": "Venom Spit",
+    "caption": "A lizard profile - flat brow, long snout, open jaw, spit. Still a little fish-like. Judge it at 16 and 32 px.",
+    "file": "reptilians-venom-spit.png"
+  },
+  {
+    "id": "reptilians-berserk",
+    "group": "Icons",
+    "people": "Butcherblock",
+    "title": "Berserk",
+    "caption": "A reptile face - red eyes, fangs, red throat. Still reads as a monster, not as rage. Judge it at 16 and 32 px.",
+    "file": "reptilians-berserk.png"
+  },
+  {
+    "id": "gnomes-herb-pouch",
+    "group": "Icons",
+    "people": "Greenvial",
+    "title": "Herb Pouch",
+    "caption": "A leather pouch with a drawstring; herbs still make it an onion at 1x. Judge it at 16 and 32 px.",
+    "file": "gnomes-herb-pouch.png"
+  },
+  {
+    "id": "gnomes-thornrod",
+    "group": "Icons",
+    "people": "Greenvial",
+    "title": "Thornrod",
+    "caption": "Lit green shaft with thorns, bright bud. Judge it at 16 and 32 px.",
+    "file": "gnomes-thornrod.png"
+  },
+  {
+    "id": "gnomes-mossweave-robe",
+    "group": "Icons",
+    "people": "Greenvial",
+    "title": "Mossweave Robe",
+    "caption": "The Robe's silhouette in moss green, rope belt, mossy hem. Judge it at 16 and 32 px.",
+    "file": "gnomes-mossweave-robe.png"
+  },
+  {
+    "id": "gnomes-worldroot-staff",
+    "group": "Icons",
+    "people": "Greenvial",
+    "title": "Worldroot Staff",
+    "caption": "Lit wood, glowing green orb, gold collar, roots joined (no diagonal flecks). Judge it at 16 and 32 px.",
+    "file": "gnomes-worldroot-staff.png"
+  },
+  {
+    "id": "gnomes-cold-snap",
+    "group": "Icons",
+    "people": "Greenvial",
+    "title": "Cold Snap",
+    "caption": "An ice block split by a zigzag crack. Judge it at 16 and 32 px.",
+    "file": "gnomes-cold-snap.png"
+  },
+  {
+    "id": "gnomes-overgrowth",
+    "group": "Icons",
+    "people": "Greenvial",
+    "title": "Overgrowth",
+    "caption": "A vine coiled up a stake, leaves, soil. Reads as a plant; the slow is in the tell. Judge it at 16 and 32 px.",
+    "file": "gnomes-overgrowth.png"
+  },
+  {
+    "id": "skill-headline",
+    "group": "Icons",
+    "people": "",
+    "title": "A skill’s mark",
+    "caption": "Each skill now shows what its card says first: Heavy Blows harder, Finisher the execute, Anchor the hold, Snare the trap, Stunning Bash the stun. Judge: does each tile match its name?",
+    "file": "skill-headline.png"
+  },
+  {
+    "id": "hcard-tag-16px",
+    "group": "Icons",
+    "people": "",
+    "title": "The “Swings” tag",
+    "caption": "The hero card drew its sword at 14 px, so two rows and columns dropped and the outline broke. It is 16 px now. Judge the zoom: a whole outline.",
+    "file": "hcard-tag-16px.png"
+  },
+  {
+    "id": "elves-starweave-tell",
+    "group": "Icons",
+    "people": "Rosethread",
+    "title": "Starweave · tell",
+    "caption": "The three stars by the head were white on white, a checker blob. Now Rosethread violet with a light centre. Judge: does it read as one mark?",
+    "file": "elves-starweave-tell.png"
+  },
+  {
+    "id": "gnomes-cold-snap-tell",
+    "group": "Icons",
+    "people": "Greenvial",
+    "title": "Cold Snap · tell",
+    "caption": "The flake pips touched only at their corners, so each pixel got its own ring: a checker. Now a solid diamond. Judge: does it read as one mark?",
+    "file": "gnomes-cold-snap-tell.png"
+  },
+  {
+    "id": "humans-banner-bearer-tell",
+    "group": "Icons",
+    "people": "Peppercorn",
+    "title": "Banner Bearer · tell",
+    "caption": "The pennant’s emblem was a zigzag ringed pixel by pixel. Now a solid cream cross. Judge: does it read as one mark?",
+    "file": "humans-banner-bearer-tell.png"
+  },
+  {
+    "id": "elves-snare-tell",
+    "group": "Icons",
+    "people": "Rosethread",
+    "title": "Snare · tell",
+    "caption": "Roots were diagonal pixel steps, each ringed alone. Lines are joined now (Thornbloom, Overgrowth and Anchor’s chain too). Judge: does it read as one mark?",
+    "file": "elves-snare-tell.png"
+  }
+]

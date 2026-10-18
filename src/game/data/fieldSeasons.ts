@@ -50,6 +50,10 @@ export type PropKind =
   | 'mushroom' // Tiny Swords' mushrooms (CC0, `deco_01–02`), the caps repainted tan
   | 'drift' // a snow drift
   | 'leaves' // a drift of fallen leaves (flat)
+  | 'pepper' // a pepper plant hung with red pods (Peppercorn's spice)
+  | 'blocks' // cut quarry stone, stacked (Ironvein's quarries)
+  | 'pool' // a brackish marsh pool (flat; Butcherblock's salt marsh)
+  | 'glowcap' // a ring of small glowing mushrooms (Greenvial's hollows)
 
 /**
  * Where a prop may stand: `forest` — a forest tile's floor (upright props
@@ -73,7 +77,10 @@ export type WeatherKind = 'rain' | 'snow' | 'petal' | 'leaf' | 'dust' | 'fluff' 
 export interface SeasonWeather {
   /** The particles, as a weighted list (a kind twice is twice as common). */
   kinds: readonly WeatherKind[]
-  /** How many on a phone at Full (a desk gets ~1.7×; Light halves both). */
+  /**
+   * How many on a phone at Full (a desk gets ~1.7×; Light halves both). The
+   * calm pass (Oct 2026) took every season to 40–50% of its old count.
+   */
   count: number
   /** Fog banks drifting at different speeds (parallax), thickest at the view's margins. */
   fog?: { color: string; alpha: number; banks: number }
@@ -119,6 +126,13 @@ export interface FieldSeason {
   light?: { from: 'w' | 'e'; lift: number; dim: number; shadow: number }
   /** Seasonal props in the scenery. */
   props?: readonly PropRule[]
+  /**
+   * The upright props stand in clumps (Oct 2026 asset critique: spread one
+   * per forest tile they read as noise): only where a soft noise at this cell
+   * size (px) falls under half — a harvested field, a reed bed — and the
+   * rest of the wood is just wood.
+   */
+  clump?: number
   /** Colour that survives the environment grade's gold cut (the season's own accents: harvest gold, snow's cool white). */
   accent?: boolean
   /** A low mist: its colour, its strongest alpha, and how far up the map it reaches (0–1). */
@@ -136,11 +150,16 @@ const AMBER: Ramp = ['#3e2a34', '#7a4a26', '#b4782a', '#dca238', '#f4d266']
 const CRIMSON: Ramp = ['#341c2c', '#5e2430', '#8e3430', '#b8502e', '#de8444']
 const MAPLE: Ramp = ['#3a2230', '#74321e', '#b4561e', '#e08a2c', '#f6c058']
 const FRESH: Ramp = ['#24504a', '#2a8656', '#3aac58', '#74d256', '#d2f07a']
-const BLOSSOM: Ramp = ['#5a3a5a', '#9c5e7c', '#d48aa6', '#f0b8cc', '#fde8f0']
-const WHITE_BLOOM: Ramp = ['#4e4e66', '#8a88a6', '#c6c4da', '#eceaf4', '#ffffff']
+// The blossom with a real dark step (Oct 2026 asset critique: the old pale
+// ramp and its white twin read as cotton puffs, with no clump in them).
+const BLOSSOM: Ramp = ['#4a2e48', '#8a4e6c', '#c8789a', '#eaa6c0', '#fbd8e6']
 const WET: Ramp = ['#182a3a', '#1a4450', '#205e58', '#367c54', '#6c9c62']
-const HAZE: Ramp = ['#4a5a6a', '#5a8284', '#6a9c8a', '#90bc8c', '#cfdcb0']
-const SNOWPINE: Ramp = ['#203a52', '#26585e', '#d4e0ee', '#eef4fc', '#ffffff']
+const HAZE: Ramp = ['#34505a', '#44706e', '#58907c', '#86b482', '#c4d8a6']
+// Rosethread's river willows and alders: a soft sage, darker at its foot.
+const WILLOW: Ramp = ['#2a4440', '#38604c', '#527e56', '#7ea262', '#bcd08a']
+// The frost's pines keep their green body, the snow on the lit boughs only
+// (it was snow down to the middle step: grey-white cones with no form).
+const SNOWPINE: Ramp = ['#1e3648', '#24544e', '#2e6c5a', '#dfe8f2', '#ffffff']
 const SNOWBUSH: Ramp = ['#7a90ac', '#a4b8d0', '#d0dcec', '#eaf0fa', '#ffffff']
 
 export const FIELD_SEASONS: Record<CompanyId, FieldSeason> = {
@@ -150,40 +169,51 @@ export const FIELD_SEASONS: Record<CompanyId, FieldSeason> = {
   spice: {
     name: 'late summer',
     washes: [{ op: 'soft-light', color: '#f0a040', alpha: 0.3 }],
-    ground: { colors: ['#8a4a1e', '#a85a24', '#6e3c18'], share: 0.02 },
+    ground: { colors: ['#8a4a1e', '#a85a24', '#6e3c18'], share: 0.008 },
     // The straw leans to the green side of yellow (~70°), past tier 4's gold
     // (30–60°), so it goes through the grade as straw rather than as a cut
     // grey (Oct 2026 job critique: the ground cover keeps no tier's hue).
-    cover: { colors: ['#748745', '#8fa752', '#a9c06d', '#c1d788'], share: 0.42, grain: 1 },
+    cover: { colors: ['#748745', '#8fa752', '#a9c06d', '#c1d788'], share: 0.38, grain: 1.7 },
     foliage: { ramps: [AMBER, RUST, AMBER, CRIMSON, null], bush: RUST },
     broadleaf: { share: 0.3, ramps: [MAPLE, RUST, CRIMSON] },
     light: { from: 'w', lift: 0.1, dim: 0.12, shadow: 2.4 },
     accent: true,
     props: [
-      { kind: 'bale', where: 'forest', share: 0.22 },
+      { kind: 'bale', where: 'forest', share: 0.2 },
       { kind: 'sheaf', where: 'forest', share: 0.14 },
-      { kind: 'sunflower', where: 'forest', share: 0.16 },
-      { kind: 'pumpkin', where: 'forest', share: 0.12 },
-      { kind: 'leaves', where: 'open', share: 0.05 },
+      { kind: 'sunflower', where: 'forest', share: 0.1 },
+      { kind: 'pepper', where: 'forest', share: 0.14 },
+      { kind: 'pumpkin', where: 'forest', share: 0.08 },
+      { kind: 'leaves', where: 'open', share: 0.04 },
     ],
+    clump: 150,
     edge: ['ember', 'ember', 'leaf'],
-    weather: { kinds: ['dust', 'dust', 'fluff', 'fluff', 'leaf'], count: 30 },
+    weather: { kinds: ['dust', 'dust', 'fluff', 'fluff', 'leaf'], count: 14 },
   },
-  // Easel House: spring — fresh green, blossom trees in pink and white,
-  // flowers through the meadow, petals on the air and a pair of butterflies.
+  // The art slot (Butcherblock's land in the world bible: a salt marsh, reed
+  // channels): spring on the marsh — fresh green, a few blossom trees, reed
+  // beds and brackish pools in the wood, reeds and pads round every lake,
+  // flowers along the margins, petals on the air and a pair of butterflies.
   art: {
     name: 'spring',
     washes: [{ op: 'soft-light', color: '#7ad85a', alpha: 0.26 }],
-    ground: { colors: ['#f0c8d8', '#fbeef2', '#e8a8c4'], share: 0.008 },
+    ground: { colors: ['#f0c8d8', '#fbeef2', '#e8a8c4'], share: 0.004 },
+    // The marsh's wet sedge in drifts through the meadow: a cooler, deeper green.
+    cover: { colors: ['#3e6e4e', '#4c805a', '#5c9264', '#70a46e'], share: 0.3, grain: 1.5 },
     foliage: { ramps: [FRESH], bush: FRESH },
-    broadleaf: { share: 0.38, ramps: [BLOSSOM, BLOSSOM, WHITE_BLOOM], blossom: ['#fff4f8', '#f6c8da'] },
+    broadleaf: { share: 0.18, ramps: [BLOSSOM, FRESH, FRESH], blossom: ['#fff4f8', '#f6c8da'] },
     accent: true,
     props: [
-      { kind: 'flowers', where: 'open', share: 0.32 },
-      { kind: 'flowers', where: 'forest', share: 0.5 },
+      { kind: 'flowers', where: 'open', share: 0.1 },
+      { kind: 'reeds', where: 'forest', share: 0.4 },
+      { kind: 'pool', where: 'forest', share: 0.2 },
+      { kind: 'flowers', where: 'forest', share: 0.16 },
+      { kind: 'reeds', where: 'water', share: 0.8 },
+      { kind: 'lily', where: 'water', share: 0.6 },
     ],
+    clump: 170,
     edge: ['fleck', 'fleck', 'blossom'],
-    weather: { kinds: ['petal', 'petal', 'petal', 'butterfly'], count: 30 },
+    weather: { kinds: ['petal', 'petal', 'petal', 'butterfly'], count: 14 },
   },
   // Ironvein: overcast and raining — dark wet pines, rocks with a wet shine,
   // mud and puddles with the sky in them, rain falling and splashing, cloud
@@ -197,14 +227,17 @@ export const FIELD_SEASONS: Record<CompanyId, FieldSeason> = {
     cover: { colors: ['#647458', '#708064', '#7e8e70', '#8c9c7c'], share: 0.34, grain: 1.4 },
     foliage: { ramps: [WET], bush: WET },
     rocks: ['#3e4e56', '#56747a', '#7a9ca2', '#c4d8de'],
+    // Ironvein's quarries: cut stone stacked in the wood. Puddles mostly off
+    // the open ground, where they read as discs floating by the road.
     props: [
-      { kind: 'puddle', where: 'open', share: 0.1 },
-      { kind: 'mud', where: 'open', share: 0.04 },
-      { kind: 'puddle', where: 'forest', share: 0.16 },
-      { kind: 'mud', where: 'forest', share: 0.22 },
+      { kind: 'puddle', where: 'open', share: 0.03 },
+      { kind: 'mud', where: 'open', share: 0.03 },
+      { kind: 'blocks', where: 'forest', share: 0.12 },
+      { kind: 'puddle', where: 'forest', share: 0.12 },
+      { kind: 'mud', where: 'forest', share: 0.18 },
     ],
     edge: ['spark', 'spark', 'ash'],
-    weather: { kinds: ['rain'], count: 40, sheet: 'rain', clouds: { color: '#141c2a', alpha: 0.16, count: 2 }, lightning: true },
+    weather: { kinds: ['rain'], count: 16, sheet: 'rain', clouds: { color: '#141c2a', alpha: 0.09, count: 2 }, lightning: true },
   },
   // Rosethread: a misty morning — fog banks drifting at the margins, the far
   // trees softened, dew on the grass, reeds and lily pads by the water,
@@ -213,10 +246,12 @@ export const FIELD_SEASONS: Record<CompanyId, FieldSeason> = {
     name: 'misty morning',
     washes: [
       { op: 'soft-light', color: '#e8c8d8', alpha: 0.2 },
-      { op: 'screen', color: '#3a3444', alpha: 0.35 },
+      { op: 'screen', color: '#3a3444', alpha: 0.2 },
     ],
     foliage: { ramps: [HAZE], bush: HAZE },
-    dew: 0.006,
+    // Rosethread's river forest: willows and alders among the pines.
+    broadleaf: { share: 0.26, ramps: [WILLOW] },
+    dew: 0.003,
     light: { from: 'e', lift: 0.08, dim: 0, shadow: 1 },
     mist: { color: '#d8ccd8', alpha: 0.3, reach: 0.9 },
     props: [
@@ -226,7 +261,7 @@ export const FIELD_SEASONS: Record<CompanyId, FieldSeason> = {
       { kind: 'mushroom', where: 'forest', share: 0.22 },
     ],
     edge: ['petal', 'mote'],
-    weather: { kinds: ['dew', 'dew', 'dust'], count: 18, fog: { color: '#f4eef6', alpha: 0.85, banks: 6 } },
+    weather: { kinds: ['dew', 'dew', 'dust'], count: 8, fog: { color: '#f4eef6', alpha: 0.45, banks: 4 } },
   },
   // Moonquill: frost — snow over the ground with the grass poking through,
   // snow-laden pines with icicles, rocks and bushes under snow, the lakes'
@@ -237,16 +272,25 @@ export const FIELD_SEASONS: Record<CompanyId, FieldSeason> = {
       { op: 'saturation', color: '#8a8a8a', alpha: 0.3 },
       { op: 'screen', color: '#1c2638', alpha: 0.32 },
     ],
-    cover: { colors: ['#c2d0e4', '#d2deee', '#e0e9f6', '#eef4fc'], share: 0.86, tufts: true, grain: 1.2 },
+    // A snow a step down from paper white, with a narrower ramp (the grass's
+    // streaks showed through the old one like ruled lines), so a cream helmet
+    // and a white muzzle flash still stand off it.
+    cover: { colors: ['#bccada', '#c8d4e2', '#d2dce8', '#dce4ee'], share: 0.82, tufts: true, grain: 1.2 },
     caps: { color: '#f2f6fa', shade: '#b8c6d6' },
     foliage: { ramps: [SNOWPINE], bush: SNOWBUSH },
     rocks: ['#7c8ea6', '#a8bad0', '#dce6f4', '#ffffff'],
     icicles: true,
     ice: true,
     accent: true,
-    props: [{ kind: 'drift', where: 'forest', share: 0.3 }],
+    // The scrolls slot's hollows (Greenvial's in the world bible): mushrooms in the wood under the drifts.
+    props: [
+      { kind: 'drift', where: 'forest', share: 0.34 },
+      { kind: 'mushroom', where: 'forest', share: 0.16 },
+      { kind: 'glowcap', where: 'forest', share: 0.14 },
+    ],
+    clump: 160,
     edge: ['star', 'star', 'snow'],
-    weather: { kinds: ['snow'], count: 40, sheet: 'snow' },
+    weather: { kinds: ['snow'], count: 18, sheet: 'snow' },
   },
 }
 
