@@ -10,38 +10,44 @@
  * hid, in the knight's own pixels, so the figure reads as the same knight with
  * the shield simply gone, whatever the off hand holds.
  *
- * It is a reflection, part by part, because the figure is near-symmetric
- * about the line through its helmet (the body faces the viewer; only the
- * visor and the sword arm break it):
+ * The figure is drawn in 3/4 view facing right, so its left is its far,
+ * receding side: nothing is mirrored across (round 1 did, and the head
+ * swelled into a lopsided egg). Part by part, in the knight's own pixels:
  *
- *  - the AXIS of each frame is the median middle of the helmet's rows that
- *    the shield never touched;
- *  - the HELMET's hidden lower-left takes its extent from the mirror of its
- *    right edge, row by row, and its colours from its own left edge in the
- *    nearest untouched row (the brown shade band down the back of the head,
- *    not the lit cream of the face side), with that row's ink outline;
- *  - the TUNIC's hidden side is the mirror of its right side (shading,
- *    shoulder and sleeve) and of the outline beyond it;
- *  - the NEAR HAND is the mirror of the sword hand where that hand rests at
- *    the hip (the idle strip). Where the sword hand is up or out (the attack
- *    strip), the near hand is the idle one, mirrored, hung at the same place
- *    against this frame's rebuilt hem;
- *  - a LEG the shield hid (one leg showing where the frame has two) is the
- *    mirror of the one that shows;
+ *  - the HELMET's back goes on from its widest painted row above the shield
+ *    in one rounded arc (a squircle quarter) into the chin where it shows
+ *    again — never wider than the painted head. It wears the shade band of
+ *    that row, as wide, thinning into the chin; the brown the art painted
+ *    along the shield's edge is inside the head now and takes the tan. Its
+ *    ink is redrawn at the art's depth;
+ *  - the TUNIC's back is narrow: from under the chin straight down to the
+ *    hem, which stands as far past the near leg as the art's hem stands past
+ *    the far one, its shoulder and hem corner rounded, a shadow-ink rim and
+ *    the row's own ink inside, behind the helmet;
+ *  - NO NEAR HAND: that arm hangs behind the body once the shield is gone
+ *    (a fist pasted at the hip read as a growth). Where an off-hand piece is
+ *    held, `grips` says where, per frame: `cover`, the painted shield's edge
+ *    against the body, where a shield-like piece stands in the shield's
+ *    place; `hand`, at the tunic's side, for a second weapon;
+ *  - the near LEG, where the shield hid it, is the far leg's mirror (the one
+ *    mirror left: legs are drawn the same either side in this art);
  *  - the GROUND SHADOW's bite is closed by the mirror of its right half.
  *
- * Then the outline is closed (every new painted pixel that faces empty space
- * gets the pack's ink) and any ink the cut kept that now edges nothing goes.
+ * Then the outline is closed, one-px notches are inked shut, ink that edges
+ * nothing goes and a lone px takes its neighbours' colour.
  *
  * It only ever writes where the cut left the frame transparent or
- * translucent, or over an ink pixel the cut kept along its edge (that edge is
- * inside the knight now). Every other pixel of the art is untouched.
+ * translucent within 12 px of the hole, over an ink pixel the cut kept along
+ * its edge (that edge is inside the knight now), and over the helmet's
+ * shade along the cut. Every other pixel of the art is untouched.
  *
  * `scripts/anchors.ts` runs it over the CC0 strips and writes the difference
  * as a per-frame patch (`shieldFill.generated.ts`); `anchors:check` fails if
- * the patch is stale or if a rebuilt frame has a hole, an open outline, a
- * stray island or a write outside that rule ({@link fillProblems}). The game
- * applies the patch after the cut (`gearMarks.unpaintedStrip`).
+ * the patch is stale or if a rebuilt frame has a hole, an open or fat
+ * outline, a lone px, a stray island, a swollen head or a write outside that
+ * rule ({@link fillProblems}). The game applies the patch after the cut
+ * (`gearMarks.unpaintedStrip`) and holds the off-hand piece at `grips`
+ * (`gearMarks.drawOffHand`).
  */
 import { cutAndFill, FILL_CODES, type StripFill } from '../src/game/render/gearMarks'
 import { TUNIC_DARK, TUNIC_MID } from '../src/game/render/bodyLayer'
@@ -181,33 +187,59 @@ const median = (xs: number[]): number => {
   return s.length ? s[Math.floor(s.length / 2)] : NaN
 }
 
-/** A hand, mirrored to the near side: its pixels in its own box (0,0 top-left), packed colours. */
-interface HandArt {
-  px: { x: number; y: number; c: number }[]
-  w: number
-  h: number
-}
-
 /** What one frame's rebuild measured (for the tests and the review log). */
 export interface FillInfo {
   /** The mirror line, in the cell's px. */
   axis: number
   helmet: number
   tunic: number
-  hand: 'mirror' | 'template' | 'none'
   leg: boolean
   shadow: number
+}
+
+/** Where a held thing goes in one frame, in the cell's px: the hidden near hand (at the tunic's side), and the painted shield's edge against the body (its right edge, at its middle height). */
+export interface FrameGrips {
+  hand: Pt
+  cover: Pt
 }
 
 const BROWN = 0x977b6b
 
 /**
- * Rebuild one frame. `orig` is the frame as painted, `cut` the same frame after
- * `cutOffHand`, `tunicSpans` the tunic measured on the cut frame. Returns the
- * rebuilt frame, what it did, and the frame's own near hand (the idle strip's
- * is the attack strip's template).
+ * The quarter of a squircle (|x|^n + |y|^n = 1) from `p0`, where the contour
+ * runs straight down, round to `p1`, where it runs flat: the back of the
+ * head into its chin. `n` = 2 is an ellipse; a little more keeps the
+ * corner full without swelling past either end.
  */
-function fillFrame(orig: Frame, cut: Frame, tunicSpans: readonly number[], template: HandArt | null): { out: Frame; info: FillInfo; hand: HandArt | null } {
+function squircle(p0: Pt, p1: Pt, n: number): Pt[] {
+  const rx = p1[0] - p0[0]
+  const ry = p1[1] - p0[1]
+  const out: Pt[] = []
+  const N = Math.max(16, Math.ceil((Math.abs(rx) + Math.abs(ry)) * 8))
+  for (let i = 0; i <= N; i++) {
+    const t = (i / N) * (Math.PI / 2)
+    out.push([p1[0] - rx * Math.cos(t) ** (2 / n), p0[1] + ry * Math.sin(t) ** (2 / n)])
+  }
+  return out
+}
+
+/** The leftmost x a curve reaches in each whole row it crosses. */
+function leftEdge(curve: Pt[]): Map<number, number> {
+  const m = new Map<number, number>()
+  for (const [x, y] of curve) {
+    const Y = Math.round(y)
+    const X = Math.round(x)
+    m.set(Y, Math.min(m.get(Y) ?? Infinity, X))
+  }
+  return m
+}
+
+/**
+ * Rebuild one frame. `orig` is the frame as painted, `cut` the same frame after
+ * `cutOffHand`, `tunicSpans` the tunic measured on the cut frame. Returns the rebuilt frame, what it did and where a held
+ * thing goes.
+ */
+function fillFrame(orig: Frame, cut: Frame, tunicSpans: readonly number[]): { out: Frame; info: FillInfo; grips: FrameGrips } {
   const { w, h } = cut
   const hole = (x: number, y: number) => orig.opaque(x, y) && cut.alpha(x, y) === 0
   const nearHole = (x: number, y: number, r: number) => {
@@ -224,6 +256,46 @@ function fillFrame(orig: Frame, cut: Frame, tunicSpans: readonly number[], templ
     claimed.add(y * w + x)
     return true
   }
+  /**
+   * Ink the contour round `region`, as the pack draws it: `th` px deep across
+   * a side and `tv` px deep along a top or a bottom (a diagonal steps, so
+   * each row and column of it stays that deep — never a fat wedge), on
+   * writable px `ok` allows.
+   */
+  const outline = (region: Set<number>, th: number, tv: number, ok: (x: number, y: number) => boolean, from: Iterable<number> = region) => {
+    for (const p of from) {
+      const x = p % w
+      const y = (p - x) / w
+      const reach = (dx: number, dy: number, t: number) => {
+        for (let k = 1; k <= t; k++) {
+          const X = x + dx * k
+          const Y = y + dy * k
+          if (!cut.in(X, Y) || region.has(Y * w + X)) return
+          if (ok(X, Y)) put(X, Y, INK_PX)
+        }
+      }
+      reach(1, 0, th)
+      reach(-1, 0, th)
+      reach(0, 1, tv)
+      reach(0, -1, tv)
+    }
+  }
+
+  // The painted shield's footprint, and its middle: where a held piece covers it.
+  let sx0 = Infinity
+  let sx1 = -Infinity
+  let sy0 = Infinity
+  let sy1 = -Infinity
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++)
+      if (hole(x, y)) {
+        sx0 = Math.min(sx0, x)
+        sx1 = Math.max(sx1, x)
+        sy0 = Math.min(sy0, y)
+        sy1 = Math.max(sy1, y)
+      }
+  // its edge against the body (the right), at its middle height
+  const cover: Pt = [sx1, Math.round((sy0 + sy1) / 2)]
 
   // ---- the parts: the tunic (measured on the CUT frame) and the helmet over it.
   const tunic = new Set<number>()
@@ -250,128 +322,27 @@ function fillFrame(orig: Frame, cut: Frame, tunicSpans: readonly number[], templ
   const helmet = skins.reduce((a, b) => (scoreHelmet(b) > scoreHelmet(a) ? b : a))
   const helmetSet = new Set(helmet)
   const hRows = rows(helmet, w)
-  const holeLeftOf = (y: number, x: number) => {
-    for (let X = 0; X < x; X++) if (hole(X, y)) return true
+  /** A row whose left edge the shield touched: a hole within 6 px of it. */
+  const dirty = (y: number, l: number) => {
+    for (let X = l - 6; X < l; X++) if (hole(X, y)) return true
     return false
   }
-  const clean = [...hRows.entries()].filter(([y, [l]]) => !holeLeftOf(y - 1, l) && !holeLeftOf(y, l) && !holeLeftOf(y + 1, l))
+  const clean = [...hRows.entries()].filter(([y, [l]]) => !dirty(y - 1, l) && !dirty(y, l) && !dirty(y + 1, l))
   const axisX2 = median(clean.map(([, [l, r]]) => l + r)) // twice the axis: x mirrors to axisX2 − x
   const mirror = (x: number) => axisX2 - x
-
-  // The helmet's rebuilt left edge, row by row: the mirror of its right edge.
-  const helmetLeft = new Map<number, number>()
-  for (const [y, [l, r]] of hRows) if (holeLeftOf(y, l)) helmetLeft.set(y, Math.min(l, mirror(r)))
-  let headSide = Infinity
-  for (const [y, [l]] of hRows) headSide = Math.min(headSide, helmetLeft.get(y) ?? l)
-
-  // ---- 1 · the tunic's hidden side. It runs down under the helmet's side (3 px
-  // in, as the idle knight's does) and curves as its right side curves; its
-  // colours are its right side's, edge for edge, and so is its outline.
-  let tunicN = 0
-  let Rmax = -Infinity
-  for (const [, [, r]] of tRows) Rmax = Math.max(Rmax, r)
-  const tunicLeft = new Map<number, number>()
-  for (const [y, [l, r]] of tRows) {
-    if (!holeLeftOf(y, l + 1) && !nearHole(l - 1, y, 2)) continue
-    const left = Math.min(l, headSide + 3 + (Rmax - r))
-    tunicLeft.set(y, left)
-    let ink = 0
-    while (ink < 3 && cut.ink(r + 1 + ink, y)) ink++
-    for (let x = left - Math.max(ink, 2); x < left; x++) put(x, y, INK_PX)
-    for (let x = left; x < l; x++) {
-      let c = 0
-      for (let s = r - (x - left); !c && s >= l; s--) if (cut.tunic(s, y)) c = cut.get(s, y)
-      if (put(x, y, c || TUNIC_DARK_PX)) tunicN++
-    }
-  }
-  let sideX = Infinity
-  for (const [y, [l]] of tRows) sideX = Math.min(sideX, tunicLeft.get(y) ?? l)
-
-  // ---- 2 · the near hand: the sword hand mirrored, where it rests at the hip.
-  const handComp = skins
-    .filter((c) => c !== helmet && c.length >= 12 && c.length <= 200)
-    .find((c) => {
-      const r = rows(c, w)
-      const ys = [...r.keys()]
-      const x0 = Math.min(...[...r.values()].map((v) => v[0]))
-      return Math.min(...ys) >= ty0 && Math.max(...ys) <= ty1 + 4 && x0 >= tx1 - 6 && x0 <= tx1 + 8
-    })
-  let hand: HandArt | null = null
-  let handAt: Pt | null = null
-  if (handComp) {
-    // the hand and its ink ring, mirrored
-    const seen = new Set<number>(handComp)
-    const abs: { x: number; y: number; c: number }[] = []
-    for (const p of handComp) {
-      const x = p % w
-      const y = (p - x) / w
-      abs.push({ x: mirror(x), y, c: cut.get(x, y) })
-      for (const [dx, dy] of N8) {
-        const q = (y + dy) * w + x + dx
-        if (seen.has(q) || !cut.ink(x + dx, y + dy)) continue
-        seen.add(q)
-        abs.push({ x: mirror(x + dx), y: y + dy, c: INK_PX })
-      }
-    }
-    const bx = Math.min(...abs.map((p) => p.x))
-    const by = Math.min(...abs.map((p) => p.y))
-    hand = { px: abs.map((p) => ({ x: p.x - bx, y: p.y - by, c: p.c })), w: Math.max(...abs.map((p) => p.x)) - bx + 1, h: Math.max(...abs.map((p) => p.y)) - by + 1 }
-    handAt = [bx, by]
-  }
-  const art = hand ?? template
-  if (art && !handAt) handAt = [sideX + 1 - art.w, ty1 + 2 - art.h] // a fist at the side, its foot at the hem
-  if (art && handAt) {
-    // Held against the body: nudge it in until it touches the rebuilt side.
-    const touches = (ox: number) =>
-      art.px.some(({ x, y }) => N4.some(([dx, dy]) => out.opaque(ox + x + dx, handAt![1] + y + dy) && !hole(ox + x + dx, handAt![1] + y + dy)))
-    let ox = handAt[0]
-    for (let i = 0; i < 12 && !touches(ox); i++) ox++
-    for (const { x, y, c } of art.px) put(ox + x, handAt[1] + y, c)
+  /** The pack's contour depth, as the art has it on the helmet's back: its ink, counted from the paint. */
+  const inkDepth = (x: number, y: number, dir: number) => {
+    let n = 0
+    while (n < 3 && cut.ink(x + dir * (n + 1), y)) n++
+    return Math.max(2, n)
   }
 
-  // ---- 3 · the helmet's hidden lower-left, in front of the tunic and the hand.
-  // Its colours are its own left edge's in the nearest untouched row: the brown
-  // shade down the back of the head, then the tan. The shade the art painted
-  // along the shield's edge is inside the head now, so it takes the tan.
-  let helmetN = 0
-  const ref = clean.length ? clean.reduce((a, b) => (b[0] > a[0] ? b : a)) : null // the lowest clean row
-  if (ref) {
-    const [ry, [rl]] = ref
-    let refInk = 0
-    while (refInk < 3 && cut.ink(rl - 1 - refInk, ry)) refInk++
-    let band = 0
-    while (cut.rgb(rl + band, ry) === BROWN && helmetSet.has(ry * w + rl + band)) band++
-    const tan = cut.get(rl + band, ry)
-    const shade = cut.get(rl, ry)
-    for (const [y, [l]] of hRows) {
-      const target = helmetLeft.get(y)
-      if (target === undefined) continue
-      // A row where the art shows the body beside the chin: the head ends above it.
-      let body = false
-      for (let x = target; x < l; x++) if (cut.paint(x, y)) body = true
-      if (body) continue
-      for (let x = target; x < l + 9; x++) {
-        const c = x - target < band ? shade : tan
-        if (x >= l && !(cut.rgb(x, y) === BROWN && helmetSet.has(y * w + x))) continue
-        if (x >= l) {
-          out.set(x, y, c)
-          claimed.add(y * w + x)
-        } else if (!put(x, y, c)) continue
-        helmetN++
-      }
-      for (let x = target - refInk; x < target; x++) put(x, y, INK_PX)
-    }
-  }
-
-  // ---- 4 · the near leg, where the shield hid it (all of it, or its side or top):
-  // the far leg's mirror, added to what shows.
-  let leg = false
-  const legPx = new Set<number>()
+  // ---- the near leg's place and the hem: what the tunic's back runs down to.
   const feet = (() => {
     for (let y = h - 1; y > ty1; y--) for (let x = tx0; x <= tx1; x++) if (cut.opaque(x, y)) return y
     return ty1
   })()
-  {
+  const legRuns = (() => {
     const y = feet - 2
     const runs: [number, number][] = []
     for (let x = 0; x < w; x++) {
@@ -380,64 +351,210 @@ function fillFrame(orig: Frame, cut: Frame, tunicSpans: readonly number[], templ
       else runs.push([x, x])
     }
     const [hl, hr] = tRows.get(ty1)!
-    const legs = runs.filter(([a, b]) => b >= hl - 8 && a <= hr + 6 && b - a <= 12)
-    const far = legs[legs.length - 1]
-    // The far leg, mirrored, wherever the shield stood over the near one.
-    let hidden = false
-    if (far) for (let yy = ty1 + 1; yy <= feet && !hidden; yy++) for (let x = mirror(far[1]) - 1; x <= mirror(far[0]) + 1; x++) if (hole(x, yy)) hidden = true
-    if (far && hidden) {
-      leg = true
-      for (let yy = ty1 + 1; yy <= feet; yy++)
-        for (let x = far[0] - 1; x <= far[1] + 1; x++)
-          if (cut.ink(x, yy) && put(mirror(x), yy, cut.get(x, yy))) legPx.add(yy * w + mirror(x))
+    return runs.filter(([a, b]) => b >= hl - 8 && a <= hr + 6 && b - a <= 12)
+  })()
+  const hemR = tRows.get(ty1)![1]
+  const farLeg = legRuns[legRuns.length - 1]
+  const nearLeg = legRuns.length >= 2 ? legRuns[0] : null
+  const hemL = nearLeg && farLeg ? nearLeg[0] - Math.max(1, hemR - farLeg[1]) : mirror(hemR)
+
+  const tunicNew = new Set<number>()
+
+  // ---- 1 · the helmet's back, continued: from where its painted contour
+  // goes behind the shield, one smooth arc into the chin where it shows again.
+  // Never wider than the painted head: the arc leaves the last clean row on
+  // its own heading, so the head does not swell past the art. In front of
+  // the tunic.
+  let helmetN = 0
+  const helmetNew = new Set<number>()
+  const dirtyRows = [...hRows.entries()].filter(([y, [l]]) => dirty(y, l)).map(([y]) => y)
+  if (dirtyRows.length && clean.length) {
+    const first = Math.min(...dirtyRows)
+    const above = clean.filter(([y]) => y < first).map(([y]) => y)
+    const l = (y: number) => hRows.get(y)![0]
+    // The head's widest painted row just above the shield's edge (the lowest
+    // of them): its contour is upright there, and the arc leaves it upright.
+    const last = Math.max(...above)
+    let y0 = last
+    for (let y = last; y >= last - 6; y--) if (hRows.has(y) && l(y) <= l(y0)) y0 = y
+    const x0 = l(y0)
+    // The chin where it shows: the leftmost helmet column whose bottom is clear of the hole.
+    const bottom = new Map<number, number>()
+    for (const p of helmet) {
+      const x = p % w
+      const y = (p - x) / w
+      bottom.set(x, Math.max(bottom.get(x) ?? -1, y))
+    }
+    const shown = [...bottom.entries()].filter(([x, y]) => x > x0 && y > y0 + 4 && !nearHole(x, y, 3)).sort((a, b) => a[0] - b[0])
+    if (shown.length >= 3) {
+      const [x1, y1] = shown[0]
+      // A rounded corner (a squircle quarter) from the widest row down into the chin.
+      const edge = leftEdge(squircle([x0, y0], [x1, y1], 2.5))
+      let band = 0
+      while (cut.rgb(x0 + band, y0) === BROWN && helmetSet.has(y0 * w + x0 + band)) band++
+      const tan = cut.get(x0 + band, y0)
+      const shade = cut.get(x0, y0)
+      const depth = inkDepth(x0, y0, -1)
+      for (let y = y0 + 1; y <= y1; y++) {
+        const art = hRows.get(y)?.[0] ?? x1
+        const xl = Math.min(edge.get(y) ?? art, art)
+        // The shade band keeps the painted side's width, thinning into the chin.
+        const k = (y - y0) / Math.max(1, y1 - y0)
+        const bw = Math.round(band * (1 - k * k))
+        // The ink the cut kept left of the new edge goes: the contour is redrawn at one depth.
+        // (but not the ink that edges the art's own tunic or anything else of the body)
+        const edgesArt = (x: number) => N4.some(([dx, dy]) => cut.paint(x + dx, y + dy) && !helmetSet.has((y + dy) * w + x + dx) && !hole(x + dx, y + dy))
+        if (hRows.has(y)) for (let x = xl - 7; x < xl; x++) if (writable(x, y) && cut.ink(x, y) && !tunicNew.has(y * w + x) && !edgesArt(x)) out.set(x, y, 0)
+        for (let x = xl; x < art + band + 3; x++) {
+          const inHead = x < art ? writable(x, y) || tunicNew.has(y * w + x) : cut.rgb(x, y) === BROWN && helmetSet.has(y * w + x) && nearHole(x, y, 9)
+          if (!inHead) continue
+          out.set(x, y, x - xl < bw ? shade : tan)
+          claimed.add(y * w + x)
+          tunicNew.delete(y * w + x)
+          helmetNew.add(y * w + x)
+          helmetN++
+        }
+      }
+      // The contour round the new back of the head: the art's depth across, two along the chin.
+      const head = new Set<number>([...helmetSet, ...helmetNew])
+      // From the new part, and from the art's own edge in the rows whose kept ink was cleared.
+      const from = new Set(helmetNew)
+      for (let y = y0 + 1; y <= y1; y++) {
+        const art = hRows.get(y)?.[0]
+        if (art !== undefined) for (let x = art; x < art + 3; x++) if (helmetSet.has(y * w + x)) from.add(y * w + x)
+      }
+      outline(head, depth, 2, (x, y) => writable(x, y) && !out.paint(x, y) && y <= y1 + 2 && !helmetSet.has(y * w + x), from)
+      for (const p of [...tunicNew]) if (out.ink(p % w, Math.floor(p / w))) tunicNew.delete(p)
     }
   }
 
-  // ---- 5 · close the outline: new paint facing empty space gets ink, and a
-  // one- or two-px gap between new body and old is inked shut.
+  // ---- 2 · the tunic's back. Behind the body in this 3/4 view, so it is
+  // narrow: its side runs straight down from under the chin to the hem, the
+  // hem standing as far past the near leg as the art's hem stands past the
+  // far one (1 px of flare), its shoulder and its hem corner rounded. Its
+  // rim wears the tunic's shadow ink, the side the art shades, and inside it
+  // the art's own ink of that row runs on; then the pack's contour. Behind
+  // the helmet and its contour.
+  let tunicN = 0
+  const topL = hemL + 1
+  const behindHead = (x: number, y: number) => helmetSet.has(y * w + x) || helmetNew.has(y * w + x) || (claimed.has(y * w + x) && out.ink(x, y))
+  let shoulder = -1
+  for (const [y, [l]] of [...tRows.entries()].sort((p, q) => p[0] - q[0])) {
+    if (!dirty(y, l + 1)) continue
+    const k = (y - ty0) / Math.max(1, ty1 - ty0)
+    let left = Math.round(topL + (hemL - topL) * k)
+    if (shoulder < 0 && !behindHead(left, y) && !behindHead(left + 1, y)) shoulder = y
+    if (shoulder >= 0) left += Math.max(0, 2 - (y - shoulder)) // the shoulder, rounded
+    if (y === ty1) left += 1 // the hem's corner
+    left = Math.min(l, left)
+    if (left >= l) continue
+    for (let x = l - 7; x < l; x++) if (writable(x, y) && cut.ink(x, y) && !behindHead(x, y)) out.set(x, y, 0)
+    const inner = cut.tunic(l, y) ? cut.get(l, y) : TUNIC_DARK_PX
+    for (let x = left; x < l; x++) {
+      if (!writable(x, y) || behindHead(x, y)) continue
+      out.set(x, y, x - left < 2 ? TUNIC_DARK_PX : inner)
+      claimed.add(y * w + x)
+      tunicNew.add(y * w + x)
+      tunicN++
+    }
+  }
+  // Its contour — but not on top, under the chin: the helmet's own contour is there.
+  const underChin = (x: number, y: number) => [1, 2, 3].some((k) => out.ink(x, y - k) && claimed.has((y - k) * w + x) && !tunicNew.has((y - k + 1) * w + x))
+  outline(tunicNew, 2, 2, (x, y) => writable(x, y) && !out.opaque(x, y) && !(underChin(x, y) && tunicNew.has((y + 1) * w + x)))
+
+  // ---- 3 · the near hand. This is the far side of a 3/4 figure facing
+  // right: with the shield gone its arm hangs behind the body, so no hand is
+  // drawn (a fist pasted at the hip read as a growth). Where an off-hand
+  // weapon is gripped (`Hold` 'hand'), the grip is that hidden hand's: at the
+  // tunic's side, two thirds down, just inside its contour.
+  const yc = Math.round(ty0 + (ty1 - ty0) * 0.62)
+  let side = Infinity
+  for (let y = yc - 1; y <= yc + 1; y++)
+    for (let x = 0; x < w; x++)
+      if (tunic.has(y * w + x) || tunicNew.has(y * w + x)) {
+        side = Math.min(side, x)
+        break
+      }
+  const hand: Pt = [side + 1, yc]
+
+  // ---- 4 · the near leg, where the shield hid it (all of it, or its side or
+  // top): the far leg's mirror, added to what shows.
+  let leg = false
+  const legPx = new Set<number>()
+  if (farLeg) {
+    let hidden = false
+    for (let yy = ty1 + 1; yy <= feet && !hidden; yy++) for (let x = mirror(farLeg[1]) - 1; x <= mirror(farLeg[0]) + 1; x++) if (hole(x, yy)) hidden = true
+    if (hidden) {
+      leg = true
+      for (let yy = ty1 + 1; yy <= feet; yy++)
+        for (let x = farLeg[0] - 1; x <= farLeg[1] + 1; x++)
+          if (cut.ink(x, yy) && !out.opaque(mirror(x), yy) && put(mirror(x), yy, cut.get(x, yy))) legPx.add(yy * w + mirror(x))
+    }
+  }
+
+  // ---- 5 · close the outline: new paint facing empty space gets ink.
   for (const p of [...claimed]) {
     const x = p % w
     const y = (p - x) / w
     if (!out.paint(x, y)) continue
     for (const [dx, dy] of N4) if (!out.opaque(x + dx, y + dy)) put(x + dx, y + dy, INK_PX)
   }
+
+  // ...and a one-px notch between new contour and old is inked shut.
   for (let pass = 0; pass < 2; pass++) {
     const gaps: Pt[] = []
     for (let y = 0; y <= ty1 + 1; y++)
       for (let x = 0; x < w; x++) {
         if (out.opaque(x, y) || !writable(x, y)) continue
-        const by = (dx: number, dy: number) => {
-          for (let k = 1; k <= 2; k++) if (out.opaque(x + dx * k, y + dy * k)) return true
-          return false
-        }
-        let near = false
-        for (const [dx, dy] of N8) if (claimed.has((y + dy) * w + x + dx)) near = true
-        if (near && ((by(1, 0) && by(-1, 0)) || (by(0, 1) && by(0, -1)))) gaps.push([x, y])
+        if (!N8.some(([dx, dy]) => claimed.has((y + dy) * w + x + dx))) continue
+        const lr = out.opaque(x - 1, y) && out.opaque(x + 1, y)
+        const ud = out.opaque(x, y - 1) && out.opaque(x, y + 1)
+        let around = 0
+        for (const [dx, dy] of N4) if (out.opaque(x + dx, y + dy)) around++
+        if (lr || ud || around >= 3) gaps.push([x, y])
       }
     for (const [x, y] of gaps) put(x, y, INK_PX)
   }
 
-  // ---- 6 · ink the cut kept, or the rebuild laid, that now edges nothing: gone.
-  for (let y = 0; y <= ty1 + 1; y++)
-    for (let x = 0; x < w; x++) {
-      if (!out.ink(x, y) || !writable(x, y) || legPx.has(y * w + x)) continue
-      let near = false
-      for (let dy = -3; dy <= 3 && !near; dy++) for (let dx = -3; dx <= 3 && !near; dx++) if (out.paint(x + dx, y + dy)) near = true
-      if (!near) {
-        out.set(x, y, 0)
-        claimed.delete(y * w + x)
+  // ---- 6 · ink that edges nothing, and lone px: gone. An ink px of the cut's
+  // edge, or the rebuild's, with no paint within 3 px; a new painted px that
+  // no other px of its colour touches takes its neighbours' colour.
+  for (let pass = 0; pass < 2; pass++)
+    for (let y = 0; y <= ty1 + 1; y++)
+      for (let x = 0; x < w; x++) {
+        if (!out.ink(x, y) || !writable(x, y) || legPx.has(y * w + x)) continue
+        let near = false
+        for (let dy = -3; dy <= 3 && !near; dy++) for (let dx = -3; dx <= 3 && !near; dx++) if (out.paint(x + dx, y + dy)) near = true
+        let inks = 0
+        for (const [dx, dy] of N8) if (out.ink(x + dx, y + dy)) inks++
+        if (!near || (inks === 0 && pass === 1)) {
+          out.set(x, y, 0)
+          claimed.delete(y * w + x)
+        }
       }
+  for (const p of [...claimed]) {
+    const x = p % w
+    const y = (p - x) / w
+    if (!out.paint(x, y)) continue
+    const c = out.get(x, y)
+    if (N4.some(([dx, dy]) => out.get(x + dx, y + dy) === c)) continue
+    const votes = new Map<number, number>()
+    for (const [dx, dy] of N4) {
+      const n = out.get(x + dx, y + dy)
+      if (out.paint(x + dx, y + dy)) votes.set(n, (votes.get(n) ?? 0) + 1)
     }
+    const best = [...votes.entries()].sort((a, b) => b[1] - a[1])[0]
+    if (best) out.set(x, y, best[0])
+  }
 
-  // ---- 7 · the ground shadow's bite: the mirror of its right half, wherever
-  // the art had paint and the rebuilt frame has none.
+  // ---- 7 · the ground shadow's bite: the mirror of its right half, about its
+  // own middle, wherever the art had paint and the rebuilt frame has none.
   let shadowN = 0
   let shadowPx = 0
   for (let i = 0; i < cut.c.length && !shadowPx; i++) {
     const a = cut.c[i] & 255
     if (a > 0 && a < 128) shadowPx = cut.c[i]
   }
-  // Its own axis: the middle of its lowest row (the far rim, which nothing stands on).
   let sAxis2 = NaN
   for (let y = h - 1; y > ty1 && Number.isNaN(sAxis2); y--) {
     let a = -1
@@ -461,12 +578,17 @@ function fillFrame(orig: Frame, cut: Frame, tunicSpans: readonly number[], templ
       }
     }
 
-  return { out, info: { axis: axisX2 / 2, helmet: helmetN, tunic: tunicN, hand: hand ? 'mirror' : art ? 'template' : 'none', leg, shadow: shadowN }, hand }
+  return {
+    out,
+    info: { axis: axisX2 / 2, helmet: helmetN, tunic: tunicN, leg, shadow: shadowN },
+    grips: { hand, cover },
+  }
 }
 
 /**
  * Where the rebuild may write in a frame: wherever the cut left it
- * transparent or translucent, and over the ink the cut kept along its edge
+ * transparent or translucent within 12 px of the hole (the knight's side,
+ * never the sword arm's), and over the ink the cut kept along its edge
  * (within 6 px of the hole — that edge is inside the knight now). The
  * helmet's shade band along the shield's edge is also repainted (step 3);
  * {@link fillProblems} allows that one too: brown helmet pixels within 8 px.
@@ -474,22 +596,23 @@ function fillFrame(orig: Frame, cut: Frame, tunicSpans: readonly number[], templ
 function writableIn(orig: Frame, cut: Frame): (x: number, y: number) => boolean {
   const hole = (x: number, y: number) => orig.opaque(x, y) && cut.alpha(x, y) === 0
   const memo = new Map<number, boolean>()
+  const near = (x: number, y: number, r: number) => {
+    for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (hole(x + dx, y + dy)) return true
+    return false
+  }
   return (x, y) => {
     if (!cut.in(x, y)) return false
-    if (!cut.opaque(x, y)) return true
-    if (!cut.ink(x, y)) return false
     const k = y * cut.w + x
     let v = memo.get(k)
     if (v === undefined) {
-      v = false
-      for (let dy = -6; dy <= 6 && !v; dy++) for (let dx = -6; dx <= 6 && !v; dx++) if (hole(x + dx, y + dy)) v = true
+      v = cut.opaque(x, y) ? cut.ink(x, y) && near(x, y, 6) : near(x, y, 12)
       memo.set(k, v)
     }
     return v
   }
 }
 
-/** The knight strips whose painted shield is cut, per pack, idle first (its sword hand is the attack strip's template). */
+/** The knight strips whose painted shield is cut, per pack. */
 export const SHIELD_STRIPS: Readonly<Record<string, readonly string[]>> = {
   tinyswords: ['fighter_idle', 'fighter_atk'],
 }
@@ -515,7 +638,6 @@ export interface StripRebuild {
  */
 export function shieldFills(strips: readonly RawStrip[]): Record<string, StripRebuild> {
   const out: Record<string, StripRebuild> = {}
-  let template: HandArt | null = null
   for (const s of strips) {
     const cut = new Uint8Array(s.data)
     cutAndFill(cut, s.w, s.h, s.frames, null)
@@ -523,17 +645,21 @@ export function shieldFills(strips: readonly RawStrip[]): Record<string, StripRe
     const cw = Math.round(s.w / s.frames)
     const palette: number[] = []
     const frames: (number | string)[][] = []
+    const grips: [number, number, number, number][] = []
     const info: FillInfo[] = []
     for (let f = 0; f < s.frames; f++) {
       const fw = Math.min(cw, s.w - f * cw)
       const o = Frame.read(s.data, s.w, s.h, f * cw, fw)
       const c = Frame.read(cut, s.w, s.h, f * cw, fw)
-      const r = fillFrame(o, c, torsos[f].spans, template)
-      if (!template && r.hand) template = r.hand
+      const r = fillFrame(o, c, torsos[f].spans)
       info.push(r.info)
       frames.push(diff(c, r.out, palette))
+      // in logical px from the hero's origin: the cell's middle, feet at y = +8 (`drawSentinel`)
+      const lx = (x: number) => x - fw / 2
+      const ly = (y: number) => y - s.h + 8
+      grips.push([lx(r.grips.hand[0]), ly(r.grips.hand[1]), lx(r.grips.cover[0]), ly(r.grips.cover[1])])
     }
-    out[s.name] = { fill: { w: s.w, h: s.h, palette, frames }, info }
+    out[s.name] = { fill: { w: s.w, h: s.h, palette, frames, grips }, info }
   }
   return out
 }
@@ -606,7 +732,7 @@ export function fillProblems(name: string, s: RawStrip, fill: StripFill): string
         const i = y * fw + x
         if (b.c[i] === c.c[i]) continue
         written.add(i)
-        const ok = !c.opaque(x, y) || (c.ink(x, y) && near(x, y, 6)) || (c.rgb(x, y) === BROWN && near(x, y, 10))
+        const ok = (!c.opaque(x, y) && near(x, y, 12)) || (c.ink(x, y) && near(x, y, 6)) || (c.rgb(x, y) === BROWN && near(x, y, 10))
         if (!ok) bad++
         if (b.c[i] & 255 && !colours.has(b.c[i])) foreign++
       }
@@ -630,7 +756,8 @@ export function fillProblems(name: string, s: RawStrip, fill: StripFill): string
         if (b.paint(X, Y) && N4.some(([ex, ey]) => !b.opaque(X + ex, Y + ey))) open.add(Y * fw + X)
       }
     }
-    if (open.size) problems.push(`${at}: the outline is open at ${open.size} px`)
+    const where = (set: Iterable<number>) => [...set].slice(0, 4).map((i) => `${i % fw},${Math.floor(i / fw)}`).join(' ')
+    if (open.size) problems.push(`${at}: the outline is open at ${open.size} px (${where(open)})`)
     // Islands: every 8-connected opaque piece holds a px the patch did not write.
     const seen = new Uint8Array(fw * s.h)
     let islands = 0
@@ -657,6 +784,59 @@ export function fillProblems(name: string, s: RawStrip, fill: StripFill): string
       if (!art) islands++
     }
     if (islands) problems.push(`${at}: ${islands} stray island(s) of rebuilt px`)
+    // No lone px: every painted px the patch wrote touches another of its colour.
+    let lone = 0
+    for (const i of written) {
+      const x = i % fw
+      const y = (i - x) / fw
+      if (b.paint(x, y) && !N4.some(([dx, dy]) => b.get(x + dx, y + dy) === b.get(x, y))) lone++
+    }
+    if (lone) problems.push(`${at}: ${lone} lone px`)
+    // The head never swells past the painted one: no rebuilt skin px left of
+    // the widest row the shield never came near (the near hand's rows aside).
+    let headL = Infinity
+    for (let y = 0; y < s.h; y++)
+      for (let x = 1; x < fw; x++) {
+        if (!o.skin(x, y) || hole(x, y) || !o.ink(x - 1, y)) continue
+        let shielded = false
+        for (let X = x - 7; X < x; X++) if (hole(X, y)) shielded = true
+        if (!shielded) headL = Math.min(headL, x)
+        break
+      }
+    const handY = fill.grips[f] ? fill.grips[f][1] + s.h - 8 : -99
+    let swell = 0
+    for (const i of written) {
+      const x = i % fw
+      const y = (i - x) / fw
+      if (b.skin(x, y) && x < headL && Math.abs(y - handY) > 6) swell++
+    }
+    if (swell) problems.push(`${at}: the head swells ${swell} px past the painted one`)
+    // The contour keeps the art's depth: from an outer ink px the patch wrote,
+    // facing empty space on one side, paint lies at most 5 px in on the other
+    // (the art's own contour runs 2–3 px, and 5 where the chin overhangs the tunic).
+    const deep: string[] = []
+    for (const i of written) {
+      const x = i % fw
+      const y = (i - x) / fw
+      if (!b.ink(x, y)) continue
+      // its depth: the shortest way in, from each side that faces empty space
+      let best = 99
+      for (const [dx, dy] of N4) {
+        if (b.opaque(x - dx, y - dy)) continue // the empty side is behind (−d); look along +d
+        let k = 1
+        while (k <= 8 && b.ink(x + dx * k, y + dy * k)) k++
+        if (k <= 8 && b.paint(x + dx * k, y + dy * k)) best = Math.min(best, k)
+      }
+      // a leg, or a foot, is ink across: no paint either side in its row
+      const across = [1, -1].some((dx) => {
+        let k = 1
+        while (k <= 8 && b.ink(x + dx * k, y)) k++
+        return b.paint(x + dx * k, y)
+      })
+      if (across && best > 6 && best < 99) deep.push(`${x},${y}`)
+    }
+    // (one corner px may run long where a flat edge turns: more than two is a fat contour)
+    if (deep.length > 2) problems.push(`${at}: the contour is more than 5 px deep at ${deep.length} px (${deep.slice(0, 4).join(' ')})`)
   }
   return problems
 }
@@ -697,7 +877,7 @@ export function renderShieldFill(packs: Record<string, Record<string, StripFill>
     return `        [${rows.join(', ')}],`
   }
   const strip = (n: string, s: StripFill) =>
-    `    ${JSON.stringify(n)}: {\n      w: ${s.w},\n      h: ${s.h},\n      palette: [${s.palette.map(hex).join(', ')}],\n      frames: [\n${s.frames.map(frame).join('\n')}\n      ],\n    },`
+    `    ${JSON.stringify(n)}: {\n      w: ${s.w},\n      h: ${s.h},\n      palette: [${s.palette.map(hex).join(', ')}],\n      grips: [${s.grips.map((g) => `[${g.join(', ')}]`).join(', ')}],\n      frames: [\n${s.frames.map(frame).join('\n')}\n      ],\n    },`
   const pack = (p: string) =>
     `  ${JSON.stringify(p)}: {\n${Object.keys(packs[p])
       .sort()
