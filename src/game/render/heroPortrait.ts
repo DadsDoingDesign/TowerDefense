@@ -26,7 +26,7 @@ import { lookOf } from '../data/gear'
 import type { Archetype, Sentinel } from '../types'
 import { torsosFor } from './bodyLayer'
 import { blitPixmap } from './blit'
-import { gearAtlasReady, heroGearCached, type HeroGear } from './gearMarks'
+import { gearAtlasReady, heroGearCached, paintsMain, type HeroGear } from './gearMarks'
 import { artFor, onSpritesReady } from './sprites'
 import { onThemeChange } from './themes'
 import { drawHeldGear, heroFigure } from './units'
@@ -73,7 +73,7 @@ export function heroPortraitCanvas(look: Archetype, gear: HeroGear): HTMLCanvasE
   const art = artFor(look)
   if (!art) return null
   const fig = heroFigure(art.pack, art.spriteScale, look, gear, false)
-  const marks = (gear.main && gear.main !== fig?.rig.paintedMain) || (gear.off && gear.off !== fig?.rig.paintedOff)
+  const marks = (gear.main && !(fig && paintsMain(fig.rig, gear))) || (gear.off && gear.off !== fig?.rig.paintedOff)
   if (!fig || (marks && !gearAtlasReady(wake))) {
     if (!fig && !askedSprites) {
       askedSprites = true

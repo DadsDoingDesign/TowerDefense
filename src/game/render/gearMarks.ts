@@ -16,11 +16,16 @@
  *
  *  - **in its fists** ({@link Rig}): the weapon's grip in the right fist, the
  *    off-hand piece in the left, measured off the idle strips;
- *  - **instead of the painted weapon, never beside it**: a hero holding what
- *    the art paints (a knight's sword, an archer's bow) keeps the painted one;
- *    a hero holding anything else has the painted weapon CUT from its idle
- *    strip before the bake, and its own item in the fist — and its attack
- *    strip (which swings the painted weapon) is not played; the item lunges
+ *  - **the painted weapon where it stands in, never a cell beside it**: a
+ *    hero holding what the art paints keeps the painted one — and the
+ *    knight's painted sword stands in for EVERY melee weapon (axe,
+ *    greatsword, warhammer, the Saffron Brand) and for an empty hand
+ *    (`Rig.paintedFor`, `paintedBare`): an atlas cell in that fist read as a
+ *    small blade on a brown block with the arm kinked where the sword was
+ *    cut. Anything else has the painted weapon CUT from its idle strip and
+ *    its own cell in the fist only where that reads (`Rig.markMain`: the
+ *    robed look's bare fists, yes; the hooded look, whose fist goes with its
+ *    bow, draws none) — and its attack strip is not played; the item lunges
  *    at the target instead (`units.drawSentinel`);
  *  - **and the same for the off hand**: the armoured look paints a shield on
  *    its left arm. A hero whose off hand holds anything else — a buckler, a
@@ -154,6 +159,24 @@ interface Rig {
   fistR: Pt
   fistL: Pt
   paintedMain: IconKey | null
+  /**
+   * The weapons the painted one STANDS IN FOR ({@link paintsMain}): a hero
+   * holding any of them keeps the painted weapon, uncut, and no mark is drawn.
+   * An atlas cell in the fist of a figure painted this big read as a small
+   * blade on a brown block, with the arm kinked where the painted weapon was
+   * cut (the designer's review, Oct 2026), so the swap is made only where it
+   * reads natively.
+   */
+  paintedFor: readonly IconKey[]
+  /** The painted weapon stays when the weapon hand is empty too: cutting it leaves the arm kinked round a missing hilt. */
+  paintedBare: boolean
+  /**
+   * Whether a weapon the art does not paint is drawn as its atlas cell in the
+   * fist. Only where it reads natively: the robed look's bare fists hold a
+   * wand or a staff; the hooded look has no fist left once its bow is cut, so
+   * a dagger there would float — it draws none.
+   */
+  markMain: boolean
   paintedOff: IconKey | null
   tip: Pt | null
   unpaint: readonly Rect[]
@@ -175,6 +198,10 @@ const TINY_SWORDS: Readonly<Record<Archetype, Rig>> = {
     fistR: { x: 21, y: -21 },
     fistL: { x: -26, y: -24 },
     paintedMain: 'blade',
+    // every melee weapon: the sword, an axe, a greatsword, a warhammer, the Saffron Brand
+    paintedFor: ['blade', 'axe', 'greatblade', 'hammer', 'brand'],
+    paintedBare: true,
+    markMain: false,
     paintedOff: 'shield',
     tip: { x: 39, y: -60 },
     unpaint: [
@@ -189,6 +216,9 @@ const TINY_SWORDS: Readonly<Record<Archetype, Rig>> = {
     fistR: { x: 25, y: -13 },
     fistL: { x: -24, y: -11 },
     paintedMain: 'bow',
+    paintedFor: ['bow'],
+    paintedBare: false,
+    markMain: false,
     paintedOff: null,
     tip: { x: 22, y: -50 },
     unpaint: [
@@ -204,6 +234,9 @@ const TINY_SWORDS: Readonly<Record<Archetype, Rig>> = {
     fistR: { x: 20, y: -13 },
     fistL: { x: -18, y: -12 },
     paintedMain: null,
+    paintedFor: [],
+    paintedBare: false,
+    markMain: true,
     paintedOff: null,
     tip: null,
     unpaint: [],
@@ -212,7 +245,7 @@ const TINY_SWORDS: Readonly<Record<Archetype, Rig>> = {
 }
 
 /** A pack with no measured rig: the marks at a generic hand height, nothing unpainted. */
-const GENERIC: Rig = { measured: false, fistR: { x: 18, y: -16 }, fistL: { x: -18, y: -16 }, paintedMain: null, paintedOff: null, tip: null, unpaint: [], offCut: false }
+const GENERIC: Rig = { measured: false, fistR: { x: 18, y: -16 }, fistL: { x: -18, y: -16 }, paintedMain: null, paintedFor: [], paintedBare: false, markMain: true, paintedOff: null, tip: null, unpaint: [], offCut: false }
 
 /** The rig for a pack's look. Only Tiny Swords (the default theme) is measured. */
 export const rigFor = (pack: string | undefined, look: Archetype): Rig => (pack === 'tinyswords' ? TINY_SWORDS[look] : GENERIC)
@@ -237,9 +270,19 @@ const GRIP: Partial<Record<IconKey, Pt>> = {
 }
 const gripOf = (k: IconKey): Pt => GRIP[k] ?? { x: 8, y: 11 }
 
+/**
+ * Is the art's painted weapon the picture of this hero's weapon? It is for
+ * the weapon itself and for every weapon it stands in for ({@link
+ * Rig.paintedFor}). Never for a draft's held picture (`HeroGear.art`).
+ */
+export function paintsMain(rig: Rig, gear: Pick<HeroGear, 'main' | 'art'>): boolean {
+  if (gear.art?.main || rig.paintedMain === null) return false
+  return gear.main === null ? rig.paintedBare : gear.main === rig.paintedMain || rig.paintedFor.includes(gear.main)
+}
+
 /** Does this hero's weapon hand hide the art's painted weapon? */
 export function unpaints(rig: Rig, gear: HeroGear): boolean {
-  return rig.unpaint.length > 0 && rig.paintedMain !== null && gear.main !== rig.paintedMain
+  return rig.unpaint.length > 0 && rig.paintedMain !== null && gear.main !== rig.paintedMain && !paintsMain(rig, gear)
 }
 
 /**
@@ -656,10 +699,12 @@ export function drawMainHand(
 ): void {
   const art = gear.art?.main
   if (!gear.main && !art) return
-  if (!art && gear.main === rig.paintedMain) {
+  if (paintsMain(rig, gear)) {
     if (gear.glint && rig.tip && !attacking) drawGlint(ctx, gear.glint, rig.tip.x, rig.tip.y, now, still)
     return
   }
+  // A cell that would not read in this look's fist is not drawn at all (`Rig.markMain`).
+  if (!art && !rig.markMain) return
   const at = hold(ctx, gear.main, rig.fistR.x + lungeX, rig.fistR.y + lungeY, art)
   if (at && gear.glint) drawGlint(ctx, gear.glint, at.x + SIDE - 6, at.y + 6, now, still)
 }

@@ -18,7 +18,8 @@ import {
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import sharp from 'sharp'
-import { bareStrip, cutAndFill, cutOffHand, heroGear, holdOf, offHandPlan, rigFor, shieldFillFor, unpaints, unpaintsOff } from '../src/game/render/gearMarks'
+import { bareStrip, cutAndFill, cutOffHand, drawMainHand, heroGear, holdOf, offHandPlan, paintsMain, rigFor, shieldFillFor, unpaints, unpaintsOff } from '../src/game/render/gearMarks'
+import { BODY_KEYS, BODY_ON_FIGURE, wornOnFigure } from '../src/game/render/bodyLayer'
 import { SHIELD_FILL } from '../src/game/render/shieldFill.generated'
 import { BODY_TORSOS } from '../src/game/render/bodyAnchors.generated'
 import { fillProblems, shieldFills, type RawStrip } from '../scripts/shield-fill-lib'
@@ -134,18 +135,44 @@ describe('gear on the figure', () => {
     expect(heroGear(hero(null).equipment)).toEqual({ main: null, off: null, body: null, glint: null })
   })
 
-  it("cuts the art's painted weapon out exactly when the hero holds something else", () => {
+  it("keeps the painted weapon wherever a swap would not read, and cuts it only for one that does", () => {
     const fighter = rigFor('tinyswords', 'fighter')
-    expect(unpaints(fighter, heroGear(hero(item('Sword', 'oneHand')).equipment))).toBe(false)
-    expect(unpaints(fighter, heroGear(hero(item('Axe', 'oneHand')).equipment))).toBe(true)
-    // A shield and no weapon: no sword either.
-    expect(unpaints(fighter, heroGear(hero(null, item('Shield', 'offHand')).equipment))).toBe(true)
+    const g = (main: Item | null, off: Item | null = null) => heroGear(hero(main, off).equipment)
+    // The knight's painted sword stands in for every melee weapon, and for an empty hand.
+    for (const [name, slot] of [['Sword', 'oneHand'], ['Axe', 'oneHand'], ['Greatsword', 'twoHand'], ['Warhammer', 'twoHand'], ['Saffron Brand', 'oneHand']] as const) {
+      expect(paintsMain(fighter, g(item(name, slot))), name).toBe(true)
+      expect(unpaints(fighter, g(item(name, slot))), name).toBe(false)
+    }
+    expect(paintsMain(fighter, g(null, item('Shield', 'offHand')))).toBe(true)
+    expect(unpaints(fighter, g(null, item('Shield', 'offHand')))).toBe(false)
+    // The archer: its bow is its own; a dagger cuts the bow and, with no fist left, draws nothing.
     const rogue = rigFor('tinyswords', 'rogue')
-    expect(unpaints(rogue, heroGear(hero(item('Bow', 'twoHand')).equipment))).toBe(false)
-    expect(unpaints(rogue, heroGear(hero(item('Dagger', 'oneHand')).equipment))).toBe(true)
-    // The robed look paints no weapon; an unmeasured pack is never cut.
-    expect(unpaints(rigFor('tinyswords', 'mystic'), heroGear(hero(item('Wand', 'oneHand')).equipment))).toBe(false)
-    expect(unpaints(rigFor('fieldwatch', 'fighter'), heroGear(hero(item('Axe', 'oneHand')).equipment))).toBe(false)
+    expect(unpaints(rogue, g(item('Bow', 'twoHand')))).toBe(false)
+    expect(unpaints(rogue, g(item('Dagger', 'oneHand')))).toBe(true)
+    expect(rogue.markMain).toBe(false)
+    expect(fighter.markMain).toBe(false)
+    // The robed look paints no weapon, and its bare fists do hold the cell.
+    const mystic = rigFor('tinyswords', 'mystic')
+    expect(unpaints(mystic, g(item('Wand', 'oneHand')))).toBe(false)
+    expect(mystic.markMain).toBe(true)
+    // An unmeasured pack is never cut.
+    expect(unpaints(rigFor('fieldwatch', 'fighter'), g(item('Axe', 'oneHand')))).toBe(false)
+  })
+
+  it('draws no cell in the fist where the painted weapon stands in, or where the look draws none', () => {
+    const g = (main: Item | null) => heroGear(hero(main).equipment)
+    for (const [look, main] of [['fighter', item('Axe', 'oneHand')], ['fighter', item('Greatsword', 'twoHand')], ['rogue', item('Dagger', 'oneHand')]] as const) {
+      const { ctx, ops } = recordingCtx()
+      drawMainHand(ctx, rigFor('tinyswords', look), g(main), 0, 0, 0, true)
+      expect(ops.filter((o) => o.fn === 'drawImage'), `${look} ${main.name}`).toEqual([])
+    }
+  })
+
+  it('wears no body piece on the figure while BODY_ON_FIGURE is off: the UI shows the piece, the figure its own tunic', () => {
+    expect(BODY_ON_FIGURE).toBe(false)
+    for (const body of BODY_KEYS) expect(wornOnFigure({ body }), body).toBe(null)
+    expect(wornOnFigure({ body: null, bodyStyle: { id: 'draft', fill: '#ffffff', shade: '#000000' } })).toBe(null)
+    expect(wornOnFigure(undefined)).toBe(null)
   })
 
   it("cuts the art's painted shield whenever the off hand holds anything else, or nothing", () => {

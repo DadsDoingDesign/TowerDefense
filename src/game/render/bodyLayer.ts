@@ -37,6 +37,22 @@
 import type { IconKey } from '../data/iconAtlas'
 import { BODY_TORSOS } from './bodyAnchors.generated'
 
+/**
+ * Whether the body piece is WORN on the battlefield figure (and so on every
+ * portrait cut from it). OFF: as overlays on the one painted knight the
+ * pieces read as pasted on — Mail a checker, Plate a flat bib, the Robe a
+ * paper bag, the Cloak a ruler-straight triangle (the designer's review, Oct
+ * 2026) — so the figure wears the art's own tunic and the piece shows in the
+ * UI only. The dresser, its tables and `bodyAnchors.generated.ts` stay, for
+ * the character builder to reuse; `anchors:check` still measures and fits
+ * them. Turning this on puts every piece back on the figure.
+ */
+export const BODY_ON_FIGURE = false
+
+/** What the figure wears: the hero's body piece (or a draft's), or nothing while {@link BODY_ON_FIGURE} is off. */
+export const wornOnFigure = (gear: { body?: BodyKey | null; bodyStyle?: BodyStyle } | undefined): BodyKey | BodyStyle | null =>
+  BODY_ON_FIGURE ? (gear?.bodyStyle ?? gear?.body ?? null) : null
+
 /** The body pieces, by their icon cell (`iconAtlas.NOUN_ICON`). */
 export const BODY_KEYS = ['mail', 'plate', 'cloth', 'cloak', 'aegis', 'ironheart', 'silkwind'] as const
 export type BodyKey = (typeof BODY_KEYS)[number]

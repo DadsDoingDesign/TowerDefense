@@ -12,8 +12,8 @@ import type { Archetype, Sentinel } from '../types'
 import { ANIM_FRAMES, loopFrame } from './anim'
 import { fxEnemyDot, fxEnemyFlash, fxEnemyRecoil, fxReducedMotion, fxSentinel, type ProcKind } from './fx'
 import { heroStrip, type Loadout } from './loadout'
-import { drawMainHand, drawOffHand, heroGearCached, offHandPlan, rigFor, unpaintedStrip, unpaints, type HeroGear, type StripFill } from './gearMarks'
-import { dressedStrip } from './bodyLayer'
+import { drawMainHand, drawOffHand, heroGearCached, offHandPlan, paintsMain, rigFor, unpaintedStrip, unpaints, type HeroGear, type StripFill } from './gearMarks'
+import { dressedStrip, wornOnFigure } from './bodyLayer'
 import type { Pixmap } from './pixmap'
 import { deliveryCached, deliveryOfRt, type Delivery } from './attackLook'
 import { pixmap, quarterTurns } from './pixmap'
@@ -442,7 +442,8 @@ export interface HeroFigure {
  *     `loadout` is given;
  *  2. the painted weapon and/or off-hand piece cut (`unpaintedStrip`), and the
  *     body the shield hid rebuilt from its build-time patch;
- *  3. the body piece worn (`bodyLayer.dressedStrip`);
+ *  3. the body piece worn (`bodyLayer.dressedStrip`) — while
+ *     `bodyLayer.BODY_ON_FIGURE` is on; it is off, so nothing is;
  *  4. baked once by `pixmap()` with one contour ring.
  *
  * Every step returns a kept object for a kept input, so after the first call
@@ -465,7 +466,7 @@ export function heroFigure(
   // weapon, is not played: the item itself makes the move (`reach` in drawSentinel).
   const rig = rigFor(pack, archetype)
   const cut = !!gear && unpaints(rig, gear)
-  const ownArt = !gear || !rig.measured || gear.main === rig.paintedMain
+  const ownArt = !gear || !rig.measured || gear.main === rig.paintedMain || paintsMain(rig, gear)
   const firing = wantFire && !!atk && ownArt
   const anim = firing ? 'atk' : 'idle'
   const frames = ANIM_FRAMES[`${archetype}_${anim}`] ?? 1
@@ -480,8 +481,8 @@ export function heroFigure(
   // then dresses that whole tunic (the rebuilt strip's own torso table).
   const off = offHandPlan(pack, rig, gear, `${archetype}_${anim}`)
   const strip = cutMain || off.cut ? unpaintedStrip(body, rig, frames, { main: cutMain, off: off.cut }, off.fill) : body
-  // The body piece, worn over what is left (an empty slot returns `strip` itself).
-  const worn = dressedStrip(strip, pack, off.torso, frames, gear?.bodyStyle ?? gear?.body ?? null)
+  // The body piece, worn over what is left (an empty slot, or BODY_ON_FIGURE off, returns `strip` itself).
+  const worn = dressedStrip(strip, pack, off.torso, frames, wornOnFigure(gear))
   const pm = pixmap(worn, { scale: unitPixmapScale(spriteScale), frames, ring: true })
   return pm ? { pm, frames, firing, ownArt, rig, grips: off.fill?.grips ?? null } : null
 }
