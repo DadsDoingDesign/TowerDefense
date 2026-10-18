@@ -329,7 +329,7 @@ export const ACCENT_PAINT = 1
 export const ACCENT_KEEP = 2
 /**
  * The season's trees within reach of the play: their reds and golds are
- * turned to the season's ochre and olive (75–90°), saturation kept,
+ * turned to the season's ochre and olive (72–82°), saturation kept,
  * so they still read as autumn wood beside the road without wearing tier 1's
  * or tier 4's hue — the move the harvest's straw makes in its ramp.
  */

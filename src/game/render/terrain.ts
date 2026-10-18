@@ -29,7 +29,7 @@ import type { FieldSeason, PropKind, PropRule, PropWhere } from '../data/fieldSe
 import { pixmap } from './pixmap'
 import { ACCENT_KEEP, ACCENT_PAINT, ACCENT_SHIFT, markAccent, seasonFinish, seasonGround, seasonOnDeco, spriteAlpha } from './season'
 import { broadleaf, propArt, repaintFoliage, repaintRock, seasonArtStamp } from './seasonArt'
-import { hash01, hashStr } from './seasonHash'
+import { hash01, hashStr, valueNoise } from './seasonHash'
 import { onSpritesReady, spriteFor } from './sprites'
 import { getActiveStyle } from './themes'
 import { darken, lighten, mix, roundRect, strokePolyline, toRgb } from './paint'
@@ -270,6 +270,9 @@ export function drawField(ctx: CanvasRenderingContext2D, map: GameMap, view?: { 
 const WATER = '#47aba9'
 const FOAM = '#c6f0db'
 const FOAM_EDGE = '#458597'
+/** The bank's shadow on the water, and the lake's deeper middle (the pack's water, a step and a half step down). */
+const WATER_SHADE = '#357f86'
+const WATER_DEEP = '#40a0a1'
 
 type Rect = { x0: number; y0: number; x1: number; y1: number }
 type Tile = NonNullable<GameMap['tiles']>[number]
@@ -312,6 +315,24 @@ function pieceShape(map: GameMap, is: (t: Tile) => boolean, inset: number, r: nu
     }
   }
   return { cores: [...cores.values()], bridges }
+}
+
+/** A piece's shape as ONE path (for a clip): the same cores and bridges {@link fillShape} fills. */
+function shapePath(ctx: CanvasRenderingContext2D, s: { cores: Rect[]; bridges: Rect[] }, r: number): void {
+  ctx.beginPath()
+  for (const c of s.cores) {
+    const w = c.x1 - c.x0
+    const h = c.y1 - c.y0
+    if (w <= 0 || h <= 0) continue
+    const rr = Math.max(0, Math.min(r, w / 2, h / 2))
+    ctx.moveTo(c.x0 + rr, c.y0)
+    ctx.arcTo(c.x1, c.y0, c.x1, c.y1, rr)
+    ctx.arcTo(c.x1, c.y1, c.x0, c.y1, rr)
+    ctx.arcTo(c.x0, c.y1, c.x0, c.y0, rr)
+    ctx.arcTo(c.x0, c.y0, c.x1, c.y0, rr)
+    ctx.closePath()
+  }
+  for (const b of s.bridges) if (b.x1 > b.x0 && b.y1 > b.y0) ctx.rect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0)
 }
 
 function fillShape(ctx: CanvasRenderingContext2D, s: { cores: Rect[]; bridges: Rect[] }, r: number): void {
@@ -390,6 +411,26 @@ function drawTerrainGround(ctx: CanvasRenderingContext2D, map: GameMap, green: s
       ctx.fillStyle = col
       fillShape(ctx, pieceShape(map, (t) => t.block === 'water', inset, r), r)
     }
+    // Depth (Oct 2026 asset critique: the lake was one flat teal, a pool
+    // poured into a tray): the bank's shadow along the far and the lit side
+    // (light from the upper left), so the water sits BELOW the grass, and a
+    // deeper middle.
+    {
+      const r = Math.max(6, Math.round(18 * k * 1.4))
+      const core = pieceShape(map, (t) => t.block === 'water', 7, r)
+      ctx.save()
+      shapePath(ctx, core, r)
+      ctx.clip()
+      ctx.fillStyle = WATER_SHADE
+      fillShape(ctx, core, r)
+      ctx.translate(2, 3)
+      ctx.fillStyle = WATER
+      fillShape(ctx, core, r)
+      ctx.translate(-2, -3)
+      ctx.fillStyle = WATER_DEEP
+      fillShape(ctx, pieceShape(map, (t) => t.block === 'water', 15, Math.max(4, r - 6)), Math.max(4, r - 6))
+      ctx.restore()
+    }
     // A few flat ripples, the way the pack's water is lit, kept inside each
     // tile's water.
     ctx.strokeStyle = 'rgba(198,240,219,0.55)'
@@ -409,10 +450,57 @@ function drawTerrainGround(ctx: CanvasRenderingContext2D, map: GameMap, green: s
   if (tiles.some((t) => t.block === 'fire')) {
     // Scorched earth: charcoal, with a warm rim where the grass is burning back.
     const fire = (t: Tile) => t.block === 'fire'
+    // Burnt grass round the rim (Oct 2026 asset critique: the patch was a
+    // clean rounded tray): the meadow browned in the tile's margin, and the
+    // rim's edge eaten into by char, so the burn is ragged where it meets
+    // the grass.
+    ctx.fillStyle = 'rgba(62, 36, 16, 0.3)'
+    fillShape(ctx, pieceShape(map, fire, 0, 14), 14)
     ctx.fillStyle = '#6b3a1c'
     fillShape(ctx, pieceShape(map, fire, 3, 12), 12)
+    for (const t of tiles) {
+      if (!fire(t)) continue
+      const x0 = Math.round(t.pos.x - T / 2)
+      const y0 = Math.round(t.pos.y - T / 2)
+      for (let y = 1; y < T - 1; y++)
+        for (let x = 1; x < T - 1; x++) {
+          const edge = Math.min(x, y, T - 1 - x, T - 1 - y)
+          if (edge > 6) continue
+          const h = hash01((x0 + x) >> 1, y0 + y, 47)
+          if (h > 0.3) continue
+          ctx.fillStyle = edge <= 3 ? '#4a2c18' : '#2b1d17'
+          ctx.fillRect(x0 + x, y0 + y, 1, 1)
+        }
+    }
     ctx.fillStyle = '#2b1d17'
     fillShape(ctx, pieceShape(map, fire, 6, 9), 9)
+    {
+      // The char lit from the upper left: a soot shadow under the far rim,
+      // pale ash drifted against the near one, and ash flecks across it.
+      const char = pieceShape(map, fire, 6, 9)
+      ctx.save()
+      shapePath(ctx, char, 9)
+      ctx.clip()
+      ctx.fillStyle = '#17100c'
+      fillShape(ctx, char, 9)
+      ctx.translate(2, 2)
+      ctx.fillStyle = '#2b1d17'
+      fillShape(ctx, char, 9)
+      ctx.translate(-2, -2)
+      for (const t of tiles) {
+        if (!fire(t)) continue
+        const x0 = Math.round(t.pos.x - T / 2)
+        const y0 = Math.round(t.pos.y - T / 2)
+        for (let y = 0; y < T; y += 2)
+          for (let x = 0; x < T; x += 2) {
+            const r = hash01(x0 + x, y0 + y, 49)
+            if (r > 0.05) continue
+            ctx.fillStyle = r < 0.012 ? '#5a4a40' : '#3e3028'
+            ctx.fillRect(x0 + x, y0 + y, 2, 2)
+          }
+      }
+      ctx.restore()
+    }
     for (const t of tiles) {
       if (!fire(t)) continue
       const seed = mulberry32((t.col * 7919 + t.row * 104729) >>> 0)
@@ -1064,11 +1152,20 @@ function keepMask(map: GameMap, W: WorldBox): { mask: Uint8Array; canvas: HTMLCa
   g.lineJoin = 'round'
   g.lineCap = 'round'
   g.strokeStyle = '#fff'
-  g.lineWidth = ROAD_W + 8
+  // Exactly the drawn road, and exactly each danger piece's drawn shape (Oct
+  // 2026 asset critique): a kept verge round them — 4 px of the road's sides,
+  // a square 2 px past each tile — left a ring of summer grass round every
+  // road and patch in the frost's snow and the harvest's straw, a seam.
+  g.lineWidth = ROAD_W
   strokePolyline(g, drawnRoad(map))
   g.fillStyle = '#fff'
-  const T = map.tile ?? 40
-  for (const t of map.tiles ?? []) if (t.block === 'water' || t.block === 'fire' || t.danger) g.fillRect(t.pos.x - T / 2 - 2, t.pos.y - T / 2 - 2, T + 4, T + 4)
+  const k = (map.tile ?? 40) / 80
+  const water = (t: Tile) => t.block === 'water'
+  const fire = (t: Tile) => t.block === 'fire'
+  const rW = Math.max(6, Math.round(23 * k * 1.4))
+  fillShape(g, pieceShape(map, water, 2, rW), rW)
+  fillShape(g, pieceShape(map, fire, 3, 12), 12)
+  fillShape(g, pieceShape(map, cursedOf, 2, 12), 12)
   const data = g.getImageData(0, 0, W.w, W.h).data
   const out = new Uint8Array(W.w * W.h)
   for (let i = 0; i < out.length; i++) out[i] = data[i * 4 + 3] > 0 ? 1 : 0
@@ -1131,6 +1228,8 @@ function seasonScenery(map: GameMap, dr: Dressing, season: FieldSeason, salt: nu
     })
     for (const c of worldLattice(map, W, road).cells) {
       if (c.kind !== 'forest') continue
+      // In clumps, when the season says so: a field of bales, a reed bed.
+      if (season.clump && valueNoise(c.x, c.y, season.clump, salt + 17) > 0.5) continue
       const i = Math.floor((c.x - lat.x) / T)
       const j = Math.floor((c.y - lat.y) / T)
       const rule = pick('forest', hash01(i, j, salt))
@@ -1215,7 +1314,7 @@ function nearPlay(map: GameMap): (x: number, y: number) => boolean {
 }
 
 /** The props that lie flat on the ground (drawn before the scenery; never in the depth order). */
-const FLAT_PROPS = new Set<PropKind>(['flowers', 'puddle', 'mud', 'lily', 'leaves'])
+const FLAT_PROPS = new Set<PropKind>(['flowers', 'puddle', 'mud', 'lily', 'leaves', 'pool'])
 
 /** One prop, its foot at (x, y): flat ones centred there, upright ones standing on it. */
 function drawProp(ctx: CanvasRenderingContext2D, p: PlacedProp, bs: BakeSeason): void {
@@ -1490,12 +1589,14 @@ function redWeight(hue: number): number {
 
 /**
  * A near tree's hue (`season.ACCENT_SHIFT`): the tiers' warm arc, 340° round
- * to 68°, laid in order onto 75–90° (rust to ochre, amber to olive) — the
+ * to 68°, laid in order onto 72–82° (rust to ochre, amber to a yellowing olive) — the
  * green side of yellow, short of the pines' and the meadow's green; -1 for a
  * hue outside it, which is kept.
  */
-const SHIFT_LO = 75
-const SHIFT_HI = 90
+// 72–82° (Oct 2026 asset critique; it was 75–90°): the near maples read as
+// yellowing birch, not as summer trees standing in an autumn wood.
+const SHIFT_LO = 72
+const SHIFT_HI = 82
 function shiftedHue(hue: number): number {
   const h = hue >= 340 ? hue - 360 : hue
   if (h < -20 || h > GOLD_HI) return -1
