@@ -492,7 +492,9 @@ export function dressFrame(d: Pixels, w: number, h: number, fx: number, cw: numb
               tx = x
               break
             }
-        if (ty >= 0) shape([[tx - 3, ty - 1, sg], [tx - 4, ty - 2, sg], [tx - 2, ty - 2, sg], [tx - 3, ty - 3, sg]], true)
+        // A sprig at the hood's crown, clipped to the cell (an attack frame's head can touch its top).
+        const sprig: [number, number, number][] = [[tx - 3, ty - 1, sg], [tx - 4, ty - 2, sg], [tx - 2, ty - 2, sg], [tx - 3, ty - 3, sg]]
+        if (ty >= 0) shape(sprig.filter(([x, y]) => inCell(x, y)), true)
       }
     }
   }

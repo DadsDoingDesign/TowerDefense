@@ -4204,3 +4204,33 @@ The designer: "Consider an audit of the motion design and animations throughout.
 - Moonquill is the calmest world, which is calm by nature.
 - Rosethread's ribbons are the one wide moving shape on a home.
 - The battle's own draw is the remaining cost on a slow phone.
+
+### 2026-10-18 — Peoples & Trades: every item's and skill's look (draft art)
+
+The designer asked to see each item's and each skill's unique visual assets for the world rework. Five peoples, 100 items and 50 skills. It is proposal art and none of it ships: the atlas, the item and skill tables and every number are untouched.
+
+**What was made.**
+- **Icons**: 125 new 16 × 16 cells in the atlas palette and outline (`scripts/peoples-art.ts`, with one file per people). The 25 kept items keep their shipped cells. Kingscale Shield and Greenvial Herbal are re-themed.
+- **On the tower**: every item is held or worn by the same knight on a Green Line post. The draw is the real `drawSentinel` → `heroFigure`: the real fists, cuts, body dresser and bake.
+- **Seams**: drafts reach the draw through two seams the game never sets. `HeroGear.art` puts a held picture in the fist. `HeroGear.bodyStyle` is a body piece as data (`bodyLayer.BodyStyle`), built from the shipped parts plus a pattern, sash, apron, pouches and a hood.
+- **Skills**: each has an icon, a small tell on the hero and a mid-hit frame on a keg on the road. The hit uses the real FX for burn, chill, shock, drain, stun, execute, splash, pierce, chains, the proc rings, the held arc, the snare and floaters. Poison, bleed, roots, gold and the tells themselves are drafted in the pack's look, pixel-doubled like the held gear.
+- **Sheets**: `docs/peoples/<people>-{items,skills}.png`, 10 sheets totalling 1 MB, from `harness/peoples.html` and `scripts/peoples-sheets.mjs`.
+
+**Checks.** `tests/peoplesArt.test.ts`:
+- 150 icons, no two closer than 24 px. The closest pairs are 39 px: the Spear against the shipped Staff, and the shipped Wand against the shipped Sceptre.
+- Every draft body piece fits every frame with 0 overflow. This caught a hood sprig poking out of an attack frame.
+- No two body pieces, shipped or draft, dress the knight alike.
+- The game never sets either seam.
+
+The harness reports that no tell touches a goblin's HP bar.
+
+**Two rounds.**
+- **Round 1.** The goblins hid behind the hero, and a torch goblin's flame covered its face, so the targets became a compact keg standing back to front with the hero. The tells were 1-px marks, invisible at the real scale; they are now pixel-doubled. Tells had touched the HP bar (the aura, the orbits); the auras and orbits now sit at a smaller radius. Miner's Pick read as a slingshot. Spiced Blade was 38 px from the Sword. Arc Spark looked like Thornbloom on the hero. Shields were clipped at the frame's edge.
+- **Round 2.** Floaters were moved off the bar and words dropped. Pips were redrawn solid (they had dithered into a checker). The Hide Wrap icon became a pelt. Brew Belt's vials were enlarged.
+
+**Benchmarks.** Slay the Spire's relics: one bold silhouette and two or three inks. The drafts hold to that, and the tiers climb from plain to gold-trimmed. Kingdom Rush's hero gear: oversized and chunky. Ours is held at the shipped `GEAR_SCALE`, about a third of the knight's height. It reads on the sheet at 3×, but on a phone it is small.
+
+**Left for the designer.**
+- The kept cells (the shipped wand, sceptre, staff, grimoire, tome and robe) are not re-themed. The Gnomes therefore read as a family through their new items only.
+- The Spear's thin diagonal sits 39 px from the shipped Staff. It differs in its bone tip and red binding, not in silhouette.
+- One knight wears everything: the brief asked for a neutral hero, and the sheet is a comparison. Per-people bodies would be new art.
