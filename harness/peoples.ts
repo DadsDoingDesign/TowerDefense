@@ -430,7 +430,7 @@ function sheet(p: People, kind: 'items' | 'skills'): HTMLElement {
   s.dataset.out = `docs/peoples/${p.id}-${kind}.png`
   const h = el('header')
   h.append(el('h1', undefined, `${p.title} · ${p.company}`))
-  h.append(el('div', 'sub', kind === 'items' ? `Items — 20 kinds, by level · ${p.materials}` : `Skills — 10, by level, signature first · the tell on the hero, mid-hit`))
+  h.append(el('div', 'sub', kind === 'items' ? `Items — 20 kinds, by level · ${p.materials}` : `Skills — signature first, then by level · the tell, mid-hit`))
   h.append(el('div', 'draft', 'DRAFT ART · proposal'))
   s.append(h)
   const grid = el('div', `grid ${kind}`)
