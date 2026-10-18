@@ -21,10 +21,11 @@ import { setActiveTheme } from '../src/game/render/themes'
 import { FIRST_MAP } from '../src/game/data/maps'
 import {
   CELL, CX, FEET, ITEMS, LAYERS, LIVERIES, RACES, RACE_DEFAULTS, RARITIES, STATUSES, TELLS, FRAME_COUNT, FRAME_MS,
-  composeFrame, resolveLook, layerIndex, FACES, framesFor, frameMsFor,
+  composeFrame, resolveLook, layerIndex, FACES,
   type AnimId, type HeroFrame, type HeroLook, type LayerId, type PersonaId, type RaceId,
 } from '../src/game/render/hero'
-import { MINI_FACES, MINI_H, MINI_W, miniAt, miniFrame, ticPhase, type MiniAnim } from '../src/game/render/hero/mini'
+import { MINI_FACES, MINI_FEET, MINI_H, MINI_W, miniAt, miniFrame, ticPhase, type MiniAnim } from '../src/game/render/hero/mini'
+import { POST_FACES, POST_H, POST_W, postAt, postFeetOf, postFrame, postFrames } from '../src/game/render/hero/post'
 import { torsoOutline } from '../src/game/render/hero/parts'
 
 const out = document.getElementById('out')!
@@ -143,8 +144,32 @@ interface Refs {
   tnt: HTMLImageElement
   knight: HTMLImageElement
   tower: HTMLImageElement | null
+  /** The CC0 pawn's idle frame 0, trimmed to its pixels. */
+  pawn: HTMLCanvasElement
 }
 let REFS: Refs
+/** The pack's plain grass tile (64 px), for cards that need open ground and no road. */
+let GRASS: HTMLImageElement | null = null
+/** Fill a box with the pack's grass at k× (a field with nothing on it but the figures). */
+function meadowIn(g: CanvasRenderingContext2D, b: { x: number; y: number; w: number; h: number }, k: number): void {
+  if (!GRASS) return groundIn(g, b, k)
+  g.imageSmoothingEnabled = false
+  for (let y = b.y; y < b.y + b.h; y += 64 * k) for (let x = b.x; x < b.x + b.w; x += 64 * k) g.drawImage(GRASS, x, y, 64 * k, 64 * k)
+}
+/** Each face's post, baked with the face at its counter (`stop-scenes.ts --faces`). */
+let POST_IMG: Partial<Record<PersonaId, HTMLImageElement | null>> = {}
+
+/** A CC0 sheet's cell (192 px), trimmed to its pixels. */
+function trimmedCell(im: HTMLImageElement, col: number, row: number): HTMLCanvasElement {
+  const [c, g] = canvas(192, 192)
+  g.drawImage(im, col * 192, row * 192, 192, 192, 0, 0, 192, 192)
+  const d = g.getImageData(0, 0, 192, 192).data
+  let x0 = 192, y0 = 192, x1 = 0, y1 = 0
+  for (let y = 0; y < 192; y++) for (let x = 0; x < 192; x++) if (d[(y * 192 + x) * 4 + 3]) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y) }
+  const [t, tg] = canvas(x1 - x0 + 1, y1 - y0 + 1)
+  tg.drawImage(c, x0, y0, t.width, t.height, 0, 0, t.width, t.height)
+  return t
+}
 
 /** A CC0 strip's frame `i` (n frames), its bottom at y (the shadow's foot), centred on x, scaled k. */
 function refFrame(g: CanvasRenderingContext2D, im: HTMLImageElement, n: number, i: number, x: number, y: number, k = 1): void {
@@ -188,7 +213,15 @@ function sheet(file: string, c: HTMLCanvasElement, title: string): void {
 const CARD = 600
 /** A phone card: dark panel, the title on top, the caption under the art, the art in between. */
 const slugG = (g: string) => g.toLowerCase().replace(/[^a-z]+/g, '-')
-function card(id: string, group: Group, title: string, caption: string, draw: (g: CanvasRenderingContext2D, box: { x: number; y: number; w: number; h: number }) => void, w = CARD, h = CARD, people = 'all'): HTMLCanvasElement {
+/**
+ * A builder (rig) card is magnified to be judged; the game draws the rig 1:1,
+ * so every such card says so (the company faces are hand-drawn per size and
+ * shown as the game shows them).
+ */
+const RIG_GROUPS = new Set<Group>(['Rig/Parts', 'Swaps', 'States', 'Animation'])
+const rigNote = (group: Group, caption: string): string => (RIG_GROUPS.has(group) && !/hand-drawn/i.test(caption) ? `${caption} (Magnified to judge; the game draws it 1:1.)` : caption)
+function card(id: string, group: Group, title: string, caption0: string, draw: (g: CanvasRenderingContext2D, box: { x: number; y: number; w: number; h: number }) => void, w = CARD, h = CARD, people = 'all'): HTMLCanvasElement {
+  const caption = rigNote(group, caption0)
   const [c, g] = canvas(w, h)
   paintCard(g, w, h, title, caption, group, draw)
   CARDS.push({ id, group, people, title, caption, file: `${slugG(group)}-${id}.png`, canvas: c })
@@ -212,7 +245,8 @@ function paintCard(g: CanvasRenderingContext2D, w: number, h: number, title: str
 }
 
 /** An animated card: every frame painted as its own full card, stacked (the script makes a GIF). */
-function animCard(id: string, title: string, caption: string, n: number, delays: number[], draw: (g: CanvasRenderingContext2D, box: { x: number; y: number; w: number; h: number }, i: number) => void, people = 'all', group: Group = 'Animation'): void {
+function animCard(id: string, title: string, caption0: string, n: number, delays: number[], draw: (g: CanvasRenderingContext2D, box: { x: number; y: number; w: number; h: number }, i: number) => void, people = 'all', group: Group = 'Animation'): void {
+  const caption = rigNote(group, caption0)
   const [c, g] = canvas(CARD, CARD * n)
   for (let i = 0; i < n; i++) {
     g.save()
@@ -780,132 +814,188 @@ function miniCanvas(id: PersonaId, anim: MiniAnim, f: number, locked = false): H
   return c
 }
 
-/** A face's bust: head and shoulders cut from the field figure (as the shipped portraits are). */
-function bust(g: CanvasRenderingContext2D, f: HeroFrame, x: number, y: number, k: number): void {
-  // from the top of the figure (a hat included) to below the shoulders, square-ish, the head centred
-  const P = f.pose
-  const top = boxOf([f], 0).y0 - 2
-  const h = Math.round(P.torsoTop + 12 - top)
-  const w = Math.round(Math.max(56, h * 1.1))
-  const sx = Math.round(P.head.x - w / 2), sy = top
-  const kk = Math.max(1, Math.min(k, Math.floor((58 * k) / h)))
-  g.drawImage(frameCanvas(f), sx, sy, w, h, x + Math.round((64 * k - w * kk) / 2), y + Math.round((58 * k - h * kk) / 2), w * kk, h * kk)
+/**
+ * The faces at FIELD / POST size: hand-drawn at the pack's scale (`post.ts`),
+ * drawn 1:1 or at an integer scale, never the rig magnified.
+ */
+const postCache = new Map<string, HTMLCanvasElement>()
+function postCanvas(id: PersonaId, anim: MiniAnim = 'idle', f = 0, locked = false): HTMLCanvasElement {
+  const key = `${id}|${anim}|${f}|${locked}`
+  const hit = postCache.get(key)
+  if (hit) return hit
+  const fr = postFrame(id, anim, f, locked)
+  const [c, g] = canvas(fr.w, fr.h)
+  g.putImageData(new ImageData(new Uint8ClampedArray(fr.rgba), fr.w, fr.h), 0, 0)
+  postCache.set(key, c)
+  return c
 }
+/** A post-size face with the middle of its feet at (x, y), k× (an integer: no resampling). */
+function postAtXY(g: CanvasRenderingContext2D, id: PersonaId, x: number, y: number, k: number, anim: MiniAnim = 'idle', f = 0, locked = false): void {
+  const p = postFeetOf(id)
+  g.drawImage(postCanvas(id, anim, f, locked), Math.round(x - p.x * k), Math.round(y - p.y * k), POST_W * k, POST_H * k)
+}
+/** The CC0 pawn (idle frame 0, trimmed), its feet at (x, y), k×. */
+function pawnAt(g: CanvasRenderingContext2D, x: number, y: number, k: number): void {
+  const p = REFS.pawn
+  g.drawImage(p, Math.round(x - (p.width / 2) * k), Math.round(y - (p.height - 3) * k), p.width * k, p.height * k)
+}
+/** Each face's post: the shipped scene's layout with the face at the counter (`stop-scenes.ts --faces`). */
+const POST_SCENE: Readonly<Record<PersonaId, string>> = { saffra: 'liaison-spice', odile: 'liaison-silk', brannoch: 'liaison-metals', hask: 'proposal-butcherblock', wren: 'proposal-greenvial' }
 
 function faces(): void {
   const W = 1344
-  const [c, g] = canvas(W, 1200)
+  const [c, g] = canvas(W, 900)
   g.fillStyle = PANEL
   g.fillRect(0, 0, W, c.height)
-  text(g, 'The company faces: field, bust and dock', 20, 44, 32, '#f2e8d8', 700, 'left', 'Georgia, serif')
-  text(g, 'Each company’s liaison, given a body on the hero rig. Field figure 1× and 3× (beside a CC0 goblin), the bust 2×, the dock figure (redrawn at 24 px) 1×, 2× and 6×.', 20, 74, 18, DIM)
-  // 1× strip on the ground with a goblin
-  const [g1c, g1] = ground(W, 150, 1, postOf(), -30)
-  refFrame(g1, REFS.torch, 6, 0, 120, 130)
-  FACES.forEach((fc, i) => hero(g1, F(fc.look), 260 + i * 120, 124, 1))
+  text(g, 'The company faces: field / post size and dock size', 20, 44, 32, '#f2e8d8', 700, 'left', 'Georgia, serif')
+  text(g, 'Hand-drawn at each size the game shows them (field / post: the pack’s pawn scale; dock: 24 × 28). Beside the CC0 pawn, knight and goblin, 1× and 3×.', 20, 74, 18, DIM)
+  // 1× on the ground with the pack
+  const [g1c, g1] = ground(W, 130, 1, postOf(), -30)
+  pawnAt(g1, 90, 112, 1)
+  refFrame(g1, REFS.knight, 6, 0, 190, 116)
+  refFrame(g1, REFS.torch, 6, 0, 290, 116)
+  DOCK_ORDER.forEach((id, i) => postAtXY(g1, id, 420 + i * 90, 112, 1))
+  DOCK_ORDER.forEach((id, i) => g1.drawImage(miniCanvas(id, 'idle', 0), 900 + i * 60, 112 - (MINI_FEET + 2) * 2, MINI_W * 2, MINI_H * 2))
   g.drawImage(g1c, 0, 92)
-  let y = 92 + 150 + 16
-  FACES.forEach((fc, i) => {
+  text(g, 'pack', 70, 240, 14, DIM)
+  text(g, 'field / post 1×', 420, 240, 14, DIM)
+  text(g, 'dock 2× (the slot)', 900, 240, 14, DIM)
+  // 3× each, on ground, with the dock figure
+  DOCK_ORDER.forEach((id, i) => {
+    const fc = FACES.find((x) => x.id === id)!
     const x0 = 20 + i * 264
-    g.fillStyle = PANEL2
-    g.fillRect(x0, y, 252, 820)
-    text(g, fc.name, x0 + 12, y + 32, 26, '#f2e8d8', 700, 'left', 'Georgia, serif')
-    text(g, `${fc.companyName} · ${fc.role}${fc.proposal ? ' · PROPOSAL' : ''}`, x0 + 12, y + 54, 14, fc.proposal ? GOLD : DIM, 700)
-    // 3× field on ground
-    const [gc, gg] = ground(84, 100, 3, postOf(), -6)
-    hero(gg, F(fc.look), 42 * 3, 92 * 3, 3)
-    g.drawImage(gc, x0, y + 64)
-    // bust 2× + the dock figure
-    g.fillStyle = '#3a2f27'
-    g.fillRect(x0 + 6, y + 372, 128, 116)
-    bust(g, F(fc.look), x0 + 6, y + 372, 2)
-    g.drawImage(miniCanvas(fc.id, 'idle', 0), x0 + 150, y + 380, MINI_W * 2, MINI_H * 2)
-    g.drawImage(miniCanvas(fc.id, 'idle', 0), x0 + 210, y + 400, MINI_W, MINI_H)
-    g.drawImage(miniCanvas(fc.id, 'idle', 0), x0 + 66, y + 500, MINI_W * 5, MINI_H * 5)
-    text(g, 'bust 2×', x0 + 10, y + 504, 13, DIM)
-    text(g, 'dock 2× · 1×', x0 + 150, y + 452, 13, DIM)
-    text(g, 'dock 5×', x0 + 10, y + 640, 13, DIM)
-    let ty = y + 664
-    for (const line of [fc.brief.temperament, `Tic: ${fc.brief.tic}`, `Shape: ${fc.brief.silhouette}`]) ty = wrap(g, line, x0 + 12, ty, 230, 14, '#efe6d6', 1.25) + 4
+    const [gc] = ground(84, 90, 3, postOf(), -10)
+    g.drawImage(gc, x0, 262)
+    postAtXY(g, id, x0 + 126, 262 + 84 * 3, 3)
+    g.fillStyle = '#2c3434'
+    g.fillRect(x0, 540, 252, 90)
+    g.drawImage(miniCanvas(id, 'idle', 0), x0 + 10, 548, MINI_W * 3, MINI_H * 3)
+    g.drawImage(miniCanvas(id, 'idle', 0), x0 + 100, 570, MINI_W * 2, MINI_H * 2)
+    g.drawImage(miniCanvas(id, 'idle', 0), x0 + 170, 590, MINI_W, MINI_H)
+    text(g, fc.name, x0 + 4, 660, 24, '#f2e8d8', 700, 'left', 'Georgia, serif')
+    text(g, `${fc.companyName} · ${fc.role}${fc.proposal ? ' · PROPOSAL' : ''}`, x0 + 4, 682, 13, fc.proposal ? GOLD : DIM, 700)
+    let ty = 706
+    for (const line of [fc.brief.temperament, `Tic: ${fc.brief.tic}`, `Shape: ${fc.brief.silhouette}`]) ty = wrap(g, line, x0 + 4, ty, 248, 14, '#efe6d6', 1.25) + 4
   })
   sheet('docs/characters/faces.png', c, 'the five company faces')
 
   for (const fc of FACES) {
+    const id = fc.id
     const people = fc.look.race
-    card(`face-${fc.id}`, 'Company faces', `${fc.name} — ${fc.companyName} ${fc.role}`, `${fc.brief.temperament} Judge that the people, the trade and the temperament read at 1× (corner) without this caption.`, (gg, b) => {
-      groundIn(gg, b, 4, -12)
-      hero(gg, F(fc.look), b.x + b.w / 2 + 30, b.y + b.h - 36, 4)
-      refFrame(gg, REFS.torch, 6, 0, b.x + 70, b.y + b.h - 26, 2)
-      gg.fillStyle = 'rgba(0,0,0,0.35)'
-      gg.fillRect(b.x + b.w - 120, b.y + 8, 112, 104)
-      hero(gg, F(fc.look), b.x + b.w - 64, b.y + 104, 1)
+    // the post: the scene at the page's 2× (the 260 px a phone sees), the face at the counter
+    card(`face-${id}`, 'Company faces', `${fc.name} — at the ${fc.companyName} post`, `The post as a phone shows it: the scene at 2×, the face hand-drawn at the pack’s scale behind its counter${fc.proposal ? ' (a proposed post)' : ''}. Judge the people, trade and temperament without this caption.`, (gg, b) => {
+      const sc = POST_IMG[id]
+      gg.fillStyle = '#16120f'
+      gg.fillRect(b.x, b.y, b.w, b.h)
+      if (sc) gg.drawImage(sc, 70, 0, 260, 150, b.x + (b.w - 520) / 2, b.y + 6, 520, 300)
+      // the figure alone below, 1× and 2×, as the post draws it
+      gg.fillStyle = '#2a2420'
+      gg.fillRect(b.x + 8, b.y + 316, b.w - 16, b.h - 324)
+      postAtXY(gg, id, b.x + 46, b.y + b.h - 18, 1)
+      postAtXY(gg, id, b.x + 190, b.y + b.h - 10, 2, 'tic', 2)
+      postAtXY(gg, id, b.x + 400, b.y + b.h - 10, 2, 'react', 1)
+      text(gg, '1×', b.x + 86, b.y + b.h - 22, 13, DIM, 700)
+      text(gg, 'tic, 2×', b.x + 262, b.y + b.h - 22, 13, DIM, 700)
+      text(gg, 'picked, 2×', b.x + 472, b.y + b.h - 22, 13, DIM, 700)
     }, CARD, CARD, people)
-    card(`brief-${fc.id}`, 'Company faces', `${fc.name}: the brief`, fc.proposal ? `PROPOSAL — ${fc.proposal}` : 'The person behind the design: who, want and worry, temperament, tic, shape, prop.', (gg, b) => {
+    // the battlefield: beside the pack's pawn, knight and goblin at the phone's 2×, and the face with the pawn at 4×
+    card(`field-${id}`, 'Company faces', `${fc.name} on the field, beside the pack`, 'Top: a battlefield crop at a phone’s 2×, the pack’s pawn, knight and goblin beside the face. Below: the face and the pawn at 4×. Judge that it is one set with the pack, not chunkier.', (gg, b) => {
+      meadowIn(gg, b, 2)
+      pawnAt(gg, b.x + 64, b.y + 140, 2)
+      refFrame(gg, REFS.knight, 6, 0, b.x + 210, b.y + 146, 2)
+      refFrame(gg, REFS.torch, 6, 0, b.x + 360, b.y + 146, 2)
+      postAtXY(gg, id, b.x + 500, b.y + 140, 2)
+      gg.fillStyle = 'rgba(22,28,46,0.35)'
+      gg.fillRect(b.x, b.y + 160, b.w, b.h - 160)
+      pawnAt(gg, b.x + 150, b.y + b.h - 14, 4)
+      postAtXY(gg, id, b.x + 420, b.y + b.h - 10, 4)
+    }, CARD, CARD, people)
+    card(`brief-${id}`, 'Company faces', `${fc.name}: the brief`, fc.proposal ? `PROPOSAL — ${fc.proposal}` : 'The person behind the design: who, want and worry, temperament, tic, shape, prop.', (gg, b) => {
       gg.fillStyle = '#3a2f27'
-      gg.fillRect(b.x + 8, b.y + 8, 128 * 1.5, 116 * 1.5)
-      bust(gg, F(fc.look, 'react', 2), b.x + 8, b.y + 8, 3)
+      gg.fillRect(b.x + 8, b.y + 8, 196, 196)
+      postAtXY(gg, id, b.x + 104, b.y + 196, 3, 'react', 2)
       let ty = b.y + 30
       const tx = b.x + 220, tw = b.w - 230
       for (const [k, v] of [['Who', fc.brief.who], ['Want', fc.brief.want]] as const) {
         text(gg, k, tx, ty, 14, GOLD, 700)
         ty = wrap(gg, v, tx, ty + 18, tw, 14, '#efe6d6', 1.25) + 6
       }
-      ty = Math.max(ty, b.y + 200)
+      ty = Math.max(ty, b.y + 224)
       for (const [k, v] of [['Temperament', fc.brief.temperament], ['Tic', fc.brief.tic], ['Silhouette', fc.brief.silhouette], ['Prop', fc.brief.prop]] as const) {
         text(gg, k, b.x + 14, ty, 14, GOLD, 700)
         ty = wrap(gg, v, b.x + 120, ty, b.w - 132, 15, '#efe6d6', 1.25) + 8
       }
     }, CARD, CARD, people)
-    for (const a of ['idle', 'tic', 'react'] as AnimId[]) {
-      const n = framesFor(a, fc.id)
-      const ms = frameMsFor(a, fc.id)
-      animCard(`${fc.id}-${a}`, `${fc.name} — ${a === 'react' ? 'reaction (slot picked)' : a}`, `${n} frames, ${a === 'tic' ? `plays every ~${fc.ticEvery} s` : a === 'idle' ? 'the loop' : 'once, on focus'}; 4× and 1× (corner). Judge the timing and that it says the temperament.`, n, ms, (gg, b, i) => {
+    // the moves, at the post size: 4× on the ground, 1× in the corner, at the dock's clock
+    const face = POST_FACES[id]
+    const clock = MINI_FACES[id]
+    for (const a of ['idle', 'tic', 'react'] as MiniAnim[]) {
+      const n = postFrames(id, a)
+      const ms = a === 'idle' ? face.idle.map(() => clock.period / face.idle.length) : [...(a === 'tic' ? face.ticMs : face.reactMs)]
+      animCard(`${id}-${a}`, `${fc.name} — ${a === 'react' ? 'reaction (slot picked)' : a}`, `Hand-drawn at the post size: ${n} frames, ${a === 'tic' ? `every ${(clock.ticEvery / 1000).toFixed(1)} s` : a === 'idle' ? `a ${(clock.period / 1000).toFixed(2)} s loop` : 'once, when picked'}; 4× and 1× (corner). Judge the timing and that it says the temperament.`, n, ms, (gg, b, i) => {
         groundIn(gg, b, 4, -12)
-        const f = F(fc.look, a, i)
-        hero(gg, f, b.x + b.w / 2, b.y + b.h - 36, 4)
-        hero(gg, f, b.x + b.w - 64, b.y + 104, 1)
+        postAtXY(gg, id, b.x + b.w / 2, b.y + b.h - 30, 4, a, i)
+        gg.fillStyle = 'rgba(0,0,0,0.35)'
+        gg.fillRect(b.x + b.w - 96, b.y + 8, 88, 84)
+        postAtXY(gg, id, b.x + b.w - 52, b.y + 84, 1, a, i)
       }, people)
     }
-    // (the silhouette line-up is one card for all five, below)
-    // a life loop: the idle twice, the tic once, the idle again (~4 s, as it would play)
+    // a few seconds of life, by the face's own clock
     {
-      const seq: [AnimId, number][] = []
-      const idleN = framesFor('idle', fc.id), ticN = framesFor('tic', fc.id)
-      for (let r = 0; r < 2; r++) for (let i = 0; i < idleN; i++) seq.push(['idle', i])
-      for (let i = 0; i < ticN; i++) seq.push(['tic', i])
-      for (let i = 0; i < idleN; i++) seq.push(['idle', i])
-      const im = frameMsFor('idle', fc.id), tm = frameMsFor('tic', fc.id)
-      const delays = seq.map(([a, i]) => (a === 'idle' ? im[i] : tm[i]))
-      animCard(`${fc.id}-life`, `${fc.name} — a few seconds of life`, `The idle loop with the tic dropped in, at the game’s timing (~${(delays.reduce((x, y) => x + y, 0) / 1000).toFixed(1)} s). Judge that it is calm and says who they are.`, seq.length, delays, (gg, b, i) => {
+      const STEP = 100, N = 40
+      animCard(`${id}-life`, `${fc.name} — a few seconds of life`, `Four seconds by the face’s own clock: its idle, and its tic when it falls due (hand-drawn, 4×). Judge that it is calm and says who they are.`, N, Array.from({ length: N }, () => STEP), (gg, b, i) => {
         groundIn(gg, b, 4, -12)
-        const f = F(fc.look, seq[i][0], seq[i][1])
-        hero(gg, f, b.x + b.w / 2, b.y + b.h - 36, 4)
-        hero(gg, f, b.x + b.w - 64, b.y + 104, 1)
+        // start 1.5 s before the face's next tic falls due
+        const t0 = (((clock.ticEvery - ticPhase(id) - 1500) % clock.ticEvery) + clock.ticEvery) % clock.ticEvery
+        const at = postAt(id, t0 + i * STEP)
+        postAtXY(gg, id, b.x + b.w / 2, b.y + b.h - 30, 4, at.anim, at.frame)
       }, people)
     }
     // the dock figure
-    card(`dock-${fc.id}`, 'Dock', `${fc.name} at dock size`, 'Redrawn at 24 px for the dock slot (shown 6×): idle, tic, reaction and locked, the 2× slot size beside; the strip below is 1× and 2× on the slot. Judge it is still a person, not a smudge.', (gg, b) => {
+    card(`dock-${id}`, 'Dock', `${fc.name} at dock size`, 'Redrawn at 24 px for the dock slot (shown 6×): idle, tic, reaction and locked, the 2× slot size beside; the strip below is 1× and 2× on the slot. Judge it is still a person, not a smudge.', (gg, b) => {
       const k = 6
-      // the strip: every idle frame at 1× and 2×, on the slot's own colour
       gg.fillStyle = '#2c3434'
       gg.fillRect(b.x + 8, b.y + 360, b.w - 16, 68)
-      const nIdle = MINI_FACES[fc.id].idle.length
-      for (let j = 0; j < Math.min(nIdle, 6); j++) gg.drawImage(miniCanvas(fc.id, 'idle', j), b.x + 20 + j * 56, b.y + 366, MINI_W * 2, MINI_H * 2)
-      for (let j = 0; j < Math.min(nIdle, 6); j++) gg.drawImage(miniCanvas(fc.id, 'idle', j), b.x + 370 + j * 30, b.y + 384, MINI_W, MINI_H)
+      const nIdle = MINI_FACES[id].idle.length
+      for (let j = 0; j < Math.min(nIdle, 6); j++) gg.drawImage(miniCanvas(id, 'idle', j), b.x + 20 + j * 56, b.y + 366, MINI_W * 2, MINI_H * 2)
+      for (let j = 0; j < Math.min(nIdle, 6); j++) gg.drawImage(miniCanvas(id, 'idle', j), b.x + 370 + j * 30, b.y + 384, MINI_W, MINI_H)
       const cells: [MiniAnim, number, boolean, string][] = [['idle', 0, false, 'idle'], ['tic', 2, false, 'tic'], ['react', 1, false, 'picked'], ['idle', 0, true, 'locked']]
       cells.forEach(([a, f, lock, lab], i) => {
         const x = b.x + 8 + (i % 2) * 280, yy = b.y + 6 + Math.floor(i / 2) * 176
         gg.fillStyle = '#3a2f27'
         gg.fillRect(x, yy, MINI_W * k, MINI_H * k)
-        gg.drawImage(miniCanvas(fc.id, a, f, lock), x, yy, MINI_W * k, MINI_H * k)
-        gg.drawImage(miniCanvas(fc.id, a, f, lock), x + MINI_W * k + 14, yy + 40, MINI_W * 2, MINI_H * 2)
+        gg.drawImage(miniCanvas(id, a, f, lock), x, yy, MINI_W * k, MINI_H * k)
+        gg.drawImage(miniCanvas(id, a, f, lock), x + MINI_W * k + 14, yy + 40, MINI_W * 2, MINI_H * 2)
         text(gg, lab, x + MINI_W * k + 14, yy + 30, 15, '#efe6d6', 700)
       })
     }, CARD, CARD, people)
   }
 
-  // the silhouette line-up: field and dock, filled black — each must be known by its shape alone
-  card('silhouettes', 'Company faces', 'Silhouettes: field and dock', 'The five faces filled flat, at the sizes the game shows them (field 1×, dock 2×) and the dock figure at 4×. Judge that each is known by its shape alone.', (gg, b) => {
+  // the line-ups, one per size
+  card('lineup-field', 'Company faces', 'The five at field / post size', 'All five at the pack’s scale beside the pawn and a goblin: 1× (top) and a phone’s 2×. Judge that each is known by its shape and colour, and that they belong with the pack.', (gg, b) => {
+    meadowIn(gg, b, 1)
+    pawnAt(gg, b.x + 40, b.y + 84, 1)
+    refFrame(gg, REFS.torch, 6, 0, b.x + 100, b.y + 88)
+    DOCK_ORDER.forEach((id, i) => postAtXY(gg, id, b.x + 170 + i * 80, b.y + 84, 1))
+    meadowIn(gg, { x: b.x, y: b.y + 110, w: b.w, h: b.h - 110 }, 2)
+    DOCK_ORDER.forEach((id, i) => postAtXY(gg, id, b.x + 62 + i * 112, b.y + b.h - 40, 2))
+  }, CARD, CARD, 'all')
+  card('lineup-dock', 'Dock', 'The five at dock size', 'All five redrawn at 24 × 28: 1×, the slot’s own 2×, 4×, and locked at 2×, on the slot colour. Judge that each is a person and known by its shape alone.', (gg, b) => {
+    gg.fillStyle = '#2c3434'
+    gg.fillRect(b.x, b.y, b.w, b.h)
+    DOCK_ORDER.forEach((id, i) => {
+      const x = b.x + 18 + i * 112
+      gg.drawImage(miniCanvas(id, 'idle', 0), x + 36, b.y + 12, MINI_W, MINI_H)
+      gg.drawImage(miniCanvas(id, 'idle', 0), x + 24, b.y + 56, MINI_W * 2, MINI_H * 2)
+      gg.drawImage(miniCanvas(id, 'idle', 0), x, b.y + 130, MINI_W * 4, MINI_H * 4)
+      // and locked, at the slot's 2× (the company not open yet)
+      gg.drawImage(miniCanvas(id, 'idle', 0, true), x + 24, b.y + 268, MINI_W * 2, MINI_H * 2)
+      text(gg, FACES.find((f) => f.id === id)!.name, x + 48, b.y + b.h - 14, 15, '#efe6d6', 800, 'center')
+    })
+  }, CARD, CARD, 'all')
+
+  // the silhouette line-up: field / post and dock, filled flat — each must be known by its shape alone
+  card('silhouettes', 'Company faces', 'Silhouettes: field and dock', 'The five faces filled flat, at the sizes the game shows them (field / post 1×, dock 2×) and the dock figure at 4×. Judge that each is known by its shape alone.', (gg, b) => {
     gg.fillStyle = '#e1d4bd'
     gg.fillRect(b.x, b.y, b.w, b.h)
     const flat = (src: Uint8ClampedArray, w: number, h: number): HTMLCanvasElement => {
@@ -917,17 +1007,14 @@ function faces(): void {
     }
     DOCK_ORDER.forEach((id, i) => {
       const fc = FACES.find((x) => x.id === id)!
-      const f = F(fc.look)
-      const bx = boxOf([f], 1)
-      const cw = bx.x1 - bx.x0 + 1, chh = bx.y1 - bx.y0 + 1
       const x = b.x + 40 + i * 106
-      const sil = flat(f.rgba, CELL, CELL)
+      const pf = postFrame(id, 'idle', 0)
+      const sil = flat(pf.rgba, pf.w, pf.h)
+      const ft = postFeetOf(id)
+      gg.drawImage(sil, Math.round(x + 52 - ft.x), Math.round(b.y + 150 - ft.y))
       const m = miniFrame(id, 'idle', 0)
       const ms = flat(m.rgba, m.w, m.h)
-      // the field figure at 1× and the dock figure at 2×: the sizes the game shows them
-      gg.drawImage(sil, bx.x0, bx.y0, cw, chh, x + Math.round((104 - cw) / 2), b.y + 150 - chh, cw, chh)
       gg.drawImage(ms, x + (104 - MINI_W * 2) / 2, b.y + 170, MINI_W * 2, MINI_H * 2)
-      // the dock figure at 4×, to judge its edge
       gg.drawImage(ms, x + (104 - MINI_W * 4) / 2, b.y + 250, MINI_W * 4, MINI_H * 4)
       text(gg, fc.name, x + 52, b.y + b.h - 8, 15, '#1d1713', 800, 'center')
     })
@@ -1084,7 +1171,10 @@ async function build(): Promise<void> {
     img('assets/sprites/tinyswords/fighter_idle.png'),
     img('node_modules/.cache/cc0-pack/Factions/Knights/Buildings/Tower/Tower_Blue.png'),
   ])
-  REFS = { torch: torch!, tnt: tnt!, knight: knight!, tower }
+  const pawnSheet = await img('node_modules/.cache/cc0-pack/Factions/Knights/Troops/Pawn/Blue/Pawn_Blue.png')
+  GRASS = await img('assets/sprites/tinyswords/grass.png')
+  REFS = { torch: torch!, tnt: tnt!, knight: knight!, tower, pawn: trimmedCell(pawnSheet!, 0, 0) }
+  POST_IMG = Object.fromEntries(await Promise.all(DOCK_ORDER.map(async (id) => [id, await img(`node_modules/.cache/hero-posts/${POST_SCENE[id]}.png`)] as const)))
   out.textContent = ''
   SHEETS.length = 0
   CARDS.length = 0

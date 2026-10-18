@@ -24,9 +24,9 @@ export const MINI_H = 28
 /** The row the feet stand on (the shadow is the two rows under it). */
 export const MINI_FEET = 24
 
-type Group = 'body' | 'head' | 'off' | 'main' | 'back'
+export type Group = 'body' | 'head' | 'off' | 'main' | 'back'
 
-interface MiniPart {
+export interface MiniPart {
   id: string
   group: Group
   x: number
@@ -34,9 +34,11 @@ interface MiniPart {
   rows: readonly string[]
   /** Hidden unless a frame shows it. */
   hidden?: boolean
+  /** 0: no ink ring (a string, a strand drawn in ink). Default 1. */
+  ring?: 0 | 1
 }
 
-interface MiniKey {
+export interface MiniKey {
   move?: Partial<Record<Group, readonly [number, number]>>
   /** Moves everything (a hop, a weight shift). */
   all?: readonly [number, number]
@@ -49,7 +51,7 @@ interface MiniKey {
   extra?: readonly (readonly [number, number, string])[]
 }
 
-interface MiniFace {
+export interface MiniFace {
   /** letter → [ramp, tone 0..3] (0 shade · 1 mid · 2 light · 3 specular). */
   inks: Readonly<Record<string, readonly [RampId, number]>>
   parts: readonly MiniPart[]
@@ -73,26 +75,29 @@ interface MiniFace {
 const BOOTS = { b: ['leather', 0], B: ['leather', 1] } as const
 
 export const MINI_FACES: Readonly<Record<PersonaId, MiniFace>> = {
-  // ── Saffra: a saffron headscarf with a red band, its knotted tail behind; a red sash vest over a saffron tunic;
-  //    a burlap pepper sack hanging from her hand (at 24 px a balance reads as a crossbow; the field figure keeps it).
+  // ── Saffra: ginger hair under a saffron bandana with a gold band, the knot's two tails streaming behind (the notch no
+  //    other face has); a narrow red vest with a gold sash; the near arm bent forward, a burlap pepper sack held out at the
+  //    knee (at 24 px a balance reads as a crossbow). Lean and asymmetric against Brannoch's square block.
   saffra: {
     inks: {
       s: ['skinTan', 0], S: ['skinTan', 1], L: ['skinTan', 2], ...BOOTS,
-      c: ['ochre', 0], C: ['ochre', 1], D: ['ochre', 2], T: ['gold', 1], t: ['gold', 0], g: ['gold', 1], G: ['gold', 0],
-      r: ['red', 0], R: ['red', 1], Q: ['red', 2], n: ['navy', 0], N: ['navy', 1],
+      c: ['ochre', 0], C: ['ochre', 1], D: ['ochre', 2], y: ['gold', 2], Y: ['gold', 0], a: ['gold', 1],
+      q: ['hairGinger', 0], h: ['hairGinger', 1], H: ['hairGinger', 2],
+      r: ['red', 0], R: ['red', 1], Q: ['red', 2], n: ['navy', 0], N: ['navy', 1], l: ['leather', 0], m: ['leather', 1], z: ['brass', 2],
       u: ['wood', 1], U: ['wood', 2], V: ['wood', 3], e: ['red', 0], E: ['red', 2],
     },
     skin: 'L',
     parts: [
-      { id: 'knot', group: 'head', x: 4, y: 9, rows: ['cC.', 'cCc', '.cC', '.cC', '..c'] },
-      { id: 'offArm', group: 'off', x: 4, y: 15, rows: ['..cC', '.cC.', '.cC.', '.LS.', '.sS.'] },
-      { id: 'body', group: 'body', x: 6, y: 14, rows: ['..cCCCCD..', '.rRRRRRRQ.', '.rRtRRRRQ.', '.rRRtRRRQ.', '.rRRRtRRQ.', '.cCCCCtCD.', '.cCCCCCCD.', '..nN..nN..'] },
-      { id: 'boots', group: 'body', x: 7, y: 22, rows: ['bBB.bBB', 'bBBBbBBB'] },
-      { id: 'head', group: 'head', x: 6, y: 5, rows: ['....cCCCCD..', '..cCCCCCCCD.', '.cCCCCCCCCCD', '.gGGGGGGGGGG', 'cCCCLLLLLLL.', 'cCCLLLLLLLL.', 'cCCSLLLLLLL.', '.cCSSLLLLLL.', '..cSSSLLLL..'] },
-      { id: 'mainArm', group: 'main', x: 14, y: 15, rows: ['Cc.', 'CCc', '.CC', '.LS'] },
-      { id: 'sack', group: 'main', x: 14, y: 19, rows: ['.eE..', 'uUUV.', 'uUEUV', 'uUUUV', '.uUU.'] },
+      { id: 'knot', group: 'head', x: 2, y: 7, rows: ['DCc..', '.DCCc', '..CCc', '.DCc.', 'DCc..'] },
+      { id: 'offArm', group: 'off', x: 7, y: 13, rows: ['.cC', '.cC', 'cC.', 'LS.'] },
+      { id: 'legs', group: 'body', x: 10, y: 20, rows: ['nN.nN', 'nN.nN'] },
+      { id: 'boots', group: 'body', x: 9, y: 22, rows: ['bBB.bBB.', 'bBBBbBBB'] },
+      { id: 'body', group: 'body', x: 9, y: 13, rows: ['.RRRRR.', 'QRaRRRr', 'QRRaRRr', 'QRRRaRr', 'lmmzmml', 'DCCCCCc', '.DCCCc.'] },
+      { id: 'mainArm', group: 'main', x: 15, y: 13, rows: ['Cc...', 'Cc...', 'CCcLS', '.ccSs'] },
+      { id: 'head', group: 'head', x: 6, y: 4, rows: ['...DDCCc....', '.DDDCCCCcc..', 'DDCCCCCCCcc.', 'yyyyyyyyyyY.', 'HhhhqSSSSSq.', 'HhhhqLLLLLLs', 'hhhhqLLLLLLs', '.hhqLLLLLss.', '..qqsLLLss..', '....ssss....'] },
+      { id: 'sack', group: 'main', x: 17, y: 17, rows: ['.eE..', 'uUUV.', 'uUEUV', 'uUUUV', '.uUU.'] },
     ],
-    eyes: [[13, 10], [16, 10]],
+    eyes: [[13, 9], [16, 9]],
     idle: [{}, { move: { head: [0, 1], main: [0, 1], off: [0, 1] } }, { move: { head: [0, 1] } }, {}],
     period: 829,
     // she weighs the sack in her hand: it sinks, settles, sinks again, and she grins at the weight (it never rises to the face)
@@ -293,28 +298,42 @@ function hash01(s: string): number {
 const TIC_SALT = 2011
 export const ticPhase = (id: PersonaId): number => Math.round(hash01(`tic:${TIC_SALT}:${id}`) * MINI_FACES[id].ticEvery)
 
+/** Which frame of an animation plays `into` ms after it starts (−1 once it is over). */
+function frameAt(ms: readonly number[], into: number): number {
+  let acc = 0
+  for (let i = 0; i < ms.length; i++) { acc += ms[i]; if (into < acc) return i }
+  return -1
+}
+
+/**
+ * The one clock every company face moves by, at any size: the idle loop at
+ * the face's own period; the tic on its own interval and hashed phase; the
+ * reaction for its length once picked at `pickedAt`. Under reduced motion
+ * only the still pose. `face` gives the frame counts and holds; the timing
+ * (`period`, `ticEvery`, the phase) is the dock face's, so a face at two
+ * sizes moves in step with itself and out of step with the other four.
+ */
+export function spriteAt(id: PersonaId, face: MiniFace, t: number, o: { pickedAt?: number; still?: boolean } = {}): { anim: MiniAnim; frame: number } {
+  if (o.still) return { anim: 'idle', frame: 0 }
+  const clock = MINI_FACES[id]
+  if (o.pickedAt != null && t >= o.pickedAt) {
+    const i = frameAt(face.reactMs, t - o.pickedAt)
+    if (i >= 0) return { anim: 'react', frame: i }
+  }
+  const ticLen = face.ticMs.reduce((a, b) => a + b, 0)
+  const into = (((t + ticPhase(id)) % clock.ticEvery) + clock.ticEvery) % clock.ticEvery
+  if (into < ticLen) return { anim: 'tic', frame: frameAt(face.ticMs, into) }
+  const per = clock.period / face.idle.length
+  return { anim: 'idle', frame: Math.floor((((t % clock.period) + clock.period) % clock.period) / per) }
+}
+
 /**
  * What a dock figure shows at time `t` (ms): the idle loop at its own period;
  * the tic on its own interval and phase; the reaction for its length once the
  * slot is picked at `pickedAt`. Under reduced motion only the still pose.
  */
 export function miniAt(id: PersonaId, t: number, o: { pickedAt?: number; still?: boolean } = {}): { anim: MiniAnim; frame: number } {
-  if (o.still) return { anim: 'idle', frame: 0 }
-  const f = MINI_FACES[id]
-  const run = (ms: readonly number[], at: number): number => {
-    let acc = 0
-    for (let i = 0; i < ms.length; i++) { acc += ms[i]; if (at < acc) return i }
-    return -1
-  }
-  if (o.pickedAt != null && t >= o.pickedAt) {
-    const i = run(f.reactMs, t - o.pickedAt)
-    if (i >= 0) return { anim: 'react', frame: i }
-  }
-  const ticLen = f.ticMs.reduce((a, b) => a + b, 0)
-  const into = (((t + ticPhase(id)) % f.ticEvery) + f.ticEvery) % f.ticEvery
-  if (into < ticLen) return { anim: 'tic', frame: run(f.ticMs, into) }
-  const per = f.period / f.idle.length
-  return { anim: 'idle', frame: Math.floor((((t % f.period) + f.period) % f.period) / per) }
+  return spriteAt(id, MINI_FACES[id], t, o)
 }
 
 export interface MiniFrame {
@@ -325,20 +344,47 @@ export interface MiniFrame {
 
 const INK_RGB = rgbOf(INK)
 
+/** How one size is painted: its cell, its ground shadow, its eyes, and whether it gets the pack's outer px. */
+export interface SpriteSize {
+  w: number
+  h: number
+  /** The shadow: centre, radii (px), drawn under everything. */
+  shadow: { cx: number; cy: number; rx: number; ry: number; rows?: readonly [number, number] }
+  /**
+   * One more px of ink round the whole figure, so the outer line is 2 px
+   * (the pack's at the field's scale) while the lines between parts stay 1.
+   */
+  outer: boolean
+  /** Eyes: 'dot' 1 × 2 (the dock), 'pack' 2 × 3 (the field's: small and dark, as the pack's). */
+  eyes: 'dot' | 'pack'
+}
+
+const DOCK_SIZE: SpriteSize = { w: MINI_W, h: MINI_H, shadow: { cx: 11.5, cy: MINI_FEET + 1.6, rx: 7, ry: 1.3, rows: [MINI_FEET + 1, MINI_FEET + 2] }, outer: false, eyes: 'dot' }
+
 /** One dock frame. `locked`: the figure as a shadow (the company not open yet). */
 export function miniFrame(id: PersonaId, anim: MiniAnim, frame: number, locked = false): MiniFrame {
-  const face = MINI_FACES[id]
+  return paintSprite(MINI_FACES[id], anim, frame, locked, DOCK_SIZE)
+}
+
+/**
+ * Paint one frame of a hand-drawn face at one size: the shadow; each part back
+ * to front, ringed in 1 px of ink, at its group's offset this frame; the outer
+ * px if the size takes one; then the eyes by expression and loose pixels.
+ */
+export function paintSprite(face: MiniFace, anim: MiniAnim, frame: number, locked: boolean, size: SpriteSize): MiniFrame {
   const keys = anim === 'idle' ? face.idle : anim === 'tic' ? face.tic : face.react
   const k = keys[((frame % keys.length) + keys.length) % keys.length] ?? {}
-  const W = MINI_W, H = MINI_H
+  const W = size.w, H = size.h
   const rgba = new Uint8ClampedArray(W * H * 4)
   const all = k.all ?? [0, 0]
   const lift = -Math.min(0, all[1])
   // the ground shadow stays on the ground (and shrinks a little in a hop)
-  for (let y = MINI_FEET + 1; y <= MINI_FEET + 2; y++)
-    for (let x = 4; x <= 19; x++) {
-      const rx = 7 - lift * 0.5, cx = 11.5
-      if (((x + 0.5 - cx) / rx) ** 2 + ((y + 0.5 - (MINI_FEET + 1.6)) / 1.3) ** 2 > 1) continue
+  const sh = size.shadow
+  for (let y = sh.rows?.[0] ?? Math.floor(sh.cy - sh.ry); y <= (sh.rows?.[1] ?? Math.ceil(sh.cy + sh.ry)); y++)
+    for (let x = Math.floor(sh.cx - sh.rx); x <= Math.ceil(sh.cx + sh.rx); x++) {
+      if (x < 0 || y < 0 || x >= W || y >= H) continue
+      const rx = sh.rx - lift * 0.5
+      if (((x + 0.5 - sh.cx) / rx) ** 2 + ((y + 0.5 - sh.cy) / sh.ry) ** 2 > 1) continue
       rgba.set([...INK_RGB, SHADOW_ALPHA], (y * W + x) * 4)
     }
   const colour = (ch: string): [number, number, number] => {
@@ -353,6 +399,10 @@ export function miniFrame(id: PersonaId, anim: MiniAnim, frame: number, locked =
     return [m[0] + all[0], m[1] + all[1]]
   }
   const put = (x: number, y: number, rgb: readonly number[]) => { if (x >= 0 && y >= 0 && x < W && y < H) rgba.set([...rgb, 255], (y * W + x) * 4) }
+  const isInk = (x: number, y: number) => {
+    const o = (y * W + x) * 4
+    return rgba[o + 3] === 255 && rgba[o] === INK_RGB[0] && rgba[o + 1] === INK_RGB[1] && rgba[o + 2] === INK_RGB[2]
+  }
   for (const part of face.parts) {
     const shown = part.hidden ? k.show?.includes(part.id) : !k.hide?.includes(part.id)
     if (!shown) continue
@@ -361,13 +411,26 @@ export function miniFrame(id: PersonaId, anim: MiniAnim, frame: number, locked =
     const px: [number, number, string][] = []
     rows.forEach((row, ry) => [...row].forEach((ch, rx) => { if (ch !== '.') px.push([part.x + rx + dx, part.y + ry + dy, ch]) }))
     const own = new Set(px.map(([x, y]) => y * W + x))
-    for (const [x, y] of px)
-      for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
-        const xx = x + ox, yy = y + oy
-        if (xx < 0 || yy < 0 || xx >= W || yy >= H || own.has(yy * W + xx)) continue
-        put(xx, yy, INK_RGB)
-      }
+    if (part.ring !== 0)
+      for (const [x, y] of px)
+        for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+          const xx = x + ox, yy = y + oy
+          if (xx < 0 || yy < 0 || xx >= W || yy >= H || own.has(yy * W + xx)) continue
+          put(xx, yy, INK_RGB)
+        }
     for (const [x, y, ch] of px) put(x, y, colour(ch))
+  }
+  if (size.outer) {
+    const add: number[] = []
+    for (let y = 0; y < H; y++)
+      for (let x = 0; x < W; x++) {
+        if (rgba[(y * W + x) * 4 + 3] === 255) continue
+        for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+          const xx = x + ox, yy = y + oy
+          if (xx >= 0 && yy >= 0 && xx < W && yy < H && isInk(xx, yy)) { add.push(y * W + x); break }
+        }
+      }
+    for (const i of add) rgba.set([...INK_RGB, 255], i * 4)
   }
   if (!locked) {
     const [hx, hy] = offOf('head')
@@ -375,6 +438,7 @@ export function miniFrame(id: PersonaId, anim: MiniAnim, frame: number, locked =
     const skin = colour(face.skin)
     face.eyes.forEach(([ex, ey], i) => {
       const x = ex + hx, y = ey + hy
+      if (size.eyes === 'pack') return packEye(put, x, y, mode, !!face.slit, skin, colour)
       if (face.slit) {
         // a gold eye with an ink slit; shut, a line
         if (mode === 'closed') { put(x - 1, y + 1, INK_RGB); put(x, y + 1, INK_RGB); put(x - 1, y, skin); put(x, y, skin) }
@@ -390,4 +454,30 @@ export function miniFrame(id: PersonaId, anim: MiniAnim, frame: number, locked =
     for (const [ex, ey, ch] of k.extra ?? []) put(ex + all[0], ey + all[1], colour(ch))
   }
   return { w: W, h: H, rgba }
+}
+
+/**
+ * The field-size eye (the pack's goblins': small and dark, never a white disc):
+ * open, a 2 × 3 ink mark; shut, a low arc; happy, a raised arc; smug, a lid
+ * over a low pupil. A reptile's is a 3 × 3 gold eye with an ink slit.
+ */
+function packEye(put: (x: number, y: number, rgb: readonly number[]) => void, x: number, y: number, mode: string, slit: boolean, skin: readonly number[], colour: (ch: string) => [number, number, number]): void {
+  const box = (rgb: readonly number[], x0: number, x1: number) => { for (let yy = y; yy < y + 3; yy++) for (let xx = x0; xx <= x1; xx++) put(xx, yy, rgb) }
+  if (slit) {
+    const gold = rgbOf(RAMPS.gold[2])
+    box(skin, x - 1, x + 1)
+    if (mode === 'closed') { put(x - 1, y + 2, INK_RGB); put(x, y + 2, INK_RGB); put(x + 1, y + 2, INK_RGB); return }
+    box(gold, x - 1, x + 1)
+    for (let yy = y; yy < y + 3; yy++) put(x, yy, INK_RGB)
+    if (mode === 'smug') { put(x - 1, y, INK_RGB); put(x + 1, y, INK_RGB) }
+    void colour
+    return
+  }
+  box(skin, x, x + 1)
+  if (mode === 'open') { box(INK_RGB, x, x + 1); return }
+  if (mode === 'closed') { put(x - 1, y + 1, INK_RGB); put(x, y + 2, INK_RGB); put(x + 1, y + 2, INK_RGB); put(x + 2, y + 1, INK_RGB); return }
+  if (mode === 'happy') { put(x - 1, y + 1, INK_RGB); put(x, y, INK_RGB); put(x + 1, y, INK_RGB); put(x + 2, y + 1, INK_RGB); return }
+  // smug: the lid's line over a low pupil
+  for (let xx = x - 1; xx <= x + 2; xx++) put(xx, y, INK_RGB)
+  put(x, y + 1, INK_RGB); put(x + 1, y + 1, INK_RGB); put(x, y + 2, INK_RGB); put(x + 1, y + 2, INK_RGB)
 }

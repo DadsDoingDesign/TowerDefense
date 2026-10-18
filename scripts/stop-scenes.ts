@@ -5,6 +5,9 @@
  *
  *   npx tsx scripts/stop-scenes.ts
  *   npx tsx scripts/stop-scenes.ts --proposals <dir>   # also the two proposed posts, into <dir> only
+ *   npx tsx scripts/stop-scenes.ts --faces <dir>       # ONLY the posts, each with its company face (the
+ *                                                       # hand-drawn prototype, `render/hero/post.ts`) at the
+ *                                                       # counter, into <dir>: the review cards; nothing shipped
  *
  * Writes `public/assets/scenes/<scene>.png` (native pixels; the page draws them
  * at 2× with `image-rendering: pixelated`) and `src/ui/shell/stopScenes.generated.ts`
@@ -35,6 +38,8 @@ import { dirname, join, resolve } from 'node:path'
 import sharp from 'sharp'
 import { companyById, type CompanyId } from '../src/game/data/companies'
 import { companyStandardPalette, companyStandardRows } from '../src/game/data/companyStandard'
+import { postFrame } from '../src/game/render/hero/post'
+import type { PersonaId } from '../src/game/render/hero/rig'
 
 const ROOT = resolve(import.meta.dirname, '..')
 const CACHE = join(ROOT, 'node_modules', '.cache', 'cc0-pack')
@@ -714,6 +719,22 @@ interface Anchors {
   beside?: true
 }
 
+/**
+ * `--faces <dir>`: every post bakes with its company's face at the counter in
+ * place of the CC0 pawn (the review cards), and only the posts are written,
+ * only into <dir>. The face stands as the pawn does: feet on the post's floor,
+ * turned as the pawn is turned.
+ */
+const fi = process.argv.indexOf('--faces')
+const FACES_DIR = fi > 0 ? resolve(process.argv[fi + 1] ?? 'faces') : null
+function faceOr(id: PersonaId, pawn: Cv, turned: boolean): Cv {
+  if (!FACES_DIR) return pawn
+  const f = postFrame(id, 'idle', 0)
+  const c = new Cv(f.w, f.h)
+  c.d.set(f.rgba)
+  return turned ? flip(trim(c)) : trim(c)
+}
+
 async function bake(proposals: string | null): Promise<Record<string, Anchors>> {
   const flat = await load(P.flat)
   const grass = crop(flat, 64, 64, 64, 64)
@@ -905,7 +926,7 @@ async function bake(proposals: string | null): Promise<Record<string, Anchors>> 
   // rows behind, a charred strip where last summer's burn ran, sacks of spice
   // and a brazier (the burning road).
   {
-    const fig = await idle(P.pawn('Red'))
+    const fig = faceOr('saffra', await idle(P.pawn('Red')), false)
     await liaisonPost(
       'liaison-spice',
       fig,
@@ -972,7 +993,7 @@ async function bake(proposals: string | null): Promise<Record<string, Anchors>> 
   // behind with a timbered adit and a cart of ore on its rails, a stone
   // counter, ore heaps and an anvil in its forge glow.
   {
-    const fig = await idle(P.warrior('Blue'))
+    const fig = faceOr('brannoch', await idle(P.warrior('Blue')), false)
     await liaisonPost(
       'liaison-metals',
       fig,
@@ -1013,7 +1034,7 @@ async function bake(proposals: string | null): Promise<Record<string, Anchors>> 
   // Rosethread — Odile's silk stall by the ford: the river behind with its
   // stepping stones, reeds on the bank, bolts hung on a line and a loom.
   {
-    const fig = await idle(P.pawn('Yellow'))
+    const fig = faceOr('odile', await idle(P.pawn('Yellow')), false)
     await liaisonPost('liaison-silk', fig, async (c, top) => {
       meadow(c, 81)
       await river(c, 66, 22)
@@ -1088,7 +1109,7 @@ async function bake(proposals: string | null): Promise<Record<string, Anchors>> 
     // Butcherblock — the smokehouse on the salt marsh: a reed channel behind
     // with its jetty, a plank smokehouse breathing smoke, meat on hooks, salt
     // sacks, and a butcher's block for a counter.
-    const marshFig = flip(await idle(P.pawn('Purple')))
+    const marshFig = faceOr('hask', flip(await idle(P.pawn('Purple'))), true)
     await liaisonPost(
       'proposal-butcherblock',
       marshFig,
@@ -1130,7 +1151,7 @@ async function bake(proposals: string | null): Promise<Record<string, Anchors>> 
     // Greenvial — the glasshouse in a hidden garden: a glasshouse behind
     // the stall, vines up its posts, potions on the counter, mushrooms in the
     // hollow, spores glowing at dusk.
-    const gardenFig = flip(await idle(P.pawn('Blue')))
+    const gardenFig = faceOr('wren', flip(await idle(P.pawn('Blue'))), true)
     await liaisonPost(
       'proposal-greenvial',
       gardenFig,
@@ -1742,6 +1763,11 @@ function vial(k: 0 | 1 | 2): Cv {
 }
 
 async function write(name: string, c: Cv, dir = OUT): Promise<void> {
+  if (FACES_DIR) {
+    // the faces mode writes the posts only, and only into its own folder
+    if (!/^(liaison|proposal)-/.test(name)) return
+    dir = FACES_DIR
+  }
   mkdirSync(dir, { recursive: true })
   await sharp(Buffer.from(c.d.buffer), { raw: { width: c.w, height: c.h, channels: 4 } })
     .png({ compressionLevel: 9 })
@@ -1759,7 +1785,8 @@ async function fireCell(): Promise<{ cx: number; by: number }> {
 // change company (Butcherblock, Greenvial) into <dir>, for the review cards:
 // never into `public/assets/scenes`, never into the generated anchors.
 const pi = process.argv.indexOf('--proposals')
-const anchors = await bake(pi > 0 ? resolve(process.argv[pi + 1] ?? 'proposals') : null)
+const anchors = await bake(FACES_DIR ?? (pi > 0 ? resolve(process.argv[pi + 1] ?? 'proposals') : null))
+if (FACES_DIR) process.exit(0)
 const fc = await fireCell()
 writeFileSync(
   GEN,
