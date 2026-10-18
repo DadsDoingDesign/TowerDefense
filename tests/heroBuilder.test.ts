@@ -15,6 +15,7 @@ import { describe, expect, it } from 'vitest'
 import {
   ANIMS, CELL, FACES, FEET, ITEMS, LAYERS, LIVERIES, MINI_FACES, MINI_H, MINI_W, PERSONAS, PROPS, RACES, RACE_BODY, RACE_DEFAULTS, RACE_LIMITS,
   STATE_LAYERS, builderColours, composeFrame, composeStrip, framesFor, layerIndex, miniAt, miniFrame, miniFrames, resolveItem, resolveLook, rgbOf,
+  POST_FACES, POST_H, POST_W, paintSprite, postAt, postFrame, postFrames, postSize,
   type AnimId, type PersonaId, type HeroFrame, type HeroLook, type LayerId, type RaceId,
 } from '../src/game/render/hero'
 import { OWN_OUTLINE } from '../src/game/render/hero/raster'
@@ -462,6 +463,82 @@ describe('hero builder: the dock figures', () => {
       return Array.from({ length: MINI_W * MINI_H }, (_, i) => fr.rgba[i * 4 + 3] === 255)
     }
     const ms = PERSONAS.map(mask)
+    for (let i = 0; i < ms.length; i++)
+      for (let j = i + 1; j < ms.length; j++) {
+        let and = 0, or = 0
+        for (let p = 0; p < ms[i].length; p++) { if (ms[i][p] && ms[j][p]) and++; if (ms[i][p] || ms[j][p]) or++ }
+        expect(and / or, `${PERSONAS[i]} vs ${PERSONAS[j]}`).toBeLessThan(0.8)
+      }
+  })
+})
+
+describe('hero builder: the company faces at field / post size (hand-drawn)', () => {
+  const ANIM3 = ['idle', 'tic', 'react'] as const
+  const solid = (f: { rgba: Uint8ClampedArray }, i: number) => f.rgba[i * 4 + 3] === 255
+
+  it('fit their 72 × 72 cell on every frame, locked is a shadow, and the tic and reaction move', () => {
+    for (const id of PERSONAS) {
+      for (const a of ANIM3)
+        for (let fr = 0; fr < postFrames(id, a); fr++)
+          for (const locked of [false, true]) {
+            const f = postFrame(id, a, fr, locked)
+            expect(f.w).toBe(POST_W)
+            expect(f.h).toBe(POST_H)
+            // nothing on the cell's border: the cell crops nothing
+            for (let k = 0; k < POST_W; k++) {
+              for (const i of [k, (POST_H - 1) * POST_W + k, k * POST_W, k * POST_W + POST_W - 1]) expect(f.rgba[i * 4 + 3], `${id} ${a}#${fr} edge`).toBe(0)
+            }
+            let n = 0
+            for (let i = 0; i < POST_W * POST_H; i++) if (solid(f, i)) n++
+            expect(n, `${id} ${a}#${fr}`).toBeGreaterThan(1200)
+          }
+      const open = postFrame(id, 'idle', 0)
+      expect(Buffer.from(postFrame(id, 'idle', 0, true).rgba).equals(Buffer.from(open.rgba)), `${id} locked`).toBe(false)
+      expect(Buffer.from(postFrame(id, 'tic', 2).rgba).equals(Buffer.from(open.rgba)), `${id} tic`).toBe(false)
+      expect(Buffer.from(postFrame(id, 'react', 1).rgba).equals(Buffer.from(open.rgba)), `${id} react`).toBe(false)
+    }
+  })
+
+  it('every solid pixel is a declared ink (the pack’s ramps and outline)', () => {
+    const inks = builderColours()
+    const hex = (r: number, g: number, b: number) => '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')
+    for (const id of PERSONAS)
+      for (const a of ANIM3) {
+        const f = postFrame(id, a, 1)
+        for (let i = 0; i < POST_W * POST_H; i++) if (solid(f, i)) expect(inks.has(hex(f.rgba[i * 4], f.rgba[i * 4 + 1], f.rgba[i * 4 + 2])), `${id} ${a}`).toBe(true)
+      }
+  })
+
+  it('nothing at the mouth: no arm, hand or prop in the lower face, on any frame', () => {
+    for (const id of PERSONAS) {
+      const face = POST_FACES[id]
+      // the same face with its arms and props taken away (the 'main' and 'off' groups)
+      const bare = { ...face, parts: face.parts.filter((p) => p.group !== 'main' && p.group !== 'off') }
+      const xs = face.eyes.map((e) => e[0]), ey = Math.max(...face.eyes.map((e) => e[1]))
+      const x0 = Math.min(...xs) - 2, x1 = Math.max(...xs) + 10, y0 = ey + 3, y1 = ey + 11
+      for (const a of ANIM3)
+        for (let fr = 0; fr < postFrames(id, a); fr++) {
+          const f = postFrame(id, a, fr)
+          const g = paintSprite(bare, a, fr, false, postSize(id))
+          for (let y = y0; y <= y1; y++)
+            for (let x = x0; x <= x1; x++) {
+              const i = (y * POST_W + x) * 4
+              expect([f.rgba[i], f.rgba[i + 1], f.rgba[i + 2], f.rgba[i + 3]].join(), `${id} ${a}#${fr} at ${x},${y}`).toBe([g.rgba[i], g.rgba[i + 1], g.rgba[i + 2], g.rgba[i + 3]].join())
+            }
+        }
+    }
+  })
+
+  it('move by the dock figure’s clock: the same animation at every moment, so the five stay out of step', () => {
+    for (const id of PERSONAS)
+      for (let t = 0; t < 12000; t += 20) {
+        expect(postAt(id, t).anim, `${id} at ${t}`).toBe(miniAt(id, t).anim)
+        expect(postAt(id, t, { pickedAt: 4000 }).anim, `${id} picked at ${t}`).toBe(miniAt(id, t, { pickedAt: 4000 }).anim)
+      }
+  })
+
+  it('each is known by its silhouette alone', () => {
+    const ms = PERSONAS.map((id) => { const f = postFrame(id, 'idle', 0); return Array.from({ length: POST_W * POST_H }, (_, i) => solid(f, i)) })
     for (let i = 0; i < ms.length; i++)
       for (let j = i + 1; j < ms.length; j++) {
         let and = 0, or = 0

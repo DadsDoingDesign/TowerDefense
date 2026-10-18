@@ -12,11 +12,14 @@
  * harness's `?only=` (e.g. `lineup,faces`) and skips the manifest. Prints the
  * harness's review report. Env: HEROES_BASE (default http://localhost:5257/).
  */
+import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import sharp from 'sharp'
 
 const ROOT = path.resolve(process.argv[2] ?? '.')
+// the company faces' posts, each with its face at the counter (into the cache the harness reads; nothing shipped)
+execFileSync('npx', ['tsx', 'scripts/stop-scenes.ts', '--faces', 'node_modules/.cache/hero-posts'], { stdio: 'inherit' })
 const ONLY = process.argv[3]
 const BASE = process.env.HEROES_BASE ?? 'http://localhost:5257/'
 const EXEC = process.env.PW_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'

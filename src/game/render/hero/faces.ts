@@ -57,9 +57,9 @@ export const FACES: readonly CompanyFace[] = [
       who: 'Saffra, human, Peppercorn’s spice broker. Came up selling pepper off a cart in the farm towns whose fields burn every summer; she buys the smoke-singed sacks cheap.',
       want: 'Wants the price before it turns. Fears a wagon of spice gone to smoke.',
       temperament: 'Brisk, hot-tempered, generous (she tips the moment it sells).',
-      tic: 'Lifts her scale, watches it tip, and grins at the price.',
+      tic: 'Weighs her pepper sack in her hand, and grins at the weight.',
       silhouette: 'Lean + angular: a forward lean, the knotted scarf’s tail.',
-      prop: 'A brass spice scale; a pouch of red pepper.',
+      prop: 'A burlap sack of pepper, held at the waist.',
     },
     look: {
       race: 'human', persona: 'saffra', posture: 'lean', company: 'Peppercorn', hair: 'scarf', hairInk: 'hairGinger', skin: 'skinTan', palette: { cloth: 'ochre' },
@@ -80,7 +80,7 @@ export const FACES: readonly CompanyFace[] = [
       temperament: 'Smooth, warm, calculating (the warmth has a price).',
       tic: 'Smooths the bolt of silk on her arm, at the waist, eyes half shut.',
       silhouette: 'Tall + tapering: topknot to trailing cloak.',
-      prop: 'A bolt of rose silk on the arm.',
+      prop: 'A bolt of cream silk on the arm, tied with a rose ribbon.',
     },
     look: {
       race: 'elf', persona: 'odile', posture: 'rock', company: 'Rosethread', hair: 'topknot', hairInk: 'hairBlack', palette: { cloth: 'plum' },
@@ -122,7 +122,7 @@ export const FACES: readonly CompanyFace[] = [
       temperament: 'Patient, cold-eyed, oddly courteous (a butcher with manners).',
       tic: 'A slow blink of his slit eyes, and a swish of the tail.',
       silhouette: 'Low + long: hunched, a flat snout ahead and a thick tail behind.',
-      prop: 'A meat hook; a sack of marsh salt.',
+      prop: 'A butcher\u2019s J hook.',
     },
     look: {
       race: 'reptilian', persona: 'hask', posture: 'hunch', company: 'Butcherblock', head: 'snout', hair: 'crest', skin: 'scaleTeal', hairInk: 'oxblood',

@@ -16,7 +16,7 @@ compositor draws the frames.
 | `swaps.png` | One human across twelve kits; one kit on all five peoples; one hire in each company's livery |
 | `states.png` | Rarity, level tiers, skill tells and status effects on one hero |
 | `animation.png` | Idle, walk, attack, hit and cheer for every people |
-| `faces.png` | The five company faces: field, bust and dock sizes |
+| `faces.png` | The five company faces, hand-drawn at each size the game shows them (field / post, dock), beside the CC0 pawn, knight and goblin |
 | `dock-mock.png` | The real home at 390 × 844 with the faces in the dock |
 | `cards/` | One ~600 px card per idea for the phone review board, with `manifest.json` |
 
@@ -31,17 +31,17 @@ the torch and TNT goblins, the tower and house).
 | | The pack | The builder |
 |---|---|---|
 | Cell | 192 px; the figure ~60–80 wide, 60–95 tall, feet on y 136 | 176 px cell; figures 61–82 tall, feet on y 138 |
-| Outline | `#161c2e`; 2 px between parts, 2–3 px outside | each piece ringed 2 px (1 px for small features), plus 1 px round the whole figure |
-| Shading | 3 tones per material + white specular dashes; bands, never dither | `palette.ts` ramps: shade · mid · light · specular, solved per pixel from the shape, quantised to those tones |
-| Light | from the top, toward the side the figure faces (knights face right: lit right, shaded on the back edge and the bottom) | the same, one constant (`raster.ts` `LIGHT`) |
-| Proportion | chibi: head ≈ the body below it; mitten fists; stub feet | the same; per-people numbers in `rig.RACE_BODY` |
+| Outline | `#161c2e`; its most common outer run is 2 px (median 3), inner lines 2 | each piece ringed 2 px (1 px for small features); nothing added outside (round 3: the extra outer px made ours 4) |
+| Shading | 3 tones per material + white specular dashes; bands, never dither; hand-laid strands in hair | `palette.ts` ramps, in clean bands, plus a hand-laid rim (the upper-left edge a step lighter, the lower-right a step darker) and strands on hair, scarves and beards |
+| Light | from the upper left (the helmets' and the pawns' hair highlights) | the same (`raster.ts` `LIGHT`) |
+| Proportion | chibi: the head is the widest mass (the pawn: a 58 px head over a 43 px body); small round fists at the hips; thin dark legs | the same; per-people numbers in `rig.RACE_BODY` (round 3: torsos narrower, fists smaller, legs thin and dark) |
+| Colours per figure | 7–9 | the builder's 17–24 before round 3; fewer since (no streak noise) |
 | Ground | ink ellipse at alpha 80 | the same |
 | Frames | idle 6 (the game loops it at 6 fps); attack 6 (the archer 8) | idle 6 at 6 fps, walk 6 at 10 fps, attack 6 timed slow wind-up / fast strike, hit 3, cheer 4 |
 
-**One rule we did not follow, on purpose:** the character-design skill says "light
-from the upper left". The pack's own knights are lit from the top on the side
-they face (right). We follow the pack so our heroes sit with its art. It is one
-constant; say the word and it flips.
+**The light** (round 3) is from the upper left, as the skill says and as the
+pack's helmets and hair show on a closer look; round 1 had read the knights as
+lit from the top on their facing side.
 
 ## The rig
 
@@ -57,15 +57,22 @@ The peoples differ by **body numbers only**, inside shared limits
 
 | People | Head (half w × h) | Torso (half w × h) | Legs | What else |
 |---|---|---|---|---|
-| Human | 20.5 × 19 | 15.5 × 21.5 | 8.5 | the baseline |
-| Elf | 18 × 20 | 13 × 25 | 12 | taller, slimmer, a pointed chin, long ears |
-| Dwarf | 21.5 × 18 | 20.5 × 18 | 3.5 | short and broad, a beard over the chest |
-| Reptilian | 19 × 17 | 15.5 × 23 | 8.5 | a snout, a tail, a crest or a frill |
-| Gnome | 23 × 21 | 12 × 14.5 | 3.5 | small, the biggest head, a big nose |
+| Human | 20.5 × 19 | 11.5 × 20 | 7.5 | the baseline |
+| Elf | 18 × 20 | 9.5 × 23 | 11 | taller, slimmer, a pointed chin, long ears |
+| Dwarf | 21.5 × 18 | 15.5 × 17 | 3.5 | short and broad, a beard over the chest |
+| Reptilian | 19 × 17 | 11.5 × 22 | 8 | a snout, a tail, a crest or a frill |
+| Gnome | 23 × 21 | 9.5 × 14 | 3.5 | small, the biggest head, a big nose |
 
 **3/4 view, never mirrored.** The skull is an asymmetric union: the cranium
 bulges toward the back, the face is the narrower front, and a cheek and a nose
 break the front silhouette. Nothing is drawn by mirroring one half.
+
+**Arms are two bones** (round 3): shoulder, upper arm, elbow, forearm, and the
+fist on the forearm's own line (`parts.elbowOf`: the elbow bends back and
+down; a reach past both bones straightens the arm). The far arm, behind the
+body, is slimmer and a step darker. A resting fist hangs at mid-thigh. A
+wind-up passes the near arm and its weapon BEHIND the head (`Pose.behind`): a
+chibi arm cannot reach over its own head, so it never rises across the face.
 
 **Hands are real parts.** Each arm is a sleeve plus a fist on its anchor, and
 the held item is drawn in that hand's frame. The fist is re-stamped over its
@@ -133,9 +140,32 @@ any other layer changes. A company livery swaps inks, never shapes (tested).
 
 ## The company faces
 
-Each company's liaison, given a body on the rig (`faces.ts`). Saffra, Odile
-and Brannoch are the liaisons `src/game/data/liaisons.ts` already voices.
-**Hask and Wren are proposals**; `liaisons.ts` is untouched.
+Each company's liaison (`faces.ts` holds their briefs). Saffra, Odile and
+Brannoch are the liaisons `src/game/data/liaisons.ts` already voices. **Hask
+and Wren are proposals**; `liaisons.ts` is untouched.
+
+**Drawn by hand, once per size the game shows them** (round 3; the designer:
+the small hand-made figures read, the magnified rig does not). They are fixed
+people with no gear swaps, so they do not need the rig to look right:
+
+| Size | Where it shows | Cell | Module |
+|---|---|---|---|
+| field / post | the battlefield and the liaison post, both at the pack's unit scale (the post stands the person where the CC0 pawn stands, at native size; the page draws the scene at 2×) | 72 × 72, feet on row 57 | `post.ts` |
+| dock | the home dock's slot (drawn at 2×) | 24 × 28 | `mini.ts` |
+
+Both are pixel rows in the pack's inks, named parts, each ringed in 1 px of
+ink; the field / post size adds one more px round the whole figure (the
+pack's 2 px outer line) and the pack's small dark eyes (2 × 3, never a white
+disc). Both run on one clock (`spriteAt`): a face moves in step with itself at
+both sizes, out of step with the other four. The heroes' portrait bust
+(`heroPortrait.ts`) is a crop of a hero's figure, not of a liaison, so there
+is no third size for the faces today. The rig stays for the heroes, whose
+gear swaps; it is only ever meant to be drawn 1:1, and its cards say they are
+magnified for critique.
+
+The posts in the cards are the shipped posts' layouts with the face at the
+counter: `npx tsx scripts/stop-scenes.ts --faces <dir>` (only into <dir>;
+nothing shipped changes).
 
 | | Saffra | Odile | Brannoch | Hask (proposal) | Wren (proposal) |
 |---|---|---|---|---|---|
@@ -143,10 +173,9 @@ and Brannoch are the liaisons `src/game/data/liaisons.ts` already voices.
 | Who | Came up selling pepper off a cart in the farm towns whose fields burn every summer; buys the smoke-singed sacks cheap | Buys bolts at the river-forest looms, sells them at the fords for twice the weight in coin | Counts the ore carts out of the quarry halls and back in, and has named every one | Works the smokehouses on the salt marsh's reed channels, weighing hides and salting the catch | Tends the glasshouses in the mushroom hollows and bottles whatever glows there |
 | Want / worry | The price before it turns / a wagon gone to smoke | Every coin the road can pay / a pulled thread | Every cart home whole / a cart in the ditch | The meat delivered fresh / rot, and the salt running out | The rare cuttings home whole / a cracked vial, and what spills |
 | Temperament | brisk, hot-tempered, generous | smooth, warm, calculating | gruff, terse, secretly sentimental | patient, cold-eyed, oddly courteous | quiet, patient, unsettlingly cheerful |
-| Tic (field) | weighs a pinch of pepper on her scale, grins when it tips | smooths the silk at her waist, eyes half shut | lifts the slate and chalks a cart home | a slow blink of his slit eyes, a tail swish | holds a vial out to the side, in the light |
-| Tic (dock) | weighs her pepper sack in her hand (it sinks, never rises) | the same smoothing | chalks a tally | the blink and swish | the vial out to the side |
+| Tic | weighs her pepper sack in her hand (it sinks, never rises), grins | smooths the silk at her waist, eyes half shut | lifts the slate and chalks a cart home | a slow blink of his slit eyes, a tail swish | holds a vial out to the side, in the light |
 | Silhouette | lean + angular | tall + tapering, a long ear out sideways | squat + square | low + long: flat snout, thick tail | round + tall: a huge sprouting hat |
-| Prop | brass spice scale (dock: a burlap pepper sack) | bolt of cream silk | chalked tally slate | meat hook (a J) | glowing green vial, hung low |
+| Prop | a burlap pepper sack (a balance reads as a crossbow at both sizes) | bolt of cream silk, a rose ribbon round it | chalked tally slate | a butcher's J hook | glowing green vial at his side |
 | Idle (shape, period) | quick bob, 0.83 s | slow breath, 1.57 s | weight shift side to side, 2.21 s | sway + tail swish, 1.93 s | bob, the hat's sprout lagging, 1.31 s |
 | Reaction (slot picked) | a hop and a wink | a half-bow, eyes shut | one curt nod | twirls the hook | dips, then lifts the vial |
 

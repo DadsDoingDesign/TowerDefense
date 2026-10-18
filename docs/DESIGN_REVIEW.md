@@ -4735,3 +4735,69 @@ The board's verdicts on the quiet frames: Peppercorn's and Rosethread's home car
 **Left.** At some sizes `border-image-repeat: repeat` lands a band rivet right beside a corner plate's rivet, because tile phase is set by the box. Moonquill's band of runes is the busiest of the five, though dim.
 
 **Cards:** `docs/ui-audit-2026-10/frames-calm/` has `home-metals`, `pick-metals`, a new `terms-metals`, `home-art` and `home-scrolls` (LAST PASS over NOW). `home-spice` and `home-silk` are unchanged.
+### 2026-10-18 — the company faces, round 3: hand-drawn at each size; the rig's arms and proportions
+
+The designer on round 2:
+- **Crests → faces and the dock in motion:** good; kept exactly (the desync timings did not move).
+- **Saffra:** "arms still look busted, and overall look chunky and ugly compared to other assets", and her dock figure "needs more work".
+- **The face card (Wren magnified about 5×):** "this format specifically of all the assets looks bad. The small bit formats are better."
+
+Two changes followed from that.
+
+**1. The faces are hand-drawn once per size; the rig is never shown magnified.** The five liaisons are fixed people with no gear swaps, so they no longer go through the rig:
+- **Field / post size** (`render/hero/post.ts`, a 72 cell): the pack's unit scale. The CC0 pawn is about 58 × 59 in its 192 cell, and the liaison post stands the person where the pawn stands, at native size.
+- **Dock size** (`mini.ts`, 24 × 28).
+
+Both are pixel rows in the dock figures' language: named parts each ringed in 1 px of ink, plus one outer px at field size (the pack's 2 px). The eyes are small and dark, 2 × 3, never a white disc. Each figure has:
+- a collar or neck line under the chin;
+- arms bent at the elbow, with the fist on the forearm;
+- 2–3-step ramps lit from the upper left.
+
+Both sizes run on one clock (`spriteAt`), so a face's two sizes move together and the five stay out of step (tested).
+
+The cards changed to match: every size is shown as the game shows it.
+- `face-<name>`: the post at a phone's 2×, with the face at the counter (`stop-scenes.ts --faces`, into a cache only).
+- `field-<name>`: a battlefield crop at 2× beside the CC0 pawn, knight and goblin, then the face and the pawn at 4×.
+- The line-ups (`lineup-field`, `lineup-dock`) and the dock cards.
+
+The 5× crop of a rig figure is gone. The builder's own cards now say they are magnified for critique.
+
+**2. The rig's bodies, for the heroes** (checkpoint `fa62ec8`). Measured against the pawn, knight and archer:
+- **Outline:** ours was 4 px outside against the pack's mode of 2, so the extra outer px went.
+- **Colours:** ours used 17–24 a figure against the pack's 7–9, so the streak noise went.
+- **Proportion:** our widest mass was the hands, the pack's is the head. Torsos are narrower, fists smaller, legs thin and dark.
+- **Arms:** now two bones (shoulder, elbow, forearm, fist on the forearm's line), with the far arm a step darker and slimmer.
+- **Wind-ups:** the near arm and weapon pass behind the head, since a chibi arm cannot reach over it.
+- **Light and edge:** light from the upper left, a hand-laid rim on every form, and strands on hair, scarves and beards.
+- **Tests:** the mouth test now covers greataxe, spear and staff kits too, and a new test keeps wind-ups off the face.
+
+**Round 1 at field / post size (1×, 4× and 7× beside the pawn and torch goblin).**
+- **Saffra.** First drawn too small (a 30 px head against the pawn's 44 px hair); redrawn on a 72 cell. The headscarf then read as a hood or a helmet. It is now a saffron bandana over ginger hair with hand-laid strands, a fringe and a lock.
+- **Saffra's face** was a box in a ball (a straight back edge, a flat front). It now has a curved jaw from the temple to the chin and a cheek that bulges at the front.
+- **Saffra's balance** read as a crossbow at 64 px, as it had at 24. Both sizes carry a burlap pepper sack.
+- **Odile:** her face was a saturated disc in a hood. It is now lighter, narrower, and ends in an elf's chin. Her bolt read as a white sign; it is now a short roll with a rose ribbon.
+- **Brannoch:** his brows were a separately ringed bar whose ring swallowed the eyes; they are now painted on the skin. The beard sat on the eyes and is now 3 px lower.
+- **Hask:** his apron was a flat oxblood block; it now has neck straps, a hem and stains.
+
+**Round 2 (the five together, 1× and 5×).** All five read by people and trade at 1× beside the pack, with the same outline weight and density. The fixes:
+- Odile's topknot and Wren's sprout crossed the cell's edge; both are tucked in.
+- Wren's two sprout leaves merged into one bar; they are now drawn by hand.
+- Brannoch's post tic and react timings differed from his dock figure's; they now share one clock.
+
+**Round 3 (every tic and reaction frame, and the cards as exported).**
+- Nothing comes near any mouth, on any frame (tested: the lower face is the same pixels with the arms and props taken away).
+- The silhouettes stay apart (IoU < 0.8).
+- Three card fixes: the field cards' road edges framed the art like a box, so the cards use the pack's plain grass; the 3× line-up overlapped, so it is now 1× and 2×; the post card's labels sat on the figures, so they now sit beside them.
+
+**Dock size (Saffra first).**
+- Redrawn to match her post figure: ginger hair under a bandana with a gold band, and the knot's two tails streaming behind her, a notch no other face has.
+- A narrow vest, and the near arm bent forward holding the sack out at the knee.
+- Her silhouette is now lean and asymmetric against Brannoch's square block.
+- **The band** is one colour, gold, at both sizes. A red band would have vanished against her red vest.
+
+**Benchmark.** Pixel Frog's pawn and goblins are drawn at this one size and read by mass first: a big lit head over a small dark body, a 2 px line, and few inks. The hand-drawn faces now match that construction. The magnified rig never could.
+
+**Still weakest.**
+- The faces are plain: two dark eyes and no other feature. That is the pack's own restraint (its pawn shows no face at all), but at the post's 2× the face is a large flat area.
+- Saffra's hair strands are a little dense, like fur.
+- The rig's heroes keep their round-3 bodies, but it is still a procedural drawing. At 1× it sits with the pack; it is not hand-laid, and it is not shown larger.
