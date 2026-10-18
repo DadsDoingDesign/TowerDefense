@@ -306,25 +306,35 @@ result. Append a short note to the review log when you're done.
 - Company worlds (Oct 2026; the designer: "if one is fire themed it should
   have fire effects"): each company theme is a PLACE, in pixels, all under
   `:root[data-co-theme]` (the neutral house look has none). The art is pixel
-  rows in `src/ui/theme/themeArt.ts` (per world: a 4 px 9-slice frame
-  flipbook with its own edge and corner — Peppercorn charred with ember
-  cracks, Easel House a scalloped paint stroke, Ironvein riveted plates and
-  a molten seam, Rosethread satin and a running stitch, Moonquill a rune
-  band — a CTA strip, and Peppercorn's flame crest on the card), rasterised
-  once into CSS variables by `themeArtDom.ts` and laid on by
-  `src/styles/worlds.css` (`border-image`: changes pixels, never boxes; the
-  frame flickers only on the card, the pick card and the CTA, on a promoted
-  `::after` under the words). The motion is `src/ui/theme/fxWorlds.ts`
+  rows in `src/ui/theme/themeArt.ts` (per world: a 4 px 9-slice frame with
+  its own edge and corner — Peppercorn charred with ember cracks, Easel
+  House a scalloped paint stroke, Ironvein riveted plates and a molten seam,
+  Rosethread satin and a running stitch, Moonquill a rune band — a CTA
+  strip, and Peppercorn's flame crest on the card; each ONE still image),
+  rasterised once into CSS variables by `themeArtDom.ts` and laid on by
+  `src/styles/worlds.css` (`border-image`: changes pixels, never boxes).
+  The frames, strips and crest are STATIC: the only CSS loop the worlds keep
+  is the CTA's faint shimmer (`th-shimmer`, one pale band every 9 s, on a
+  promoted `::after` under the words; none on Light or reduced motion).
+  The calm pass (Oct 2026; the designer: "a bit overwhelming now that I'm
+  playing more") retuned Full for every world — felt, not watched, the map
+  and the words are the show — and Light follows from it; before → after in
+  `docs/ui-audit-2026-10/motion/AUDIT.md`, phone cards in
+  `docs/ui-audit-2026-10/motion-calm/`. The motion is `src/ui/theme/fxWorlds.ts`
   (pure: each world's ambient particles and backdrop, its press burst, its
   switch-in) run by ONE rAF loop in `fxEngine.ts` (`fx`, dev handle
   `window.__worldFx`): the ambient layer `<ThemeFx>` (`.th-fx`, behind the page's
   panels; over the map on the home) is drawn in software by `pixelPen.ts`
-  at 24 fps (backdrop 12), capped (`ambientCap`: 60 on a phone, 110 on a
-  desk), cleared under every word and panel, and measures the scene (the
-  dock's top as the floor; the focused road from `.tm-leaders[data-road]`);
-  press bursts are zoned to their `.pg-cta` (`burstClip`) and cleared under
-  its label; a switch-in plays over the map, cleared under every word and
-  panel. Glows breathe, never crawl, and dither is anchored to the screen's
+  at 24 fps (backdrop 12), capped (`ambientCap`: 24 on a phone, 40 on a
+  desk; each world's `peak`, ≤ 0.7, is its particles' strongest alpha, so
+  none outshines the words), cleared under every word and panel, and
+  measures the scene (the dock's top as the floor; the focused road from
+  `.tm-leaders[data-road]`); press bursts stay on their `.pg-cta`'s face
+  (`burstClip` is the button, ≤ 20 particles) and are cleared under its
+  label; a switch-in is a crossfade (`SWITCH_S`, 350 ms: the old world's
+  particles and backdrop fade out as the new one's fade in, `PixelPen.crossfade`)
+  with a faint, still wash of the world on the overlay, cleared under every
+  word and panel. Glows breathe (`BREATH_S`, 8 s), never crawl, and dither is anchored to the screen's
   pixels (a moving checker flips a whole shape). Sleeps when hidden; nothing
   moves under reduced motion; dimmed under high contrast. Tests
   `tests/themeWorlds.test.ts`; the motion budget per world, measured in the
@@ -335,7 +345,8 @@ result. Append a short note to the review log when you're done.
   automatic step down to Light when the measured rate stays under 45 fps for
   2 s (back over 56 fps for 6 s, doubling after each relapse), and reduced
   motion (`off`) over both; mirrored onto `<html data-fx>` for `worlds.css`.
-  Light: half the particles at half the cadence, no glows, frames still.
+  Light: half of Full's particles at half the cadence, no glows, no CTA
+  shimmer (the frames are still at every level).
   The battlefield wears the run's world too: its SEASON
   (`src/game/data/fieldSeasons.ts`, named as the home map's `MAP_SEASONS`;
   the hiring company's, your militia's chosen world's on the Sovereign
@@ -360,15 +371,18 @@ result. Append a short note to the review log when you're done.
   (`gradeEnvironment`'s `accent` mask, `ACCENT_SAT`). MOVING:
   `src/game/render/weatherFx.ts` (`WeatherLayer`, one per battle, drawn in
   the battle's loop right after the terrain — under the wagon, units, shots,
-  HP bars, plaques): particles (≤ 40 on a phone), a rain / snow SHEET at the
-  view's edges, fog banks and cloud shadows (`Veil`: a low-res layer through
-  a margin mask, blitted in bands), a rare flash at the margins; faint over
-  the game (`edgeFx.clearGrid`), Light halves it and drops the clouds and
+  HP bars, plaques): particles (≤ 18 on a phone, 40–50% of the old counts,
+  each at `WEATHER_PEAK` of its old strength), a narrow, faint rain / snow
+  SHEET at the view's edges, fog banks and cloud shadows (`Veil`: a low-res
+  layer through a margin mask, blitted in bands), a rare, faint flash at the
+  margins (Full only, `FLASH_GAP_S`: 45–90 s apart); faint over the game
+  (`edgeFx.clearGrid`; `OVER_GAME` 0.18), Light halves it and drops the clouds and
   the flash, reduced motion draws none. Particles of both layers are
   batched (`pixelBatch.ts`). The world's EDGE BAND of particles
   (`src/game/render/edgeFx.ts`, `EdgeBand`) still lives only in a thin band
   at the view's edges, on cells clear of the road, every slot and the wagon
-  (half its old cap beside the weather). Tests `tests/fieldWorlds.test.ts`.
+  (`EDGE_PEAK` strength; caps 11 / 18, and 6 / 9 beside the weather in
+  `BattleCanvas`). Tests `tests/fieldWorlds.test.ts`.
   Dev: `window.__fxQuality`, `__seasonOff`, `__weather` (live counts).
 - The battle band (Oct 2026, `docs/FIGMA.md` § The battle band): in setup
   the wave's name and line-up hang from the Stage's top edge (`WavePreview`,
