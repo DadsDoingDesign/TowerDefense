@@ -5,7 +5,7 @@
    "id": "cinder",
    "company": "spice",
    "name": "Cinder Clan",
-   "tell": "Flame crests and soot iron; the torch burns on, the kegs grow a chilli stem.",
+   "tell": "Hoods that burn at the tip and soot iron; the torch burns on, the kegs wear a chilli stem and a spice label.",
    "specialists": {
     "shaman": "Ember Shaman",
     "bearer": "Hearth Bearer"
@@ -15,7 +15,7 @@
    "id": "smudge",
    "company": "art",
    "name": "Smudge Gang",
-   "tell": "Paint buckets for helmets, brushes for weapons, paint dripping off everything.",
+   "tell": "Paint-poured buckets for helmets, brushes for weapons, paint dripping off everything.",
    "specialists": {
     "shaman": "Smear Shaman",
     "bearer": "Canvas Bearer"
@@ -83,10 +83,9 @@
    "name": "Ember Runt",
    "engineName": "Torch Runt",
    "boss": false,
-   "look": "flame crest, torch",
+   "look": "burning hood tip, torch",
    "parts": [
-    "crest-flames",
-    "soot-band"
+    "crest-plume"
    ],
    "forms": [
     {
@@ -134,8 +133,7 @@
    "boss": false,
    "look": "+ soot pauldron",
    "parts": [
-    "crest-flames",
-    "soot-band",
+    "crest-plume",
     "soot-pauldron"
    ],
    "forms": [
@@ -184,8 +182,7 @@
    "look": "+ chilli banner",
    "parts": [
     "chilli-banner",
-    "crest-flames",
-    "soot-band",
+    "crest-plume",
     "soot-pauldron"
    ],
    "forms": [
@@ -231,11 +228,10 @@
    "name": "Blaze Berserker",
    "engineName": "Torch Berserker",
    "boss": false,
-   "look": "tall triple crest",
+   "look": "taller flame",
    "parts": [
     "chilli-banner",
-    "tall-crest-flames",
-    "soot-band",
+    "tall-crest-plume",
     "soot-pauldron"
    ],
    "forms": [
@@ -334,14 +330,13 @@
    "name": "Spark Whelp",
    "engineName": "Fuse Whelp",
    "boss": false,
-   "look": "flame crest, firepot pack, firepot",
+   "look": "burning cap, firepot pack, firepot",
    "parts": [
     "firepots",
     "firepot-flames",
     "firepot",
     "firepot-flame",
-    "tnt-crest-flames",
-    "tnt-soot-band"
+    "tnt-crest-plume"
    ],
    "forms": [
     {
@@ -393,8 +388,7 @@
     "firepot-flames",
     "firepot",
     "firepot-flame",
-    "tnt-crest-flames",
-    "tnt-soot-band",
+    "tnt-crest-plume",
     "soot-pauldron"
    ],
    "forms": [
@@ -447,8 +441,7 @@
     "firepot-flames",
     "firepot",
     "firepot-flame",
-    "tnt-crest-flames",
-    "tnt-soot-band",
+    "tnt-crest-plume",
     "soot-pauldron"
    ],
    "forms": [
@@ -494,15 +487,14 @@
    "name": "Ash Sapper",
    "engineName": "Sapper",
    "boss": false,
-   "look": "tall triple crest",
+   "look": "taller flame",
    "parts": [
     "chilli-banner",
     "firepots",
     "firepot-flames",
     "firepot",
     "firepot-flame",
-    "tnt-tall-crest-flames",
-    "tnt-soot-band",
+    "tnt-tall-crest-plume",
     "soot-pauldron"
    ],
    "forms": [
@@ -603,9 +595,9 @@
    "name": "Spice Keg",
    "engineName": "Barrel Imp",
    "boss": false,
-   "look": "chilli stem, flame mark",
+   "look": "chilli stem, spice label",
    "parts": [
-    "flame-mark",
+    "spice-label",
     "chilli-stem"
    ],
    "forms": [
@@ -652,9 +644,9 @@
    "name": "Pepper Roller",
    "engineName": "Barrel Roller",
    "boss": false,
-   "look": "+ soot hoops",
+   "look": "+ ember studs",
    "parts": [
-    "flame-mark",
+    "spice-label",
     "ember-studs",
     "chilli-stem"
    ],
@@ -701,10 +693,11 @@
    "name": "Charred Keg",
    "engineName": "Ironbarrel",
    "boss": false,
-   "look": "+ iron flame fins",
+   "look": "+ ember fins",
    "parts": [
-    "flame-fins",
-    "flame-mark",
+    "ember-fin-l",
+    "ember-fin-r",
+    "spice-label",
     "ember-studs",
     "chilli-stem"
    ],
@@ -753,8 +746,9 @@
    "boss": false,
    "look": "+ taller stem",
    "parts": [
-    "flame-fins",
-    "flame-mark",
+    "ember-fin-l",
+    "ember-fin-r",
+    "spice-label",
     "ember-studs",
     "chilli-stem-tall",
     "stem-flame"
@@ -802,10 +796,11 @@
    "name": "The Brimstone Vat",
    "engineName": "The Colossus Keg",
    "boss": true,
-   "look": "brimstone crown, flame fins",
+   "look": "brimstone crown, ember fins",
    "parts": [
-    "flame-fins",
-    "flame-mark",
+    "ember-fin-l",
+    "ember-fin-r",
+    "spice-label",
     "ember-studs",
     "brimstone-crown",
     "brimstone-flames"
@@ -853,7 +848,7 @@
    "name": "Smudge Runt",
    "engineName": "Torch Runt",
    "boss": false,
-   "look": "paint bucket helm, brush",
+   "look": "paint-poured bucket helm, brush",
    "parts": [
     "paintbrush",
     "bucket-helm",
@@ -1112,7 +1107,7 @@
    "name": "Pigment Whelp",
    "engineName": "Fuse Whelp",
    "boss": false,
-   "look": "paint bucket helm, tube pack, paint bomb",
+   "look": "paint-poured bucket helm, tube pack, paint bomb",
    "parts": [
     "paint-tubes",
     "paint-bomb",
@@ -1374,7 +1369,7 @@
    "name": "Paint Pot",
    "engineName": "Barrel Imp",
    "boss": false,
-   "look": "bucket handle, drip mark",
+   "look": "wire bail, paint splotch",
    "parts": [
     "paint-splotch",
     "wire-bail",
@@ -1474,9 +1469,10 @@
    "name": "Tin Drum",
    "engineName": "Ironbarrel",
    "boss": false,
-   "look": "+ brush handles",
+   "look": "+ paint tubes",
    "parts": [
-    "brush-handles",
+    "paint-tube-l",
+    "paint-tube-r",
     "paint-splotch",
     "paint-drips",
     "wire-bail",
@@ -1525,9 +1521,10 @@
    "name": "Siege Vat",
    "engineName": "Siege Barrel",
    "boss": false,
-   "look": "+ second handle",
+   "look": "+ brush in the tin",
    "parts": [
-    "brush-handles",
+    "paint-tube-l",
+    "paint-tube-r",
     "paint-splotch",
     "paint-drips",
     "wire-bail",
@@ -1578,7 +1575,8 @@
    "boss": true,
    "look": "brush crown, drips",
    "parts": [
-    "brush-handles",
+    "paint-tube-l",
+    "paint-tube-r",
     "paint-splotch",
     "paint-drips",
     "wire-bail",
@@ -2235,7 +2233,8 @@
    "boss": false,
    "look": "+ iron side plates",
    "parts": [
-    "side-plates",
+    "side-plate-l",
+    "side-plate-r",
     "rivet-plate",
     "rivets",
     "valve-wheel"
@@ -2285,7 +2284,8 @@
    "boss": false,
    "look": "+ lamp on the cap",
    "parts": [
-    "side-plates",
+    "side-plate-l",
+    "side-plate-r",
     "rivet-plate",
     "rivets",
     "valve-wheel",
@@ -2336,7 +2336,8 @@
    "boss": true,
    "look": "crucible crown, side plates",
    "parts": [
-    "side-plates",
+    "side-plate-l",
+    "side-plate-r",
     "rivet-plate",
     "rivets",
     "crucible-crown"
@@ -2892,10 +2893,11 @@
    "name": "Spool Imp",
    "engineName": "Barrel Imp",
    "boss": false,
-   "look": "spool flanges, thread band",
+   "look": "reel flanges, wound thread",
    "parts": [
     "thread-band",
     "top-flange",
+    "bottom-flange",
     "spindle-peg"
    ],
    "forms": [
@@ -2947,6 +2949,7 @@
     "thread-band",
     "needle-through",
     "top-flange",
+    "bottom-flange",
     "spindle-peg"
    ],
    "forms": [
@@ -2992,12 +2995,13 @@
    "name": "Iron Spool",
    "engineName": "Ironbarrel",
    "boss": false,
-   "look": "+ wider flanges",
+   "look": "+ loose thread end",
    "parts": [
-    "bottom-flange",
+    "loose-thread",
     "thread-band",
     "needle-through",
     "top-flange",
+    "bottom-flange",
     "spindle-peg"
    ],
    "forms": [
@@ -3045,10 +3049,11 @@
    "boss": false,
    "look": "+ rose on top",
    "parts": [
-    "bottom-flange",
+    "loose-thread",
     "thread-band",
     "needle-through",
     "top-flange",
+    "bottom-flange",
     "rose-peg"
    ],
    "forms": [
@@ -3096,10 +3101,11 @@
    "boss": true,
    "look": "rose crown, flanges",
    "parts": [
-    "bottom-flange",
+    "loose-thread",
     "thread-band",
     "needle-through",
     "top-flange",
+    "bottom-flange",
     "rose-crown"
    ],
    "forms": [
@@ -3400,11 +3406,10 @@
    "name": "Glyph Whelp",
    "engineName": "Fuse Whelp",
    "boss": false,
-   "look": "crescent horns, scroll case, hex vial",
+   "look": "crescent horns, moonlit goggles, scroll cases, hex vial",
    "parts": [
-    "scroll-case",
+    "scroll-cases",
     "hex-vial",
-    "moon-mask",
     "tnt-crescent-horns"
    ],
    "forms": [
@@ -3453,9 +3458,8 @@
    "boss": false,
    "look": "+ rune pauldron",
    "parts": [
-    "scroll-case",
+    "scroll-cases",
     "hex-vial",
-    "moon-mask",
     "tnt-crescent-horns",
     "rune-pauldron"
    ],
@@ -3505,9 +3509,8 @@
    "look": "+ scroll pole",
    "parts": [
     "scroll-pole",
-    "scroll-case",
+    "scroll-cases",
     "hex-vial",
-    "moon-mask",
     "tnt-crescent-horns",
     "rune-pauldron"
    ],
@@ -3557,9 +3560,8 @@
    "look": "full-moon horns",
    "parts": [
     "scroll-pole",
-    "scroll-case",
+    "scroll-cases",
     "hex-vial",
-    "moon-mask",
     "tnt-full-moon-horns",
     "rune-pauldron"
    ],
@@ -3609,9 +3611,8 @@
    "look": "moon halo crown, star standard",
    "parts": [
     "star-standard",
-    "scroll-case",
+    "scroll-cases",
     "hex-vial",
-    "moon-mask",
     "tnt-moon-halo",
     "rune-pauldron"
    ],
@@ -3658,7 +3659,7 @@
    "name": "Rune Urn",
    "engineName": "Barrel Imp",
    "boss": false,
-   "look": "crescent lid, rune mark",
+   "look": "crescent moon lid, moon-and-stars plate",
    "parts": [
     "rune-mark",
     "crescent-lid"
@@ -3758,7 +3759,8 @@
    "boss": false,
    "look": "+ rune stones",
    "parts": [
-    "rune-stones",
+    "rune-stone-l",
+    "rune-stone-r",
     "rune-mark",
     "star-studs",
     "crescent-lid"
@@ -3806,9 +3808,10 @@
    "name": "Siege Orrery",
    "engineName": "Siege Barrel",
    "boss": false,
-   "look": "+ taller crescent",
+   "look": "+ star by the moon",
    "parts": [
-    "rune-stones",
+    "rune-stone-l",
+    "rune-stone-r",
     "rune-mark",
     "star-studs",
     "crescent-lid",
@@ -3859,7 +3862,8 @@
    "boss": true,
    "look": "full-moon crown, rune stones",
    "parts": [
-    "rune-stones",
+    "rune-stone-l",
+    "rune-stone-r",
     "rune-mark",
     "star-studs",
     "full-moon-crown"

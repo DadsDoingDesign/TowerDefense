@@ -1,0 +1,226 @@
+[
+ {
+  "id": "cinder-torch",
+  "group": "Goblins",
+  "people": "Peppercorn Co.",
+  "title": "Cinder Clan · Torch line",
+  "caption": "pad moved to the back shoulder; face clear; hood tip burns: one plume off the peak (T4 taller); mantle soot with an ember hem — judge the 1× read and the tier order.",
+  "file": "cinder-torch.png"
+ },
+ {
+  "id": "cinder-tnt",
+  "group": "Goblins",
+  "people": "Peppercorn Co.",
+  "title": "Cinder Clan · Bombers",
+  "caption": "pad on the basket strap; arm kept, fist held, crumbs cleared; burning cap — judge the 1× read and the tier order.",
+  "file": "cinder-tnt.png"
+ },
+ {
+  "id": "cinder-barrel",
+  "group": "Goblins",
+  "people": "Peppercorn Co.",
+  "title": "Cinder Clan · Kegs",
+  "caption": "holes mended, glints soot, fins strapped on; spice label with a chilli — judge the 1× read and the tier order.",
+  "file": "cinder-barrel.png"
+ },
+ {
+  "id": "smudge-torch",
+  "group": "Goblins",
+  "people": "Easel House",
+  "title": "Smudge Gang · Torch line",
+  "caption": "palette on the back shoulder; paint dabs on the robe tried, dropped (noise at size); paint poured over the bucket and down its side — judge the 1× read and the tier order.",
+  "file": "smudge-torch.png"
+ },
+ {
+  "id": "smudge-tnt",
+  "group": "Goblins",
+  "people": "Easel House",
+  "title": "Smudge Gang · Bombers",
+  "caption": "pad on the basket strap; arm kept, bomb in the fist, crumbs cleared; paint-poured bucket — judge the 1× read and the tier order.",
+  "file": "smudge-tnt.png"
+ },
+ {
+  "id": "smudge-barrel",
+  "group": "Goblins",
+  "people": "Easel House",
+  "title": "Smudge Gang · Kegs",
+  "caption": "bail is an unbroken arc on rivets; paint tubes strapped on; crumbs cleared — judge the 1× read and the tier order.",
+  "file": "smudge-barrel.png"
+ },
+ {
+  "id": "delve-torch",
+  "group": "Goblins",
+  "people": "Ironvein",
+  "title": "Deepdelve · Torch line",
+  "caption": "pad on the back shoulder — judge the 1× read and the tier order.",
+  "file": "delve-torch.png"
+ },
+ {
+  "id": "delve-tnt",
+  "group": "Goblins",
+  "people": "Ironvein",
+  "title": "Deepdelve · Bombers",
+  "caption": "pad on the basket strap; arm kept, crumbs cleared — judge the 1× read and the tier order.",
+  "file": "delve-tnt.png"
+ },
+ {
+  "id": "delve-barrel",
+  "group": "Goblins",
+  "people": "Ironvein",
+  "title": "Deepdelve · Kegs",
+  "caption": "mended; plates touch — judge the 1× read and the tier order.",
+  "file": "delve-barrel.png"
+ },
+ {
+  "id": "silkcut-torch",
+  "group": "Goblins",
+  "people": "Rosethread",
+  "title": "Silkcut Gang · Torch line",
+  "caption": "bow on the back shoulder — judge the 1× read and the tier order.",
+  "file": "silkcut-torch.png"
+ },
+ {
+  "id": "silkcut-tnt",
+  "group": "Goblins",
+  "people": "Rosethread",
+  "title": "Silkcut Gang · Bombers",
+  "caption": "wound-thread stripes; pad on the strap; thread ball in the fist, arm kept — judge the 1× read and the tier order.",
+  "file": "silkcut-tnt.png"
+ },
+ {
+  "id": "silkcut-barrel",
+  "group": "Goblins",
+  "people": "Rosethread",
+  "title": "Silkcut Gang · Kegs",
+  "caption": "flanges are 3/4-view discs; thread wound in stripes; mended; both flanges from T1: a reel, not a brim; both flanges from T1; loose thread end — judge the 1× read and the tier order.",
+  "file": "silkcut-barrel.png"
+ },
+ {
+  "id": "hexmoon-torch",
+  "group": "Goblins",
+  "people": "Moonquill",
+  "title": "Hexmoon Coven · Torch line",
+  "caption": "pad on the back shoulder; mask on the face, eye holes and all — judge the 1× read and the tier order.",
+  "file": "hexmoon-torch.png"
+ },
+ {
+  "id": "hexmoon-tnt",
+  "group": "Goblins",
+  "people": "Moonquill",
+  "title": "Hexmoon Coven · Bombers",
+  "caption": "goggles back, lenses moonlit; scroll cases stand in the basket; vial in the fist; scroll cases stand in the basket; vial in the fist; standard planted — judge the 1× read and the tier order.",
+  "file": "hexmoon-tnt.png"
+ },
+ {
+  "id": "hexmoon-barrel",
+  "group": "Goblins",
+  "people": "Moonquill",
+  "title": "Hexmoon Coven · Kegs",
+  "caption": "mint glints, stones strapped on; crumbs cleared; fat crescent moon; moon-and-stars plate — judge the 1× read and the tier order.",
+  "file": "hexmoon-barrel.png"
+ },
+ {
+  "id": "cinder-walk",
+  "group": "Goblins",
+  "people": "Peppercorn Co.",
+  "title": "Cinder Clan · the walk",
+  "caption": "Torch and bomber walk, before vs after — judge that every part rides the body and the bomb sits in the fist.",
+  "file": "cinder-walk.webp"
+ },
+ {
+  "id": "smudge-walk",
+  "group": "Goblins",
+  "people": "Easel House",
+  "title": "Smudge Gang · the walk",
+  "caption": "Torch and bomber walk, before vs after — judge that every part rides the body and the bomb sits in the fist.",
+  "file": "smudge-walk.webp"
+ },
+ {
+  "id": "delve-walk",
+  "group": "Goblins",
+  "people": "Ironvein",
+  "title": "Deepdelve · the walk",
+  "caption": "Torch and bomber walk, before vs after — judge that every part rides the body and the bomb sits in the fist.",
+  "file": "delve-walk.webp"
+ },
+ {
+  "id": "silkcut-walk",
+  "group": "Goblins",
+  "people": "Rosethread",
+  "title": "Silkcut Gang · the walk",
+  "caption": "Torch and bomber walk, before vs after — judge that every part rides the body and the bomb sits in the fist.",
+  "file": "silkcut-walk.webp"
+ },
+ {
+  "id": "hexmoon-walk",
+  "group": "Goblins",
+  "people": "Moonquill",
+  "title": "Hexmoon Coven · the walk",
+  "caption": "Torch and bomber walk, before vs after — judge that every part rides the body and the bomb sits in the fist.",
+  "file": "hexmoon-walk.webp"
+ },
+ {
+  "id": "cinder-field",
+  "group": "Goblins",
+  "people": "Peppercorn Co.",
+  "title": "Cinder Clan · on the field",
+  "caption": "A crowded wave at real phone size, before vs after — judge tier, faction and armour at a glance.",
+  "file": "cinder-field.png"
+ },
+ {
+  "id": "smudge-field",
+  "group": "Goblins",
+  "people": "Easel House",
+  "title": "Smudge Gang · on the field",
+  "caption": "A crowded wave at real phone size, before vs after — judge tier, faction and armour at a glance.",
+  "file": "smudge-field.png"
+ },
+ {
+  "id": "delve-field",
+  "group": "Goblins",
+  "people": "Ironvein",
+  "title": "Deepdelve · on the field",
+  "caption": "A crowded wave at real phone size, before vs after — judge tier, faction and armour at a glance.",
+  "file": "delve-field.png"
+ },
+ {
+  "id": "silkcut-field",
+  "group": "Goblins",
+  "people": "Rosethread",
+  "title": "Silkcut Gang · on the field",
+  "caption": "A crowded wave at real phone size, before vs after — judge tier, faction and armour at a glance.",
+  "file": "silkcut-field.png"
+ },
+ {
+  "id": "hexmoon-field",
+  "group": "Goblins",
+  "people": "Moonquill",
+  "title": "Hexmoon Coven · on the field",
+  "caption": "A crowded wave at real phone size, before vs after — judge tier, faction and armour at a glance.",
+  "file": "hexmoon-field.png"
+ },
+ {
+  "id": "armour-badge",
+  "group": "Goblins",
+  "people": "—",
+  "title": "Armour badge · field and map",
+  "caption": "The armour badge over a goblin now rings in the map tab’s armour colour — judge whether map and lane read as one.",
+  "file": "armour-badge.png"
+ },
+ {
+  "id": "proposal-gnawbone",
+  "group": "Goblins",
+  "people": "Butcherblock",
+  "title": "Proposal · Gnawbone Pack",
+  "caption": "Marsh raiders of the smokehouse barges: an ox skull for a helm, a meat hook for a torch, hide on the shoulder, salt sacks and salt kegs heaped white. Mock only — judge whether to build it.",
+  "file": "proposal-gnawbone.png"
+ },
+ {
+  "id": "proposal-sporecap",
+  "group": "Goblins",
+  "people": "Greenvial",
+  "title": "Proposal · Sporecap Rot",
+  "caption": "Hollow-dwellers who brew spoiled stock into rot: a spotted cap, a swinging spore censer, moss on the shoulder, rot jars and a copper vat foaming green. Mock only — judge whether to build it.",
+  "file": "proposal-sporecap.png"
+ }
+]
