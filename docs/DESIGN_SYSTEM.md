@@ -98,9 +98,13 @@ Into the Breach move. Each world keeps its shape, at a lower volume.
 **The frames pass** (Oct 2026; the designer: "the border on the ui can be too
 intense, especially when it's doubled up at the bottom"): a world frame is a
 **quiet edge that says "this company"**, never a loud outline — one dim line
-a source pixel thick (2 CSS px), a shade or two off the panel (under 0.42
-luma), with sparse 1 px detail inside it (accents under 0.6) and a corner
-whose outer pixel is clear. And it is **one deep**: a framed part inside a
+at most two source pixels deep (a second tone may run under it: Ironvein's
+iron, Easel House's bristle shade), a shade or two off the panel (under 0.42
+luma), with a sparse rhythm of its own inside it (accents under 0.6) and a
+corner whose outer pixel is clear. Quiet is not minimal: the board approved
+Peppercorn's and Rosethread's frames, called the first Ironvein "the most
+minimal in our UI aesthetic", and every world now matches the approved two in
+presence. And it is **one deep**: a framed part inside a
 framed panel, or under the battle detail band's trim, wears no frame; a CTA
 never wears a 9-slice — alone, it has only its low strip on its lip; inside a
 framed panel (the home card, the Buy Company card) it is a plain button, with
@@ -110,10 +114,10 @@ Before → after: `docs/ui-audit-2026-10/frames-calm/`.
 | World | Frame (`themeArt.ts`, 4 px at the sheet's double, its own corner; still, quiet) | Ambient (`fxWorlds.ts`) | Press burst (on the CTA's face) | Switch-in (350 ms) |
 |---|---|---|---|---|
 | Peppercorn — fire | A dim charred line, burnt through in places, a two-pixel ember crack a tile and a coal at each corner; low, dull flame tongues on the card's top (its crest) | A few small embers (1–2 px, no white heart) rising slowly beside the focused road and at the foot; a low flame line along the dock's top over a faint heat glow | A few flames up the CTA's face, a few embers off the press | A faint warmth off the floor |
-| Easel House — paint | A thin stroke in three paints that swells into small scallops, a drip now and then, a dab at each corner | Flecks drifting, now and then a small splat that dries (never on the focused road), faint washes | An inked splat at the CTA's nearer end, a drip, a few droplets | A faint lilac stroke |
-| Ironvein — forge | An iron line jointed into plates, a rivet on each, one ember-lit joint a tile, a bolt at each corner | Three anvils along the dock's top, a few sparks in low slow arcs, ash drifting | A molten flash along both CTA seams, a handful of sparks | A faint glow round the strike |
+| Easel House — paint | A two-pixel brush stroke in three paints, each dab its paint over its bristle shade and parted from the next, a drip now and then, a dab at each corner | Flecks drifting, now and then a small splat that dries (never on the focused road), faint washes | An inked splat at the CTA's nearer end, a drip, a few droplets | A faint lilac stroke |
+| Ironvein — forge | A two-tone iron band lit on its top edge, a rivet head every 16 CSS px, a riveted bracket plate at each corner, the forge glowing in each plate joint; on a lone CTA, an iron bar with two domed rivets | Three anvils along the dock's top, a few sparks in low slow arcs, ash drifting | A molten flash along both CTA seams, a handful of sparks | A faint glow round the strike |
 | Rosethread — silk | A satin line with one sheen pixel a tile, a running stitch inside it, a rose bud at each corner | Rose petals tumbling slowly; two faint ribbons across the map, a still stitch and a slow sheen | A running stitch along the CTA's foot, a few petals | A faint ribbon |
-| Moonquill — arcane night | A silver line, one faint rune a tile under it, a star at each corner | A crescent moon and its still beam, stars twinkling slowly, runes drifting up | Sparkles and an inked rune at the CTA's nearer end | A faint silver sky |
+| Moonquill — arcane night | A silver line, two runes a tile hung under it, a four-pointed star at each corner | A crescent moon and its still beam, stars twinkling slowly, runes drifting up | Sparkles and an inked rune at the CTA's nearer end | A faint silver sky |
 
 Rules the worlds keep: **every world reads in one still, at a glance, in
 greyscale** (each has its own shape — a flame line, flecks and splats, anvils,

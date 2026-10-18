@@ -235,71 +235,129 @@ function fireCrest(f: number): Rows {
 }
 
 // ---------------------------------------------------------------------------
-// PAINT — Easel House: a thin brush stroke in three paints that swells into
-// scallops, a drip now and then
+// PAINT — Easel House: a confident brush stroke in three paints, each dab
+// with its bristle shade under it; a drip now and then
 // ---------------------------------------------------------------------------
-const PAINT: Palette = { p: '#6e5a96', q: '#46326e', o: '#84663e', t: '#40726c', s: '#8a5a72', d: '#2a1d3c' }
+/*
+ * The second frames pass (Oct 2026; the board: Peppercorn and Rosethread
+ * GOOD, Ironvein "the most minimal in our UI aesthetic"): every world as
+ * present as those two — a line and a rhythm of its own you can read at a
+ * glance — still one deep, still dim, still no lone pixel.
+ */
+const PAINT: Palette = {
+  // Each paint and its bristle shade.
+  p: '#6e5a96',
+  P: '#4c3d70',
+  o: '#84663e',
+  O: '#5c4628',
+  t: '#40726c',
+  T: '#2b4f4b',
+  s: '#8a5a72',
+  q: '#46326e',
+}
 function paintFrame(_f: number): Rows {
   return frame(
     (d, along, side) => {
       const s = sideN(side)
-      // Scallops: the stroke swells 1 → 2 px and back in the middle of each
-      // eight-pixel dab, every dab its own paint.
+      // Dabs eight pixels long, each its own paint: the paint on the outside,
+      // its bristle shade under it, parted where one dab meets the next (the
+      // stroke's scallops: inner bumps read as battlements, not paint).
       const a = along % 8
       const band = (Math.floor(along / 8) + s) % 3
-      const paint = band === 0 ? 'p' : band === 1 ? 'o' : 't'
+      const [paint, shade] = band === 0 ? ['p', 'P'] : band === 1 ? ['o', 'O'] : ['t', 'T']
       if (d === 0) return paint
-      if (d === 1 && a >= 3 && a <= 5) return paint
-      // A drip off the foot, once in a while.
-      if (side === 'bottom' && d === 1 && hash(along, 13) < 0.12) return 'q'
+      if (d === 1) return a === 0 || a === 7 ? null : shade
+      // A drip off the foot, once a tile, hanging from a dab's edge.
+      if (side === 'bottom' && (d === 2 || d === 3) && along === 6) return shade
       return null
     },
-    // A dab of paint one pixel in, a different paint across the diagonal.
-    (cx, cy, which) => quietCorner(which === 0 || which === 3 ? 'o' : 's', (x, y) => (x === 1 && y === 1 ? (which === 0 || which === 3 ? 's' : 'o') : null))(cx, cy),
+    // A dab of paint in each corner, a different paint across the diagonal.
+    (cx, cy, which) => {
+      const [paint, shade] = which === 0 || which === 3 ? ['o', 'O'] : ['s', 'q']
+      return quietCorner(paint, (x, y) => (x === 1 && y === 1 ? shade : (x === 2 && y === 1) || (x === 1 && y === 2) ? shade : null))(cx, cy)
+    },
   )
 }
-function paintStrip(f: number): Rows {
+function paintStrip(_f: number): Rows {
   const g = grid(STRIP_W, STRIP_H)
-  const paints = ['p', 'o', 't', 's']
-  // The bristles' line on the button's lip, a tuft of two or three on it.
+  // A brush stroke standing on the button's lip: a dab of each of two paints,
+  // its bristle shade under it (parted where the dabs meet), a scallop of
+  // paint swelling up in the middle of each.
   for (let x = 0; x < STRIP_W; x++) {
-    g[STRIP_H - 1][x] = 'p'
-    if (x === 1 || x === 2 || (x >= 9 && x <= 11)) g[STRIP_H - 2][x] = 'q'
-  }
-  // Two dabs of other paint sitting on it (on the bristles, never floating).
-  for (let k = 0; k < 2; k++) {
-    const x = 3 + k * 8 + Math.floor(hash(k, f, 21) * 3)
-    g[STRIP_H - 1][x] = g[STRIP_H - 1][x + 1] = paints[(k + 1) % paints.length]
+    const [paint, shade] = x < 8 ? ['p', 'P'] : ['t', 'T']
+    const a = x % 8
+    g[STRIP_H - 2][x] = a === 0 ? '.' : shade
+    g[STRIP_H - 3][x] = paint
+    if (a >= 2 && a <= 5) g[STRIP_H - 4][x] = paint
   }
   return rows(g)
 }
 
 // ---------------------------------------------------------------------------
-// FORGE — Ironvein: an iron line jointed into plates, a rivet on each, the
-// forge's glow in one joint a tile
+// FORGE — Ironvein: a two-tone iron band lit on its top edge, a rivet head
+// every eight pixels, a riveted bracket plate at each corner, the forge's
+// glow in each plate joint
 // ---------------------------------------------------------------------------
-const FORGE: Palette = { i: '#46526a', l: '#7f8ca2', d: '#222a36', m: '#8a4422', M: '#b4602c' }
+const FORGE: Palette = {
+  // The iron: its lit edge, its body, its shadow, a joint.
+  L: '#5c697e',
+  i: '#3e495c',
+  D: '#262e3b',
+  k: '#141922',
+  // A rivet head, lit, and its shadow side.
+  r: '#8a97ab',
+  R: '#66738a',
+  // The forge's glow in a joint.
+  m: '#8a4422',
+  M: '#b4602c',
+}
 function forgeFrame(_f: number): Rows {
   return frame(
-    (d, along) => {
-      const a = along % 8
-      if (d === 0) return a === 7 ? 'd' : 'i' // a plate joint every eight pixels
-      if (d === 1) {
-        // The forge's glow in one joint a tile, just inside the line.
-        if (along === 15) return 'm'
-        // A rivet head on each plate, a bump on the line: lit, then its body.
-        return a === 3 ? 'l' : a === 4 ? 'i' : null
-      }
+    (d, along, side) => {
+      // Lit from the top left, like the pack: the top and left bands catch the
+      // light on their outer edge, the bottom and right fall into shadow.
+      const lit = side === 'top' || side === 'left'
+      // A plate joint every sixteen pixels, glowing from the forge.
+      if (along === 15) return d === 0 ? 'k' : d === 1 ? 'm' : d === 2 ? 'M' : null
+      // A rivet head on the band every eight pixels: lit, then its shadow side.
+      if (d === 1 && along % 8 === 3) return 'r'
+      if (d === 1 && along % 8 === 4) return 'R'
+      if (d === 0) return lit ? 'L' : 'i'
+      if (d === 1) return lit ? 'i' : 'D'
       return null
     },
-    // A bolt one pixel in from each corner.
-    quietCorner('i', (cx, cy) => (cx === 1 && cy === 1 ? 'l' : null)),
+    // A riveted bracket plate at each corner, deeper than the band, its
+    // outer edge in the light of whichever side it turns.
+    (cx, cy, which) => {
+      if (cx === 0 && cy === 0) return null
+      const top = which < 2
+      const left = which === 0 || which === 2
+      if (cy === 0) return top ? 'L' : 'i'
+      if (cx === 0) return left ? 'L' : 'i'
+      if (cx === 1 && cy === 1) return 'r'
+      if ((cx === 2 && cy === 1) || (cx === 1 && cy === 2)) return 'R'
+      if (cx + cy === 5 || (cx === 3 && cy === 1) || (cx === 1 && cy === 3)) return 'D'
+      if (cx + cy <= 4) return 'i'
+      return null
+    },
   )
 }
 function forgeStrip(_f: number): Rows {
   const g = grid(STRIP_W, STRIP_H)
-  // A dim seam along the lip, one pixel, warmer for three at one joint a tile.
-  for (let x = 0; x < STRIP_W; x++) g[STRIP_H - 1][x] = x >= 10 && x <= 12 ? 'M' : 'm'
+  // An iron bar standing on the button's lip: its lit top, its body, a domed
+  // rivet every eight pixels, and the forge glowing in its one joint.
+  for (let x = 0; x < STRIP_W; x++) {
+    g[STRIP_H - 3][x] = 'L'
+    g[STRIP_H - 2][x] = 'i'
+  }
+  // Each rivet a round head two pixels wide, domed over the bar, lit on its left.
+  for (const x of [3, 11]) {
+    g[STRIP_H - 4][x] = g[STRIP_H - 4][x + 1] = 'R'
+    g[STRIP_H - 3][x] = 'r'
+    g[STRIP_H - 3][x + 1] = 'R'
+  }
+  g[STRIP_H - 3][15] = 'm'
+  g[STRIP_H - 2][15] = 'M'
   return rows(g)
 }
 
@@ -330,10 +388,10 @@ function silkStrip(_f: number): Rows {
 }
 
 // ---------------------------------------------------------------------------
-// ARCANE NIGHT — Moonquill: a silver line, one faint rune a tile inscribed
-// under it, a star in each corner
+// ARCANE NIGHT — Moonquill: a silver line, two runes a tile inscribed under
+// it, a four-pointed star in each corner
 // ---------------------------------------------------------------------------
-const ARCANE: Palette = { s: '#5e6898', g: '#434d86', G: '#7a86bc' }
+const ARCANE: Palette = { s: '#5e6898', g: '#56609c', G: '#8a96ca' }
 /** Five little runes, 3 × 3, for the frame and the CTA strip. */
 const RUNES_3: Rows[] = [
   ['s.s', '.s.', 's.s'],
@@ -346,24 +404,28 @@ function arcaneFrame(_f: number): Rows {
   return frame(
     (d, along, side) => {
       if (d === 0) return 's'
-      // One rune a tile (at 7), a pixel in from the line, dim.
-      const x = along - 7
-      if (d >= 1 && x >= 0 && x <= 2) {
-        const rune = RUNES_3[sideN(side) % RUNES_3.length]
+      // Two runes a tile (at 2 and 10), hung from the line, each its own.
+      for (const [k, at] of [
+        [0, 2],
+        [1, 10],
+      ] as const) {
+        const x = along - at
+        if (x < 0 || x > 2) continue
+        const rune = RUNES_3[(sideN(side) + k * 2) % RUNES_3.length]
         return rune[d - 1][x] === 's' ? 'g' : null
       }
       return null
     },
-    // A star one pixel in, its two short rays along the line.
-    quietCorner('s', (cx, cy) => (cx === 1 && cy === 1 ? 'G' : (cx === 2 && cy === 1) || (cx === 1 && cy === 2) ? 'g' : null)),
+    // A four-pointed star in each corner, its near rays touching the line.
+    quietCorner('s', (cx, cy) => (cx === 2 && cy === 2 ? 'G' : (cx === 2 && (cy === 1 || cy === 3)) || (cy === 2 && (cx === 1 || cx === 3)) ? 'g' : null)),
   )
 }
 function arcaneStrip(_f: number): Rows {
   const g = grid(STRIP_W, STRIP_H)
-  // Three runes in a row on the button's lip, the middle one lit.
+  // Three runes in a row standing on the button's lip, the middle one lit.
   for (let k = 0; k < 3; k++) {
     const rune = RUNES_3[(k + 2) % RUNES_3.length]
-    for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) if (rune[y][x] === 's') g[3 + y][1 + k * 5 + x] = k === 1 ? 'G' : 'g'
+    for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) if (rune[y][x] === 's') g[2 + y][1 + k * 5 + x] = k === 1 ? 'G' : 'g'
   }
   return rows(g)
 }

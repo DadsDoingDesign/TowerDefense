@@ -4716,3 +4716,22 @@ The salt was picked from 5,000 so that in the first twelve seconds no two tics s
 - Hask's company colour (the oxblood apron) is smaller than his teal skin. Here the race wins over the company.
 - Saffra's band is gold on the field and red on the dock.
 - The field figures' shading is still flatter than the pack's.
+
+### 2026-10-18 — the world frames, present again (second frames pass)
+
+The board's verdicts on the quiet frames: Peppercorn's and Rosethread's home cards GOOD, kept exactly as they were. The Ironvein hero pick got a FIX: "This one was the most minimal in our UI aesthetic, consider a better styling for this company". The quiet pass had overshot for the worlds whose identity lived in their detail. The target was every world as present as the two approved ones, still one deep, no doubling, no busy sparkle. No gameplay, number or RNG draw changed.
+
+**What changed** (`themeArt.ts`; Peppercorn's and Rosethread's art untouched).
+- **Ironvein.** A two-tone iron band, lit on its top-left edges and shadowed on the bottom-right. It has a rivet head every 16 CSS px, a riveted bracket plate at each corner, and the forge glowing in each plate joint (every 32 CSS px). A lone CTA stands on an iron bar with two domed rivets and a glowing joint. This covers the home card, the dock, the hero pick and the terms (modes, asks).
+- **Easel House.** A two-pixel brush stroke: each dab is its paint over its bristle shade, parted where the dabs meet, with a drip off the foot. The CTA strip is the same stroke with a scallop on each dab.
+- **Moonquill.** Two clearer runes a tile hang under the silver line, and a four-pointed star sits at each corner. The strip's runes are lifted to stand on the lip.
+- **Test cap.** `tests/themeWorlds.test.ts` lets the line be two pixels deep: depth 1 is no longer capped, depths 2–3 stay ≤ 0.5 each, and the inner share goes from a third to a half. That cap was what blocked a two-tone iron band. The luma caps (line under 0.42, accents under 0.6) are unchanged.
+
+**Rounds**, each against the two approved cards.
+1. Ironvein now reads riveted, as present as Rosethread's stitch. But Easel's inner scallop bumps read as battlements, not paint.
+2. The scallops left the frame; the stroke's shade and partings carry the brush. Ironvein's strip rivets read as ruler ticks.
+3. The rivets are now domed two-pixel heads. Phone and desk: home, terms and pick for all five. No nesting, `home-stability` passes, and each world reads at a glance beside the approved two.
+
+**Left.** At some sizes `border-image-repeat: repeat` lands a band rivet right beside a corner plate's rivet, because tile phase is set by the box. Moonquill's band of runes is the busiest of the five, though dim.
+
+**Cards:** `docs/ui-audit-2026-10/frames-calm/` has `home-metals`, `pick-metals`, a new `terms-metals`, `home-art` and `home-scrolls` (LAST PASS over NOW). `home-spice` and `home-silk` are unchanged.
