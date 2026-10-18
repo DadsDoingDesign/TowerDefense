@@ -36,6 +36,8 @@ import { drawMark, drawTellOver, drawTellUnder } from './peoples-tells'
 
 const q = new URLSearchParams(location.search)
 const ONLY = q.get('people')
+/** One review card per item and per skill instead of the contact sheets. */
+const CARDS = q.has('cards')
 const out = document.getElementById('out')!
 const MAP = FIRST_MAP
 const LOOK = 'fighter' as const
@@ -56,6 +58,27 @@ const FOE2 = { x: SKILL_POST.x + 41, y: SKILL_POST.y + 74 }
 const ITEM_BOX = { w: 84, h: 112, hx: 42, hy: 92 }
 const WEAPON_BOX = { ...ITEM_BOX, hx: 38 }
 const SKILL_BOX = { w: 84, h: 184, hx: 30, hy: 92 }
+
+type Box = { w: number; h: number; hx: number; hy: number }
+/** Where a skill frame is shot from: its box round the hero, and the goblins on the road. */
+interface SkillGeo {
+  box: Box
+  foe: Vec2
+  foe2: Vec2
+}
+const SHEET_GEO: SkillGeo = { box: SKILL_BOX, foe: FOE, foe2: FOE2 }
+
+/**
+ * The review cards (`?cards`): one item or skill per card, the hero at 5×.
+ * The same posts and goblins as the sheets, framed wider (112 logical px =
+ * 560 at 5×) so nothing the sheet cell crops is lost: the figure spans
+ * −32…+44 round its post (−41 with a shield), −84…+18 tall with its shadow,
+ * and the struck keg −26…+25 round its own, −50 (its HP bar) …+38.
+ */
+const CARD_X = 5
+const CARD_ITEM_BOX: Box = { w: 112, h: 102, hx: 58, hy: 86 }
+const CARD_WEAPON_BOX: Box = { ...CARD_ITEM_BOX, hx: 52 }
+const CARD_SKILL_GEO: SkillGeo = { box: { w: 112, h: 160, hx: 40, hy: 86 }, foe: FOE, foe2: FOE2 }
 
 function tileAt(col: number, row: number): Vec2 {
   const t = MAP.tiles?.find((x) => x.col === col && x.row === row)
@@ -171,7 +194,7 @@ function sentinel(id: string, pos: Vec2, gear: HeroGear, over: Partial<DrawSenti
   }
 }
 
-function fieldCanvas(box: { w: number; h: number; hx: number; hy: number }, at: Vec2, k: number): { c: HTMLCanvasElement; g: CanvasRenderingContext2D } {
+function fieldCanvas(box: Box, at: Vec2, k: number): { c: HTMLCanvasElement; g: CanvasRenderingContext2D } {
   const c = el('canvas', 'hero')
   c.width = box.w * k
   c.height = box.h * k
@@ -185,9 +208,10 @@ function fieldCanvas(box: { w: number; h: number; hx: number; hy: number }, at: 
   return { c, g }
 }
 
-function itemHero(it: DraftItem, k = HERO_X): HTMLCanvasElement {
+function itemHero(it: DraftItem, k = HERO_X, card = false): HTMLCanvasElement {
   const weapon = it.slot !== 'offHand' && it.slot !== 'body'
-  const { c, g } = fieldCanvas(weapon ? WEAPON_BOX : ITEM_BOX, ITEM_POST, k)
+  const box = card ? (weapon ? CARD_WEAPON_BOX : CARD_ITEM_BOX) : weapon ? WEAPON_BOX : ITEM_BOX
+  const { c, g } = fieldCanvas(box, ITEM_POST, k)
   setPresentationTime(0.01)
   fxReset()
   drawSentinel(g, sentinel('item', ITEM_POST, gearFor(it)))
@@ -223,23 +247,24 @@ function goblin(id: string, pos: Vec2, sk: DraftSkill, struck: boolean): RtEnemy
  * One skill, mid-hit. `parts` picks what is drawn (for the overlap check the
  * tells and the goblins are drawn alone on a clear canvas).
  */
-function skillFrame(p: People, sk: DraftSkill, k: number, parts: 'all' | 'tells' | 'foes' = 'all'): HTMLCanvasElement {
+function skillFrame(p: People, sk: DraftSkill, k: number, parts: 'all' | 'tells' | 'foes' = 'all', geo: SkillGeo = SHEET_GEO): HTMLCanvasElement {
+  const { box, foe2 } = geo
   const glint = sk.tell.find((t) => t.kind === 'glint')
   const gear = kitGear(p, glint && glint.kind === 'glint' ? glint.effect : null)
   let c: HTMLCanvasElement
   let g: CanvasRenderingContext2D
-  if (parts === 'all') ({ c, g } = fieldCanvas(SKILL_BOX, SKILL_POST, k))
+  if (parts === 'all') ({ c, g } = fieldCanvas(box, SKILL_POST, k))
   else {
     c = el('canvas')
-    c.width = SKILL_BOX.w * k
-    c.height = SKILL_BOX.h * k
+    c.width = box.w * k
+    c.height = box.h * k
     g = c.getContext('2d', { willReadFrequently: true })!
     g.imageSmoothingEnabled = false
     g.scale(k, k)
-    g.translate(-(SKILL_POST.x - SKILL_BOX.hx), -(SKILL_POST.y - SKILL_BOX.hy))
+    g.translate(-(SKILL_POST.x - box.hx), -(SKILL_POST.y - box.hy))
   }
   const hero = SKILL_POST
-  const foe = FOE
+  const foe = geo.foe
   const two = !!(sk.hit.second || sk.hit.chain || sk.hit.splash || sk.hit.pierce)
   const now = 0.4
   setPresentationTime(now)
@@ -263,8 +288,8 @@ function skillFrame(p: People, sk: DraftSkill, k: number, parts: 'all' | 'tells'
     side: 1,
   })
   // No `fxHitEnemy`: its white silhouette would hide the very marks the frame is for.
-  if (sk.hit.chain) fxArc(foe.x, foe.y - 10, FOE2.x, FOE2.y - 10)
-  if (sk.hit.chain && sk.hit.chain > 1) fxArc(FOE2.x, FOE2.y - 10, FOE2.x + 34, FOE2.y + 20)
+  if (sk.hit.chain) fxArc(foe.x, foe.y - 10, foe2.x, foe2.y - 10)
+  if (sk.hit.chain && sk.hit.chain > 1) fxArc(foe2.x, foe2.y - 10, foe2.x + 34, foe2.y + 20)
   if (sk.hit.proc) fxProc('hero', sk.hit.proc, hero.x, hero.y)
   if (sk.hit.floater) fxFloater(foe.x - 4, foe.y + 2, sk.hit.floater.text, sk.hit.floater.ink, sk.hit.floater.crit ? FLOAT_CRIT : FLOAT_NUM)
   for (let i = 0; i < 3; i++) fxAdvance(1 / 60)
@@ -279,7 +304,7 @@ function skillFrame(p: People, sk: DraftSkill, k: number, parts: 'all' | 'tells'
     g.restore()
   }
   if (parts === 'foes') {
-    for (const pos of two ? [FOE2, foe] : [foe]) drawEnemy(g, goblin('chk', pos, sk, true), now, 0, false)
+    for (const pos of two ? [foe2, foe] : [foe]) drawEnemy(g, goblin('chk', pos, sk, true), now, 0, false)
     return c
   }
   // The blow has just left the hand: below the attack strip's threshold, so
@@ -293,7 +318,7 @@ function skillFrame(p: People, sk: DraftSkill, k: number, parts: 'all' | 'tells'
   if (parts === 'all') {
     // Back to front, as the battle draws (`units.backToFront`): the goblins
     // stand lower on the road than the hero, so they are drawn over it.
-    for (const [id, pos] of two ? ([['foe', foe], ['foe2', FOE2]] as const) : ([['foe', foe]] as const)) {
+    for (const [id, pos] of two ? ([['foe', foe], ['foe2', foe2]] as const) : ([['foe', foe]] as const)) {
       drawEnemy(g, goblin(id, pos, sk, true), now, 0, false)
       g.save()
       g.translate(Math.round(pos.x), Math.round(pos.y) + 13)
@@ -446,13 +471,110 @@ function sheet(p: People, kind: 'items' | 'skills'): HTMLElement {
   return s
 }
 
+/* --------------------------------------------------------------- the cards */
+
+/**
+ * The designer's roster (`docs/peoples/roster.json`, handed in by
+ * `peoples-sheets.mjs --cards` as `window.__roster`): per people, items as
+ * [level, name, slot, effect, status] and skills as [name, level, effect,
+ * status]. A card's effect line and status tag are read from it; the drafted
+ * `does` / `status` stand in for anything it does not list.
+ */
+type RosterItem = [number, string, string, string, string]
+type RosterSkill = [string, number, string, string]
+type Roster = Partial<Record<People['id'], { items: RosterItem[]; skills: RosterSkill[] }>>
+const ROSTER: Roster = (window as unknown as { __roster?: Roster }).__roster ?? {}
+
+/** What `peoples-sheets.mjs --cards` writes to `docs/peoples/cards/manifest.json`, one per card. */
+interface CardMeta {
+  id: string
+  group: 'Items' | 'Skills'
+  people: People['id']
+  title: string
+  level: number
+  status: 'new' | 'renamed' | 'kept'
+  caption: string
+  file: string
+}
+
+const slug = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/['’]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+
+/** A skill's roster status ("signature, was Pepperfire", "new", "kept") as a tag. */
+const skillStatus = (s: string): CardMeta['status'] => (/\bwas\b/.test(s) ? 'renamed' : /\bnew\b/.test(s) ? 'new' : 'kept')
+const STATUS_TAG: Record<CardMeta['status'], [string, string]> = { new: ['new', 'NEW'], renamed: ['ren', 'RENAMED'], kept: ['kept', 'KEPT'] }
+
+function card(p: People, meta: CardMeta, icon: Art | IconKey, opts: { signature?: boolean; was?: string }, stage: HTMLCanvasElement): HTMLElement {
+  const c = el('section', `card lv${meta.level}`)
+  c.dataset.out = meta.file
+  c.dataset.meta = JSON.stringify(meta)
+  const head = el('div', 'card-head')
+  head.append(scaled(cellOf(icon), 6))
+  const side = el('div', 'card-side')
+  const name = el('h1', 'card-name', meta.title)
+  // A renamed piece says what it was beside its new name (a renamed item's roster line already says it).
+  if (opts.was) name.append(' ', el('small', 'card-was', `was ${opts.was}`))
+  side.append(name)
+  const tags = el('div', 'card-tags')
+  tags.append(el('span', `lv lv${meta.level}`, levelTag(meta.level)))
+  const [cls, word] = STATUS_TAG[meta.status]
+  tags.append(el('span', cls, word))
+  if (opts.signature) tags.append(el('span', 'sig', 'SIGNATURE'))
+  side.append(tags)
+  head.append(side)
+  stage.classList.add('card-stage')
+  const line = el('p', 'card-line')
+  line.append(el('b', undefined, p.title), document.createTextNode(` · ${meta.caption}`))
+  c.append(head, stage, line)
+  return c
+}
+
+function cards(p: People): HTMLElement[] {
+  const roster = ROSTER[p.id]
+  const list: HTMLElement[] = []
+  for (const it of [...p.items].sort((a, b) => a.level - b.level)) {
+    const r = roster?.items.find((x) => x[1] === it.name)
+    const id = `${p.id}-item-${slug(it.name)}`
+    const status = (r?.[4] ?? it.status) as CardMeta['status']
+    const meta: CardMeta = { id, group: 'Items', people: p.id, title: it.name, level: it.level, status, caption: r?.[3] ?? it.does, file: `${id}.png` }
+    // A renamed item's roster line already names what it was.
+    const was = it.was && !meta.caption.includes(it.was) ? it.was : undefined
+    list.push(card(p, meta, it.icon, { was }, itemHero(it, CARD_X, true)))
+  }
+  for (const sk of [...p.skills].sort((a, b) => (b.signature ? 1 : 0) - (a.signature ? 1 : 0) || a.level - b.level)) {
+    const r = roster?.skills.find((x) => x[0] === sk.name)
+    const raw = r?.[3] ?? sk.status
+    const id = `${p.id}-skill-${slug(sk.name)}`
+    const meta: CardMeta = { id, group: 'Skills', people: p.id, title: sk.name, level: sk.level, status: skillStatus(raw), caption: r?.[2] ?? sk.does, file: `${id}.png` }
+    const was = /\bwas ([^,)]+)/.exec(raw)?.[1]?.trim()
+    list.push(card(p, meta, sk.icon, { signature: sk.signature, was }, skillFrame(p, sk, CARD_X, 'all', CARD_SKILL_GEO)))
+  }
+  return list
+}
+
+/** Shrink a card's one-line effect until it fits the card (never below 17 px). */
+function fitLines(): void {
+  for (const line of document.querySelectorAll<HTMLElement>('.card-line')) {
+    let size = 26
+    line.style.fontSize = `${size}px`
+    while (line.scrollWidth > line.clientWidth && size > 17) line.style.fontSize = `${--size}px`
+  }
+}
+
 function build(): void {
   out.textContent = ''
+  if (CARDS) document.body.classList.add('cards')
   for (const p of PEOPLES) {
     if (ONLY && p.id !== ONLY) continue
     if (!p.items.length) continue
-    out.append(sheet(p, 'items'), sheet(p, 'skills'))
+    if (CARDS) out.append(...cards(p))
+    else out.append(sheet(p, 'items'), sheet(p, 'skills'))
   }
+  if (CARDS) fitLines()
 }
 
 setActiveTheme('tinyswords')

@@ -4234,3 +4234,54 @@ The harness reports that no tell touches a goblin's HP bar.
 - The kept cells (the shipped wand, sceptre, staff, grimoire, tome and robe) are not re-themed. The Gnomes therefore read as a family through their new items only.
 - The Spear's thin diagonal sits 39 px from the shipped Staff. It differs in its bone tip and red binding, not in silhouette.
 - One knight wears everything: the brief asked for a neutral hero, and the sheet is a comparison. Per-people bodies would be new art.
+
+### 2026-10-18 — the knight's body under the cut shield, filled
+
+The designer: "The shield shape matters as it covers part of the body, and when it's small it looks odd since the body is missing." The painted shield covered the lower-left of the helmet, the side of the tunic and its outline, the near arm, in the swing a leg, and a bite of the ground shadow. `cutOffHand` cut all of it with the shield. So every knight whose off hand held something smaller than the shield (a Tome, Quiver, Focus or Buckler), or nothing (a two-hander, an empty hand), stood sliced down one side. This was live in the game, not only in the drafts. No rule, number or RNG draw changed.
+
+**The fix: fill in the body.** No CC0 unit in the repo shows the knight's body without its shield (the old build's Warrior paints it in every row), so the body is rebuilt from the knight itself. `scripts/shield-fill-lib.ts` mirrors it part by part about the middle of the helmet's untouched rows; the figure faces the viewer, so it is near-symmetric:
+- **Helmet**: the hidden lower-left takes the mirror of its right edge, row by row. It takes its colours from its own left edge in the lowest untouched row: the brown shade, then the tan. The art had painted brown along the shield's edge; that is inside the head now, so it becomes tan.
+- **Tunic**: the hidden side runs under the helmet's side and curves as its right side curves. It wears its right side's shades, edge for edge, and the same outline.
+- **Near hand**: the idle strip uses the sword hand at the hip, mirrored. In the attack strip, where the sword hand is up or out, the idle hand hangs at the rebuilt side.
+- **Leg**: where the shield hid the near leg, the far leg is mirrored.
+- **Shadow**: the bite is closed by the mirror of its right half, about the shadow's own axis.
+- **Outline**: new paint that faces empty space gets the pack's ink, and any ink the cut kept that now edges nothing is removed.
+
+**How it ships.**
+- `npm run anchors` writes the difference as a per-frame patch, `shieldFill.generated.ts` (12.7 KB), which `gearMarks.cutAndFill` applies after the cut.
+- `anchors:check` fails if the patch is stale or if any rebuilt frame breaks one of these rules (`fillProblems`): a hole the art does not have, an open outline, a stray island, a colour the knight does not wear, or a write over art the cut kept.
+- The rebuilt strips have their own torso rows (`fighter_{idle,atk}_bare`), so Mail, Plate, Robe and Cloak dress the whole tunic.
+- `offHandPlan` sends a knight with a real Shield down the old path: no cut, no patch, its own torso. Pixel for pixel, it is the painted art.
+- Tests: `tests/attackLook.test.ts`, "the body under the shield".
+
+**Round 1** (`harness/kit.html?shield=1`, the real `drawSentinel` → `heroFigure`; 1×, 3× and 8×):
+- The tunic mirrored about the helmet made the leaning wind-up frames pear-shaped (44 px wide). It now follows the helmet's side instead.
+- The helmet had a double shade band: the new one, plus the brown the art had painted along the shield. The old band is now repainted tan.
+- The leg pass deleted the legs it had drawn, because a leg is all ink and the stray-ink pass removed ink-only pixels. Legs are now exempt.
+- The attack strip's near hand floated far left. It now hangs at the side.
+- A shadow fleck stood under the shield's old tip.
+- In swing frame 4 the tunic showed through the chin. A row where the art shows body beside the chin now ends the head above it.
+
+**Round 2**:
+- The leg rule mistook the sword's pommel for a leg in one idle frame, which drew a loop of ink in the air.
+- A thin near leg (the shield had trimmed its top) was left detached in the last swing frame. Now the far leg is mirrored wherever the shield stood over the near one.
+- The hand covered the rebuilt tunic in the low swing frames. It now overlaps only the tunic's outline.
+
+Re-shot afterwards:
+- all 8 off hands (empty, Greatsword, Tome, Quiver, Focus, Buckler, Pavise, Shield) × no body / Mail / Plate / Robe / Cloak, idle and three swing frames;
+- the app's party bar and field (`scripts/kit-look.mjs`, 390 × 844 and 1280 × 800). The Greatsword knight's bust is whole, and Ironheart dresses both shoulders.
+
+**Benchmark.** Against the painted-shield knight, the bare knight reads as the same figure with the shield gone. Its silhouette is the egg helmet over a short tunic with a fist each side, in the pack's 2 px contour, like the Tiny Swords pawn. Kingdom Rush's heroes keep their silhouette whatever they hold, and so does the knight now. The held piece still hangs from the shield's old grip (`fistL`). In the swing it sits over the body, as before.
+
+**Shots.** `docs/ui-audit-2026-10/shield-fill/`:
+- `before-after-3x.png`: idle, five off hands;
+- `swing-before-after.png`: Focus through the swing at 3×, and Focus and empty at 1×;
+- `armour-after.png`: six off hands × five bodies.
+
+The Peoples & Trades sheets in `docs/peoples/` were regenerated (`scripts/peoples-sheets.mjs`). Nine of ten changed: every knight holding a drafted off-hand piece or a two-hander is whole now. `humans-skills` is unchanged.
+
+**Left.** The atlas piece is held at one point (`fistL`) for every frame. Through the swing it covers the chest, and in idle the rebuilt fist shows under it. Per-frame off-hand grips would be the next step.
+**Review cards (one asset at a time, for a phone).** `node scripts/peoples-sheets.mjs --cards` shoots `harness/peoples.html?cards` into `docs/peoples/cards/`: 150 cards (100 items, 50 skills), 3.2 MB in all, and `manifest.json` (`{ id, group, people, title, level, status, caption, file }`). The cell art is the same as the sheets'. Each card shows the icon at 6×, the name, the level tag and a NEW / RENAMED / KEPT tag. Signature skills also carry SIGNATURE, and a renamed skill says "was …" beside its name. Under that is the hero at 5×, crisp, with the people and the effect in one line from `docs/peoples/roster.json`.
+- **Sizes.** Items are 600 × 694. Skills are 600 × 984, because the keg stands on the road below the hero and a 5× frame of both is 160 logical px tall. At 390 px wide a skill card is 640 tall, so it still fits a phone screen.
+- **Checks.** Looked at on a 390 px downscale, the names, tags and art read at 26 px or larger. The effect line is 17 px; the longest (Spicy Peps) shrinks to about 11 px. The script exits non-zero if any name or line clips; none do.
+- **Left.** On a two-goblin skill (splash, pierce, chain) the second keg's HP bar sits over the first keg. That is the game's own layering, and the sheets do the same, but at 5× it is plain to see.

@@ -27,7 +27,13 @@
  *    tome, a second blade — or nothing at all (a two-hander, an empty hand)
  *    has that shield cut from BOTH its strips ({@link cutOffHand}), and holds
  *    its own piece, if any, in the left fist. A knight with a greatsword is
- *    not still carrying the shield the art came with;
+ *    not still carrying the shield the art came with. The shield covered part
+ *    of the knight — the side of the helmet and tunic, the near arm, a leg,
+ *    a bite of the shadow — so the cut would leave the knight sliced down one
+ *    side; the body it hid is rebuilt in the knight's own pixels, frame by
+ *    frame, from a patch baked at build time ({@link cutAndFill},
+ *    `scripts/shield-fill-lib.ts`), so the same knight stands there with the
+ *    shield simply gone, whatever the left fist holds;
  *  - **pixel-doubled once, never scaled at draw time**: each cell is baked to a
  *    32 × 32 canvas by nearest-neighbour and blitted at a whole logical px with
  *    no transform, the 1:1 invariant every field sprite keeps (`blit.ts`).
@@ -50,6 +56,7 @@ import type { Archetype, Equipment, Sentinel } from '../types'
 import { EFFECT_INK, leadEffect, type HitEffect } from './attackLook'
 import { mergeMods } from '../data/archetypeTree'
 import { isBodyKey, type BodyKey, type BodyStyle } from './bodyLayer'
+import { SHIELD_FILL } from './shieldFill.generated'
 
 /** What a hero carries, as atlas cells, plus the glint its weapon wears. */
 export interface HeroGear {
@@ -249,16 +256,102 @@ export interface Cut {
 const unpainted = new WeakMap<object, Map<string, HTMLCanvasElement>>()
 
 /**
- * A strip with the painted weapon and/or off-hand piece cut out (see
- * {@link Rig.unpaint}, {@link Rig.offCut}). One canvas per source strip and
- * cut, kept: `pixmap()` caches its bake by source IDENTITY, so a stable canvas
- * is baked once and never again.
+ * The body the painted shield hid, rebuilt per frame at build time
+ * (`scripts/shield-fill-lib.ts`, written by `npm run anchors` into
+ * `shieldFill.generated.ts`, checked by `anchors:check`): one strip's patch.
+ * `frames[f]` is runs `y, x, codes` in the frame's own px, one palette index
+ * per pixel (`FILL_CODES`); a 0-alpha colour clears.
  */
-export function unpaintedStrip(src: HTMLImageElement | HTMLCanvasElement, rig: Rig, frames: number, cut: Cut): HTMLImageElement | HTMLCanvasElement {
+export interface StripFill {
+  /** The strip the patch was made for; any other size is never patched. */
+  w: number
+  h: number
+  /** Packed `0xRRGGBBAA`. */
+  palette: readonly number[]
+  frames: readonly (readonly (number | string)[])[]
+}
+export type ShieldFills = Readonly<Record<string, Readonly<Record<string, StripFill>>>>
+
+/** The palette index alphabet of a {@link StripFill}'s codes. */
+export const FILL_CODES = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
+/** The rebuilt-body patch for a pack's strip, or null (nothing measured: the cut is left as it is). */
+export const shieldFillFor = (pack: string | undefined, strip: string): StripFill | null => (pack ? SHIELD_FILL[pack]?.[strip] ?? null : null)
+
+/** The torso table's key for a strip with its painted shield cut and the body rebuilt (`bodyAnchors.generated.ts`). */
+export const bareStrip = (strip: string): string => `${strip}_bare`
+
+/**
+ * What the off hand does to a strip (`role`, e.g. `fighter_idle`) of a pack's
+ * look: whether the painted piece is cut ({@link unpaintsOff}), the patch that
+ * rebuilds the body under it, and the torso table the body piece dresses it
+ * from. A hero holding the painted piece itself (a knight with a Shield) gets
+ * no cut, no patch and the strip's own torso: the art exactly as painted.
+ */
+export function offHandPlan(pack: string | undefined, rig: Rig, gear: HeroGear | undefined, role: string): { cut: boolean; fill: StripFill | null; torso: string } {
+  const cut = !!gear && unpaintsOff(rig, gear)
+  const fill = cut ? shieldFillFor(pack, role) : null
+  return { cut, fill, torso: fill ? bareStrip(role) : role }
+}
+
+/**
+ * Write one frame's patch into RGBA pixels, in place (columns `x0 ..` of a
+ * strip `w` wide). Pure: the anchors script, the tests and the canvas path
+ * all go through it. Returns the pixels written.
+ */
+export function applyShieldFill(d: { [i: number]: number; length: number }, w: number, x0: number, fill: StripFill, f: number): number {
+  const runs = fill.frames[f]
+  if (!runs) return 0
+  let n = 0
+  for (let i = 0; i + 2 < runs.length; i += 3) {
+    const y = runs[i] as number
+    const x = runs[i + 1] as number
+    const codes = runs[i + 2] as string
+    for (let j = 0; j < codes.length; j++) {
+      const c = fill.palette[FILL_CODES.indexOf(codes[j])]
+      const o = (y * w + x0 + x + j) * 4
+      d[o] = c >>> 24
+      d[o + 1] = (c >>> 16) & 255
+      d[o + 2] = (c >>> 8) & 255
+      d[o + 3] = c & 255
+      n++
+    }
+  }
+  return n
+}
+
+/**
+ * Cut the painted off-hand piece from every frame of a strip's RGBA pixels and,
+ * when a patch is given (and made for this size), rebuild the body it hid.
+ * In place. The canvas path ({@link unpaintedStrip}) and the build check share it.
+ */
+export function cutAndFill(d: { [i: number]: number; length: number }, w: number, h: number, frames: number, fill: StripFill | null): void {
+  const cw = Math.round(w / frames)
+  const patch = fill && fill.w === w && fill.h === h && fill.frames.length === frames ? fill : null
+  for (let f = 0; f < frames; f++) {
+    cutOffHand(d, w, h, f * cw, Math.min(cw, w - f * cw))
+    if (patch) applyShieldFill(d, w, f * cw, patch, f)
+  }
+}
+
+/**
+ * A strip with the painted weapon and/or off-hand piece cut out (see
+ * {@link Rig.unpaint}, {@link Rig.offCut}) — and, where the off hand is cut,
+ * the body under it rebuilt (`fill`, {@link shieldFillFor}). One canvas per
+ * source strip and cut, kept: `pixmap()` caches its bake by source IDENTITY,
+ * so a stable canvas is baked once and never again.
+ */
+export function unpaintedStrip(
+  src: HTMLImageElement | HTMLCanvasElement,
+  rig: Rig,
+  frames: number,
+  cut: Cut,
+  fill: StripFill | null = null,
+): HTMLImageElement | HTMLCanvasElement {
   const main = cut.main && rig.unpaint.length > 0
   const off = cut.off && rig.offCut
   if (typeof document === 'undefined' || (!main && !off)) return src
-  const key = `${main ? 'm' : ''}${off ? 'o' : ''}`
+  const key = `${main ? 'm' : ''}${off ? (fill ? 'of' : 'o') : ''}`
   let byCut = unpainted.get(src)
   const hit = byCut?.get(key)
   if (hit) return hit
@@ -275,7 +368,7 @@ export function unpaintedStrip(src: HTMLImageElement | HTMLCanvasElement, rig: R
   if (main) for (let f = 0; f < frames; f++) for (const r of rig.unpaint) g.clearRect(f * cw + r.x, r.y, Math.min(r.w, cw - r.x), r.h)
   if (off) {
     const img = g.getImageData(0, 0, w, h)
-    for (let f = 0; f < frames; f++) cutOffHand(img.data, w, h, f * cw, Math.min(cw, w - f * cw))
+    cutAndFill(img.data, w, h, frames, fill)
     g.putImageData(img, 0, 0)
   }
   if (!byCut) unpainted.set(src, (byCut = new Map()))
@@ -301,7 +394,9 @@ const isInk = (d: ArrayLike<number>, o: number): boolean =>
  *     touch an untouched painted pixel goes; ink that does is the BODY's
  *     outline and stays. The contour bake rings whatever is left.
  *
- * The ground shadow is translucent, so it is never ink and never cut.
+ * The ground shadow is translucent, so it is never ink and never cut. What
+ * the shield hid of the body is NOT restored here: {@link cutAndFill} writes
+ * the build-time patch that does that over the result.
  */
 export function cutOffHand(d: { [i: number]: number; length: number }, w: number, h: number, x0: number, cw: number): number {
   const at = (x: number, y: number) => (y * w + x) * 4

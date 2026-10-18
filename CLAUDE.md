@@ -41,8 +41,15 @@ result. Append a short note to the review log when you're done.
   on-hit effect palette); the hero's real weapon/off-hand on the figure is
   `gearMarks.ts` (atlas cells in the fists; the painted Tiny Swords weapon is
   cut when the hero holds something else, and the knight's painted shield is
-  flood-cut by `cutOffHand` unless the off hand holds a Shield); the body
-  piece is WORN, `bodyLayer.ts`: the tunic of every frame is measured off the
+  flood-cut by `cutOffHand` unless the off hand holds a Shield, and the hole
+  it leaves is FILLED: the helmet, tunic, near hand, leg and shadow it hid
+  are rebuilt per frame by mirroring the knight's own pixels, baked by
+  `npm run anchors` (`scripts/shield-fill-lib.ts`) into
+  `shieldFill.generated.ts` and written by `gearMarks.cutAndFill`;
+  `anchors:check` fails if stale or if a rebuilt frame has a hole, an open
+  outline, a stray island or a write over the art; `offHandPlan` says when);
+  the body piece is WORN, `bodyLayer.ts`: the tunic of every frame (the
+  rebuilt strips' too, as `<strip>_bare`) is measured off the
   strips by `npm run anchors` into `bodyAnchors.generated.ts` (`anchors:check`
   fails if stale or if a piece paints outside its cell), re-inked in the
   piece's icon colours and given its silhouette (pauldrons, skirt, hem, a cape
@@ -50,7 +57,7 @@ result. Append a short note to the review log when you're done.
   `units.heroFigure` is that ONE composition; every hero portrait in the shell
   is cut from it (`heroPortrait.ts`, a bust data URL per (look, kit), read only
   through `offers.heroLookArt`; `RootShell` re-renders when the art lands;
-  `tests/heroPortrait.test.ts`). Review harness `harness/kit.html`, app shots
+  `tests/heroPortrait.test.ts`). Review harness `harness/kit.html` (`?shield=1`: every off hand over the rebuilt body), app shots
   and the frame-time probe `scripts/kit-look.mjs`. The atlas
   order and item-noun → icon table live in `src/game/data/iconAtlas.ts`
   (re-exported by `channels`); every item kind has its own cell

@@ -56,6 +56,8 @@ import sharp from 'sharp'
 import { ANIM_FRAMES } from '../src/game/render/anim'
 import { GEAR_POSE_CELLS } from '../src/game/render/anchors'
 import type { Torso } from '../src/game/render/bodyLayer'
+import { bareStrip, cutAndFill, type StripFill } from '../src/game/render/gearMarks'
+import { fillProblems, renderShieldFill, SHIELD_STRIPS, shieldFills, type RawStrip } from './shield-fill-lib'
 import {
   bodyFitProblems,
   gearFitProblems,
@@ -74,6 +76,45 @@ const CHECK = process.argv.includes('--check')
 const ROOT = join('public', 'assets', 'sprites')
 const OUT = join('src', 'game', 'render', 'anchors.generated.ts')
 const BODY_OUT = join('src', 'game', 'render', 'bodyAnchors.generated.ts')
+const FILL_OUT = join('src', 'game', 'render', 'shieldFill.generated.ts')
+
+/**
+ * Rebuild the knight's body under its painted shield (`shield-fill-lib`), per
+ * pack in `SHIELD_STRIPS`, and measure the rebuilt tunic of each strip into
+ * `torsos` as `bareStrip(strip)` — the table the body layer dresses a cut
+ * knight from. Appends to `problems`.
+ */
+async function scanShields(torsos: Record<string, Record<string, Torso[]>>, problems: string[]): Promise<Record<string, Record<string, StripFill>>> {
+  const out: Record<string, Record<string, StripFill>> = {}
+  for (const [pack, names] of Object.entries(SHIELD_STRIPS)) {
+    const strips: RawStrip[] = []
+    for (const name of names) {
+      const frames = ANIM_FRAMES[name]
+      const file = join(ROOT, pack, `${name}.png`)
+      if (!frames || !existsSync(file)) {
+        problems.push(`${pack}/${name}: no strip or frame count`)
+        continue
+      }
+      const art = await raw(file)
+      strips.push({ name, data: art.data, w: art.w, h: art.h, frames })
+    }
+    const fills = shieldFills(strips)
+    out[pack] = {}
+    for (const s of strips) {
+      const { fill } = fills[s.name]
+      out[pack][s.name] = fill
+      for (const p of fillProblems(`${pack}/${s.name}`, s, fill)) problems.push(p)
+      const bare = new Uint8Array(s.data)
+      cutAndFill(bare, s.w, s.h, s.frames, fill)
+      const { torsos: t, errors } = measureTorsos(bare, s.w, s.h, s.frames)
+      const name = bareStrip(s.name)
+      for (const e of errors) problems.push(`${pack}/${name}: ${e}`)
+      for (const p of bodyFitProblems(`${pack}/${name}`, bare, s.w, s.h, t)) problems.push(p)
+      ;(torsos[pack] ??= {})[name] = t
+    }
+  }
+  return out
+}
 
 /** Measure every torso strip of every pack in `TORSO_PACKS`; appends to `problems`. */
 async function scanTorsos(problems: string[]): Promise<Record<string, Record<string, Torso[]>>> {
@@ -156,6 +197,7 @@ async function main(): Promise<void> {
     packs[pack] = await scanPack(pack, problems)
   }
   const torsos = await scanTorsos(problems)
+  const fills = await scanShields(torsos, problems)
 
   if (problems.length) {
     console.error('anchors: problems found\n  ' + problems.join('\n  '))
@@ -166,8 +208,10 @@ async function main(): Promise<void> {
   const bodyCount = Object.values(torsos).reduce((n, t) => n + Object.keys(t).length, 0)
   const next = render(packs)
   const nextBody = renderTorsos(torsos)
+  const nextFill = renderShieldFill(fills)
+  const fillCount = Object.values(fills).reduce((n, t) => n + Object.keys(t).length, 0)
   if (CHECK) {
-    for (const [file, want, n] of [[OUT, next, count], [BODY_OUT, nextBody, bodyCount]] as const) {
+    for (const [file, want, n] of [[OUT, next, count], [BODY_OUT, nextBody, bodyCount], [FILL_OUT, nextFill, fillCount]] as const) {
       const current = existsSync(file) ? readFileSync(file, 'utf8') : ''
       if (current.trim() !== want.trim()) {
         console.error(`anchors: ${file} is stale — ${n} strip(s) on disk disagree with it.\n` + 'Run `npm run anchors` and commit the result.')
@@ -175,14 +219,17 @@ async function main(): Promise<void> {
       }
     }
     console.log(
-      `anchors: up to date (${count} strips in ${Object.keys(packs).length} pack(s), ${bodyCount} torso strip(s)); all gear and every body piece fits its cells.`,
+      `anchors: up to date (${count} strips in ${Object.keys(packs).length} pack(s), ${bodyCount} torso strip(s), ${fillCount} shield-fill strip(s)); all gear and every body piece fits its cells, and every rebuilt body is whole.`,
     )
     return
   }
 
   writeFileSync(OUT, next)
   writeFileSync(BODY_OUT, nextBody)
-  console.log(`anchors: wrote ${count} strip(s) in ${Object.keys(packs).length} pack(s) to ${OUT}, and ${bodyCount} torso strip(s) to ${BODY_OUT}.`)
+  writeFileSync(FILL_OUT, nextFill)
+  console.log(
+    `anchors: wrote ${count} strip(s) in ${Object.keys(packs).length} pack(s) to ${OUT}, ${bodyCount} torso strip(s) to ${BODY_OUT}, and ${fillCount} shield-fill strip(s) to ${FILL_OUT}.`,
+  )
 }
 
 main().catch((e) => {

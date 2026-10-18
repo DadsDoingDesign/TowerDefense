@@ -12,7 +12,7 @@ import type { Archetype, Sentinel } from '../types'
 import { ANIM_FRAMES, loopFrame } from './anim'
 import { fxEnemyDot, fxEnemyFlash, fxEnemyRecoil, fxReducedMotion, fxSentinel, type ProcKind } from './fx'
 import { heroStrip, type Loadout } from './loadout'
-import { drawMainHand, drawOffHand, heroGearCached, rigFor, unpaintedStrip, unpaints, unpaintsOff, type HeroGear } from './gearMarks'
+import { drawMainHand, drawOffHand, heroGearCached, offHandPlan, rigFor, unpaintedStrip, unpaints, type HeroGear } from './gearMarks'
 import { dressedStrip } from './bodyLayer'
 import type { Pixmap } from './pixmap'
 import { deliveryCached, deliveryOfRt, type Delivery } from './attackLook'
@@ -427,7 +427,8 @@ export interface HeroFigure {
  *  1. the strip (idle, or the attack strip while firing when the art's own
  *     weapon is the hero's — `gearMarks`), through the paper doll when a
  *     `loadout` is given;
- *  2. the painted weapon and/or off-hand piece cut (`unpaintedStrip`);
+ *  2. the painted weapon and/or off-hand piece cut (`unpaintedStrip`), and the
+ *     body the shield hid rebuilt from its build-time patch;
  *  3. the body piece worn (`bodyLayer.dressedStrip`);
  *  4. baked once by `pixmap()` with one contour ring.
  *
@@ -451,9 +452,6 @@ export function heroFigure(
   // weapon, is not played: the item itself makes the move (`reach` in drawSentinel).
   const rig = rigFor(pack, archetype)
   const cut = !!gear && unpaints(rig, gear)
-  // ...and the painted shield, whenever the off hand holds anything else or
-  // nothing (a two-hander): cut from BOTH strips, so a swing never brings it back.
-  const cutOff = !!gear && unpaintsOff(rig, gear)
   const ownArt = !gear || !rig.measured || gear.main === rig.paintedMain
   const firing = wantFire && !!atk && ownArt
   const anim = firing ? 'atk' : 'idle'
@@ -463,9 +461,14 @@ export function heroFigure(
   const body = heroStrip(pack, archetype, anim, frames, loadout) ?? ((firing ? atk : idle) ?? idle ?? atk)
   if (!body) return null
   const cutMain = cut && anim === 'idle'
-  const strip = cutMain || cutOff ? unpaintedStrip(body, rig, frames, { main: cutMain, off: cutOff }) : body
+  // ...and the painted shield, whenever the off hand holds anything else or
+  // nothing (a two-hander): cut from BOTH strips, so a swing never brings it
+  // back, and the body it hid rebuilt (`gearMarks.offHandPlan`); the body piece
+  // then dresses that whole tunic (the rebuilt strip's own torso table).
+  const off = offHandPlan(pack, rig, gear, `${archetype}_${anim}`)
+  const strip = cutMain || off.cut ? unpaintedStrip(body, rig, frames, { main: cutMain, off: off.cut }, off.fill) : body
   // The body piece, worn over what is left (an empty slot returns `strip` itself).
-  const worn = dressedStrip(strip, pack, `${archetype}_${anim}`, frames, gear?.bodyStyle ?? gear?.body ?? null)
+  const worn = dressedStrip(strip, pack, off.torso, frames, gear?.bodyStyle ?? gear?.body ?? null)
   const pm = pixmap(worn, { scale: unitPixmapScale(spriteScale), frames, ring: true })
   return pm ? { pm, frames, firing, ownArt, rig } : null
 }
