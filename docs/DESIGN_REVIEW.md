@@ -4234,3 +4234,8 @@ The harness reports that no tell touches a goblin's HP bar.
 - The kept cells (the shipped wand, sceptre, staff, grimoire, tome and robe) are not re-themed. The Gnomes therefore read as a family through their new items only.
 - The Spear's thin diagonal sits 39 px from the shipped Staff. It differs in its bone tip and red binding, not in silhouette.
 - One knight wears everything: the brief asked for a neutral hero, and the sheet is a comparison. Per-people bodies would be new art.
+
+**Review cards (one asset at a time, for a phone).** `node scripts/peoples-sheets.mjs --cards` shoots `harness/peoples.html?cards` into `docs/peoples/cards/`: 150 cards (100 items, 50 skills), 3.2 MB in all, and `manifest.json` (`{ id, group, people, title, level, status, caption, file }`). The cell art is the same as the sheets'. Each card shows the icon at 6×, the name, the level tag and a NEW / RENAMED / KEPT tag. Signature skills also carry SIGNATURE, and a renamed skill says "was …" beside its name. Under that is the hero at 5×, crisp, with the people and the effect in one line from `docs/peoples/roster.json`.
+- **Sizes.** Items are 600 × 694. Skills are 600 × 984, because the keg stands on the road below the hero and a 5× frame of both is 160 logical px tall. At 390 px wide a skill card is 640 tall, so it still fits a phone screen.
+- **Checks.** Looked at on a 390 px downscale, the names, tags and art read at 26 px or larger. The effect line is 17 px; the longest (Spicy Peps) shrinks to about 11 px. The script exits non-zero if any name or line clips; none do.
+- **Left.** On a two-goblin skill (splash, pierce, chain) the second keg's HP bar sits over the first keg. That is the game's own layering, and the sheets do the same, but at 5× it is plain to see.
