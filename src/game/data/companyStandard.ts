@@ -22,14 +22,16 @@ import { OUTLINE, shade, type Palette, type PixelRows } from './pixelArt'
  * (`data/companyKits.ts`), one per standing level. The logo always stays on
  * the cloth and the cloth stays the company's colour, so the flag still says
  * whose road it is. {@link DEFAULT_STANDARD} draws exactly the standard
- * before it could be dressed (`tests/companyKits.test.ts` holds it to the old
+ * before it could be dressed, plus the logo's patch (the marks critique, Oct
+ * 2026: a deliberate change; `tests/companyKits.test.ts` holds it to those
  * pixels).
  *
  * 19 × 30 cells, drawn at 2 px a cell: the same 38 × 60 box as a militia
  * banner at 3 px (`caravan.ts` `CARAVAN_BOX` does not move). The cell keys are
  * digits so they never collide with a logo's letter keys: `1` outline, `2`
  * wood, `3` the gold finial, `4` the cloth, `5` the edge (and the emblem), `6`
- * the pattern, `7` the emblem (in the trim, or the logo's ink).
+ * the pattern, `7` the emblem (in the trim, or the logo's ink), `8` the
+ * logo's patch (the cloth a deeper dye, one cell round the logo).
  */
 export const STANDARD_W = 19
 export const STANDARD_H = 30
@@ -76,6 +78,13 @@ export const standardKey = (look?: Partial<StandardLook> | null): string => {
 }
 
 export const isDefaultStandard = (look?: Partial<StandardLook> | null): boolean => standardKey(look) === standardKey(DEFAULT_STANDARD)
+
+/** The patch's reach round the logo: its eight neighbours (`standardRowsFor`). */
+const PATCH_RING: readonly (readonly [number, number])[] = [
+  [-1, -1], [0, -1], [1, -1],
+  [-1, 0], [1, 0],
+  [-1, 1], [0, 1], [1, 1],
+]
 
 /** The ragged foot's depth per cloth column (the tattered cut). */
 const TATTERS = [2, 1, 3, 1, 2, 0, 2, 3, 1, 2, 0, 1, 3, 2, 1, 2, 3]
@@ -196,6 +205,17 @@ export function standardRowsFor(logo: CompanyLogo, look?: Partial<StandardLook> 
       if (!inCloth(x, y - 1) || !inCloth(x, y + 1) || !inCloth(x + 1, y)) g[y][x] = '5'
       else if (l.pattern === 'bordure' ? nearEdge(inCloth, x, y, 2, 2) : inStandardPattern(l.pattern, x - 2, y - 1, clothRows)) g[y][x] = '6'
     }
+  // The logo's patch (the marks critique, Oct 2026): every logo is drawn in
+  // its company's colour, so on a cloth OF that colour it was only an
+  // outline. A patch of deeper cloth, one cell round the logo's silhouette,
+  // sews it on: the logo reads as a thing on the flag, the flag stays the
+  // company's colour. The cloth's edge is kept.
+  const logoAt = (x: number, y: number) => (logo.rows[y - 3]?.[x - 3] ?? '.') !== '.'
+  for (let y = 1; y < STANDARD_H; y++)
+    for (let x = 2; x < STANDARD_W; x++) {
+      if (g[y][x] !== '4' && g[y][x] !== '6') continue
+      if (PATCH_RING.some(([dx, dy]) => logoAt(x + dx, y + dy))) g[y][x] = '8'
+    }
   // The logo, 16 × 16, on the cloth.
   logo.rows.forEach((row, j) =>
     row.split('').forEach((ch, i) => {
@@ -220,6 +240,9 @@ export const emblemColor = (look?: Partial<StandardLook> | null): string => {
   return l.trim ? METALS[l.trim] : OUTLINE
 }
 
+/** How much deeper than the cloth the logo's patch is dyed. */
+export const PATCH_SHADE = -0.55
+
 /** A standard's palette for any logo and cloth colour. */
 export function standardPaletteFor(logo: CompanyLogo, color: string, look?: Partial<StandardLook> | null): Palette {
   const l = fullStandard(look)
@@ -232,6 +255,7 @@ export function standardPaletteFor(logo: CompanyLogo, color: string, look?: Part
     5: l.trim ? METALS[l.trim] : shade(color, -0.35),
     6: l.tincture2 ? TINCTURES[l.tincture2] : shade(color, -0.18),
     7: emblemColor(l),
+    8: shade(color, PATCH_SHADE),
   }
 }
 

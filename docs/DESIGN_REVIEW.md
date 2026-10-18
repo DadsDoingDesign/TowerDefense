@@ -4285,3 +4285,55 @@ The Peoples & Trades sheets in `docs/peoples/` were regenerated (`scripts/people
 - **Sizes.** Items are 600 × 694. Skills are 600 × 984, because the keg stands on the road below the hero and a 5× frame of both is 160 logical px tall. At 390 px wide a skill card is 640 tall, so it still fits a phone screen.
 - **Checks.** Looked at on a 390 px downscale, the names, tags and art read at 26 px or larger. The effect line is 17 px; the longest (Spicy Peps) shrinks to about 11 px. The script exits non-zero if any name or line clips; none do.
 - **Left.** On a two-goblin skill (splash, pierce, chain) the second keg's HP bar sits over the first keg. That is the game's own layering, and the sheets do the same, but at 5× it is plain to see.
+
+### 2026-10-18 — the marks critique: crests, flags, the home map and the shell's pixel marks (3 rounds)
+
+The designer asked for three rounds of critique on every asset, against aesthetics, brand and job. This entry covers the marks family: 41 assets. The scorecard is `docs/ui-audit-2026-10/asset-critique/marks/SCORECARD.md`, with every asset × round. **Mean score 3.64 → 4.02.** Assets with an axis under 4: 19 → 3, and those 3 are outside this pass's reach.
+
+**How it was judged.**
+- **Running app.** Playwright at 390 × 844 @2× and 1280 × 800 on:
+  - the home with each company focused, and Buy Company;
+  - terms, charter, militia, track, livery, standings, Codex, receipt;
+  - a battle, for the wagon's flag.
+- **Marks alone.** The new harness `harness/marks.html` draws every mark from the shipping rows and components at 1×, 2×, 4× and 8×, on wood, panel, parchment and map ground. `?proposal=1` adds the unshipped proposals.
+
+**Round 1 (worst first).**
+- **Ironvein crest.** A brown rock with a 3 px blue vein, a grey sack at dock size. Now a blue-steel pick over a lump of ore with its blue crystal.
+- **Peppercorn crest.** The chili read as a pickle. Now it hangs from its cap and curls to its tip.
+- **Rosethread, Moonquill and Easel House crests.** The spool loses its dotted "jar" winding. The quill-blade becomes a feather. The easel's daubs become a painting.
+- **Company standards.** Every logo is drawn in its company's colour, so on the standard it was only an outline. A patch of deeper dye, one cell round the logo, now sews it on. This is a deliberate change to the plain standard; `tests/companyKits.test.ts` now holds the patch.
+- **Small lock.** Its outline-only shackle vanished on dark wood; it now has its own steel. The 16 px locked padlock moved off cool slate to the same warm parchment.
+- **Coin.** The 7 × 7 coin was a gold square; it is now round.
+- **Codex tile frames.** `#fff` / `#000` became tokens.
+- **Emblems.** Eight 5 × 5 emblems that read as something else were redrawn.
+
+**Round 2 (zoomed to 8×).**
+- **Sovereign crest and Crown.** Two jewels over a dark band read as a *smiling face*. The new crown has a raised centre point and one ruby. The shield's point no longer hangs a two-row stem.
+- **Gold rim.** It was a 1 px hairline in the *themed* `--accent`, so it showed lime under Peppercorn. It is now one crest pixel wide (`--rim`) in `--gold`.
+- **Map.** Towns are houses with pitched roofs, not crates. Pines are lit from the left.
+
+**Round 3.**
+- **Map peaks.** They read as tents; they now have a summit, a shoulder and a ragged snowline.
+- **Town roofs.** Warm terracotta.
+- **Checks.** Everything re-shot. `scripts/home-stability.mjs` passes after every round: no wiggle, and the terrain bakes once.
+
+**Benchmark.**
+- Against the Tiny Swords icon set and the atlas, the five crests are now one family:
+  - one `#161c2e` outline, light from the upper left, 2–3-step ramps;
+  - each company's colour is the largest mass;
+  - five distinct silhouettes at 16 px (curve, framed board, T-pick, I-spool, diagonal feather).
+- Against Slay the Spire's and Hades' small marks: each reads as one object, never a scene.
+
+**Proposals (not shipped; cards only, drawn by `harness/marksProposals.ts`).**
+- **Butcherblock:** a haunch on the bone in brine red `#c25b6b`.
+- **Greenvial:** a sprouting potion flask in bottle jade `#2fa58a`.
+- Both colours are ≥ ΔE 15 from every reserved hue. Their standards are built with the shipping `standardRowsFor`.
+
+**Left.**
+- Rare `#5fb0c4` sits ΔE 4 from the CTA teal; this needs the designer (card `rarity-teal`).
+- The run's atlas coin is lemon and differs from the shell's (`fw-icons`, another agent's).
+- At the livery's 4× the patch reads as a doubled outline.
+- The 5 × 5 emblems are at their resolution floor.
+- `harvest-cc0 --check` could not reach the network (403). No pack file was added: every mark here is hand-drawn rows.
+
+**Cards.** `docs/ui-audit-2026-10/asset-critique/marks/cards/`: 19 cards plus `manifest.json`.

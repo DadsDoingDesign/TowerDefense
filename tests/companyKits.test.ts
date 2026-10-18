@@ -64,6 +64,17 @@ function legacyStandardRows(company: CompanyId): string[] {
       if (g[y][x] !== '4') continue
       if (!inCloth(x, y - 1) || !inCloth(x, y + 1) || !inCloth(x + 1, y)) g[y][x] = '5'
     }
+  // The logo's patch (the marks critique, Oct 2026 — a deliberate change to
+  // the plain standard): cloth one cell round the logo, in a deeper dye.
+  const logo = COMPANY_LOGOS[company].rows
+  const logoAt = (x: number, y: number) => (logo[y - 3]?.[x - 3] ?? '.') !== '.'
+  for (let y = 1; y < H; y++)
+    for (let x = 2; x < W; x++) {
+      if (g[y][x] !== '4') continue
+      let near = false
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if ((dx || dy) && logoAt(x + dx, y + dy)) near = true
+      if (near) g[y][x] = '8'
+    }
   COMPANY_LOGOS[company].rows.forEach((row, j) =>
     row.split('').forEach((ch, i) => {
       if (ch !== '.') g[3 + j][3 + i] = ch

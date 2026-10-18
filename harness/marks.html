@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <base href="/" />
+    <title>Marks and flags — gallery</title>
+    <style>
+      body { margin: 0; padding: 16px; background: #201711; color: #f3e7d0; font: 12px/1.35 system-ui, sans-serif; }
+      h1 { margin: 0 0 4px; font: 700 24px Georgia, serif; }
+      h2 { margin: 22px 0 6px; font: 700 17px Georgia, serif; color: #f0c46a; }
+      section { display: inline-block; vertical-align: top; margin: 0 10px 10px 0; padding: 8px; background: #241a11; border: 1px solid rgba(233, 205, 150, 0.15); border-radius: 6px; }
+      .row { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+      .cell { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+      .cell small { color: #b89e7e; font: 10px ui-monospace, monospace; }
+      .g { padding: 6px; border-radius: 4px; display: flex; align-items: flex-end; gap: 8px; }
+      .g.wood { background: #201711; }
+      .g.panel { background: #2f2418; }
+      .g.paper { background: #ece0c8; }
+      .g.map { background: #212f22; }
+      .g.grass { background: #6aa84f; }
+      canvas, img { image-rendering: pixelated; display: block; }
+    </style>
+  </head>
+  <body>
+    <h1>Marks, flags and the brand</h1>
+    <p>Every picture is drawn from the game's own pixel rows (<code>companies.ts</code>, <code>pixelArt.ts</code>, <code>companyStandard.ts</code>, <code>banner.ts</code>) at whole-number scales. Review harness for <code>docs/ui-audit-2026-10/asset-critique/marks/</code>.</p>
+    <div id="out"></div>
+    <script type="module" src="/harness/marks.ts"></script>
+  </body>
+</html>

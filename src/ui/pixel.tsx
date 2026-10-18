@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, type CSSProperties } from 'react'
 import { useMetaStore } from '../state/metaStore'
 import { COMPANY_LOGOS, crestRows, SOVEREIGN_EMBLEM, type CompanyId } from '../game/data/companies'
 import { SOVEREIGN_COLOR } from '../game/run/charter'
@@ -34,7 +34,7 @@ import {
  * Decorative by default (`aria-hidden`): every shape rides beside the words it
  * illustrates — a crest beside its company's name, a crate beside "4 crates".
  */
-export const Pixel = memo(function Pixel({ rows, palette, scale = 2, className }: { rows: PixelRows; palette: Palette; scale?: number; className?: string }) {
+export const Pixel = memo(function Pixel({ rows, palette, scale = 2, className, style }: { rows: PixelRows; palette: Palette; scale?: number; className?: string; style?: CSSProperties }) {
   const w = rows[0]?.length ?? 0
   const h = rows.length
   return (
@@ -44,6 +44,7 @@ export const Pixel = memo(function Pixel({ rows, palette, scale = 2, className }
       height={h * scale}
       viewBox={`0 0 ${w} ${h}`}
       shapeRendering="crispEdges"
+      style={style}
       aria-hidden="true"
       focusable="false"
     >
@@ -66,22 +67,24 @@ export function Crest({ company, scale = 2, locked = false }: { company: Company
   // A second term signed with the company (Draft 4 · B) puts a gold rim on its
   // crest everywhere it is drawn (`.crest.rim`, app.css).
   const rim = useMetaStore((s) => !locked && (s.terms?.[company] ?? 1) >= 2)
-  return <Pixel rows={logo.rows} palette={logo.palette} scale={scale} className={`crest logo${locked ? ' locked' : ''}${rim ? ' rim' : ''}`} />
+  // The rim is one of the crest's own pixels wide (`--rim`), not a hairline round 2 px cells.
+  return <Pixel rows={logo.rows} palette={logo.palette} scale={scale} className={`crest logo${locked ? ' locked' : ''}${rim ? ' rim' : ''}`} style={rim ? ({ '--rim': `${scale}px` } as CSSProperties) : undefined} />
 }
 
 /** The Sovereign Route's crest: a crown on a shield in the Sovereign cyan (the endgame charter). */
 export function SovereignCrest({ scale = 2 }: { scale?: number }) {
   const base = SOVEREIGN_COLOR
-  const pal: Palette = { o: OUTLINE, c: base, l: shade(base, 0.35), d: shade(base, -0.3), p: '#f3e7d0', g: '#e0ac4c' }
+  const pal: Palette = { o: OUTLINE, c: base, l: shade(base, 0.35), d: shade(base, -0.3), ...CROWN_GOLD, g: '#e0ac4c' }
   return <Pixel rows={crestRows(SOVEREIGN_EMBLEM)} palette={pal} scale={scale} className="crest sovereign" />
 }
 
 /**
  * The trade war's leader's crown (Draft 4 § D): the Sovereign crest's crown (`SOVEREIGN_EMBLEM`), in
- * gold with a red jewel, outlined so it reads on wood and on the map.
+ * gold with one ruby on its band, outlined so it reads on wood and on the map.
  */
-const CROWN_ROWS = outlined(SOVEREIGN_EMBLEM.slice(1, 7).map((r) => r.replace(/o/g, 'd')))
-const CROWN_PALETTE = { g: '#f0c46a', d: '#a8812c', p: '#e0443a', k: '#161c2e' }
+const CROWN_GOLD = { w: '#fff0b8', y: '#a8812c', r: '#e0443a' }
+const CROWN_ROWS = outlined(SOVEREIGN_EMBLEM.slice(0, 6))
+const CROWN_PALETTE = { ...CROWN_GOLD, g: '#f0c46a', k: '#161c2e' }
 export const Crown = ({ scale = 2 }: { scale?: number }) => <Pixel rows={CROWN_ROWS} palette={CROWN_PALETTE} scale={scale} className="crown" />
 
 /** Rows with a one-pixel `k` outline grown around every filled pixel. */
