@@ -5196,3 +5196,32 @@ still falls short in three ways. The parts are small next to the castle
 (the pack's 296 px castle at 1× leaves them about 40 px). The yard's pack
 units are large for its plot. And on a 320 × 568 phone the card is a scroll
 below the castle.
+## 2026-10-18 — The pack's people, measured (figure bands)
+
+The designer rejected slim, anatomical post figures ("they don't fit in at
+all") and, before them, 72 × 72 figures ("chunky", "arms busted"). Before
+anyone draws more, the CC0 people were measured pixel by pixel: the pawn
+(`mystic`), knight (`fighter`), archer (`rogue`) and the torch, TNT and barrel
+goblins. The result is `src/game/render/hero/packBands.ts`
+(`measureFigure`, `checkBands`, `PACK_BANDS`), `scripts/pack-bands.ts` (the
+table and the card `docs/characters/cards/pack-direction/measure.png`) and
+`tests/packBands.test.ts`.
+
+**What the pack is.** It is 53 to 86 px tall, with a width ÷ height of 0.75
+to 1.41. The box is 55 to 72% filled. The head (hair, helmet or hood) is 62 to
+74% of the height and flares widest at its bottom, so only 36 to 47% of the
+mass sits in the top half. The legs are nubs, 0 to 13% of the height. Every
+figure is outlined in `#161c2e` on 85 to 100% of its edge. The line is 2 px on
+straights and 3 on curves, 2.23 to 2.67 px deep on average. Each figure has 7
+to 13 main colours.
+
+**Checks.**
+- A slim anatomical figure misses on legs, aspect and head.
+- The current 72 × 72 post faces sit inside every proportion band but miss
+  on line depth. Theirs is about 2.1: one even ring, where the pack
+  thickens on curves.
+- So the bands are a floor against drift, not a judge of quality. The
+  line-up is still the bar.
+
+The lesson and the bands are in the character-design skill (§ 4a). Nothing
+is wired into the game.
