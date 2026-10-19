@@ -206,5 +206,21 @@
     "title": "9. Flowerpot Potter · own body, motion",
     "caption": "A clay-smeared potter's apron over a round belly, with the idle and tic. Judge: still a tiny round gnome, hat leading?",
     "file": "d09-body.webp"
+  },
+  {
+    "id": "wren-d09-final",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "9. Flowerpot Potter · shoulders and nose",
+    "caption": "Before and after at 4× and 1× beside the pack: the pot now sits on round shoulders, and the nose is a long sausage. Judge: does the pot fit the body now?",
+    "file": "d09-final.png"
+  },
+  {
+    "id": "wren-d09-final-motion",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "9. Flowerpot Potter · the nose flops",
+    "caption": "The idle and the trowel tic, looped: the nose lags the head a frame and swings on each tap. Judge: floppy, not jittery?",
+    "file": "d09-final.webp"
   }
 ]

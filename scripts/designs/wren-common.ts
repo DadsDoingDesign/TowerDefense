@@ -60,6 +60,20 @@ export const SHADOW = [
   '........ssssssssssssssss',
 ]
 
+/** A wider ground shadow, for a broad body (the Flowerpot Potter). */
+export const SHADOW_W = [
+  '..........ssssssssssssssssssss',
+  '.....ssssssssssssssssssssssssssssss',
+  '..ssssssssssssssssssssssssssssssssssss',
+  '.ssssssssssssssssssssssssssssssssssssss',
+  'ssssssssssssssssssssssssssssssssssssssss',
+  'ssssssssssssssssssssssssssssssssssssssss',
+  '.ssssssssssssssssssssssssssssssssssssss',
+  '..ssssssssssssssssssssssssssssssssssss',
+  '.....ssssssssssssssssssssssssssssss',
+  '..........ssssssssssssssssssss',
+]
+
 /** A round fist, the back hand (shade on its back edge). */
 export const FIST_L = ['.eeE', 'eeEEE', 'eeEEE', 'eeEEE', '.eeE']
 /** A round fist, the front hand (lit on its top). */

@@ -8,6 +8,9 @@
  *   npx tsx scripts/designs/wren.ts                 # measure all ten against the pack's bands, and the prop clearance
  *   npx tsx scripts/designs/wren.ts --preview DIR   # 8× stills + 1×/3× line-ups for the critique rounds
  *   npx tsx scripts/designs/wren.ts --cards         # the cards in docs/characters/cards/designs/wren/
+ *   npx tsx scripts/designs/wren.ts --stills DIR    # 1× stills of the ten (the "before" of a later pass)
+ *   npx tsx scripts/designs/wren.ts --bodies DIR    # bodies.png + dXX-body.webp, before from DIR
+ *   npx tsx scripts/designs/wren.ts --final DIR     # d09-final.png + d09-final.webp, before from DIR
  *
  * Every figure is a hand-placed pixel map (wren-d01.ts … wren-d10.ts);
  * wren-lib.ts only stamps the pack's outline and composes the frames. The
@@ -321,6 +324,45 @@ async function bodies(beforeDir: string) {
   writeFileSync(mpath, JSON.stringify(keep, null, 2) + '\n')
 }
 
+/** d09-final.png (the designer's pick before / after its shoulders and nose, 4×, plus a 1× line-up beside the pack) and d09-final.webp. */
+async function final(beforeDir: string) {
+  mkdirSync(OUT, { recursive: true })
+  const grass = b64(await sharp(join(PACK, 'grass.png')).png().toBuffer())
+  const pack = await Promise.all(PACK_PEOPLE.map(async (p) => ({ ...p, img: await readPack(p.file) })))
+  const cell = async (img: Rgba, s: number) => b64(await png(img, s))
+  const d = DESIGNS.find((x) => x.id === 'd09')!
+  const { data, info } = await sharp(join(beforeDir, 'd09.png')).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
+  const before: Rgba = { w: info.width, h: info.height, data: new Uint8ClampedArray(data) }
+  const after = render(d)
+  const b = frameBox([before, after, ...idleFrames(d), ...ticFrames(d)])
+  const x = Math.max(0, b.x0 - 2), y = Math.max(0, b.y0 - 2), w = Math.min(W, b.x1 + 3) - x, h = Math.min(H, b.y1 + 3) - y
+  const ones = await Promise.all([...pack.map((p) => p.img), crop(before, x, y, w, h), crop(after, x, y, w, h)].map((im) => cell(im, 1)))
+  const twos = await Promise.all([...pack.map((p) => p.img), crop(after, x, y, w, h)].map((im) => cell(im, 2)))
+  const html = `<!doctype html><meta charset="utf-8"><style>${CSS(grass)}
+    .wrap{padding:12px;width:576px} h1{font-size:20px;margin:0} p{margin:2px 0 8px;color:#c9cbbf;font-size:13.5px}
+    .top{display:flex;align-items:flex-end;justify-content:space-around;padding:10px 6px 4px;border-radius:8px}
+    .lab{display:flex;justify-content:space-around;font-size:12px;color:#c9cbbf;margin:4px 0 8px}
+    .k{font-size:12px;color:#c9cbbf;margin:8px 0 3px}
+    .row{display:flex;align-items:flex-end;gap:6px;padding:8px 10px;border-radius:6px;flex-wrap:wrap}
+    </style><div class="wrap"><h1>9. Flowerpot Potter · shoulders and nose</h1><p>The pick, before and after at 4×: broad round shoulders the pot now rests on, and a long sausage nose that flops a frame behind the head.</p>
+    <div class="top grass"><img src="${await cell(crop(before, x, y, w, h), 4)}"><img src="${await cell(crop(after, x, y, w, h), 4)}"></div>
+    <div class="lab"><span>Before</span><span>After</span></div>
+    <div class="k">At 1× (game size): the CC0 pawn, knight, archer and torch goblin, then before and after</div>
+    <div class="row grass">${ones.map((u) => `<img src="${u}">`).join('')}</div>
+    <div class="k">The same at 2×</div>
+    <div class="row grass">${twos.map((u) => `<img src="${u}">`).join('')}</div></div>`
+  await shoot(html, join(OUT, 'd09-final.png'), 600)
+  await motion(d, join(OUT, 'd09-final.webp'), { x, y, w, h })
+  const mpath = join(OUT, 'manifest.json')
+  const manifest: { id: string; group: string; people: string; title: string; caption: string; file: string }[] = existsSync(mpath) ? JSON.parse(readFileSync(mpath, 'utf8')) : []
+  const keep = manifest.filter((m) => !m.id.startsWith('wren-d09-final'))
+  keep.push(
+    { id: 'wren-d09-final', group: 'Wren designs', people: 'Wren', title: '9. Flowerpot Potter · shoulders and nose', caption: 'Before and after at 4× and 1× beside the pack: the pot now sits on round shoulders, and the nose is a long sausage. Judge: does the pot fit the body now?', file: 'd09-final.png' },
+    { id: 'wren-d09-final-motion', group: 'Wren designs', people: 'Wren', title: '9. Flowerpot Potter · the nose flops', caption: 'The idle and the trowel tic, looped: the nose lags the head a frame and swings on each tap. Judge: floppy, not jittery?', file: 'd09-final.webp' },
+  )
+  writeFileSync(mpath, JSON.stringify(keep, null, 2) + '\n')
+}
+
 const BODY_NOTE: Record<string, string> = {
   d08: 'a mossy robe to the ground, root-hemmed, a vine belt, hands in its sleeves',
   d02: "a gardener's waistcoat, rolled sleeves, a trowel loop, soil on the knees",
@@ -340,6 +382,8 @@ async function main() {
   }
   const bi = args.indexOf('--bodies')
   if (bi >= 0) await bodies(args[bi + 1])
+  const fi = args.indexOf('--final')
+  if (fi >= 0) await final(args[fi + 1])
   if (args.includes('--cards')) {
     if (results.some((r) => r.miss.length || r.clear.length)) throw new Error('a design is out of band or a prop touches the head: no cards')
     await cards()
