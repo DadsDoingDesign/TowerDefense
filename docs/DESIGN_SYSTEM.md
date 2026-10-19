@@ -64,15 +64,15 @@ under `:root[data-co-theme='<id>']` (generated from the table, registered with
 `neutral` is the `:root` values exactly (tested). Under high contrast,
 `:root[data-co-theme][data-contrast='high']` applies the theme's lifted ramp
 (`highContrast()`), so high contrast always wins. **This supersedes BRAND.md's
-"no cool chrome" for the company themes** (Ironvein's steel and Moonquill's
-indigo are cool by request); the house look stays warm.
+"no cool chrome" for the company themes** (Ironvein's steel and Greenvial's
+glass are cool by request); the house look stays warm.
 
 | Token | House value | Use |
 |---|---|---|
 | `--gold` / `--gold-text` | `#e0ac4c` / `#f0c46a` | Money as a fill / as text. NEVER themed: a bank, a price, a pay figure reads gold in every theme |
 | `--rule` | `#e9cd96` | The lines' colour, opaque: a rule or wash at its own strength is `color-mix(in srgb, var(--rule) N%, transparent)` |
 | `--shade` | `#140e08` | The dark every translucent wash is mixed from (scrims, wells, floating chips, the map's vignette) |
-| `--glow` / `--glow-2` | accent at 6% / none | The page's two glows (a theme's second is its "other paint": Peppercorn's paprika, Easel House's ochre, Moonquill's indigo) |
+| `--glow` / `--glow-2` | accent at 6% / none | The page's two glows (a theme's second is its "other paint": Peppercorn's paprika, Butcherblock's marsh mist, Greenvial's spore lime) |
 | `--plate` / `--plate-on` / `--plate-rim` / `--plate-ink` | the signposts' wood | The home bar's carved plates (places, your militia's purse), stained per theme. The map's signposts stay `--sign-wood`: the world, not the chrome |
 
 A theme never touches: gold, rarity, archetype hues, the company hues
@@ -99,7 +99,7 @@ Into the Breach move. Each world keeps its shape, at a lower volume.
 intense, especially when it's doubled up at the bottom"): a world frame is a
 **quiet edge that says "this company"**, never a loud outline — one dim line
 at most two source pixels deep (a second tone may run under it: Ironvein's
-iron, Easel House's bristle shade), a shade or two off the panel (under 0.42
+iron, Butcherblock's twine lashing), a shade or two off the panel (under 0.42
 luma), with a sparse rhythm of its own inside it (accents under 0.6) and a
 corner whose outer pixel is clear. Quiet is not minimal: the board approved
 Peppercorn's and Rosethread's frames, called the first Ironvein "the most
@@ -114,14 +114,14 @@ Before → after: `docs/ui-audit-2026-10/frames-calm/`.
 | World | Frame (`themeArt.ts`, 4 px at the sheet's double, its own corner; still, quiet) | Ambient (`fxWorlds.ts`) | Press burst (on the CTA's face) | Switch-in (350 ms) |
 |---|---|---|---|---|
 | Peppercorn — fire | A dim charred line, burnt through in places, a two-pixel ember crack a tile and a coal at each corner; low, dull flame tongues on the card's top (its crest) | A few small embers (1–2 px, no white heart) rising slowly beside the focused road and at the foot; a low flame line along the dock's top over a faint heat glow | A few flames up the CTA's face, a few embers off the press | A faint warmth off the floor |
-| Easel House — paint | A two-pixel brush stroke in three paints, each dab its paint over its bristle shade and parted from the next, a drip now and then, a dab at each corner | Flecks drifting, now and then a small splat that dries (never on the focused road), faint washes | An inked splat at the CTA's nearer end, a drip, a few droplets | A faint lilac stroke |
+| Butcherblock — marsh | A dry reed stem jointed every eight pixels, lashed with hide twine once a tile, a bone knuckle at each corner; on a lone CTA, a low reed bed, two stems gone to cattails | A still reed bed along the dock's top under a low breathing mist, smoke curling slowly up, now and then a grain of salt glinting | A pinch of salt scattered across the CTA's face | A faint mist off the floor |
 | Ironvein — forge | A two-tone iron band lit on its top edge, a rivet head every 16 CSS px, a riveted bracket plate at each corner, the forge glowing in each plate joint; on a lone CTA, an iron bar with two domed rivets | Three anvils along the dock's top, a few sparks in low slow arcs, ash drifting | A molten flash along both CTA seams, a handful of sparks | A faint glow round the strike |
 | Rosethread — silk | A satin line with one sheen pixel a tile, a running stitch inside it, a rose bud at each corner | Rose petals tumbling slowly; two faint ribbons across the map, a still stitch and a slow sheen | A running stitch along the CTA's foot, a few petals | A faint ribbon |
-| Moonquill — arcane night | A silver line, two runes a tile hung under it, a four-pointed star at each corner | A crescent moon and its still beam, stars twinkling slowly, runes drifting up | Sparkles and an inked rune at the CTA's nearer end | A faint silver sky |
+| Greenvial — glasshouse | A leaded glass line with a pane's glint once a tile, a vine winding inside it with a leaf, a spore bud at each corner; on a lone CTA, a vine with two leaves and a spore | Three glowing mushrooms along the dock's top, spores rising slowly off them, a leaf now and then | A puff of spores off the press | A faint green glow off the floor |
 
 Rules the worlds keep: **every world reads in one still, at a glance, in
-greyscale** (each has its own shape — a flame line, flecks and splats, anvils,
-a ribbon, a moon); **felt, not watched** — at most 24 ambient particles on a
+greyscale** (each has its own shape — a flame line, a reed bed, anvils,
+a ribbon, glowing caps); **felt, not watched** — at most 24 ambient particles on a
 phone and 40 on a desk, each drawn at its world's `peak` (no pixel brighter
 than the words near it), glows that breathe over 8 s, frames, strips and
 crest still, and the CTA's faint shimmer (one pale band every 9 s) the only
@@ -146,10 +146,10 @@ season is a PLACE you can name from a still, in greyscale too:
 | Season | Scenery (baked) | Props (baked) | Weather (moving) |
 |---|---|---|---|
 | Late summer (Peppercorn) | larches turned amber, rust and crimson; maples in the wood; the grass gone to straw in patches; a low sun from the west, long shadows | hay bales, stooks, sunflowers, pumpkins; leaf drifts on the grass | dust motes and seed fluff, a few leaves |
-| Spring (Easel House) | fresh pines; pink and white blossom trees | flower clumps on the meadow and in the wood | petals, two butterflies |
+| Marsh spring (Butcherblock) | reed-green pines and willows, wet sedge in drifts, a crust of salt on the open ground, a low grey-green mist | reed beds and brackish pools in the wood, reeds and pads round the lakes | cattail fluff, two low mist banks; salt and ash at the edges |
 | Overcast (Ironvein) | dark wet pines, rocks with a wet shine, rain-dark grass | puddles with the sky in them, mud | rain (a sheet at the edges, streaks and splashes), cloud shadows, a rare far flash at the margins |
 | Misty morning (Rosethread) | pines softened by haze, a pale low light, dew | reeds and lily pads on the lakes' rims, mushrooms | fog banks drifting along the top and bottom at two speeds, dew twinkling |
-| Frost (Moonquill) | snow over the ground with the blades poking through, snow-laden pines with icicles, rocks and bushes under snow, the lakes' rims frozen | snow drifts | steady snow (a sheet at the edges, flakes over the middle) |
+| Spore dusk (Greenvial) | deep wet greens under a cool light, moss in patches over the grass, jade broadleaves among the pines, a damp mist at the foot | rings of glowing caps and mushrooms in the wood | glowing spores rising, dew; spores and leaves at the edges |
 
 The scenery and props are baked once per map (`render/season.ts`,
 `seasonArt.ts`; placement a hash of the field and the season); the road and
@@ -576,13 +576,13 @@ agree it, then edit this section.
 | Head badge (`.mn-badge`, `companyBadge`) | A one-off condition on the focused company — desperate terms, then the market's top price, each with its dock mark's own number ("Desperate · pays ×1.5"; desperate's +20% raiders ride the Raiders row) — at the right of the card's head, only when one applies; most cards have none. The head's height never changes with it | A second condition (the dock's marks carry it, and the slot's name says it) |
 | Next row (`button.mn-fact.is-link`) | Names what the focused company's track pays next ("At Rep 5 · Skill · Gilt Frame ›") and opens its track; the whole row is the button, its hit area reaching 44px below it | Saying your standing (the dock) |
 | Season panel (`.mn-season`, `homeSeason.ts`) | Under the purse, floating over the map while the trade war shows: "SEASON 3" and "3 left ›", over seven bars, one per contract of the season in order — a delivery in the colour of the company it was for, a fall or a cash-out in earth, the ones still to come dim. A fixed size. The whole panel opens the standings; its name reads the season, what is left, who leads and each contract so far | The shares (the dock's slots); the patron (the standings' season card) |
-| Map season (`mapRules.MAP_SEASONS`, `paintMap.seasonPixels`) | Says, softly, which company's road is in focus by its weather: a tint and a sparse speckle over the same baked terrain — Peppercorn late summer, Easel House spring, Ironvein overcast, Rosethread a morning mist, Moonquill frost. It crossfades with the focus (a cut under reduced motion); no focus and Buy Company keep the neutral night. The lit road stays the strongest thing on screen | Carrying any fact (the road's light and the card do); re-scattering the map |
+| Map season (`mapRules.MAP_SEASONS`, `paintMap.seasonPixels`) | Says, softly, which company's road is in focus by its weather: a tint and a sparse speckle over the same baked terrain — Peppercorn late summer, Butcherblock a marsh spring, Ironvein overcast, Rosethread a morning mist, Greenvial a spore dusk. It crossfades with the focus (a cut under reduced motion); no focus and Buy Company keep the neutral night. The lit road stays the strongest thing on screen | Carrying any fact (the road's light and the card do); re-scattering the map |
 | Coach pill (`.mn-coach`) | Under the home bar, floating over the map (it never pushes the map): one first-time tip at a time (the dock, the market, the war), gone once read where it matters; the map's labels keep off it | A standing hint |
 | Share bar (`ShareBar`, `.tw-bar`) | Each company's share of the trade, one segment in its colour, widest first, its % inside when it fits; its accessible name reads them all | Any other proportion |
 | Leader's crown (`.mn-slot-crown`, `pixel.Crown`) | Marks the trade war's sole leader (`tradeWar.seasonLeader`: the biggest share, alone — a tie, the even start included, crowns nobody) on its dock slot, its standings row and the season's end | A company's standing or the market (the slot's own marks) |
 | Standings (`StandingsScreen`) | The five companies ranked by share, each with its bar, how the last contract moved it (▲/▼) and your deliveries this season; level shares share a place, the crown only on an outright leader; this season's desperate company tagged where it sits; the season card under them. Its head is the season alone (the card says when it ends). Its CTA reads the desperate company's terms, else your patron's, else the leader's | Signing anything |
-| Season card (`SeasonCard`, `seasonCardCopy.ts`, `.tw-card`) | One paper ledger under the standings' rows: when the season ends (its eyebrow — "The season ends in 4 contracts" / "The season's last contract is next"), your patron with its crest and what it would pay now ("Ironvein is your patron … 150 so far"; "No patron yet"; "Ironvein and Easel House are level" and what breaks the tie), what a patron pays (two `SlipLine`s: each delivery, one of its items), and the company last now with its terms next season | Shares or per-company deliveries (the rows); the season's number (the head) |
-| Season's end (`SeasonEndScreen`) | After the settle that ends a season, before the home: your patron ("Easel House pays you") with its standard, the purse (a "Banked" slip) and its vault pick as the shared `PickStrip` + `PickCard`, the CTA naming the item — or, with no delivery, "No company pays you"; then the next season: the company that finished last and its terms, the leader the shares carry over (or "No company leads") | Showing anything but the season that ended |
+| Season card (`SeasonCard`, `seasonCardCopy.ts`, `.tw-card`) | One paper ledger under the standings' rows: when the season ends (its eyebrow — "The season ends in 4 contracts" / "The season's last contract is next"), your patron with its crest and what it would pay now ("Ironvein is your patron … 150 so far"; "No patron yet"; "Ironvein and Butcherblock are level" and what breaks the tie), what a patron pays (two `SlipLine`s: each delivery, one of its items), and the company last now with its terms next season | Shares or per-company deliveries (the rows); the season's number (the head) |
+| Season's end (`SeasonEndScreen`) | After the settle that ends a season, before the home: your patron ("Butcherblock pays you") with its standard, the purse (a "Banked" slip) and its vault pick as the shared `PickStrip` + `PickCard`, the CTA naming the item — or, with no delivery, "No company pays you"; then the next season: the company that finished last and its terms, the leader the shares carry over (or "No company leads") | Showing anything but the season that ended |
 | War fact on the terms (`WarTerms`, `.tw-fact`) | On the desperate company's terms, its one trade-war fact this season: desperate terms (pays ×1.5, raiders 20% stronger) | The pay itself (the slip does, ×1.5 included) |
 | Desperate chip (`DesperateChip`, `.tw-chip.is-desperate`) | Names the company on desperate terms this season ("This season: pays ×1.5" — "this season", so it never reads against the season card's "Last now", which is next season's), on its standings row (the home says it with the dock's "×1.5" mark and the card's chip) | Saying what makes it desperate (the season card's foot, the glossary) |
 

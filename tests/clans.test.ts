@@ -87,8 +87,8 @@ describe('enemyName: the one name helper every surface uses', () => {
         expect(n, `${clan} ${key}`).toBe(mod ? `${unit} · ${mod.prefix}` : unit)
       }
     const colossus = ENEMY_TYPES.barrel5
-    expect(enemyName({ ...colossus, name: `${colossus.name} (half)` }, 'hexmoon')).toBe('The Lunar Vault (half)')
-    expect(enemyName(ENEMY_TYPES.tnt2_warded, 'hexmoon')).toBe('Hex Bomber · Warded')
+    expect(enemyName({ ...colossus, name: `${colossus.name} (half)` }, 'hexmoon')).toBe('The Rot Vat (half)')
+    expect(enemyName(ENEMY_TYPES.tnt2_warded, 'hexmoon')).toBe('Spore Bomber · Warded')
   })
 })
 
@@ -103,8 +103,8 @@ describe('every surface names through enemyName', () => {
       ['Chief Scorchgut', 'cinder_torch5'],
     ])
     expect(lineUp(q, 'smudge').map((e) => [e.name, e.art])).toEqual([
-      ['Paint Bomber · Warded', 'smudge_tnt2'],
-      ['Old Gesso', 'smudge_torch5'],
+      ['Brine Bomber · Warded', 'smudge_tnt2'],
+      ['Chief Gristle', 'smudge_torch5'],
     ])
     const knowledge = { kind: 'barrel3', level: 'met', felled: 1, need: 5 } as const
     expect(enemyCardData('barrel3_bearer', { wave: null, hpMult: 1, laneLength: 0, knowledge, clan: 'silkcut' })!.name).toBe('Veil Bearer')

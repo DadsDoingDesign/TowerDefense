@@ -11,24 +11,25 @@
  *   - Peppercorn Co. — FIRE: a charred line, burnt through in places, an
  *     ember crack a tile, a coal at each corner; low flames on its CTA and
  *     low flame tongues rising from the card's top edge (its crest).
- *   - Easel House — PAINT: a thin stroke in three paints swelling into small
- *     scallops, a drip now and then, a dab at each corner; paint on its CTA.
+ *   - Butcherblock — MARSH: a dry reed stem jointed every few pixels, lashed
+ *     with hide twine once a tile, a bone knuckle at each corner; a
+ *     smokehouse rail on its CTA, two hooks hanging from it.
  *   - Ironvein — FORGE: an iron line jointed into plates, a rivet on each,
  *     one joint a tile lit by the forge, a bolt at each corner.
  *   - Rosethread — SILK: a satin line with a sheen pixel, an embroidered
  *     running stitch inside it, a rose bud at each corner; a ribbon on its CTA.
- *   - Moonquill — ARCANE NIGHT: a silver line, one faint rune a tile, a star
- *     at each corner; runes on its CTA.
+ *   - Greenvial — GLASSHOUSE: a leaded glass line, a vine climbing along
+ *     inside it with a leaf a tile, a spore bud at each corner; a vine on
+ *     its CTA.
  *
  * The frames' slice is 4 px (8 CSS px), but what is drawn in it is QUIET (the
  * frames pass, Oct 2026): one dim line and sparse detail, each world with its
- * own corner and its own SHAPE — ragged, scalloped, riveted, stitched,
- * inscribed — so a glance tells them apart even in greyscale.
+ * own corner and its own SHAPE — ragged, jointed, riveted, stitched,
+ * climbing — so a glance tells them apart even in greyscale.
  *
  * Everything here is PIXEL ROWS (one character a pixel, `.` clear) and a
- * palette: the frame (a 9-slice for `border-image`), the CTA's top strip, the
- * card's crest, and the rune glyphs
- * the ambient layer drifts. `themeArtDom.ts` rasterises them once into CSS
+ * palette: the frame (a 9-slice for `border-image`), the CTA's top strip and
+ * the card's crest. `themeArtDom.ts` rasterises them once into CSS
  * variables; nothing is a file and nothing is third-party (procedural, our own).
  *
  * Pure: no DOM. Deterministic: a hash, never `Math.random`.
@@ -235,62 +236,53 @@ function fireCrest(f: number): Rows {
 }
 
 // ---------------------------------------------------------------------------
-// PAINT — Easel House: a confident brush stroke in three paints, each dab
-// with its bristle shade under it; a drip now and then
+// MARSH — Butcherblock: a dry reed stem along the edge, jointed, lashed with
+// hide twine once a tile; a bone knuckle in each corner
 // ---------------------------------------------------------------------------
 /*
- * The second frames pass (Oct 2026; the board: Peppercorn and Rosethread
- * GOOD, Ironvein "the most minimal in our UI aesthetic"): every world as
- * present as those two — a line and a rhythm of its own you can read at a
- * glance — still one deep, still dim, still no lone pixel.
+ * The rename (Oct 2026): the `art` slot is Butcherblock's now — reeds, mist,
+ * hide and bone on the salt marsh — so its frame is the reed bed's, as quiet
+ * as Peppercorn's char and Rosethread's satin: one dim line (a reed stem a
+ * shade off the smoke-grey panel), a darker joint every eight pixels, and a
+ * short wrap of twine once a tile, two pixels deep.
  */
-const PAINT: Palette = {
-  // Each paint and its bristle shade.
-  p: '#6e5a96',
-  P: '#4c3d70',
-  o: '#84663e',
-  O: '#5c4628',
-  t: '#40726c',
-  T: '#2b4f4b',
-  s: '#8a5a72',
-  q: '#46326e',
+const MARSH: Palette = {
+  // The reed stem, and its joint.
+  r: '#6a6448',
+  n: '#46412e',
+  // The hide twine lashed round it, and its shadow.
+  t: '#7e5c42',
+  T: '#523a28',
+  // A bone knuckle: lit, and its shade.
+  w: '#9c9076',
+  W: '#706650',
+  // The CTA's hooks, steel.
+  S: '#8a939c',
 }
-function paintFrame(_f: number): Rows {
+function marshFrame(_f: number): Rows {
   return frame(
-    (d, along, side) => {
-      const s = sideN(side)
-      // Dabs eight pixels long, each its own paint: the paint on the outside,
-      // its bristle shade under it, parted where one dab meets the next (the
-      // stroke's scallops: inner bumps read as battlements, not paint).
-      const a = along % 8
-      const band = (Math.floor(along / 8) + s) % 3
-      const [paint, shade] = band === 0 ? ['p', 'P'] : band === 1 ? ['o', 'O'] : ['t', 'T']
-      if (d === 0) return paint
-      if (d === 1) return a === 0 || a === 7 ? null : shade
-      // A drip off the foot, once a tile, hanging from a dab's edge.
-      if (side === 'bottom' && (d === 2 || d === 3) && along === 6) return shade
+    (d, along) => {
+      // The lashing, once a tile: a two-pixel wrap across the stem and under it.
+      const lash = along === 11 || along === 12
+      if (d === 0) return lash ? 't' : along % 8 === 3 ? 'n' : 'r'
+      if (d === 1) return lash ? 'T' : null
       return null
     },
-    // A dab of paint in each corner, a different paint across the diagonal.
-    (cx, cy, which) => {
-      const [paint, shade] = which === 0 || which === 3 ? ['o', 'O'] : ['s', 'q']
-      return quietCorner(paint, (x, y) => (x === 1 && y === 1 ? shade : (x === 2 && y === 1) || (x === 1 && y === 2) ? shade : null))(cx, cy)
-    },
+    // A bone knuckle one pixel in from each corner, its shade toward the panel.
+    quietCorner('r', (cx, cy) => (cx === 1 && cy === 1 ? 'w' : (cx === 2 && cy === 1) || (cx === 1 && cy === 2) ? 'W' : null)),
   )
 }
-function paintStrip(_f: number): Rows {
-  const g = grid(STRIP_W, STRIP_H)
-  // A brush stroke standing on the button's lip: a dab of each of two paints,
-  // its bristle shade under it (parted where the dabs meet), a scallop of
-  // paint swelling up in the middle of each.
-  for (let x = 0; x < STRIP_W; x++) {
-    const [paint, shade] = x < 8 ? ['p', 'P'] : ['t', 'T']
-    const a = x % 8
-    g[STRIP_H - 2][x] = a === 0 ? '.' : shade
-    g[STRIP_H - 3][x] = paint
-    if (a >= 2 && a <= 5) g[STRIP_H - 4][x] = paint
-  }
-  return rows(g)
+function marshStrip(_f: number): Rows {
+  // A smokehouse rail along the button's top, one butcher's hook a tile
+  // hanging from it, its J resting on the lip (two a tile read as a ruler).
+  return [
+    '................',
+    'tttttttttttttttt',
+    '.......S........',
+    '.......S........',
+    '.......S.S......',
+    '........S.......',
+  ]
 }
 
 // ---------------------------------------------------------------------------
@@ -388,68 +380,58 @@ function silkStrip(_f: number): Rows {
 }
 
 // ---------------------------------------------------------------------------
-// ARCANE NIGHT — Moonquill: a silver line, two runes a tile inscribed under
-// it, a four-pointed star in each corner
+// GLASSHOUSE — Greenvial: a leaded glass line, a vine climbing along inside
+// it with a leaf a tile, a spore bud in each corner
 // ---------------------------------------------------------------------------
-const ARCANE: Palette = { s: '#5e6898', g: '#56609c', G: '#8a96ca' }
-/** Five little runes, 3 × 3, for the frame and the CTA strip. */
-const RUNES_3: Rows[] = [
-  ['s.s', '.s.', 's.s'],
-  ['ss.', '.s.', '.ss'],
-  ['.s.', 'sss', '.s.'],
-  ['s..', 'ss.', 's.s'],
-  ['sss', 's..', '.s.'],
-]
-function arcaneFrame(_f: number): Rows {
+/*
+ * The rename (Oct 2026): the `scrolls` slot is Greenvial's now — glass, vines
+ * and glowing spores in the hidden gardens — so its frame is a glasshouse
+ * pane's: one dim leaded line, a pane's faint glint inside it once a tile,
+ * and a vine running along under it, a leaf put out twice a tile.
+ */
+const GLASS: Palette = {
+  // The lead line, and the pane's glint along it.
+  g: '#3e6a5c',
+  q: '#487462',
+  // The vine, and its leaf.
+  v: '#2f5a40',
+  l: '#4c8a52',
+  // The spore bud in the corner, and the CTA's spore.
+  s: '#7aa444',
+}
+function glassFrame(_f: number): Rows {
   return frame(
-    (d, along, side) => {
-      if (d === 0) return 's'
-      // Two runes a tile (at 2 and 10), hung from the line, each its own.
-      for (const [k, at] of [
-        [0, 2],
-        [1, 10],
-      ] as const) {
-        const x = along - at
-        if (x < 0 || x > 2) continue
-        const rune = RUNES_3[(sideN(side) + k * 2) % RUNES_3.length]
-        return rune[d - 1][x] === 's' ? 'g' : null
-      }
+    (d, along) => {
+      if (d === 0) return along === 13 ? 'q' : 'g'
+      // The vine runs along under the lead, a pixel in, and puts out a leaf twice a tile.
+      if (d === 1) return 'v'
+      if (d === 2) return along === 3 || along === 11 ? 'l' : null
       return null
     },
-    // A four-pointed star in each corner, its near rays touching the line.
-    quietCorner('s', (cx, cy) => (cx === 2 && cy === 2 ? 'G' : (cx === 2 && (cy === 1 || cy === 3)) || (cy === 2 && (cx === 1 || cx === 3)) ? 'g' : null)),
+    // A spore bud one pixel in from each corner, a leaf beside it.
+    quietCorner('g', (cx, cy) => (cx === 1 && cy === 1 ? 's' : cx === 2 && cy === 2 ? 'l' : null)),
   )
 }
-function arcaneStrip(_f: number): Rows {
-  const g = grid(STRIP_W, STRIP_H)
-  // Three runes in a row standing on the button's lip, the middle one lit.
-  for (let k = 0; k < 3; k++) {
-    const rune = RUNES_3[(k + 2) % RUNES_3.length]
-    for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) if (rune[y][x] === 's') g[2 + y][1 + k * 5 + x] = k === 1 ? 'G' : 'g'
-  }
-  return rows(g)
+function glassStrip(_f: number): Rows {
+  // A vine running along the button's lip, a leaf rising off it twice a tile
+  // and one glowing spore bud.
+  return [
+    '................',
+    '................',
+    '..........s.....',
+    '...l......v...l.',
+    '.vvlv....vv..vl.',
+    'v...vvvvvv.vvv.v',
+  ]
 }
 
 const WORLDS: Record<CompanyId, WorldArt> = {
   spice: { frame: fireFrame(0), strip: fireStrip(0), crest: fireCrest(0), palette: FIRE },
-  art: { frame: paintFrame(0), strip: paintStrip(0), palette: PAINT },
+  art: { frame: marshFrame(0), strip: marshStrip(0), palette: MARSH },
   metals: { frame: forgeFrame(0), strip: forgeStrip(0), palette: FORGE },
   silk: { frame: silkFrame(0), strip: silkStrip(0), palette: SILK },
-  scrolls: { frame: arcaneFrame(0), strip: arcaneStrip(0), palette: ARCANE },
+  scrolls: { frame: glassFrame(0), strip: glassStrip(0), palette: GLASS },
 }
 
 /** A company's world art. */
 export const worldArt = (c: CompanyId): WorldArt => WORLDS[c]
-
-/**
- * The runes Moonquill's night drifts (5 × 5), and its stars' twinkle steps.
- * The ambient layer draws them pixel by pixel.
- */
-export const RUNES_5: Rows[] = [
-  ['..s..', '.s.s.', 's...s', '.s.s.', '..s..'],
-  ['s...s', '.s.s.', '..s..', '..s..', '..s..'],
-  ['sssss', '..s..', '.s.s.', 's...s', '.....'],
-  ['s.s.s', 's.s.s', 'sssss', '..s..', '..s..'],
-  ['.sss.', 's....', '.sss.', '....s', '.sss.'],
-  ['s...s', 'ss.ss', 's.s.s', 's...s', 's...s'],
-]

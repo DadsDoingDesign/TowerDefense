@@ -32,7 +32,7 @@ Every string a player reads is listed, by surface and with its job, in
 | **Skill** | Say what the skill does to its hero, so two can be compared | One sentence with its numbers. Seconds as `s`, damage over time as `/s`. At most 80 characters. | "Every hit burns 12/s for 3s and splashes 15 wider." |
 | **Mutation** | Say how it changes one hero's attack | Its upside only, in at most 60 characters; the bill is the downside line. | "Every shot hits ×3.2 as hard." |
 | **Note** | Give context the player needs to choose, once | One short plain sentence in the quiet italic note (`BodyLine` `tone: 'note'`: `.sh-line.note` on cards and the Context panel, `.pg-card-body.note` on pages). Never a second effect line. | *"Relics affect new team members and stack for the rest of your run."* · *"Taking it doesn't raise enemy strength."* |
-| **CTA** | Commit the screen's one action, and name it | A verb and its object. | "Hire Doyle" · "Read Easel House's terms" · "Take the free escort" |
+| **CTA** | Commit the screen's one action, and name it | A verb and its object. | "Hire Doyle" · "Read Butcherblock's terms" · "Take the free escort" |
 | **Nav row** (Back, March on, Hire nobody) | Leave or skip | Its title says it all, with no body. | "March on" |
 | **Board subtitle** | Say what the page is for, only when the title does not | At most one short line. None where the rows say it (Settings, Codex). | "Take one." |
 | **Coach tip** | Teach one thing, once, when it first matters | One sentence. It names the control by its label. It never repeats a card's note. | "Take one: an item for one hero, or a relic for the team." |
@@ -91,7 +91,7 @@ From `BRAND.md` § Voice & tone, sharpened by the designer's note:
 | Settings · Assist | Four lines, the first and second saying the same thing | the level's effect, "Waves, loot and pay stay the same.", and the Assisted rule as a note |
 | Settings page | subtitle "Audio, motion, contrast, scale, colour vision, assist and tips." | no subtitle (the rows say it) |
 | Terms tip | "Each crate costs 50 gold and makes the road harder …" under "Your stake · 50 gold a crate" | "Each crate makes the road harder, and pays more if delivered." |
-| Codex item | "Every Watch has it from the first run. Heroes and loot can be dealt it on any road. On Easel House's road it turns up more often." | "Yours from the first run. Dealt on any road. More often on Easel House's road." |
+| Codex item | "Every Watch has it from the first run. Heroes and loot can be dealt it on any road. On Butcherblock's road it turns up more often." | "Yours from the first run. Dealt on any road. More often on Butcherblock's road." |
 | Defeat receipt | "×3 · 5 Gate" · "Hardest hit: Bomber, 3 Gate in one." | "×3 · −25% cargo" · "Hardest hit: Bomber, −15% cargo in one." |
 | Coach (spoils) | "A relic helps all your heroes for the rest of the run." (the card's note again) | "Take one: an item for one hero, or a relic for the team." |
 | Hire card | "Casts magic from a wand at a group · holds 2 enemies with its shield" beside a "Holds 2 enemies" tile | "Casts magic from a wand" |

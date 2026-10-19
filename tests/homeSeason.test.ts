@@ -24,7 +24,7 @@ describe('the season panel', () => {
   it('its name says the season, what is left, who leads and each contract so far', () => {
     const bars = seasonBars({ contracts: 2, log: ['art', null] })
     expect(seasonPanelName(3, 5, 'metals', bars)).toBe(
-      'Trade war, season 3: 5 contracts left, Ironvein leads. So far: delivered for Easel House, fell or cashed out. Open the standings.',
+      'Trade war, season 3: 5 contracts left, Ironvein leads. So far: delivered for Butcherblock, fell or cashed out. Open the standings.',
     )
     expect(seasonPanelName(1, 7, null, seasonBars(freshSeason()))).toBe('Trade war, season 1: 7 contracts left. Open the standings.')
   })

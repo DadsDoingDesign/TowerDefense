@@ -5,7 +5,7 @@ import { COMPANY_IDS } from '../src/game/data/companies'
 import { THEME_IDS } from '../src/game/run/militiaTheme'
 import { AMBIENT_CAP_DESK, AMBIENT_CAP_PHONE, ambientCap, BREATH_S, burstClip, drawParticle, ROAD_BESIDE, ROAD_CLEAR, roadDistance, step, stepAlpha, SWITCH_S, WORLDS, type Pen, type Zone } from '../src/ui/theme/fxWorlds'
 import { PixelPen } from '../src/ui/theme/pixelPen'
-import { CREST_H, CREST_W, FRAME_SIZE, FRAME_SPAN, FRAME_T, RUNES_5, STRIP_H, STRIP_W, worldArt } from '../src/ui/theme/themeArt'
+import { CREST_H, CREST_W, FRAME_SIZE, FRAME_SPAN, FRAME_T, STRIP_H, STRIP_W, worldArt } from '../src/ui/theme/themeArt'
 
 /*
  * The company worlds (Oct 2026): each theme's pixel art and motion. The art
@@ -79,12 +79,6 @@ describe('each company world’s pixel art', () => {
     // Rooted on the edge: its foot row is lit all along.
     expect(f[CREST_H - 1]).not.toMatch(/\./)
   })
-  it('the runes are 5 × 5', () => {
-    for (const r of RUNES_5) {
-      expect(r.length).toBe(5)
-      for (const row of r) expect(row.length).toBe(5)
-    }
-  })
 })
 
 describe('the frames: quiet, and one deep (the frames pass, Oct 2026)', () => {
@@ -99,7 +93,7 @@ describe('the frames: quiet, and one deep (the frames pass, Oct 2026)', () => {
     it(`${c}: one dominant line, at most two pixels deep, sparse detail inside it, nothing bright`, () => {
       const lit = (d: number) => [...edge[d]].filter((ch) => ch !== '.').length / FRAME_SPAN
       // The line runs (nearly) the whole edge. Its second pixel may be a band
-      // of its own (Ironvein's two-tone iron, Easel House's bristle shade:
+      // of its own (Ironvein's two-tone iron, Butcherblock's twine lashing:
       // the second frames pass, Oct 2026), but the inner half stays sparse,
       // and inside the line at most half the pixels are set.
       expect(lit(0), c).toBeGreaterThanOrEqual(0.75)

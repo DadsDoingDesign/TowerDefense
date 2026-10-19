@@ -7,7 +7,7 @@
  *
  * Writes `home-<company>.png` (the home at 390 × 844 with that company
  * focused, over a 3× crop of the dock round its slot), `home-locked.png`
- * (Moonquill not hiring yet: its face is a shadow), `desk.png` (1280 × 800,
+ * (Greenvial not hiring yet: its face is a shadow), `desk.png` (1280 × 800,
  * with a crop of the dock at its own pixels), `dock-live.webp` (4 s of the
  * real dock on a fake clock: the idles, a tic or two, a pick's reaction) and
  * `manifest.json`. Env: DOCK_BASE (default http://localhost:5273/).
@@ -22,11 +22,11 @@ const EXEC = process.env.PW_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-l
 const { chromium } = await import(process.env.PW_MODULE ?? '/opt/node22/lib/node_modules/playwright/index.mjs')
 
 const IDS = ['spice', 'art', 'metals', 'silk', 'scrolls']
-const NAMES = { spice: 'Peppercorn', art: 'Easel House', metals: 'Ironvein', silk: 'Rosethread', scrolls: 'Moonquill' }
+const NAMES = { spice: 'Peppercorn', art: 'Butcherblock', metals: 'Ironvein', silk: 'Rosethread', scrolls: 'Greenvial' }
 const FACE = { spice: 'Saffra', art: 'Hask', metals: 'Brannoch', silk: 'Odile', scrolls: 'Wren' }
 // A played save (as hero-dock.mjs): every company hiring, Ironvein leading the war.
 const OPEN = { bank: 12480, runs: 31, standing: { spice: 4, art: 2, metals: 6, silk: 3, scrolls: 3 }, season: { n: 3, contracts: 4, shares: { spice: 27, art: 14, metals: 32, silk: 11, scrolls: 16 }, deliveries: { spice: 1, art: 0, metals: 2, silk: 0, scrolls: 0 }, log: ['metals', 'spice', null, 'metals'] } }
-// An early save: no standing 3 yet, so Moonquill is not hiring.
+// An early save: no standing 3 yet, so Greenvial is not hiring.
 const EARLY = { bank: 340, runs: 5, standing: { spice: 2, art: 1, metals: 1 }, season: { n: 1, contracts: 2, deliveries: { spice: 1, art: 0, metals: 0, silk: 0, scrolls: 0 }, log: ['spice', null] } }
 
 const browser = await chromium.launch(fs.existsSync(EXEC) ? { executablePath: EXEC } : {})
@@ -108,8 +108,8 @@ for (const c of IDS) {
   ])
   manifest.push({ id: `home-${c}`, group: 'Dock live', people: FACE[c], title: `${NAMES[c]}: ${FACE[c]}`, caption: `The real home at 390 wide with ${NAMES[c]} focused, and the dock at 3×; judge the face reads as its company and its Rep still reads.`, file: `home-${c}.png` })
 }
-await phoneCard(EARLY, 'scrolls', 'home-locked.png', 'Not hiring yet: a shadow', ['An early save: Moonquill opens at Standing 3. Its face is Wren’s', 'shadow, still; the slot says “at 3”. Judge it reads as locked.'])
-manifest.push({ id: 'home-locked', group: 'Dock live', people: 'Wren', title: 'Not hiring yet: a shadow', caption: 'An early save, Moonquill focused but not hiring: the face is a still shadow and the slot says “at 3”; judge it reads as locked.', file: 'home-locked.png' })
+await phoneCard(EARLY, 'scrolls', 'home-locked.png', 'Not hiring yet: a shadow', ['An early save: Greenvial opens at Standing 3. Its face is Wren’s', 'shadow, still; the slot says “at 3”. Judge it reads as locked.'])
+manifest.push({ id: 'home-locked', group: 'Dock live', people: 'Wren', title: 'Not hiring yet: a shadow', caption: 'An early save, Greenvial focused but not hiring: the face is a still shadow and the slot says “at 3”; judge it reads as locked.', file: 'home-locked.png' })
 
 // The desk: the whole home, and the dock at its own pixels round the focused slot.
 {

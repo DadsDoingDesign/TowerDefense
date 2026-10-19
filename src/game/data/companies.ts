@@ -27,6 +27,17 @@ import type { TerrainRuleId } from '../types'
  */
 export type CompanyId = 'spice' | 'art' | 'metals' | 'silk' | 'scrolls'
 
+/**
+ * The two newest companies' names (Oct 2026, the world bible's rename: the
+ * `art` slot was Easel House, the `scrolls` slot Moonquill). ONE constant
+ * each: every surface reads the name from here (through `companyById`, or
+ * these where a table is keyed by name, like the rig's liveries), so a
+ * rename is a one-line change. The ids and every storage key stay `art` and
+ * `scrolls`. "Greenvial" is a working name.
+ */
+export const BUTCHERBLOCK = 'Butcherblock'
+export const GREENVIAL = 'Greenvial'
+
 export const COMPANY_IDS: readonly CompanyId[] = ['spice', 'art', 'metals', 'silk', 'scrolls']
 
 export const isCompanyId = (v: unknown): v is CompanyId => typeof v === 'string' && (COMPANY_IDS as readonly string[]).includes(v)
@@ -56,7 +67,7 @@ export interface Company {
   /**
    * The armour its road's goblins lean to (Oct 2026): of the ordinary fights
    * on its road that come armoured (`waves.nodeArmour`), most wear this. The
-   * ore road's raiders strap on plate; the scroll road's are warded. A road
+   * ore road's raiders strap on plate; Greenvial's are warded. A road
    * with none deals Plated and Warded evenly.
    */
   armour?: 'plated' | 'warded'
@@ -96,17 +107,18 @@ export const COMPANIES: readonly Company[] = [
   },
   {
     id: 'art',
-    name: 'Easel House',
-    goods: 'Art',
-    noun: 'paintings',
-    color: '#c6a4ff',
+    name: BUTCHERBLOCK,
+    goods: 'Salt',
+    noun: 'salt meat',
+    color: '#c25b6b',
     ground: { name: 'Flooded canals', rules: ['flooded'] },
-    towns: ['Hollowmere', 'Gilt Bridge', 'Varnish'],
+    towns: ['Brinefen', 'Smoke Ferry', 'Saltcleave'],
     letters: [
-      '{name} needs its {noun} kept dry along the canal road to {dest}.',
-      '{name} sends its {noun} by {c1} and {c2} to {dest}, and pays for every frame that arrives.',
+      '{name} needs its {noun} kept dry along the reed channels to {dest}.',
+      '{name} sends its {noun} by {c1} and {c2} to {dest}, and pays for every cask that keeps.',
     ],
-    emblem: ['gggggggg', 'gppppppg', 'gpppoppg', 'gppooopg', 'gpooooog', 'gppppppg', 'gggggggg', '........'],
+    // A haunch on the bone.
+    emblem: ['....ooo.', '...opppo', '..opgppo', '..oppppo', '.oopppo.', 'opoooo..', 'po......', '.o......'],
   },
   {
     id: 'metals',
@@ -139,18 +151,19 @@ export const COMPANIES: readonly Company[] = [
   },
   {
     id: 'scrolls',
-    name: 'Moonquill',
-    goods: 'Scrolls & Arcana',
-    noun: 'scrolls',
-    color: '#e4e8f2',
+    name: GREENVIAL,
+    goods: 'Potions',
+    noun: 'tonic',
+    color: '#2fa58a',
     ground: { name: 'Cursed ground', rules: ['hexed'] },
     armour: 'warded',
-    towns: ['Quill Hill', 'Lanternhold', 'Inkspire'],
+    towns: ['Mossdell', 'Spore Hollow', 'Greenglass'],
     letters: [
       '{name} seeks wardens for sealed {noun} bound for {dest}.',
-      '{name} sends its {noun} over cursed ground, by {c1} and {c2} to {dest}.',
+      '{name} sends its {noun} through the spoiled hollows, by {c1} and {c2} to {dest}.',
     ],
-    emblem: ['.oooooo.', 'oppppppo', '.pgggpp.', '.pppppp.', '.pggggp.', '.pppppp.', 'oppppppo', '.oooooo.'],
+    // A stoppered flask, a sprout from its cork.
+    emblem: ['....g...', '...gg...', '...oo...', '...pp...', '..pppp..', '.ppgppp.', '.pppppp.', '..pppp..'],
     opensAt: 3,
   },
 ]
@@ -214,26 +227,28 @@ export const COMPANY_LOGOS: Readonly<Record<CompanyId | 'locked', CompanyLogo>> 
     palette: { G: '#276740', d: '#8fa83a', g: '#38b251', h: '#c6e05a', l: '#fffce7', o: '#161c2e' },
   },
   art: {
-    // an easel holding a painting — a sun over a green hill — in a wooden frame
+    // a haunch on the bone, its fat marbled: the meat Butcherblock's marsh
+    // smokehouses salt and sell (the marks proposal, Oct 2026; a hook over it
+    // read as a flask's neck at signpost size, so the bone carries it alone)
     rows: [
-      '.......oo.......',
-      '......owWo......',
-      '.oooooooooooooo.',
-      '.owwwwwwwwwwwwo.',
-      '.owhhhhhhhyyhWo.',
-      '.owhhhhhhyyyyWo.',
-      '.owhhhhhhhyyhWo.',
-      '.owhhhgggghhhWo.',
-      '.owhhggggggghWo.',
-      '.owgGGgggGGGgWo.',
-      '.owWWWWWWWWWWWo.',
-      '.oooooooooooooo.',
-      '...owo.oo.owo...',
-      '...owo.oo.owo...',
-      '..owo..oo..owo..',
-      '..ooo..oo..ooo..',
+      '................',
+      '........ooooo...',
+      '......oohhhhhoo.',
+      '.....olhhhhhhhdo',
+      '....olhhfhhhhhdo',
+      '....ohhhhhhffhdo',
+      '...olhhffhhhhddo',
+      '...ohhhhhhhhhddo',
+      '...ohhhhhhhhdddo',
+      '...oddhhhhhdddo.',
+      '..owoddddddddo..',
+      '.owwWoooooooo...',
+      'owwWo...........',
+      'owwWWo..........',
+      '.owoWo..........',
+      '..o.o...........',
     ],
-    palette: { G: '#276740', W: '#866353', g: '#38b251', h: '#c6a4ff', o: '#161c2e', w: '#a38250', y: '#ffed44' },
+    palette: { o: '#161c2e', h: '#c25b6b', l: '#e2868c', d: '#8a3a48', f: '#f3d0c0', w: '#ece0c8', W: '#c9b48c' },
   },
   metals: {
     // a blue-steel pick over a lump of ore with its blue vein (the old one was a brown rock: no blue to read at dock size)
@@ -280,26 +295,27 @@ export const COMPANY_LOGOS: Readonly<Record<CompanyId | 'locked', CompanyLogo>> 
     palette: { W: '#866353', d: '#a8718a', h: '#dba5b9', l: '#fffce7', o: '#161c2e', s: '#bac1c8', w: '#a38250' },
   },
   scrolls: {
-    // a quill feather — its vane, rachis and bare shaft — in front of a crescent moon (the old quill read as a blade)
+    // a flask of plant potion, a sprout from its cork, spores glowing in it
+    // (the marks proposal, Oct 2026)
     rows: [
-      '..........ooooo.',
-      '.....ooooolllddo',
-      '...oommolollddo.',
-      '..ommMollllddho.',
-      '.ommMoollldhhho.',
-      '.omMololldhhho..',
-      'omMoollldhhhho..',
-      'omMoollddhhoo...',
-      'omMoolldhhho....',
-      'omMooldhhho.....',
-      '.omMooddhho.....',
-      '.ommodhoo.......',
-      '..ooodo.........',
-      '...odo..........',
-      '...odo..........',
-      '....o...........',
+      '.........oo.....',
+      '.......oogGo....',
+      '......ogGGoo....',
+      '.....oocco......',
+      '......oCco......',
+      '......oqvo......',
+      '.....oqvvqo.....',
+      '....oqxvvvqo....',
+      '...oqlhhhhhqo...',
+      '..oqlhhhshhhdo..',
+      '..olhhhhhhhhdo..',
+      '..ohhshhhhhhdo..',
+      '..ohhhhhhhshdo..',
+      '...ohhhhhhhdo...',
+      '....oddddddo....',
+      '.....oooooo.....',
     ],
-    palette: { M: '#d08c41', d: '#a9b0c4', h: '#e4e8f2', l: '#fffce7', m: '#ffed44', o: '#161c2e' },
+    palette: { o: '#161c2e', G: '#276740', g: '#38b251', c: '#a38250', C: '#866353', q: '#d8efe6', v: '#24423c', h: '#2fa58a', l: '#7fe0c4', d: '#1d6e5c', s: '#d8ff7a', x: '#fffce7' },
   },
   locked: {
     // a padlock, in the small lock's warm parchment and steel (it was cool slate)

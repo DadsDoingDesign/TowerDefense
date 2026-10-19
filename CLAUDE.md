@@ -14,6 +14,13 @@ asset or package added must allow commercial use and be recorded in
 `sprites/CREDITS.md` / `docs/AUDIO_CREDITS.md` for its category). No CC-BY-SA /
 GPL / non-commercial material, and nothing without a verifiable licence.
 
+The five companies (`src/game/data/companies.ts`, ids in brackets): Peppercorn
+Co. (`spice`), Butcherblock (`art`, was Easel House), Ironvein (`metals`),
+Rosethread (`silk`), Greenvial (`scrolls`, was Moonquill; a working name —
+`companies.GREENVIAL`, one constant). The ids and every storage key keep the
+old slots; the world bible is `docs/peoples/roster.json` and the
+character-design skill's table.
+
 ## Working practice — review after every task
 
 **After any task that changes visuals or gameplay feel, run the design review
@@ -127,7 +134,8 @@ result. Append a short note to the review log when you're done.
   `encounterPreview.nodeModFor`). `balance/armour-eval.ts` measures fairness.
   Goblin clans (Oct 2026): every goblin a player sees wears its road's clan,
   one per company (`src/game/data/clans.ts`: cinder, smudge, delve, silkcut,
-  hexmoon; `DEFAULT_CLAN` cinder when there is no run). A clan is a LOOK and
+  hexmoon — the ids; smudge wears the Gnawbone Pack and hexmoon the Sporecap
+  Rot since the companies' rename; `DEFAULT_CLAN` cinder when there is no run). A clan is a LOOK and
   a NAME only: the engine keeps its ids, stats and RNG order
   (`tests/fixtures/enemyStats.snapshot.json`). Which clan: the run's company
   (`run/clans.runClan` / `roadClan`, the hand-made benches too); the Sovereign
@@ -239,8 +247,8 @@ result. Append a short note to the review log when you're done.
   desynced clock, the reaction when its slot is focused, a still shadow while
   the company is not hiring; still under reduced motion, the tic half as
   often on Light, asleep when hidden); who stands where is the one table
-  `ui/shell/dockFace.ts` `DOCK_FACE` (Hask in Easel House's slot and Wren in
-  Moonquill's lead the rename); crests stay everywhere else; the **Buy Company** slot — the Sovereign Route,
+  `ui/shell/dockFace.ts` `DOCK_FACE` (Hask, Butcherblock's salter, in the
+  `art` slot; Wren, Greenvial's herbalist, in `scrolls`); crests stay everywhere else; the **Buy Company** slot — the Sovereign Route,
   padlocked with its progress until `charterDoor` opens — floats over the
   dock's right end, a slot's size) and the card: a FIXED FORM, the same three rows for
   every company (Ground · Raiders · At Rep N — the track's next reward by kind, `track.nextReward` — `ui/shell/homeCard.ts`; the
@@ -330,12 +338,12 @@ result. Append a short note to the review log when you're done.
   rows in `src/ui/theme/themeArt.ts` (per world: a 4 px 9-slice frame that
   is QUIET but present — a dim line at most two pixels deep, a shade or two
   off the panel, with a sparse rhythm of its own and a corner whose outer
-  pixel is clear: Peppercorn a charred line with a few embers, Easel House
-  a two-pixel brush stroke (each dab its paint over its bristle shade, a
-  drip), Ironvein a two-tone iron band lit on top with rivet heads,
+  pixel is clear: Peppercorn a charred line with a few embers, Butcherblock
+  a dry reed stem jointed every eight pixels and lashed with hide twine, a
+  bone knuckle in each corner, Ironvein a two-tone iron band lit on top with rivet heads,
   riveted corner plates and a forge glow in each joint, Rosethread satin
-  with a running stitch, Moonquill a silver line with two runes a tile and
-  a four-pointed star at each corner — a low CTA strip (Ironvein's an iron
+  with a running stitch, Greenvial a leaded glass line with a vine winding
+  inside it and a spore bud at each corner — a low CTA strip (Ironvein's an iron
   bar with domed rivets), and Peppercorn's flame crest on the card; each
   ONE still image; the board approved Peppercorn's and Rosethread's as the
   bar the others match), rasterised once into CSS

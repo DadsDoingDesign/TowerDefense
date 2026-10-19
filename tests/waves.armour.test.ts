@@ -23,7 +23,7 @@ describe('armoured ordinary fights', () => {
     expect(armed.filter((m) => m === 'plated').length / armed.length).toBeCloseTo(0.5, 1)
   })
 
-  it('leans to the road: Ironvein plate, Moonquill wards, the rest even', () => {
+  it('leans to the road: Ironvein plate, Greenvial wards, the rest even', () => {
     const share = (company: 'metals' | 'scrolls' | 'spice', mod: string) => {
       const rules = encounterRulesOf({ company })
       const armed = nodes('battle').map((n) => nodeArmour(n, n.seed, rules)).filter(Boolean)

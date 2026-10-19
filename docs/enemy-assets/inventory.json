@@ -14,11 +14,11 @@
   {
    "id": "smudge",
    "company": "art",
-   "name": "Smudge Gang",
-   "tell": "Paint-poured buckets for helmets, brushes for weapons, paint dripping off everything.",
+   "name": "Gnawbone Pack",
+   "tell": "Boar skulls for helms, meat hooks for torches, hides and smoke racks; the kegs come heaped with salt.",
    "specialists": {
-    "shaman": "Smear Shaman",
-    "bearer": "Canvas Bearer"
+    "shaman": "Bone Shaman",
+    "bearer": "Hide Bearer"
    }
   },
   {
@@ -44,11 +44,11 @@
   {
    "id": "hexmoon",
    "company": "scrolls",
-   "name": "Hexmoon Coven",
-   "tell": "Crescent horns and moon masks, quill staves, scroll cases; kegs become rune urns.",
+   "name": "Sporecap Rot",
+   "tell": "Huge spotted caps with glowing gills, swinging spore censers, moss; the kegs are vats foaming with green rot.",
    "specialists": {
-    "shaman": "Moon Shaman",
-    "bearer": "Ward Bearer"
+    "shaman": "Spore Shaman",
+    "bearer": "Moss Bearer"
    }
   }
  ],
@@ -838,43 +838,41 @@
   },
   {
    "clan": "smudge",
-   "clanName": "Smudge Gang",
+   "clanName": "Gnawbone Pack",
    "company": "art",
    "faction": "torch",
    "tier": 1,
    "key": "torch1",
    "lookId": "smudge.torch1",
    "role": "smudge_torch1",
-   "name": "Smudge Runt",
+   "name": "Gnaw Runt",
    "engineName": "Torch Runt",
    "boss": false,
-   "look": "paint-poured bucket helm, brush",
+   "look": "boar-skull helm, meat hook",
    "parts": [
-    "paintbrush",
-    "bucket-helm",
-    "bucket-drips",
-    "bucket-bail"
+    "meat-hook",
+    "boar-skull"
    ],
    "forms": [
     {
      "form": "base",
      "key": "torch1",
-     "name": "Smudge Runt"
+     "name": "Gnaw Runt"
     },
     {
      "form": "swift",
      "key": "torch1_swift",
-     "name": "Smudge Runt · Swift"
+     "name": "Gnaw Runt · Swift"
     },
     {
      "form": "plated",
      "key": "torch1_plated",
-     "name": "Smudge Runt · Plated"
+     "name": "Gnaw Runt · Plated"
     },
     {
      "form": "warded",
      "key": "torch1_warded",
-     "name": "Smudge Runt · Warded"
+     "name": "Gnaw Runt · Warded"
     }
    ],
    "renders": {
@@ -889,44 +887,42 @@
   },
   {
    "clan": "smudge",
-   "clanName": "Smudge Gang",
+   "clanName": "Gnawbone Pack",
    "company": "art",
    "faction": "torch",
    "tier": 2,
    "key": "torch2",
    "lookId": "smudge.torch2",
    "role": "smudge_torch2",
-   "name": "Dauber",
+   "name": "Hook Goblin",
    "engineName": "Torch Goblin",
    "boss": false,
-   "look": "+ palette pauldron",
+   "look": "+ hide pauldron",
    "parts": [
-    "paintbrush",
-    "bucket-helm",
-    "bucket-drips",
-    "bucket-bail",
-    "palette-pauldron"
+    "meat-hook",
+    "boar-skull",
+    "hide-pauldron"
    ],
    "forms": [
     {
      "form": "base",
      "key": "torch2",
-     "name": "Dauber"
+     "name": "Hook Goblin"
     },
     {
      "form": "swift",
      "key": "torch2_swift",
-     "name": "Dauber · Swift"
+     "name": "Hook Goblin · Swift"
     },
     {
      "form": "plated",
      "key": "torch2_plated",
-     "name": "Dauber · Plated"
+     "name": "Hook Goblin · Plated"
     },
     {
      "form": "warded",
      "key": "torch2_warded",
-     "name": "Dauber · Warded"
+     "name": "Hook Goblin · Warded"
     }
    ],
    "renders": {
@@ -940,45 +936,43 @@
   },
   {
    "clan": "smudge",
-   "clanName": "Smudge Gang",
+   "clanName": "Gnawbone Pack",
    "company": "art",
    "faction": "torch",
    "tier": 3,
    "key": "torch3",
    "lookId": "smudge.torch3",
    "role": "smudge_torch3",
-   "name": "Splatter Raider",
+   "name": "Marsh Raider",
    "engineName": "Torch Raider",
    "boss": false,
-   "look": "+ canvas flag",
+   "look": "+ smoke rack of meat",
    "parts": [
-    "canvas-flag",
-    "paintbrush",
-    "bucket-helm",
-    "bucket-drips",
-    "bucket-bail",
-    "palette-pauldron"
+    "smoke-rack",
+    "meat-hook",
+    "boar-skull",
+    "hide-pauldron"
    ],
    "forms": [
     {
      "form": "base",
      "key": "torch3",
-     "name": "Splatter Raider"
+     "name": "Marsh Raider"
     },
     {
      "form": "swift",
      "key": "torch3_swift",
-     "name": "Splatter Raider · Swift"
+     "name": "Marsh Raider · Swift"
     },
     {
      "form": "plated",
      "key": "torch3_plated",
-     "name": "Splatter Raider · Plated"
+     "name": "Marsh Raider · Plated"
     },
     {
      "form": "warded",
      "key": "torch3_warded",
-     "name": "Splatter Raider · Warded"
+     "name": "Marsh Raider · Warded"
     }
    ],
    "renders": {
@@ -992,46 +986,43 @@
   },
   {
    "clan": "smudge",
-   "clanName": "Smudge Gang",
+   "clanName": "Gnawbone Pack",
    "company": "art",
    "faction": "torch",
    "tier": 4,
    "key": "torch4",
    "lookId": "smudge.torch4",
    "role": "smudge_torch4",
-   "name": "Brush Berserker",
+   "name": "Bone Berserker",
    "engineName": "Torch Berserker",
    "boss": false,
-   "look": "stacked bucket helm",
+   "look": "tusked skull",
    "parts": [
-    "canvas-flag",
-    "paintbrush",
-    "top-bucket",
-    "bucket-helm",
-    "bucket-drips",
-    "bucket-bail",
-    "palette-pauldron"
+    "smoke-rack",
+    "meat-hook",
+    "tusked-skull",
+    "hide-pauldron"
    ],
    "forms": [
     {
      "form": "base",
      "key": "torch4",
-     "name": "Brush Berserker"
+     "name": "Bone Berserker"
     },
     {
      "form": "swift",
      "key": "torch4_swift",
-     "name": "Brush Berserker · Swift"
+     "name": "Bone Berserker · Swift"
     },
     {
      "form": "plated",
      "key": "torch4_plated",
-     "name": "Brush Berserker · Plated"
+     "name": "Bone Berserker · Plated"
     },
     {
      "form": "warded",
      "key": "torch4_warded",
-     "name": "Brush Berserker · Warded"
+     "name": "Bone Berserker · Warded"
     }
    ],
    "renders": {
@@ -1045,44 +1036,45 @@
   },
   {
    "clan": "smudge",
-   "clanName": "Smudge Gang",
+   "clanName": "Gnawbone Pack",
    "company": "art",
    "faction": "torch",
    "tier": 5,
    "key": "torch5",
    "lookId": "smudge.torch5",
    "role": "smudge_torch5",
-   "name": "Old Gesso",
+   "name": "Chief Gristle",
    "engineName": "Warlord Grukk",
    "boss": true,
-   "look": "brush crown, splattered smock",
+   "look": "bone crown, hide cape",
    "parts": [
-    "splattered-smock",
-    "canvas-flag",
-    "paintbrush",
-    "brush-crown",
-    "palette-pauldron"
+    "hide-cape",
+    "smoke-rack",
+    "meat-hook",
+    "bone-crown",
+    "crowned-skull",
+    "hide-pauldron"
    ],
    "forms": [
     {
      "form": "base",
      "key": "torch5",
-     "name": "Old Gesso"
+     "name": "Chief Gristle"
     },
     {
      "form": "swift",
      "key": "torch5_swift",
-     "name": "Old Gesso · Swift"
+     "name": "Chief Gristle · Swift"
     },
     {
      "form": "plated",
      "key": "torch5_plated",
-     "name": "Old Gesso · Plated"
+     "name": "Chief Gristle · Plated"
     },
     {
      "form": "warded",
      "key": "torch5_warded",
-     "name": "Old Gesso · Warded"
+     "name": "Chief Gristle · Warded"
     }
    ],
    "renders": {
@@ -1097,44 +1089,42 @@
   },
   {
    "clan": "smudge",
-   "clanName": "Smudge Gang",
+   "clanName": "Gnawbone Pack",
    "company": "art",
    "faction": "tnt",
    "tier": 1,
    "key": "tnt1",
    "lookId": "smudge.tnt1",
    "role": "smudge_tnt1",
-   "name": "Pigment Whelp",
+   "name": "Salt Whelp",
    "engineName": "Fuse Whelp",
    "boss": false,
-   "look": "paint-poured bucket helm, tube pack, paint bomb",
+   "look": "boar-skull helm, salt sacks, salt pouch",
    "parts": [
-    "paint-tubes",
-    "paint-bomb",
-    "tnt-bucket-helm",
-    "tnt-bucket-drips",
-    "tnt-bucket-bail"
+    "salt-sacks",
+    "salt-pouch",
+    "tnt-boar-skull"
    ],
    "forms": [
     {
      "form": "base",
      "key": "tnt1",
-     "name": "Pigment Whelp"
+     "name": "Salt Whelp"
     },
     {
      "form": "swift",
      "key": "tnt1_swift",
-     "name": "Pigment Whelp · Swift"
+     "name": "Salt Whelp · Swift"
     },
     {
      "form": "plated",
      "key": "tnt1_plated",
-     "name": "Pigment Whelp · Plated"
+     "name": "Salt Whelp · Plated"
     },
     {
      "form": "warded",
      "key": "tnt1_warded",
-     "name": "Pigment Whelp · Warded"
+     "name": "Salt Whelp · Warded"
     }
    ],
    "renders": {
@@ -1149,45 +1139,43 @@
   },
   {
    "clan": "smudge",
-   "clanName": "Smudge Gang",
+   "clanName": "Gnawbone Pack",
    "company": "art",
    "faction": "tnt",
    "tier": 2,
    "key": "tnt2",
    "lookId": "smudge.tnt2",
    "role": "smudge_tnt2",
-   "name": "Paint Bomber",
+   "name": "Brine Bomber",
    "engineName": "Bomber",
    "boss": false,
-   "look": "+ palette pauldron",
+   "look": "+ hide pauldron",
    "parts": [
-    "paint-tubes",
-    "paint-bomb",
-    "tnt-bucket-helm",
-    "tnt-bucket-drips",
-    "tnt-bucket-bail",
-    "palette-pauldron"
+    "salt-sacks",
+    "salt-pouch",
+    "tnt-boar-skull",
+    "hide-pauldron"
    ],
    "forms": [
     {
      "form": "base",
      "key": "tnt2",
-     "name": "Paint Bomber"
+     "name": "Brine Bomber"
     },
     {
      "form": "swift",
      "key": "tnt2_swift",
-     "name": "Paint Bomber · Swift"
+     "name": "Brine Bomber · Swift"
     },
     {
      "form": "plated",
      "key": "tnt2_plated",
-     "name": "Paint Bomber · Plated"
+     "name": "Brine Bomber · Plated"
     },
     {
      "form": "warded",
      "key": "tnt2_warded",
-     "name": "Paint Bomber · Warded"
+     "name": "Brine Bomber · Warded"
     }
    ],
    "renders": {
@@ -1201,46 +1189,44 @@
   },
   {
    "clan": "smudge",
-   "clanName": "Smudge Gang",
+   "clanName": "Gnawbone Pack",
    "company": "art",
    "faction": "tnt",
    "tier": 3,
    "key": "tnt3",
    "lookId": "smudge.tnt3",
    "role": "smudge_tnt3",
-   "name": "Varnish Wrecker",
+   "name": "Rack Wrecker",
    "engineName": "Demolisher",
    "boss": false,
-   "look": "+ canvas flag",
+   "look": "+ smoke rack of meat",
    "parts": [
-    "canvas-flag",
-    "paint-tubes",
-    "paint-bomb",
-    "tnt-bucket-helm",
-    "tnt-bucket-drips",
-    "tnt-bucket-bail",
-    "palette-pauldron"
+    "smoke-rack",
+    "salt-sacks",
+    "salt-pouch",
+    "tnt-boar-skull",
+    "hide-pauldron"
    ],
    "forms": [
     {
      "form": "base",
      "key": "tnt3",
-     "name": "Varnish Wrecker"
+     "name": "Rack Wrecker"
     },
     {
      "form": "swift",
      "key": "tnt3_swift",
-     "name": "Varnish Wrecker · Swift"
+     "name": "Rack Wrecker · Swift"
     },
     {
      "form": "plated",
      "key": "tnt3_plated",
-     "name": "Varnish Wrecker · Plated"
+     "name": "Rack Wrecker · Plated"
     },
     {
      "form": "warded",
      "key": "tnt3_warded",
-     "name": "Varnish Wrecker · Warded"
+     "name": "Rack Wrecker · Warded"
     }
    ],
    "renders": {
@@ -1254,47 +1240,44 @@
   },
   {
    "clan": "smudge",
-   "clanName": "Smudge Gang",
+   "clanName": "Gnawbone Pack",
    "company": "art",
    "faction": "tnt",
    "tier": 4,
    "key": "tnt4",
    "lookId": "smudge.tnt4",
    "role": "smudge_tnt4",
-   "name": "Turps Sapper",
+   "name": "Fen Sapper",
    "engineName": "Sapper",
    "boss": false,
-   "look": "stacked bucket helm",
+   "look": "tusked skull",
    "parts": [
-    "canvas-flag",
-    "paint-tubes",
-    "paint-bomb",
-    "tnt-top-bucket",
-    "tnt-bucket-helm",
-    "tnt-bucket-drips",
-    "tnt-bucket-bail",
-    "palette-pauldron"
+    "smoke-rack",
+    "salt-sacks",
+    "salt-pouch",
+    "tnt-tusked-skull",
+    "hide-pauldron"
    ],
    "forms": [
     {
      "form": "base",
      "key": "tnt4",
-     "name": "Turps Sapper"
+     "name": "Fen Sapper"
     },
     {
      "form": "swift",
      "key": "tnt4_swift",
-     "name": "Turps Sapper · Swift"
+     "name": "Fen Sapper · Swift"
     },
     {
      "form": "plated",
      "key": "tnt4_plated",
-     "name": "Turps Sapper · Plated"
+     "name": "Fen Sapper · Plated"
     },
     {
      "form": "warded",
      "key": "tnt4_warded",
-     "name": "Turps Sapper · Warded"
+     "name": "Fen Sapper · Warded"
     }
    ],
    "renders": {
@@ -1308,44 +1291,45 @@
   },
   {
    "clan": "smudge",
-   "clanName": "Smudge Gang",
+   "clanName": "Gnawbone Pack",
    "company": "art",
    "faction": "tnt",
    "tier": 5,
    "key": "tnt5",
    "lookId": "smudge.tnt5",
    "role": "smudge_tnt5",
-   "name": "The Lacquer King",
+   "name": "The Marrow King",
    "engineName": "Powderkeg King",
    "boss": true,
-   "look": "brush crown, easel standard",
+   "look": "bone crown, hide standard",
    "parts": [
-    "easel-standard",
-    "paint-tubes",
-    "paint-bomb",
-    "tnt-brush-crown",
-    "palette-pauldron"
+    "hide-standard",
+    "salt-sacks",
+    "salt-pouch",
+    "tnt-bone-crown",
+    "tnt-crowned-skull",
+    "hide-pauldron"
    ],
    "forms": [
     {
      "form": "base",
      "key": "tnt5",
-     "name": "The Lacquer King"
+     "name": "The Marrow King"
     },
     {
      "form": "swift",
      "key": "tnt5_swift",
-     "name": "The Lacquer King · Swift"
+     "name": "The Marrow King · Swift"
     },
     {
      "form": "plated",
      "key": "tnt5_plated",
-     "name": "The Lacquer King · Plated"
+     "name": "The Marrow King · Plated"
     },
     {
      "form": "warded",
      "key": "tnt5_warded",
-     "name": "The Lacquer King · Warded"
+     "name": "The Marrow King · Warded"
     }
    ],
    "renders": {
@@ -1359,42 +1343,41 @@
   },
   {
    "clan": "smudge",
-   "clanName": "Smudge Gang",
+   "clanName": "Gnawbone Pack",
    "company": "art",
    "faction": "barrel",
    "tier": 1,
    "key": "barrel1",
    "lookId": "smudge.barrel1",
    "role": "smudge_barrel1",
-   "name": "Paint Pot",
+   "name": "Salt Keg",
    "engineName": "Barrel Imp",
    "boss": false,
-   "look": "wire bail, paint splotch",
+   "look": "salt heap, crossed-bones label",
    "parts": [
-    "paint-splotch",
-    "wire-bail",
-    "tin-lid-knob"
+    "crossed-bones",
+    "salt-heap"
    ],
    "forms": [
     {
      "form": "base",
      "key": "barrel1",
-     "name": "Paint Pot"
+     "name": "Salt Keg"
     },
     {
      "form": "swift",
      "key": "barrel1_swift",
-     "name": "Paint Pot · Swift"
+     "name": "Salt Keg · Swift"
     },
     {
      "form": "plated",
      "key": "barrel1_plated",
-     "name": "Paint Pot · Plated"
+     "name": "Salt Keg · Plated"
     },
     {
      "form": "warded",
      "key": "barrel1_warded",
-     "name": "Paint Pot · Warded"
+     "name": "Salt Keg · Warded"
     }
    ],
    "renders": {
@@ -1409,43 +1392,42 @@
   },
   {
    "clan": "smudge",
-   "clanName": "Smudge Gang",
+   "clanName": "Gnawbone Pack",
    "company": "art",
    "faction": "barrel",
    "tier": 2,
    "key": "barrel2",
    "lookId": "smudge.barrel2",
    "role": "smudge_barrel2",
-   "name": "Bucket Roller",
+   "name": "Brine Roller",
    "engineName": "Barrel Roller",
    "boss": false,
-   "look": "+ paint drips",
+   "look": "+ twine",
    "parts": [
-    "paint-splotch",
-    "paint-drips",
-    "wire-bail",
-    "tin-lid-knob"
+    "crossed-bones",
+    "twine",
+    "salt-heap"
    ],
    "forms": [
     {
      "form": "base",
      "key": "barrel2",
-     "name": "Bucket Roller"
+     "name": "Brine Roller"
     },
     {
      "form": "swift",
      "key": "barrel2_swift",
-     "name": "Bucket Roller · Swift"
+     "name": "Brine Roller · Swift"
     },
     {
      "form": "plated",
      "key": "barrel2_plated",
-     "name": "Bucket Roller · Plated"
+     "name": "Brine Roller · Plated"
     },
     {
      "form": "warded",
      "key": "barrel2_warded",
-     "name": "Bucket Roller · Warded"
+     "name": "Brine Roller · Warded"
     }
    ],
    "renders": {
@@ -1459,45 +1441,44 @@
   },
   {
    "clan": "smudge",
-   "clanName": "Smudge Gang",
+   "clanName": "Gnawbone Pack",
    "company": "art",
    "faction": "barrel",
    "tier": 3,
    "key": "barrel3",
    "lookId": "smudge.barrel3",
    "role": "smudge_barrel3",
-   "name": "Tin Drum",
+   "name": "Bone Cask",
    "engineName": "Ironbarrel",
    "boss": false,
-   "look": "+ paint tubes",
+   "look": "+ hanging bones",
    "parts": [
-    "paint-tube-l",
-    "paint-tube-r",
-    "paint-splotch",
-    "paint-drips",
-    "wire-bail",
-    "tin-lid-knob"
+    "hanging-bone-l",
+    "hanging-bone-r",
+    "crossed-bones",
+    "twine",
+    "salt-heap"
    ],
    "forms": [
     {
      "form": "base",
      "key": "barrel3",
-     "name": "Tin Drum"
+     "name": "Bone Cask"
     },
     {
      "form": "swift",
      "key": "barrel3_swift",
-     "name": "Tin Drum · Swift"
+     "name": "Bone Cask · Swift"
     },
     {
      "form": "plated",
      "key": "barrel3_plated",
-     "name": "Tin Drum · Plated"
+     "name": "Bone Cask · Plated"
     },
     {
      "form": "warded",
      "key": "barrel3_warded",
-     "name": "Tin Drum · Warded"
+     "name": "Bone Cask · Warded"
     }
    ],
    "renders": {
@@ -1511,45 +1492,45 @@
   },
   {
    "clan": "smudge",
-   "clanName": "Smudge Gang",
+   "clanName": "Gnawbone Pack",
    "company": "art",
    "faction": "barrel",
    "tier": 4,
    "key": "barrel4",
    "lookId": "smudge.barrel4",
    "role": "smudge_barrel4",
-   "name": "Siege Vat",
+   "name": "Siege Smoker",
    "engineName": "Siege Barrel",
    "boss": false,
-   "look": "+ brush in the tin",
+   "look": "+ a bone in the salt",
    "parts": [
-    "paint-tube-l",
-    "paint-tube-r",
-    "paint-splotch",
-    "paint-drips",
-    "wire-bail",
-    "brush-in-tin"
+    "hanging-bone-l",
+    "hanging-bone-r",
+    "crossed-bones",
+    "twine",
+    "salt-heap",
+    "bone-in-salt"
    ],
    "forms": [
     {
      "form": "base",
      "key": "barrel4",
-     "name": "Siege Vat"
+     "name": "Siege Smoker"
     },
     {
      "form": "swift",
      "key": "barrel4_swift",
-     "name": "Siege Vat · Swift"
+     "name": "Siege Smoker · Swift"
     },
     {
      "form": "plated",
      "key": "barrel4_plated",
-     "name": "Siege Vat · Plated"
+     "name": "Siege Smoker · Plated"
     },
     {
      "form": "warded",
      "key": "barrel4_warded",
-     "name": "Siege Vat · Warded"
+     "name": "Siege Smoker · Warded"
     }
    ],
    "renders": {
@@ -1563,45 +1544,45 @@
   },
   {
    "clan": "smudge",
-   "clanName": "Smudge Gang",
+   "clanName": "Gnawbone Pack",
    "company": "art",
    "faction": "barrel",
    "tier": 5,
    "key": "barrel5",
    "lookId": "smudge.barrel5",
    "role": "smudge_barrel5",
-   "name": "The Big Tin",
+   "name": "The Pickling Vat",
    "engineName": "The Colossus Keg",
    "boss": true,
-   "look": "brush crown, drips",
+   "look": "bone crown, hanging bones",
    "parts": [
-    "paint-tube-l",
-    "paint-tube-r",
-    "paint-splotch",
-    "paint-drips",
-    "wire-bail",
-    "brush-crown"
+    "hanging-bone-l",
+    "hanging-bone-r",
+    "crossed-bones",
+    "twine",
+    "salt-heap",
+    "bone-crown-keg"
    ],
    "forms": [
     {
      "form": "base",
      "key": "barrel5",
-     "name": "The Big Tin"
+     "name": "The Pickling Vat"
     },
     {
      "form": "swift",
      "key": "barrel5_swift",
-     "name": "The Big Tin · Swift"
+     "name": "The Pickling Vat · Swift"
     },
     {
      "form": "plated",
      "key": "barrel5_plated",
-     "name": "The Big Tin · Plated"
+     "name": "The Pickling Vat · Plated"
     },
     {
      "form": "warded",
      "key": "barrel5_warded",
-     "name": "The Big Tin · Warded"
+     "name": "The Pickling Vat · Warded"
     }
    ],
    "renders": {
@@ -3141,42 +3122,42 @@
   },
   {
    "clan": "hexmoon",
-   "clanName": "Hexmoon Coven",
+   "clanName": "Sporecap Rot",
    "company": "scrolls",
    "faction": "torch",
    "tier": 1,
    "key": "torch1",
    "lookId": "hexmoon.torch1",
    "role": "hexmoon_torch1",
-   "name": "Hex Runt",
+   "name": "Spore Runt",
    "engineName": "Torch Runt",
    "boss": false,
-   "look": "crescent horns, moon mask, quill staff",
+   "look": "spotted cap, spore censer",
    "parts": [
-    "quill-staff",
-    "moon-mask",
-    "crescent-horns"
+    "spore-censer",
+    "censer-spores",
+    "spotted-cap"
    ],
    "forms": [
     {
      "form": "base",
      "key": "torch1",
-     "name": "Hex Runt"
+     "name": "Spore Runt"
     },
     {
      "form": "swift",
      "key": "torch1_swift",
-     "name": "Hex Runt · Swift"
+     "name": "Spore Runt · Swift"
     },
     {
      "form": "plated",
      "key": "torch1_plated",
-     "name": "Hex Runt · Plated"
+     "name": "Spore Runt · Plated"
     },
     {
      "form": "warded",
      "key": "torch1_warded",
-     "name": "Hex Runt · Warded"
+     "name": "Spore Runt · Warded"
     }
    ],
    "renders": {
@@ -3191,43 +3172,43 @@
   },
   {
    "clan": "hexmoon",
-   "clanName": "Hexmoon Coven",
+   "clanName": "Sporecap Rot",
    "company": "scrolls",
    "faction": "torch",
    "tier": 2,
    "key": "torch2",
    "lookId": "hexmoon.torch2",
    "role": "hexmoon_torch2",
-   "name": "Moon Goblin",
+   "name": "Cap Goblin",
    "engineName": "Torch Goblin",
    "boss": false,
-   "look": "+ rune pauldron",
+   "look": "+ moss pauldron",
    "parts": [
-    "quill-staff",
-    "moon-mask",
-    "crescent-horns",
-    "rune-pauldron"
+    "spore-censer",
+    "censer-spores",
+    "spotted-cap",
+    "moss-pauldron"
    ],
    "forms": [
     {
      "form": "base",
      "key": "torch2",
-     "name": "Moon Goblin"
+     "name": "Cap Goblin"
     },
     {
      "form": "swift",
      "key": "torch2_swift",
-     "name": "Moon Goblin · Swift"
+     "name": "Cap Goblin · Swift"
     },
     {
      "form": "plated",
      "key": "torch2_plated",
-     "name": "Moon Goblin · Plated"
+     "name": "Cap Goblin · Plated"
     },
     {
      "form": "warded",
      "key": "torch2_warded",
-     "name": "Moon Goblin · Warded"
+     "name": "Cap Goblin · Warded"
     }
    ],
    "renders": {
@@ -3241,44 +3222,44 @@
   },
   {
    "clan": "hexmoon",
-   "clanName": "Hexmoon Coven",
+   "clanName": "Sporecap Rot",
    "company": "scrolls",
    "faction": "torch",
    "tier": 3,
    "key": "torch3",
    "lookId": "hexmoon.torch3",
    "role": "hexmoon_torch3",
-   "name": "Rune Raider",
+   "name": "Rot Raider",
    "engineName": "Torch Raider",
    "boss": false,
-   "look": "+ scroll pole",
+   "look": "+ glow-cap pole",
    "parts": [
-    "scroll-pole",
-    "quill-staff",
-    "moon-mask",
-    "crescent-horns",
-    "rune-pauldron"
+    "glow-cap-pole",
+    "spore-censer",
+    "censer-spores",
+    "spotted-cap",
+    "moss-pauldron"
    ],
    "forms": [
     {
      "form": "base",
      "key": "torch3",
-     "name": "Rune Raider"
+     "name": "Rot Raider"
     },
     {
      "form": "swift",
      "key": "torch3_swift",
-     "name": "Rune Raider · Swift"
+     "name": "Rot Raider · Swift"
     },
     {
      "form": "plated",
      "key": "torch3_plated",
-     "name": "Rune Raider · Plated"
+     "name": "Rot Raider · Plated"
     },
     {
      "form": "warded",
      "key": "torch3_warded",
-     "name": "Rune Raider · Warded"
+     "name": "Rot Raider · Warded"
     }
    ],
    "renders": {
@@ -3292,44 +3273,44 @@
   },
   {
    "clan": "hexmoon",
-   "clanName": "Hexmoon Coven",
+   "clanName": "Sporecap Rot",
    "company": "scrolls",
    "faction": "torch",
    "tier": 4,
    "key": "torch4",
    "lookId": "hexmoon.torch4",
    "role": "hexmoon_torch4",
-   "name": "Lunar Berserker",
+   "name": "Mould Berserker",
    "engineName": "Torch Berserker",
    "boss": false,
-   "look": "full-moon horns",
+   "look": "double cap",
    "parts": [
-    "scroll-pole",
-    "quill-staff",
-    "moon-mask",
-    "full-moon-horns",
-    "rune-pauldron"
+    "glow-cap-pole",
+    "spore-censer",
+    "censer-spores",
+    "double-cap",
+    "moss-pauldron"
    ],
    "forms": [
     {
      "form": "base",
      "key": "torch4",
-     "name": "Lunar Berserker"
+     "name": "Mould Berserker"
     },
     {
      "form": "swift",
      "key": "torch4_swift",
-     "name": "Lunar Berserker · Swift"
+     "name": "Mould Berserker · Swift"
     },
     {
      "form": "plated",
      "key": "torch4_plated",
-     "name": "Lunar Berserker · Plated"
+     "name": "Mould Berserker · Plated"
     },
     {
      "form": "warded",
      "key": "torch4_warded",
-     "name": "Lunar Berserker · Warded"
+     "name": "Mould Berserker · Warded"
     }
    ],
    "renders": {
@@ -3343,45 +3324,46 @@
   },
   {
    "clan": "hexmoon",
-   "clanName": "Hexmoon Coven",
+   "clanName": "Sporecap Rot",
    "company": "scrolls",
    "faction": "torch",
    "tier": 5,
    "key": "torch5",
    "lookId": "hexmoon.torch5",
    "role": "hexmoon_torch5",
-   "name": "The Pale Seer",
+   "name": "Mother Mildew",
    "engineName": "Warlord Grukk",
    "boss": true,
-   "look": "moon halo crown, star mantle",
+   "look": "toadstool ring, moss cloak",
    "parts": [
-    "star-mantle",
-    "scroll-pole",
-    "quill-staff",
-    "moon-mask",
-    "moon-halo",
-    "rune-pauldron"
+    "moss-cloak",
+    "glow-cap-pole",
+    "spore-censer",
+    "censer-spores",
+    "toadstool-ring",
+    "crowned-cap",
+    "moss-pauldron"
    ],
    "forms": [
     {
      "form": "base",
      "key": "torch5",
-     "name": "The Pale Seer"
+     "name": "Mother Mildew"
     },
     {
      "form": "swift",
      "key": "torch5_swift",
-     "name": "The Pale Seer · Swift"
+     "name": "Mother Mildew · Swift"
     },
     {
      "form": "plated",
      "key": "torch5_plated",
-     "name": "The Pale Seer · Plated"
+     "name": "Mother Mildew · Plated"
     },
     {
      "form": "warded",
      "key": "torch5_warded",
-     "name": "The Pale Seer · Warded"
+     "name": "Mother Mildew · Warded"
     }
    ],
    "renders": {
@@ -3396,42 +3378,43 @@
   },
   {
    "clan": "hexmoon",
-   "clanName": "Hexmoon Coven",
+   "clanName": "Sporecap Rot",
    "company": "scrolls",
    "faction": "tnt",
    "tier": 1,
    "key": "tnt1",
    "lookId": "hexmoon.tnt1",
    "role": "hexmoon_tnt1",
-   "name": "Glyph Whelp",
+   "name": "Puff Whelp",
    "engineName": "Fuse Whelp",
    "boss": false,
-   "look": "crescent horns, moonlit goggles, scroll cases, hex vial",
+   "look": "spotted cap, rot jars, puffball",
    "parts": [
-    "scroll-cases",
-    "hex-vial",
-    "tnt-crescent-horns"
+    "rot-jars",
+    "puffball",
+    "puff-spores",
+    "tnt-spotted-cap"
    ],
    "forms": [
     {
      "form": "base",
      "key": "tnt1",
-     "name": "Glyph Whelp"
+     "name": "Puff Whelp"
     },
     {
      "form": "swift",
      "key": "tnt1_swift",
-     "name": "Glyph Whelp · Swift"
+     "name": "Puff Whelp · Swift"
     },
     {
      "form": "plated",
      "key": "tnt1_plated",
-     "name": "Glyph Whelp · Plated"
+     "name": "Puff Whelp · Plated"
     },
     {
      "form": "warded",
      "key": "tnt1_warded",
-     "name": "Glyph Whelp · Warded"
+     "name": "Puff Whelp · Warded"
     }
    ],
    "renders": {
@@ -3446,43 +3429,44 @@
   },
   {
    "clan": "hexmoon",
-   "clanName": "Hexmoon Coven",
+   "clanName": "Sporecap Rot",
    "company": "scrolls",
    "faction": "tnt",
    "tier": 2,
    "key": "tnt2",
    "lookId": "hexmoon.tnt2",
    "role": "hexmoon_tnt2",
-   "name": "Hex Bomber",
+   "name": "Spore Bomber",
    "engineName": "Bomber",
    "boss": false,
-   "look": "+ rune pauldron",
+   "look": "+ moss pauldron",
    "parts": [
-    "scroll-cases",
-    "hex-vial",
-    "tnt-crescent-horns",
-    "rune-pauldron"
+    "rot-jars",
+    "puffball",
+    "puff-spores",
+    "tnt-spotted-cap",
+    "moss-pauldron"
    ],
    "forms": [
     {
      "form": "base",
      "key": "tnt2",
-     "name": "Hex Bomber"
+     "name": "Spore Bomber"
     },
     {
      "form": "swift",
      "key": "tnt2_swift",
-     "name": "Hex Bomber · Swift"
+     "name": "Spore Bomber · Swift"
     },
     {
      "form": "plated",
      "key": "tnt2_plated",
-     "name": "Hex Bomber · Plated"
+     "name": "Spore Bomber · Plated"
     },
     {
      "form": "warded",
      "key": "tnt2_warded",
-     "name": "Hex Bomber · Warded"
+     "name": "Spore Bomber · Warded"
     }
    ],
    "renders": {
@@ -3496,44 +3480,45 @@
   },
   {
    "clan": "hexmoon",
-   "clanName": "Hexmoon Coven",
+   "clanName": "Sporecap Rot",
    "company": "scrolls",
    "faction": "tnt",
    "tier": 3,
    "key": "tnt3",
    "lookId": "hexmoon.tnt3",
    "role": "hexmoon_tnt3",
-   "name": "Rune Breaker",
+   "name": "Rot Wrecker",
    "engineName": "Demolisher",
    "boss": false,
-   "look": "+ scroll pole",
+   "look": "+ glow-cap pole",
    "parts": [
-    "scroll-pole",
-    "scroll-cases",
-    "hex-vial",
-    "tnt-crescent-horns",
-    "rune-pauldron"
+    "glow-cap-pole",
+    "rot-jars",
+    "puffball",
+    "puff-spores",
+    "tnt-spotted-cap",
+    "moss-pauldron"
    ],
    "forms": [
     {
      "form": "base",
      "key": "tnt3",
-     "name": "Rune Breaker"
+     "name": "Rot Wrecker"
     },
     {
      "form": "swift",
      "key": "tnt3_swift",
-     "name": "Rune Breaker · Swift"
+     "name": "Rot Wrecker · Swift"
     },
     {
      "form": "plated",
      "key": "tnt3_plated",
-     "name": "Rune Breaker · Plated"
+     "name": "Rot Wrecker · Plated"
     },
     {
      "form": "warded",
      "key": "tnt3_warded",
-     "name": "Rune Breaker · Warded"
+     "name": "Rot Wrecker · Warded"
     }
    ],
    "renders": {
@@ -3547,44 +3532,45 @@
   },
   {
    "clan": "hexmoon",
-   "clanName": "Hexmoon Coven",
+   "clanName": "Sporecap Rot",
    "company": "scrolls",
    "faction": "tnt",
    "tier": 4,
    "key": "tnt4",
    "lookId": "hexmoon.tnt4",
    "role": "hexmoon_tnt4",
-   "name": "Curse Sapper",
+   "name": "Blight Sapper",
    "engineName": "Sapper",
    "boss": false,
-   "look": "full-moon horns",
+   "look": "double cap",
    "parts": [
-    "scroll-pole",
-    "scroll-cases",
-    "hex-vial",
-    "tnt-full-moon-horns",
-    "rune-pauldron"
+    "glow-cap-pole",
+    "rot-jars",
+    "puffball",
+    "puff-spores",
+    "tnt-double-cap",
+    "moss-pauldron"
    ],
    "forms": [
     {
      "form": "base",
      "key": "tnt4",
-     "name": "Curse Sapper"
+     "name": "Blight Sapper"
     },
     {
      "form": "swift",
      "key": "tnt4_swift",
-     "name": "Curse Sapper · Swift"
+     "name": "Blight Sapper · Swift"
     },
     {
      "form": "plated",
      "key": "tnt4_plated",
-     "name": "Curse Sapper · Plated"
+     "name": "Blight Sapper · Plated"
     },
     {
      "form": "warded",
      "key": "tnt4_warded",
-     "name": "Curse Sapper · Warded"
+     "name": "Blight Sapper · Warded"
     }
    ],
    "renders": {
@@ -3598,44 +3584,46 @@
   },
   {
    "clan": "hexmoon",
-   "clanName": "Hexmoon Coven",
+   "clanName": "Sporecap Rot",
    "company": "scrolls",
    "faction": "tnt",
    "tier": 5,
    "key": "tnt5",
    "lookId": "hexmoon.tnt5",
    "role": "hexmoon_tnt5",
-   "name": "The Eclipse King",
+   "name": "The Toadstool King",
    "engineName": "Powderkeg King",
    "boss": true,
-   "look": "moon halo crown, star standard",
+   "look": "toadstool ring, moss standard",
    "parts": [
-    "star-standard",
-    "scroll-cases",
-    "hex-vial",
-    "tnt-moon-halo",
-    "rune-pauldron"
+    "moss-standard",
+    "rot-jars",
+    "puffball",
+    "puff-spores",
+    "tnt-toadstool-ring",
+    "tnt-crowned-cap",
+    "moss-pauldron"
    ],
    "forms": [
     {
      "form": "base",
      "key": "tnt5",
-     "name": "The Eclipse King"
+     "name": "The Toadstool King"
     },
     {
      "form": "swift",
      "key": "tnt5_swift",
-     "name": "The Eclipse King · Swift"
+     "name": "The Toadstool King · Swift"
     },
     {
      "form": "plated",
      "key": "tnt5_plated",
-     "name": "The Eclipse King · Plated"
+     "name": "The Toadstool King · Plated"
     },
     {
      "form": "warded",
      "key": "tnt5_warded",
-     "name": "The Eclipse King · Warded"
+     "name": "The Toadstool King · Warded"
     }
    ],
    "renders": {
@@ -3649,41 +3637,41 @@
   },
   {
    "clan": "hexmoon",
-   "clanName": "Hexmoon Coven",
+   "clanName": "Sporecap Rot",
    "company": "scrolls",
    "faction": "barrel",
    "tier": 1,
    "key": "barrel1",
    "lookId": "hexmoon.barrel1",
    "role": "hexmoon_barrel1",
-   "name": "Rune Urn",
+   "name": "Rot Jar",
    "engineName": "Barrel Imp",
    "boss": false,
-   "look": "crescent moon lid, moon-and-stars plate",
+   "look": "rot ooze, bubbling window",
    "parts": [
-    "rune-mark",
-    "crescent-lid"
+    "rot-window",
+    "rot-ooze"
    ],
    "forms": [
     {
      "form": "base",
      "key": "barrel1",
-     "name": "Rune Urn"
+     "name": "Rot Jar"
     },
     {
      "form": "swift",
      "key": "barrel1_swift",
-     "name": "Rune Urn · Swift"
+     "name": "Rot Jar · Swift"
     },
     {
      "form": "plated",
      "key": "barrel1_plated",
-     "name": "Rune Urn · Plated"
+     "name": "Rot Jar · Plated"
     },
     {
      "form": "warded",
      "key": "barrel1_warded",
-     "name": "Rune Urn · Warded"
+     "name": "Rot Jar · Warded"
     }
    ],
    "renders": {
@@ -3698,42 +3686,42 @@
   },
   {
    "clan": "hexmoon",
-   "clanName": "Hexmoon Coven",
+   "clanName": "Sporecap Rot",
    "company": "scrolls",
    "faction": "barrel",
    "tier": 2,
    "key": "barrel2",
    "lookId": "hexmoon.barrel2",
    "role": "hexmoon_barrel2",
-   "name": "Star Roller",
+   "name": "Moss Roller",
    "engineName": "Barrel Roller",
    "boss": false,
-   "look": "+ star studs",
+   "look": "+ moss patches",
    "parts": [
-    "rune-mark",
-    "star-studs",
-    "crescent-lid"
+    "rot-window",
+    "moss-patches",
+    "rot-ooze"
    ],
    "forms": [
     {
      "form": "base",
      "key": "barrel2",
-     "name": "Star Roller"
+     "name": "Moss Roller"
     },
     {
      "form": "swift",
      "key": "barrel2_swift",
-     "name": "Star Roller · Swift"
+     "name": "Moss Roller · Swift"
     },
     {
      "form": "plated",
      "key": "barrel2_plated",
-     "name": "Star Roller · Plated"
+     "name": "Moss Roller · Plated"
     },
     {
      "form": "warded",
      "key": "barrel2_warded",
-     "name": "Star Roller · Warded"
+     "name": "Moss Roller · Warded"
     }
    ],
    "renders": {
@@ -3747,44 +3735,44 @@
   },
   {
    "clan": "hexmoon",
-   "clanName": "Hexmoon Coven",
+   "clanName": "Sporecap Rot",
    "company": "scrolls",
    "faction": "barrel",
    "tier": 3,
    "key": "barrel3",
    "lookId": "hexmoon.barrel3",
    "role": "hexmoon_barrel3",
-   "name": "Moon Keg",
+   "name": "Mould Cask",
    "engineName": "Ironbarrel",
    "boss": false,
-   "look": "+ rune stones",
+   "look": "+ side toadstools",
    "parts": [
-    "rune-stone-l",
-    "rune-stone-r",
-    "rune-mark",
-    "star-studs",
-    "crescent-lid"
+    "side-toadstool-l",
+    "side-toadstool-r",
+    "rot-window",
+    "moss-patches",
+    "rot-ooze"
    ],
    "forms": [
     {
      "form": "base",
      "key": "barrel3",
-     "name": "Moon Keg"
+     "name": "Mould Cask"
     },
     {
      "form": "swift",
      "key": "barrel3_swift",
-     "name": "Moon Keg · Swift"
+     "name": "Mould Cask · Swift"
     },
     {
      "form": "plated",
      "key": "barrel3_plated",
-     "name": "Moon Keg · Plated"
+     "name": "Mould Cask · Plated"
     },
     {
      "form": "warded",
      "key": "barrel3_warded",
-     "name": "Moon Keg · Warded"
+     "name": "Mould Cask · Warded"
     }
    ],
    "renders": {
@@ -3798,45 +3786,45 @@
   },
   {
    "clan": "hexmoon",
-   "clanName": "Hexmoon Coven",
+   "clanName": "Sporecap Rot",
    "company": "scrolls",
    "faction": "barrel",
    "tier": 4,
    "key": "barrel4",
    "lookId": "hexmoon.barrel4",
    "role": "hexmoon_barrel4",
-   "name": "Siege Orrery",
+   "name": "Siege Still",
    "engineName": "Siege Barrel",
    "boss": false,
-   "look": "+ star by the moon",
+   "look": "+ a toadstool on the lid",
    "parts": [
-    "rune-stone-l",
-    "rune-stone-r",
-    "rune-mark",
-    "star-studs",
-    "crescent-lid",
-    "lid-star"
+    "side-toadstool-l",
+    "side-toadstool-r",
+    "rot-window",
+    "moss-patches",
+    "rot-ooze",
+    "vat-toadstool"
    ],
    "forms": [
     {
      "form": "base",
      "key": "barrel4",
-     "name": "Siege Orrery"
+     "name": "Siege Still"
     },
     {
      "form": "swift",
      "key": "barrel4_swift",
-     "name": "Siege Orrery · Swift"
+     "name": "Siege Still · Swift"
     },
     {
      "form": "plated",
      "key": "barrel4_plated",
-     "name": "Siege Orrery · Plated"
+     "name": "Siege Still · Plated"
     },
     {
      "form": "warded",
      "key": "barrel4_warded",
-     "name": "Siege Orrery · Warded"
+     "name": "Siege Still · Warded"
     }
    ],
    "renders": {
@@ -3850,44 +3838,45 @@
   },
   {
    "clan": "hexmoon",
-   "clanName": "Hexmoon Coven",
+   "clanName": "Sporecap Rot",
    "company": "scrolls",
    "faction": "barrel",
    "tier": 5,
    "key": "barrel5",
    "lookId": "hexmoon.barrel5",
    "role": "hexmoon_barrel5",
-   "name": "The Lunar Vault",
+   "name": "The Rot Vat",
    "engineName": "The Colossus Keg",
    "boss": true,
-   "look": "full-moon crown, rune stones",
+   "look": "toadstool ring, side toadstools",
    "parts": [
-    "rune-stone-l",
-    "rune-stone-r",
-    "rune-mark",
-    "star-studs",
-    "full-moon-crown"
+    "side-toadstool-l",
+    "side-toadstool-r",
+    "rot-window",
+    "moss-patches",
+    "rot-ooze",
+    "vat-toadstools"
    ],
    "forms": [
     {
      "form": "base",
      "key": "barrel5",
-     "name": "The Lunar Vault"
+     "name": "The Rot Vat"
     },
     {
      "form": "swift",
      "key": "barrel5_swift",
-     "name": "The Lunar Vault · Swift"
+     "name": "The Rot Vat · Swift"
     },
     {
      "form": "plated",
      "key": "barrel5_plated",
-     "name": "The Lunar Vault · Plated"
+     "name": "The Rot Vat · Plated"
     },
     {
      "form": "warded",
      "key": "barrel5_warded",
-     "name": "The Lunar Vault · Warded"
+     "name": "The Rot Vat · Warded"
     }
    ],
    "renders": {

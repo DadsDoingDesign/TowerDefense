@@ -57,8 +57,8 @@ export const Pixel = memo(function Pixel({ rows, palette, scale = 2, className, 
 
 /**
  * A company's mark: its own 16 × 16 logo (`COMPANY_LOGOS`) — a chili for
- * Peppercorn, an easel for Easel House, a pickaxe on ore for Ironvein, a spool
- * for Rosethread, a moon and quill for Moonquill — or the padlock for one not
+ * Peppercorn, a haunch on a hook for Butcherblock, a pickaxe on ore for
+ * Ironvein, a spool for Rosethread, a sprouting flask for Greenvial — or the padlock for one not
  * met yet. (It was a shared shield with a small emblem until the October 2026
  * design review; the name `Crest` stays so every call site keeps working.)
  */

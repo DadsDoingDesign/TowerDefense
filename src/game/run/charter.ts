@@ -29,8 +29,8 @@
  *    marches from the first fight (`waves` `muster`).
  *  - **Five trade-offs at once** ({@link TRADE_OFFS}), one per company, each
  *    an existing mechanic: the route's ground on every field is all four
- *    companies' (`terrain` `sovereign`: Peppercorn's fire, Easel House's
- *    lakes, Ironvein's boulders, Moonquill's cursed ground), and Rosethread's
+ *    companies' (`terrain` `sovereign`: Peppercorn's fire, Butcherblock's
+ *    lakes, Ironvein's boulders, Greenvial's cursed ground), and Rosethread's
  *    merchants charge double ({@link CHARTER_PRICE_MULT}).
  *
  * The **Sovereign tier** is item Level 4 (`data/itemKinds.ts`): five kinds,
@@ -160,7 +160,7 @@ export interface TradeOff {
  */
 export const TRADE_OFFS: readonly TradeOff[] = [
   { company: 'spice', rule: 'Wildfire on every field', line: 'Fire covers part of every field.' },
-  { company: 'art', rule: 'The canals flood', line: 'Lakes cover some of the best ground.' },
+  { company: 'art', rule: 'The channels flood', line: 'Lakes cover some of the best ground.' },
   { company: 'metals', rule: 'Quarry boulders', line: '4 more boulders a field. They can’t be cleared.' },
   { company: 'silk', rule: 'Merchants charge double', line: 'Every merchant price is twice as much.' },
   { company: 'scrolls', rule: 'More cursed ground', line: '2 more cursed patches on every field.' },

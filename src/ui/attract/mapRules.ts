@@ -119,12 +119,17 @@ export const MAP_SEASONS: Record<CompanyId, MapSeason> = {
     grass: { colors: ['#6a4a1e', '#7c5a22'], share: 0.035 },
     trees: { color: '#4e4418', share: 0.45 },
   },
-  // Easel House: spring — fresh green, a few blossom flecks.
+  // Butcherblock: the salt marsh in spring — a grey-green haze, salt crusting
+  // the open ground, a low mist.
   art: {
-    name: 'spring',
-    washes: [{ op: 'soft-light', color: '#7ad85a', alpha: 0.36 }],
-    grass: { colors: ['#b4809c', '#c8b4cc'], share: 0.012 },
-    trees: { color: '#9a6a88', share: 0.06 },
+    name: 'marsh spring',
+    washes: [
+      { op: 'saturation', color: '#7a7a7a', alpha: 0.22 },
+      { op: 'soft-light', color: '#a8c4a0', alpha: 0.3 },
+    ],
+    grass: { colors: ['#c8c2b0', '#b4ae9a'], share: 0.012 },
+    trees: { color: '#86985a', share: 0.08 },
+    mist: { color: '#b8c4b8', alpha: 0.24, reach: 0.45 },
   },
   // Ironvein: overcast — the colour drained toward slate.
   metals: {
@@ -140,12 +145,16 @@ export const MAP_SEASONS: Record<CompanyId, MapSeason> = {
     washes: [{ op: 'soft-light', color: '#e8c8d8', alpha: 0.22 }],
     mist: { color: '#c4b4c4', alpha: 0.3, reach: 0.85 },
   },
-  // Moonquill: frost — a cool white light, snow on the open ground and the pines.
+  // Greenvial: the hollows at dusk — a deep green light, moss on the open
+  // ground, a few glowing spores in the trees.
   scrolls: {
-    name: 'frost',
-    washes: [{ op: 'screen', color: '#202a3c', alpha: 0.5 }],
-    grass: { colors: ['#5a6478', '#717d92'], share: 0.028 },
-    trees: { color: '#6c788a', share: 0.32 },
+    name: 'spore dusk',
+    washes: [
+      { op: 'soft-light', color: '#3a8a6a', alpha: 0.38 },
+      { op: 'multiply', color: '#c0d8cc', alpha: 0.22 },
+    ],
+    grass: { colors: ['#2e5e44', '#3a7050'], share: 0.03 },
+    trees: { color: '#9cc86a', share: 0.05 },
   },
 }
 

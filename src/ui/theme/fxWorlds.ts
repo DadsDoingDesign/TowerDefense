@@ -19,13 +19,15 @@
  *   - FORGE (Ironvein): three anvils on the floor, a few sparks thrown off
  *     them in slow arcs, ash drifting down; press: a molten flash along the
  *     CTA's seams and a handful of sparks.
- *   - PAINT (Easel House): flecks of paint drifting, now and then a small
- *     splat that lands and dries, faint watercolour washes; press: a splat
- *     on the CTA's end.
+ *   - MARSH (Butcherblock): a still reed bed along the floor under a low,
+ *     breathing mist, smoke from the smokehouses curling slowly up, now and
+ *     then a grain of salt catching the light; press: a pinch of salt
+ *     scattered across the CTA's face.
  *   - SILK (Rosethread): rose petals tumbling down, two faint ribbons across
  *     the map with a slow sheen; press: a running stitch along the CTA.
- *   - ARCANE NIGHT (Moonquill): a crescent moon and its faint beam, stars
- *     twinkling slowly, runes drifting up; press: sparkles along the CTA.
+ *   - GLASSHOUSE (Greenvial): three glowing mushrooms on the floor, spores
+ *     rising slowly off them and drifting up through the screen, a leaf now
+ *     and then; press: a puff of spores off the CTA.
  *   - The house look (your militia's neutral): a few lantern motes.
  *
  * The calm pass (Oct 2026; the designer: "a bit overwhelming now that I'm
@@ -46,7 +48,6 @@
  * `rand` the engine passes, so a test can drive a world deterministically.
  */
 import type { ThemeId } from '../../game/run/militiaTheme'
-import { RUNES_5 } from './themeArt'
 
 /** CSS pixels per effect pixel. */
 export const FX_PX = 3
@@ -171,6 +172,17 @@ export function step(q: Particle, dt: number, w: number, h: number): boolean {
     case 'heavy':
       q.vy += 150 * dt
       break
+    case 'grain':
+      q.vy += 110 * dt
+      break
+    case 'wisp':
+      // Smoke curling up: a slow sway, slowing as it thins.
+      q.vx = Math.sin(q.age * 0.7 + q.phase) * 2.5
+      break
+    case 'spore':
+      // A spore rides the warm air up, swaying.
+      q.vx = Math.sin(q.age * 0.8 + q.phase) * 2
+      break
     case 'pburst':
       q.vy += 35 * dt
       q.vx *= 1 - 1.5 * dt
@@ -194,7 +206,7 @@ export function step(q: Particle, dt: number, w: number, h: number): boolean {
  * The checker is anchored to the SCREEN's pixels, not the disc's centre (the
  * motion audit, Oct 2026): a wash that drifts a pixel then moves only its rim,
  * where a checker tied to its centre flipped every pixel of the disc at once —
- * a whole-blob flash, several a second, on Easel House's map.
+ * a whole-blob flash, several a second, on a map.
  */
 function dither(pen: Pen, cx: number, cy: number, r: number, color: string, alpha: number, offset = 0, sparse = false): void {
   pen.fillStyle = color
@@ -444,94 +456,80 @@ const fire: World = {
 }
 
 // ---------------------------------------------------------------------------
-// PAINT — Easel House
+// MARSH — Butcherblock
 // ---------------------------------------------------------------------------
-const PAINTS = ['#c6a4ff', '#9b74e8', '#e2aa5a', '#5fb0a8', '#e58fb0', '#f6efff']
-/** Splat shapes, 7 × 7. */
-const SPLATS = [
-  ['..x....', '.xxx.x.', 'xxxxxx.', '.xxxxx.', 'x.xxxx.', '..xx...', '....x..'],
-  ['...x...', '.xxxxx.', 'xxxxxxx', '.xxxxx.', '.xxxxxx', 'x..x...', '...x...'],
-  ['x...x..', '.xxx...', '.xxxxx.', 'xxxxxx.', '..xxx..', '.x..xx.', '.......'],
-]
-function drawSplat(pen: Pen, q: Particle, scale: number): void {
-  const s = SPLATS[(q.n ?? 0) % SPLATS.length]
-  for (let y = 0; y < 7; y++)
-    for (let x = 0; x < 7; x++) if (s[y][x] === 'x') pen.fillRect(Math.round(q.x + (x - 3) * scale), Math.round(q.y + (y - 3) * scale), scale, scale)
+/** The smoke's greys, warm to cool, and the salt's glint. */
+const SMOKE_C = ['#8a8478', '#a39d90', '#7a7f78']
+const SALT_C = '#efe8d8'
+/** The reed bed's stems: a dry ochre, its shade, and a cattail head. */
+const REED_C = ['#8a8456', '#6a6448', '#6e4a30']
+/**
+ * A still reed bed along a row (`base`): stems of hashed heights every couple
+ * of pixels, every so often one gone to a cattail. Still (the calm pass:
+ * backdrops breathe, never crawl); the mist under it is what breathes.
+ */
+function reedBed(pen: Pen, w: number, base: number, maxH: number, alpha: number): void {
+  const b = Math.round(base)
+  for (let x = 0; x < w; x++) {
+    const n = Math.sin(x * 12.9898) * 43758.5453
+    const r = n - Math.floor(n)
+    // The reeds stand in clumps with open water between (an even row of
+    // stems read as a fence): a slow wave says where a clump is, and in one
+    // a stem stands on about one column in two.
+    const clump = Math.sin(x * 0.19) + 0.6 * Math.sin(x * 0.07 + 1.3)
+    if (clump < 0.35 || r > 0.5) continue
+    const h = Math.max(2, Math.round(maxH * (0.45 + r * 1.3)))
+    pen.fillStyle = REED_C[x % 3 === 0 ? 1 : 0]
+    pen.globalAlpha = stepAlpha(alpha)
+    pen.fillRect(x, b - h + 1, 1, h)
+    if (r < 0.06) {
+      // A cattail: a brown head two pixels tall, a little under the tip.
+      pen.fillStyle = REED_C[2]
+      pen.fillRect(x, b - h + 2, 1, 2)
+    }
+  }
 }
-
-const paint: World = {
-  // Flecks drifting, and now and then a small splat (they were bold blobs
-  // up to 28 px a side, a fifth of the particles: the calm pass, Oct 2026).
-  density: 0.00066,
-  peak: 0.6,
-  spawn(rand, w, h, _seed, scene) {
-    // Behind a page's panels a splat would show as stray blobs between
-    // them: there the world is its flecks and washes; the splats and drips
-    // are for the open map.
-    const r = scene && !scene.map ? 1 : rand()
-    if (r < 0.15) {
-      // A small splat lands, lingers and dries away — never on the focused
-      // road (a second throw if the first lands on it).
-      let x = rand() * w
-      let y = rand() * h * 0.85
-      const onRoad = () => scene?.hot.some(([hx, hy]) => Math.abs(hx - x) < 14 && Math.abs(hy - y) < 12) ?? false
-      if (onRoad()) {
-        x = rand() * w
-        y = rand() * h * 0.85
-      }
-      // A size bigger on a wide screen.
-      return p({ kind: 'splat', x, y, life: 4 + rand() * 3, color: pick(rand, PAINTS.slice(0, 5)), n: Math.floor(rand() * 3), size: 1 + (w > 200 ? 1 : 0) })
+const marsh: World = {
+  // Smoke and salt, slow and few: the reeds and the mist are the world.
+  density: 0.0005,
+  peak: 0.5,
+  spawn(rand, w, h, seed, scene) {
+    const floor = floorOf(h, scene)
+    if (rand() < 0.18) {
+      // A grain of salt on the air, catching the light now and then.
+      return p({ kind: 'star', x: rand() * w, y: rand() * floor, life: 6 + rand() * 6, size: 1, color: SALT_C, phase: rand() * TAU })
     }
-    if (r < 0.19) {
-      // A thin drip running down.
-      return p({ kind: 'drip', x: rand() * w, y: rand() * h * 0.8, life: 3 + rand() * 1.5, size: 1, color: pick(rand, PAINTS.slice(0, 5)), n: 4 + Math.floor(rand() * 6) })
-    }
-    return p({ kind: 'fleck', x: rand() * w, y: rand() * h, vx: (rand() - 0.5) * 3, vy: 2 + rand() * 3, life: 10 + rand() * 6, size: rand() < 0.5 ? 1 : 2, color: pick(rand, PAINTS), phase: rand() * TAU })
+    // A wisp of smoke rising from the reed line, slowly, and thinning.
+    const y = seed ? floor - rand() * floor * 0.8 : floor - rand() * 6
+    return p({ kind: 'wisp', x: rand() * w, y, vy: -2 - rand() * 2.5, life: 9 + rand() * 6, size: rand() < 0.35 ? 2 : 1, color: pick(rand, SMOKE_C), phase: rand() * TAU })
   },
   backdrop(pen, w, h, t, scene) {
-    if (scene?.light) return
-    // Three faint watercolour washes drifting very slowly, a sparse dither.
-    const washes: [number, number, string][] = [
-      [0.22, 0.3, '#c6a4ff'],
-      [0.78, 0.55, '#e2aa5a'],
-      [0.35, 0.82, '#5fb0a8'],
-    ]
-    washes.forEach(([fx, fy, c], i) => dither(pen, fx * w + Math.sin(t * 0.06 + i) * 4, fy * h + Math.cos(t * 0.05 + i) * 3, Math.round(Math.min(w, h) * 0.18), c, 0.125, i, true))
+    const floor = floorOf(h, scene)
+    // The marsh mist lying low over the floor, breathing; the reeds stand in it.
+    if (!scene?.light) {
+      glowBand(pen, w, h, floor, Math.max(10, Math.round(h * 0.09)), '#b0c4b8', 0.1, t)
+      if (floor < h - 8) glowBand(pen, w, h, h - 1, 6, '#b0c4b8', 0.1, t)
+    }
+    reedBed(pen, w, floor + 1, Math.max(4, Math.min(8, h * 0.028)), 0.5)
   },
   burst(rand, x, y, zone = zoneAt(x, y)) {
-    // A splat at the end of the CTA nearest the press (the label stays
-    // clear), inked so it reads on the face, a drip and a few droplets.
-    const mid = (zone.t + zone.b) / 2
-    const left = x < (zone.l + zone.r) / 2
-    const a = left ? zone.l + 8 : zone.r - 8
-    const c1 = pick(rand, ['#e2aa5a', '#5fb0a8', '#e58fb0'])
-    const out = [
-      p({ kind: 'splat', x: a, y: mid, life: 1.1, color: '#2a1d3c', n: Math.floor(rand() * 3), size: 2, zone, phase: 1 }),
-      p({ kind: 'splat', x: a, y: mid, life: 1.1, color: c1, n: 0, size: 2, zone }),
-    ]
-    out[1].n = out[0].n
-    out.push(p({ kind: 'drip', x: a, y: mid + 4, life: 1, size: 2, color: c1, n: 3 + Math.floor(rand() * 3), zone }))
-    for (let i = 0; i < 5; i++) {
-      const ang = (left ? Math.PI : 0) + (rand() - 0.5) * 1.6
-      const v = 15 + rand() * 20
-      out.push(p({ kind: 'drop', x: a, y: mid, vx: Math.cos(ang) * v, vy: Math.sin(ang) * v * 0.5 + 6, life: 0.5 + rand() * 0.3, size: 1, color: c1, zone }))
+    // A pinch of salt thrown across the CTA's face from the press, each grain
+    // inked so it reads on the bright fill, falling back to the lip.
+    const out: Particle[] = []
+    const hgt = Math.max(6, zone.b - zone.t)
+    const vyMax = Math.sqrt(2 * 110 * hgt * 0.5)
+    for (let i = 0; i < 10; i++) {
+      const vx = (rand() - 0.5) * 70
+      const vy = -vyMax * (0.3 + rand() * 0.7)
+      out.push(p({ kind: 'grain', x: x + (rand() - 0.5) * 6, y: zone.b - 3, vx, vy, life: 0.55 + rand() * 0.35, size: rand() < 0.3 ? 2 : 1, color: SALT_C, zone, ink: '#2a1a12' }))
     }
     return out
   },
   switchIn: () => [],
   sweepLife: SWITCH_S,
   drawSweep(pen, w, h, s) {
-    // A faint stroke of lilac across the middle as the world comes in, drying where it lies.
-    pen.globalAlpha = stepAlpha(0.2 * (1 - s.age / s.life))
-    if (!pen.globalAlpha) return
-    pen.fillStyle = PAINTS[0]
-    const y0 = h * 0.3
-    const y1 = h * 0.7
-    for (let x = 0; x < w; x++) {
-      const top = Math.round(y0 + Math.sin(x * 0.31) * 3 + Math.sin(x * 0.07) * 6)
-      const bot = Math.round(y1 + Math.sin(x * 0.23 + 1) * 3 - Math.sin(x * 0.05) * 6)
-      for (let y = top + (x & 1); y < bot; y += 2) pen.fillRect(x, y, 1, 1)
-    }
+    // A faint mist off the floor as the world comes in, fading where it lies.
+    glowBand(pen, w, h, h - 1, Math.round(h * 0.3), '#c8d4cc', 0.16 * (1 - s.age / s.life), 0)
   },
 }
 
@@ -713,76 +711,69 @@ const silk: World = {
 }
 
 // ---------------------------------------------------------------------------
-// ARCANE NIGHT — Moonquill
+// GLASSHOUSE — Greenvial
 // ---------------------------------------------------------------------------
-const STAR_C = ['#ffffff', '#d4daf2', '#c9d4ff']
-function drawRune(pen: Pen, q: Particle): void {
-  const g = RUNES_5[(q.n ?? 0) % RUNES_5.length]
-  const x0 = Math.round(q.x)
-  const y0 = Math.round(q.y)
-  for (let y = 0; y < 5; y++) for (let x = 0; x < 5; x++) if (g[y][x] === 's') pen.fillRect(x0 + x, y0 + y, 1, 1)
-}
-const arcane: World = {
-  // Stars twinkling slowly, runes rising at half the old speed.
-  density: 0.00066,
-  peak: 0.6,
-  spawn(rand, w, h) {
-    const r = rand()
-    if (r < 0.18) return p({ kind: 'rune', x: rand() * w, y: rand() * h, vy: -1 - rand() * 1.2, vx: (rand() - 0.5) * 0.8, life: 14 + rand() * 6, color: rand() < 0.3 ? '#c9d4ff' : '#8fa4ff', n: Math.floor(rand() * RUNES_5.length) })
-    if (r < 0.22) return p({ kind: 'quill', x: rand() * w, y: rand() * h, life: 3.2, color: '#c9d4ff', phase: rand() * TAU, n: Math.floor(rand() * 4) })
-    return p({ kind: 'star', x: rand() * w, y: rand() * h, life: 8 + rand() * 10, size: rand() < 0.2 ? 2 : 1, color: pick(rand, STAR_C), phase: rand() * TAU })
-  },
-  backdrop(pen, w, h, _t, scene) {
-    if (scene && !scene.map) return
-    // The crescent moon, top right, and its faint beam slanting down, both still.
-    const mx = w - 22
-    const my = Math.round(h * 0.2)
-    if (!scene?.light) dither(pen, mx, my, 13, '#c9d4ff', 0.125, 0, true)
-    pen.fillStyle = '#eef1fb'
-    pen.globalAlpha = stepAlpha(0.625)
-    for (let y = -7; y <= 7; y++)
-      for (let x = -7; x <= 7; x++) {
-        const inMoon = x * x + y * y <= 49
-        const inBite = (x - 3) * (x - 3) + (y + 2) * (y + 2) <= 36
-        if (inMoon && !inBite) pen.fillRect(mx + x, my + y, 1, 1)
-      }
-    if (scene?.light) return
-    // The beam holds still (a ripple ran down it: the calm pass, Oct 2026).
-    pen.fillStyle = '#c9d4ff'
-    for (let y = my; y < h; y += 1) {
-      const cx = mx - (y - my) * 0.55
-      const half = 6 + (y - my) * 0.12
-      pen.globalAlpha = stepAlpha(0.1 * (1 - (y - my) / h) + 0.02)
-      for (let x = Math.round(cx - half); x < cx + half; x++) if (((x + y) & 3) === 0) pen.fillRect(x, y, 1, 1)
+/** The spores' glow: lime and jade. */
+const SPORE_C = ['#cfe86a', '#a8e08a', '#7fe0c4']
+/** The three glowing mushrooms along the floor (fractions of the width; clear of the Buy Company slot at the right). */
+const CAPS = [0.16, 0.45, 0.7]
+/** A glowing mushroom, 9 × 7: `c` its cap, `C` the cap's lit spots, `g` the glowing gills, `s` the stem. */
+const MUSHROOM = ['..ccccc..', '.cCcccCc.', 'ccccccccc', '.ggggggg.', '...sss...', '...sss...', '..sssss..']
+function drawMushroom(pen: Pen, cx: number, floor: number, t: number, i: number): void {
+  // At one effect pixel a cell (the first round drew them at two: three stalls
+  // standing on the dock, watched, not felt).
+  const S = 1
+  const x0 = Math.round(cx) - 4
+  const y0 = Math.round(floor) - MUSHROOM.length * S
+  // The gills glow and dim over a slow breath, each cap on its own phase.
+  const glow = 0.375 + 0.125 * Math.sin((t * TAU) / BREATH_S + i * 2.1)
+  for (let y = 0; y < MUSHROOM.length; y++)
+    for (let x = 0; x < 9; x++) {
+      const ch = MUSHROOM[y][x]
+      if (ch === '.') continue
+      pen.fillStyle = ch === 'c' ? '#2a5c48' : ch === 'C' ? '#9ccc6a' : ch === 'g' ? '#cfe86a' : '#6e6a5a'
+      pen.globalAlpha = stepAlpha(ch === 'g' ? glow : ch === 'C' ? 0.5 : 0.75)
+      pen.fillRect(x0 + x * S, y0 + y * S, S, S)
     }
+}
+const glasshouse: World = {
+  // Spores rising off the caps, slow and few, a leaf now and then.
+  density: 0.0006,
+  peak: 0.6,
+  spawn(rand, w, h, seed, scene) {
+    const floor = floorOf(h, scene)
+    if (rand() < 0.12) {
+      // A leaf drifting down from the glasshouse's vines.
+      return p({ kind: 'fleck', x: rand() * w, y: seed ? rand() * h : -2, vx: (rand() - 0.5) * 2, vy: 2 + rand() * 2.5, life: 12 + rand() * 6, size: 2, color: rand() < 0.5 ? '#4c8a52' : '#6aa25a', phase: rand() * TAU })
+    }
+    // A spore: off one of the caps half the time, else anywhere below the sky.
+    const off = rand() < 0.5
+    const x = off ? pick(rand, CAPS) * w + (rand() - 0.5) * 10 : rand() * w
+    const y = seed ? floor - rand() * floor * 0.9 : off ? floor - 6 : floor - rand() * floor * 0.4
+    return p({ kind: 'spore', x, y, vy: -1.5 - rand() * 2, life: 10 + rand() * 8, size: rand() < 0.25 ? 2 : 1, color: pick(rand, SPORE_C), phase: rand() * TAU })
+  },
+  backdrop(pen, w, h, t, scene) {
+    const floor = floorOf(h, scene)
+    // Each cap glows faintly round its gills; the spores rise off it.
+    CAPS.forEach((f, i) => {
+      if (!scene?.light) dither(pen, f * w, floor - 4, 6, '#a8e08a', 0.125, i, true)
+      drawMushroom(pen, f * w, floor, t, i)
+    })
   },
   burst(rand, x, y, zone = zoneAt(x, y)) {
-    const mid = (zone.t + zone.b) / 2
-    // A ring of sparkles from the end of the CTA nearest the press, a rune
-    // lighting there, a few stars on the face.
-    const ex = x < (zone.l + zone.r) / 2 ? zone.l + 7 : zone.r - 7
-    return [
-      ...Array.from({ length: 8 }, (_, i) => {
-        const a = (i / 8) * TAU
-        return p({ kind: 'spark-still', x: ex, y: mid, vx: Math.cos(a) * 18, vy: Math.sin(a) * 8, life: 0.55, size: 1 + (i % 2), color: i % 2 ? '#ffffff' : '#eef1fb', zone, ink: '#0e1030' })
-      }),
-      p({ kind: 'rune', x: ex - 2, y: mid - 2, vy: -3, life: 0.9, color: '#0e1030', n: Math.floor(rand() * RUNES_5.length), zone }),
-      ...Array.from({ length: 3 }, () => p({ kind: 'star', x: zone.l + rand() * (zone.r - zone.l), y: zone.t + rand() * (zone.b - zone.t), life: 0.7 + rand() * 0.4, size: 2, color: '#ffffff', phase: rand() * 2, zone })),
-    ]
+    // A puff of spores off the press, drifting up and out across the face,
+    // each inked so it reads on the bright fill.
+    return Array.from({ length: 9 }, (_, i) => {
+      const a = -Math.PI / 2 + ((i / 8) - 0.5) * 2.6
+      const v = 10 + rand() * 14
+      return p({ kind: 'spore', x: x + (rand() - 0.5) * 4, y: (zone.t + zone.b) / 2, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.5, life: 0.6 + rand() * 0.4, size: 1 + (i % 2), color: pick(rand, SPORE_C), phase: rand() * TAU, zone, ink: '#06201a' })
+    })
   },
   switchIn: () => [],
   sweepLife: SWITCH_S,
   drawSweep(pen, w, h, s) {
-    // A faint silver sheet over the sky as the night comes in, fading where it lies.
-    const a = stepAlpha(0.2 * (1 - s.age / s.life))
-    if (!a) return
-    pen.fillStyle = '#e4e8f6'
-    pen.globalAlpha = a
-    const sky = Math.round(h * 0.4)
-    for (let y = 0; y < sky; y++) {
-      if (y > sky / 2 && y & 1) continue
-      for (let x = (y & 1) * 2; x < w; x += 4) pen.fillRect(x, y, 1, 1)
-    }
+    // A faint green glow off the floor as the glasshouse comes in, fading where it lies.
+    glowBand(pen, w, h, h - 1, Math.round(h * 0.28), '#a8e08a', 0.16 * (1 - s.age / s.life), 0)
   },
 }
 
@@ -803,7 +794,7 @@ const lantern: World = {
   switchIn: () => [],
 }
 
-export const WORLDS: Readonly<Record<ThemeId, World>> = { neutral: lantern, spice: fire, art: paint, metals: forge, silk, scrolls: arcane }
+export const WORLDS: Readonly<Record<ThemeId, World>> = { neutral: lantern, spice: fire, art: marsh, metals: forge, silk, scrolls: glasshouse }
 
 /** Draw one particle. */
 export function drawParticle(pen: Pen, q: Particle, dim: number): void {
@@ -828,6 +819,17 @@ export function drawParticle(pen: Pen, q: Particle, dim: number): void {
       pen.fillRect(x, y, s, s)
       return
     }
+    case 'grain':
+      // A grain of salt: bone white, inked on the bright face.
+      if (q.ink) {
+        pen.fillStyle = q.ink
+        pen.globalAlpha = stepAlpha(fade * dim * 0.75)
+        pen.fillRect(x - 1, y - 1, q.size + 2, q.size + 2)
+      }
+      pen.fillStyle = q.color
+      pen.globalAlpha = stepAlpha(fade * dim)
+      pen.fillRect(x, y, q.size, q.size)
+      return
     case 'spark':
     case 'heavy': {
       // A thrown spark: a white-yellow core cooling to orange, an orange tail back along its path.
@@ -884,65 +886,38 @@ export function drawParticle(pen: Pen, q: Particle, dim: number): void {
       for (let i = 0; i < len; i++) if (Math.abs(i - q.phase) <= reach && i % 4 < 2) pen.fillRect(x + i, y, 1, q.ink ? 2 : 1)
       return
     }
-    case 'drip': {
-      // Paint running down: a 2 px trail growing to its length, a bead at its foot.
-      const len = Math.round(Math.min(1, k * 2.5) * (q.n ?? 8))
-      pen.fillStyle = q.color
-      pen.globalAlpha = stepAlpha(0.8 * fade * dim)
-      pen.fillRect(x, y, q.size, len)
-      pen.fillRect(x - 1, y + len, q.size + 2, 2)
-      return
-    }
-    case 'splat': {
-      // It lands: grows to its size in the first beat.
-      const scale = k < 0.06 ? Math.max(1, q.size - 1) : q.size
-      pen.fillStyle = q.color
-      pen.globalAlpha = stepAlpha((q.zone ? 1 : 0.8) * fade * dim)
-      if (q.phase === 1) {
-        // An outline: the same splat one pixel wider each way, drawn first.
-        const o = { ...q, x: q.x - 1 }
-        drawSplat(pen, o, scale)
-        drawSplat(pen, { ...q, x: q.x + 1 }, scale)
-        drawSplat(pen, { ...q, y: q.y - 1 }, scale)
-        drawSplat(pen, { ...q, y: q.y + 1 }, scale)
-        return
-      }
-      drawSplat(pen, q, scale)
-      if (!q.zone && scale > 2) {
-        // A wet gloss on it.
-        pen.fillStyle = '#f6efff'
-        pen.fillRect(Math.round(q.x - scale), Math.round(q.y - scale), scale - 1, scale - 1)
-        pen.fillStyle = q.color
-        // It runs: two drips growing down from its foot.
-        const run = Math.round(Math.min(1, k * 2.5) * scale * 4)
-        pen.fillRect(Math.round(q.x - scale), Math.round(q.y + scale * 3), 2, run)
-        pen.fillRect(Math.round(q.x + scale), Math.round(q.y + scale * 2), 2, Math.round(run * 0.6))
-        pen.fillRect(Math.round(q.x - scale) - 1, Math.round(q.y + scale * 3) + run, 4, 2)
-      }
-      if (q.zone) {
-        pen.fillStyle = '#f6efff'
-        pen.fillRect(Math.round(q.x - scale), Math.round(q.y - scale * 2), scale, scale)
-      }
-      return
-    }
     case 'petal':
     case 'pburst':
       drawPetal(pen, q, stepAlpha(0.9 * fade * dim))
       return
-    case 'rune':
+    case 'wisp': {
+      // A curl of smoke: a pixel or two, thinning as it rises, a fainter
+      // pixel trailing under it.
       pen.fillStyle = q.color
-      pen.globalAlpha = stepAlpha((q.zone ? 1 : 0.6) * fade * dim * (0.75 + 0.25 * Math.sin(q.age * 0.6)))
-      drawRune(pen, q)
+      pen.globalAlpha = stepAlpha(fade * dim * 0.6 * (1 - k * 0.5))
+      pen.fillRect(x, y, q.size, 1)
+      pen.globalAlpha = stepAlpha(fade * dim * 0.3 * (1 - k * 0.5))
+      pen.fillRect(x + (Math.sin(q.age + q.phase) > 0 ? 1 : -1), y + 1, 1, 1)
       return
-    case 'quill': {
-      // An ink stroke writing itself along a curl, then fading.
-      pen.fillStyle = q.color
-      const len = Math.floor(Math.min(1, k * 2) * 22)
-      for (let i = 0; i < len; i++) {
-        pen.globalAlpha = stepAlpha(0.45 * dim * (k > 0.5 ? (1 - k) * 2 : 1))
-        const a = i * 0.28 + q.phase
-        pen.fillRect(Math.round(q.x + i * 0.9 + Math.cos(a) * 2), Math.round(q.y + Math.sin(a) * 3 - i * 0.2), 1, 1)
+    }
+    case 'spore': {
+      // A glowing spore: its core, and on a big one a faint cross of glow
+      // that swells and ebbs slowly.
+      const pulse = 0.75 + 0.25 * Math.sin(q.age * 0.9 + q.phase)
+      if (q.ink) {
+        pen.fillStyle = q.ink
+        pen.globalAlpha = stepAlpha(fade * dim * 0.75)
+        pen.fillRect(x - 1, y - 1, q.size + 2, q.size + 2)
       }
+      if (q.size > 1 && !q.zone) {
+        pen.fillStyle = q.color
+        pen.globalAlpha = stepAlpha(fade * dim * 0.3 * pulse)
+        pen.fillRect(x - 1, y, q.size + 2, q.size)
+        pen.fillRect(x, y - 1, q.size, q.size + 2)
+      }
+      pen.fillStyle = q.color
+      pen.globalAlpha = stepAlpha(fade * dim * pulse)
+      pen.fillRect(x, y, q.size, q.size)
       return
     }
     case 'star': {

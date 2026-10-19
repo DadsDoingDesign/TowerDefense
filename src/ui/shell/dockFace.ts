@@ -16,19 +16,17 @@ import type { PersonaId } from '../../game/render/hero/rig'
 /**
  * Who stands in each company's slot: the one table to edit to swap a face.
  *
- * NOTE — the faces lead the rename. `art` is still Easel House and `scrolls`
- * still Moonquill in `data/companies.ts` and `data/liaisons.ts`; their slots
- * already show the faces proposed for the companies they are becoming
- * (`docs/characters/README.md`): Hask, the Butcherblock salter, and Wren,
- * the Greenvial herbalist. Saffra, Odile and Brannoch are the liaisons
- * `liaisons.ts` already voices.
+ * Each face is its company's liaison, the one `data/liaisons.ts` voices
+ * (`docs/characters/README.md`): Saffra, Odile, Brannoch, and in the renamed
+ * slots (Oct 2026) Hask, Butcherblock's salter, and Wren, Greenvial's
+ * herbalist.
  */
 export const DOCK_FACE: Readonly<Record<CompanyId, PersonaId>> = {
   spice: 'saffra',
   silk: 'odile',
   metals: 'brannoch',
-  art: 'hask', // Easel House's slot (becoming Butcherblock)
-  scrolls: 'wren', // Moonquill's slot (becoming Greenvial)
+  art: 'hask', // Butcherblock
+  scrolls: 'wren', // Greenvial
 }
 
 /** The figure's pixel scale in the slot: 2× (the crests' own) on a phone and a desk alike. */

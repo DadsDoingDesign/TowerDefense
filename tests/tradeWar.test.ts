@@ -129,7 +129,7 @@ describe('the season’s end', () => {
   })
 
   it('your patron is the company you delivered the most for — leader or not — and pays a purse per delivery and a pick of three from its vault', () => {
-    // Three Moonquill deliveries and four Peppercorn cash-outs: you delivered most for Moonquill.
+    // Three Greenvial deliveries and four Peppercorn cash-outs: you delivered most for Greenvial.
     const s = play(freshSeason(), [deliver('scrolls'), deliver('scrolls'), deliver('scrolls'), ...Array.from({ length: 4 }, () => ({ company: 'spice' as const, crates: 0, status: 'cashedOut' as const }))])
     expect(seasonPatron(s)).toBe('scrolls')
     const { end, next } = endSeason(s, { haveItems: [] })
@@ -165,7 +165,7 @@ describe('the season’s end', () => {
   })
 
   it('a tie on your deliveries goes to the bigger share, then a hash of the season', () => {
-    // Two each for Ironvein and Easel House; Ironvein's bigger stakes took more share.
+    // Two each for Ironvein and Butcherblock; Ironvein's bigger stakes took more share.
     const s = play(freshSeason(), [deliver('metals', 4), deliver('art'), deliver('metals', 4), deliver('art')])
     expect(s.shares.metals).toBeGreaterThan(s.shares.art)
     expect(seasonPatron(s)).toBe('metals')
@@ -190,7 +190,7 @@ describe('the season’s end', () => {
     const all = seasonLast(s)
     expect(all).not.toBe('metals')
     expect(all).not.toBeNull()
-    // Moonquill is not hiring yet: the last that hires you is someone else.
+    // Greenvial is not hiring yet: the last that hires you is someone else.
     const hiring = seasonLast(s, (c) => c !== 'scrolls')
     expect(hiring).not.toBe('scrolls')
     expect(endSeason(s, { haveItems: [], open: (c) => c !== 'scrolls' }).next.desperate).toBe(hiring)

@@ -223,8 +223,8 @@
   --th-shimmer: #ffd35e;
 }
 :root[data-co-theme='art'] {
-  --th-glow: 4px 4px 0 rgba(226, 170, 90, 0.24), -3px -2px 0 rgba(95, 176, 168, 0.16);
-  --th-shimmer: #f6efff;
+  --th-glow: 0 0 0 1px rgba(224, 138, 124, 0.08), 0 0 14px rgba(176, 168, 150, 0.12);
+  --th-shimmer: #f2e8d8;
 }
 :root[data-co-theme='metals'] {
   --th-glow: 0 0 0 1px rgba(255, 138, 44, 0.08), 0 0 12px rgba(255, 138, 44, 0.1);
@@ -235,8 +235,8 @@
   --th-shimmer: #fff0f5;
 }
 :root[data-co-theme='scrolls'] {
-  --th-glow: 0 0 0 1px rgba(143, 164, 255, 0.16), 0 0 14px rgba(143, 164, 255, 0.14);
-  --th-shimmer: #e4e8f6;
+  --th-glow: 0 0 0 1px rgba(127, 224, 196, 0.12), 0 0 14px rgba(127, 224, 196, 0.12);
+  --th-shimmer: #e6ffd2;
 }
 :root[data-co-theme] :is(.mn-card, .pk-card) {
   box-shadow:
@@ -257,13 +257,13 @@
   text-shadow: 0 1px 0 #000, 0 0 8px rgba(255, 138, 44, 0.18);
 }
 :root[data-co-theme='scrolls'] :is(.t-title, .ct-title, .mn-card-name) {
-  text-shadow: 0 0 8px rgba(143, 164, 255, 0.32);
+  text-shadow: 0 0 8px rgba(127, 224, 196, 0.3);
 }
 :root[data-co-theme='silk'] :is(.t-title, .ct-title, .mn-card-name) {
   text-shadow: 0 0 8px rgba(233, 168, 191, 0.24);
 }
 :root[data-co-theme='art'] :is(.t-title, .ct-title, .mn-card-name) {
-  text-shadow: 2px 2px 0 rgba(226, 170, 90, 0.24);
+  text-shadow: 0 1px 0 #000, 0 0 8px rgba(224, 138, 124, 0.2);
 }
 
 /* Peppercorn's crest: flame tongues, still, rising from the card's top edge

@@ -53,8 +53,6 @@ const PACK = join(ROOT, 'public', 'assets', 'sprites', 'tinyswords')
 const GEN = join(ROOT, 'src', 'game', 'render', 'enemyClans.generated.ts')
 const CHECK = process.argv.includes('--check')
 const SHEET = process.argv.includes('--sheet') ? process.argv[process.argv.indexOf('--sheet') + 1] : null
-/** `--proposals <dir>`: bake the proposal kits (`enemy-clans-proposals.ts`) into `dir` — review art, never shipped. */
-const PROPOSALS = process.argv.includes('--proposals') ? process.argv[process.argv.indexOf('--proposals') + 1] : null
 
 /** Headroom (and a keg's side room), in source px. */
 export const PAD: Readonly<Record<Faction, { top: number; side: number }>> = {
@@ -556,21 +554,7 @@ async function bakeOne(clan: ClanId, faction: Faction, tier: number, pal: readon
 }
 const shift = (b: readonly [number, number, number, number], dx: number, dy: number) => [b[0] + dx, b[1] + dy, b[2] + dx, b[3] + dy] as const
 
-async function proposals(dir: string): Promise<void> {
-  const pal = await packPalette()
-  const { PROPOSAL_KITS } = await import('./enemy-clans-proposals')
-  const { recipeFromKit } = await import('./enemy-clans-art')
-  for (const [id, kit] of Object.entries(PROPOSAL_KITS))
-    for (const faction of ['torch', 'tnt', 'barrel'] as const)
-      for (const t of TIERS) {
-        const b = await bakeOne(id as ClanId, faction, t, pal, (f, tier) => recipeFromKit(kit(), f, tier))
-        writeFileSync(join(dir, `${b.role}.png`), b.png)
-      }
-  console.log(`[enemy-clans] proposals → ${dir}`)
-}
-
 async function main(): Promise<void> {
-  if (PROPOSALS) return proposals(PROPOSALS)
   const pal = await packPalette()
   const out: Baked[] = []
   for (const clan of CLAN_IDS) for (const faction of ['torch', 'tnt', 'barrel'] as const) for (const t of TIERS) out.push(await bakeOne(clan, faction, t, pal))

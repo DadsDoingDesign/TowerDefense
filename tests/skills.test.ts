@@ -324,7 +324,7 @@ describe('the Codex collection (items and skills)', () => {
     const tabs = codexModel({ achievements: {}, codex: { enemies: ['torch1_plated'], relics: [], felled: { torch2: 7 }, clans: ['delve'] }, staged: false })
     const goblins = tabs[2].sections.flatMap((s) => s.entries)
     // One section per clan (the companies' roads), each its fifteen units.
-    expect(tabs[2].sections.map((s) => s.title)).toEqual(['Cinder Clan', 'Smudge Gang', 'Deepdelve', 'Silkcut Gang', 'Hexmoon Coven'])
+    expect(tabs[2].sections.map((s) => s.title)).toEqual(['Cinder Clan', 'Gnawbone Pack', 'Deepdelve', 'Silkcut Gang', 'Sporecap Rot'])
     expect(goblins).toHaveLength(75)
     // A unit opens in a clan that has fielded a wave against you, under that clan's name and dress.
     expect(goblins.filter((g) => !g.locked).map((g) => g.id)).toEqual(['goblin:delve:torch1', 'goblin:delve:torch2'])

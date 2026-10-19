@@ -15,7 +15,7 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 | Enemies | Name the goblin and the one thing about it that changes how you fight it. | 82 | 31 |
 | Ground and hazards | Say what a tile does to a hero posted on it, in a few words. | 36 | 37 |
 | Shrines | Say the bargain: what you get, what it costs. | 18 | 18 |
-| Companies, contracts and asks | Say what a contract pays, risks and asks, in numbers, before you sign. | 259 | 26 |
+| Companies, contracts and asks | Say what a contract pays, risks and asks, in numbers, before you sign. | 262 | 26 |
 | Loyalty track and liveries | Say what each standing level pays, by name. | 88 | 20 |
 | Trade war | Say who leads the season, who pays you at its end, and what desperate terms mean. | 62 | 28 |
 | Home (map, dock, card) | Say what the focused road is like and what its next level pays; the CTA opens its terms. | 76 | 25 |
@@ -23,7 +23,7 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 | HQ and crates | Say what a building does and costs, and what a crate holds. | 98 | 30 |
 | Codex | Name every entry and say what it does; a locked one says how it opens. | 72 | 19 |
 | Stops (merchant, campfire, shrine) | Say what each offer gives and costs; the keeper says one line. | 56 | 28 |
-| Liaisons (spoken) | Character voice: one spoken line, 40 characters at most. | 81 | 33 |
+| Liaisons (spoken) | Character voice: one spoken line, 40 characters at most. | 81 | 32 |
 | Run map and node preview | Say what a stop is and what it risks or pays, so a road can be chosen. | 34 | 23 |
 | Battle HUD | Say the state of the fight and the one action now; nothing to read twice mid-wave. | 76 | 30 |
 | Result and receipt | Say how the run ended and what it paid, item by item. | 77 | 30 |
@@ -162,7 +162,7 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 - L154: Holds 1 more enemy, and hits 20% harder.
 - L155: Each kill pays 4 more gold, and its hits slow 25% for 1.5s.
 - L156: Every hit jumps to 1 more enemy for 50% and slows 25% for 1.5s.
-- L161: Every hit splashes 20 wider, and hits 20% harder.
+- L161: Hits 20% harder, and every hit splashes 20 wider.
 - L162: Heroes near it attack 20% faster.
 - L163: Every 3rd attack poisons the 3 nearest enemies 12/s for 3s.
 - L164: Grows roots on the path beside it that slow 40% and sting 8/s.
@@ -401,83 +401,83 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 - L201: Kingscale Shield
 - L201: Greenvial Herbal
 - L204: ({[...NEW_NOUNS, CLASSIC_N})
-- L305: Common
-- L306: Rare
-- L307: Epic
-- L308: Legendary
-- L309: Mythic
-- L337: Saffron Brand
-- L338: Greenvial Herbal
-- L339: Kingscale Shield
-- L340: Ironheart Plate
-- L341: Silkwind Cloak
-- L358: Saffron Brand
-- L358: Sovereign
-- L359: Greenvial Herbal
-- L359: Sovereign
-- L360: Ironheart Plate
-- L360: Sovereign
-- L361: Silkwind Cloak
-- L361: Sovereign
-- L431: Shield
-- L431: Buckler
-- L431: Tome
-- L431: Quiver
-- L431: Focus
-- L431: Pavise
-- L431: Kingscale Shield
-- L432: Plate
-- L432: Mail
-- L432: Robe
-- L432: Cloak
-- L432: Aegis
-- L432: Ironheart Plate
-- L432: Silkwind Cloak
-- L433: Banner
-- L433: Standard
-- L433: Relic
-- L433: Beacon
-- L433: Oath
-- L457: of Might
-- L458: of Precision
-- L459: of Insight
-- L486: of Reach
-- L487: of Patience
-- L488: Cruel
-- L489: Ruinous
-- L490: Bursting
-- L491: Heavy
-- L492: Swift
-- L496: Flaming
-- L552: Frost
-- L553: Shocking
-- L554: Piercing
-- L555: Vampiric
-- L561: Executioner
-- L596: Reckless
-- L620: Frenzied
-- L624: Wild
-- L629: Erratic
-- L637: Vengeful
-- L643: of Rallying
-- L644: of Haste
-- L645: of Focus
-- L646: of the Hunt
-- L647: of Ruin
-- L1098: {noun} {ench[0]?.label ?? ''}
-- L1178: Mythic Onslaught
-- L1179: Mythic Tempo
-- L1180: Mythic Precision
-- L1279: {prefix ? prefix.label + }{noun}{suffix ? ' ' + suffix.la}
-- L1284: Relic
-- L1285: {noun} {ench[0]?.label ?? ''}
-- L1294: +{b.physDamage} Physical Damage
-- L1295: +{b.magDamage} Magic Damage
-- L1296: +{Math.round(b.damagePct *}% Damage
-- L1297: {signed(Math.round(b.atta}% Attack Speed
-- L1298: +{Math.round(b.critChance }% Crit Chance
-- L1299: {signed(Math.round(b.rang}% Range
-- L1300: +{b.splashAdd} Splash Radius
+- L315: Common
+- L316: Rare
+- L317: Epic
+- L318: Legendary
+- L319: Mythic
+- L347: Saffron Brand
+- L348: Greenvial Herbal
+- L349: Kingscale Shield
+- L350: Ironheart Plate
+- L351: Silkwind Cloak
+- L368: Saffron Brand
+- L368: Sovereign
+- L369: Greenvial Herbal
+- L369: Sovereign
+- L370: Ironheart Plate
+- L370: Sovereign
+- L371: Silkwind Cloak
+- L371: Sovereign
+- L441: Shield
+- L441: Buckler
+- L441: Tome
+- L441: Quiver
+- L441: Focus
+- L441: Pavise
+- L441: Kingscale Shield
+- L442: Plate
+- L442: Mail
+- L442: Robe
+- L442: Cloak
+- L442: Aegis
+- L442: Ironheart Plate
+- L442: Silkwind Cloak
+- L443: Banner
+- L443: Standard
+- L443: Relic
+- L443: Beacon
+- L443: Oath
+- L467: of Might
+- L468: of Precision
+- L469: of Insight
+- L496: of Reach
+- L497: of Patience
+- L498: Cruel
+- L499: Ruinous
+- L500: Bursting
+- L501: Heavy
+- L502: Swift
+- L506: Flaming
+- L562: Frost
+- L563: Shocking
+- L564: Piercing
+- L565: Vampiric
+- L571: Executioner
+- L606: Reckless
+- L630: Frenzied
+- L634: Wild
+- L639: Erratic
+- L647: Vengeful
+- L653: of Rallying
+- L654: of Haste
+- L655: of Focus
+- L656: of the Hunt
+- L657: of Ruin
+- L1108: {noun} {ench[0]?.label ?? ''}
+- L1188: Mythic Onslaught
+- L1189: Mythic Tempo
+- L1190: Mythic Precision
+- L1289: {prefix ? prefix.label + }{noun}{suffix ? ' ' + suffix.la}
+- L1294: Relic
+- L1295: {noun} {ench[0]?.label ?? ''}
+- L1304: +{b.physDamage} Physical Damage
+- L1305: +{b.magDamage} Magic Damage
+- L1306: +{Math.round(b.damagePct *}% Damage
+- L1307: {signed(Math.round(b.atta}% Attack Speed
+- L1308: +{Math.round(b.critChance }% Crit Chance
+- L1309: {signed(Math.round(b.rang}% Range
+- L1310: +{b.splashAdd} Splash Radius
 
 ### `src/game/data/peopleKinds.ts`
 
@@ -814,36 +814,39 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 
 ### `src/game/data/companies.ts`
 
-- L86: Spice
-- L90: Saltmarsh
-- L90: Cinder Ford
-- L90: Pepperport
-- L92: {name} seeks an escort for its {noun}, by {c1} and {c2} to {dest}.
-- L93: {name} wants its {noun} through the burning country to {dest} before the price turns.
-- L100: Art
-- L104: Hollowmere
-- L104: Gilt Bridge
-- L104: Varnish
-- L106: {name} needs its {noun} kept dry along the canal road to {dest}.
-- L107: {name} sends its {noun} by {c1} and {c2} to {dest}, and pays for every frame that arrives.
-- L114: Metals & Stones
-- L119: Slagpit
-- L119: Cobble Rise
-- L119: Deepforge
-- L121: {name} will pay well for {noun} that reaches {dest} unstolen.
-- L122: {name} needs its {noun} hauled past the quarries, by {c1} and {c2} to {dest}.
-- L129: Silk
-- L133: Reedwick
-- L133: Spindle
-- L133: Loomhaven
-- L135: {name} asks for quiet blades on the river road to {dest}.
-- L136: {name} sends bolts of {noun} by {c1} and {c2} to {dest}, and pays by the bolt.
-- L143: Scrolls & Arcana
-- L148: Quill Hill
-- L148: Lanternhold
-- L148: Inkspire
-- L150: {name} seeks wardens for sealed {noun} bound for {dest}.
-- L151: {name} sends its {noun} over cursed ground, by {c1} and {c2} to {dest}.
+- L38: Butcherblock
+- L39: Greenvial
+- L97: Spice
+- L101: Saltmarsh
+- L101: Cinder Ford
+- L101: Pepperport
+- L103: {name} seeks an escort for its {noun}, by {c1} and {c2} to {dest}.
+- L104: {name} wants its {noun} through the burning country to {dest} before the price turns.
+- L111: Salt
+- L112: salt meat
+- L115: Brinefen
+- L115: Smoke Ferry
+- L115: Saltcleave
+- L117: {name} needs its {noun} kept dry along the reed channels to {dest}.
+- L118: {name} sends its {noun} by {c1} and {c2} to {dest}, and pays for every cask that keeps.
+- L126: Metals & Stones
+- L131: Slagpit
+- L131: Cobble Rise
+- L131: Deepforge
+- L133: {name} will pay well for {noun} that reaches {dest} unstolen.
+- L134: {name} needs its {noun} hauled past the quarries, by {c1} and {c2} to {dest}.
+- L141: Silk
+- L145: Reedwick
+- L145: Spindle
+- L145: Loomhaven
+- L147: {name} asks for quiet blades on the river road to {dest}.
+- L148: {name} sends bolts of {noun} by {c1} and {c2} to {dest}, and pays by the bolt.
+- L155: Potions
+- L160: Mossdell
+- L160: Spore Hollow
+- L160: Greenglass
+- L162: {name} seeks wardens for sealed {noun} bound for {dest}.
+- L163: {name} sends its {noun} through the spoiled hollows, by {c1} and {c2} to {dest}.
 
 ### `src/game/run/asks.ts`
 
@@ -1108,10 +1111,10 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 
 ### `src/game/data/companyKits.ts`
 
-- L168: Cut
-- L168: Emblem
-- L168: Trim
-- L173: {name} {KIT_KIND_NAMES[p.kind].t}
+- L170: Cut
+- L170: Emblem
+- L170: Trim
+- L175: {name} {KIT_KIND_NAMES[p.kind].t}
 
 ### `src/game/run/track.ts`
 
@@ -1427,14 +1430,14 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 - L109: Ash
 - L110: Saffron
 - L111: Chili
-- L112: Lilac
-- L113: Canvas
+- L112: Oxblood
+- L113: Hide
 - L114: Cobalt
 - L115: Iron
 - L116: Rose
 - L117: Ivory
-- L118: Ink
-- L119: Moonsilver
+- L118: Jade
+- L119: Lichen
 - L156: Plain
 - L157: Halves
 - L158: Top & bottom
@@ -1449,44 +1452,44 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 - L167: Pall
 - L168: Chequers
 - L169: Border
-- L216: None
-- L217: Keep
-- L218: Sword
-- L219: Sun
-- L220: Star
-- L221: Crown
-- L222: Moon
-- L223: Axe
-- L224: Tree
-- L225: Heart
-- L227: Skull
-- L228: Coin
-- L229: Anchor
-- L230: Hawk
-- L231: Wheat
-- L232: Chili
-- L233: Flame
-- L234: Spice sack
-- L235: Brush
-- L236: Frame
-- L237: Palette
-- L238: Pick
-- L239: Anvil
-- L240: Gem
-- L241: Spool
-- L242: Rose
-- L243: Moth
-- L244: Quill
-- L245: Candle
-- L246: Eye
-- L266: Parchment
-- L267: Gold
-- L268: Silver
-- L269: Copper
-- L270: Verdigris
-- L271: Bronze
-- L272: Rose gold
-- L273: Electrum
+- L219: None
+- L220: Keep
+- L221: Sword
+- L222: Sun
+- L223: Star
+- L224: Crown
+- L225: Moon
+- L226: Axe
+- L227: Tree
+- L228: Heart
+- L230: Skull
+- L231: Coin
+- L232: Anchor
+- L233: Hawk
+- L234: Wheat
+- L235: Chili
+- L236: Flame
+- L237: Spice sack
+- L238: Cleaver
+- L239: Meat hook
+- L240: Bone
+- L241: Pick
+- L242: Anvil
+- L243: Gem
+- L244: Spool
+- L245: Rose
+- L246: Moth
+- L247: Vial
+- L248: Leaf
+- L249: Mushroom
+- L269: Parchment
+- L270: Gold
+- L271: Silver
+- L272: Copper
+- L273: Steel
+- L274: Bronze
+- L275: Rose gold
+- L276: Verdigris
 
 ### `src/game/run/charter.ts`
 
@@ -1963,68 +1966,68 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 - L75: Delivered, and still hot. Come back.
 - L77: Selling early? Your loss, not mine.
 - L78: Smoke and ash. Next road, burn them.
-- L87: Not a scratch. Exquisite.
-- L87: Spotless. On to {next}, gently.
-- L88: A frame or two chipped. Tolerable.
-- L89: My paintings! Half of them, ruined.
-- L92: Every frame to {dest}, mind.
-- L93: Keep the city fights spotless.
-- L93: Clean cities. Reach {dest}, it tips.
-- L94: No raider near the wagons. None.
-- L94: Spotless fights. {dest} tips for it.
-- L97: Every frame, every ask. A triumph.
-- L98: The frames survived. Mostly.
-- L99: Delivered, though not as I asked.
-- L100: Delivered. Hang them in the light.
-- L102: Sold here? To these philistines?
-- L103: Ruined. All of it, in the canal.
-- L112: Good haul. On to {next}.
-- L112: Every cart whole. That’s the job.
-- L113: A few carts short. It’ll do.
-- L114: Half the ore gone. Not good enough.
-- L117: Plated brutes ahead. Crack them.
-- L117: Plate cracked. {dest} tips for it.
-- L118: Take on the elites. Show me nerve.
-- L118: Elites down. Reach {dest}, it tips.
-- L119: Fell them all. Leave none standing.
-- L119: Good tally. {dest} tips for it.
-- L122: Every ask met. Ironvein remembers.
-- L123: Ore’s in. Decent work.
-- L124: Ore’s in. You ignored my asks.
-- L125: Ore’s in. Ironvein pays its debts.
-- L127: Selling short? Your call. Ore’s ore.
-- L128: Carts in the ditch. Ore gone. Pity.
-- L137: Not a thread pulled. Lovely.
-- L137: Soft as you found it. On to {next}.
-- L138: Some bolts snagged. Nobody’ll mind.
-- L139: Torn silk sells for rags. Careful.
-- L142: Spend at the stalls. Trade is trade.
-- L142: Good shopping. {dest} tips for it.
-- L143: Hoard your road gold for {dest}.
-- L144: Make the road pay. Every coin.
-- L144: The road paid. {dest} tips for it.
-- L147: Every ask, every bolt. Divine.
-- L148: Delivered. The silk’s still soft.
-- L149: Delivered, but not as I asked.
-- L150: Delivered. {dest} thanks you.
-- L152: Selling at {here}? Cheap, but fine.
-- L153: All that silk, in the mud.
-- L162: The seals hold. On to {next}.
-- L162: Every seal whole. As foretold.
-- L163: A few seals cracked. It will do.
-- L164: Half the scrolls lost. Ill omen.
-- L167: The old stones bargain. Heed one.
-- L167: A pact made. Reach {dest}, it tips.
-- L168: Warded ones ahead. Steel, not spells.
-- L168: Wards broken. Reach {dest}, it tips.
-- L169: Hold the cities. Let none through.
-- L169: Clean cities. Reach {dest}, it tips.
-- L172: All asked, all done. It is written.
-- L173: Delivered. The seals held.
-- L174: Delivered. My asks went unheard.
-- L175: Delivered. The seals held.
-- L177: You turn back. The scrolls remember.
-- L178: The scrolls burn. So it was written.
+- L88: Fresh, and salted. On to {next}.
+- L88: Every cask keeps. So do you.
+- L89: Some of it turned. Salt the rest.
+- L90: Half spoiled. I don’t pay for rot.
+- L93: Every cask to {dest}. Whole.
+- L94: Clean city fights. Nothing gets in.
+- L94: Clean cities. {dest} tips for it.
+- L95: Nothing touches the meat. Nothing.
+- L95: Clean work. {dest} tips for it.
+- L98: Every ask kept. You cut clean.
+- L99: Delivered. Most of it keeps.
+- L100: Delivered. I remember my asks.
+- L101: Fresh to the hook. Come back.
+- L103: Sold here. Meat doesn’t wait. Fine.
+- L104: All of it, for the marsh crows.
+- L113: Good haul. On to {next}.
+- L113: Every cart whole. That’s the job.
+- L114: A few carts short. It’ll do.
+- L115: Half the ore gone. Not good enough.
+- L118: Plated brutes ahead. Crack them.
+- L118: Plate cracked. {dest} tips for it.
+- L119: Take on the elites. Show me nerve.
+- L119: Elites down. Reach {dest}, it tips.
+- L120: Fell them all. Leave none standing.
+- L120: Good tally. {dest} tips for it.
+- L123: Every ask met. Ironvein remembers.
+- L124: Ore’s in. Decent work.
+- L125: Ore’s in. You ignored my asks.
+- L126: Ore’s in. Ironvein pays its debts.
+- L128: Selling short? Your call. Ore’s ore.
+- L129: Carts in the ditch. Ore gone. Pity.
+- L138: Not a thread pulled. Lovely.
+- L138: Soft as you found it. On to {next}.
+- L139: Some bolts snagged. Nobody’ll mind.
+- L140: Torn silk sells for rags. Careful.
+- L143: Spend at the stalls. Trade is trade.
+- L143: Good shopping. {dest} tips for it.
+- L144: Hoard your road gold for {dest}.
+- L145: Make the road pay. Every coin.
+- L145: The road paid. {dest} tips for it.
+- L148: Every ask, every bolt. Divine.
+- L149: Delivered. The silk’s still soft.
+- L150: Delivered, but not as I asked.
+- L151: Delivered. {dest} thanks you.
+- L153: Selling at {here}? Cheap, but fine.
+- L154: All that silk, in the mud.
+- L164: Nothing cracked. On to {next}.
+- L164: Every vial whole. It grows well.
+- L165: A few vials cracked. Small doses.
+- L166: Half spilled. Something will grow.
+- L169: The old stones offer. Take a dose.
+- L169: A pact taken. {dest} tips for it.
+- L170: Warded ones ahead. Steel, not spells.
+- L170: Wards broken. {dest} tips for it.
+- L171: Hold the cities. Let nothing root.
+- L171: Clean cities. {dest} tips for it.
+- L174: All asked, all done. It took.
+- L175: Delivered. Most of it took.
+- L176: Delivered. My asks went unheard.
+- L177: Delivered. Let it steep.
+- L179: You turn back. Some things wilt.
+- L180: Spilled. The hollow will drink it.
 
 ### `src/game/run/liaison.ts`
 
@@ -2335,182 +2338,182 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 - L304: Taking it doesn’t raise enemy strength.
 - L307: Hiring doesn’t raise enemy strength.
 - L354: Keepsake: works for the whole team, whoever wears it.
-- L390: Curse · {e.label} — {t}
-- L390: {e.label} — {t}
-- L398: {SOVEREIGN_TIER} tier
-- L423: STR
-- L424: DEX
-- L425: INT
-- L462: Holds
-- L463: Targets
-- L463: a group
-- L476: Skill · {k.name} — {k.desc}
-- L601: Walk on
-- L601: Nothing here to take.
-- L602: March on
-- L602: Leave the city.
-- L603: Walk on
-- L603: Leave this stop.
-- L606: Back to the menu
-- L606: End the charter and head home. Its fee is lost.
-- L606: End the contract and head home.
-- L644: Choose {c.name}
-- L649: Back
-- L649: Back
-- L672: Buy
-- L674: {itemName(e.item)} added to your pack
-- L691: −{cargoShare(-fx.baseHpDel}% cargo now
-- L702: Bargain
-- L709: Boon — {s.boon}
-- L710: Curse — {shrineCurse(st, s)}
-- L711: Accept the terms
-- L712: Walk away
-- L735: to pack
-- L741: Downside — {c.downside}
-- L754: How effects stack
-- L759: Take {c.item ? itemName(c.item}
-- L808: {cr.revealed.heroName} · Mythic
-- L811: Downside — {m.downside}
-- L813: How effects stack
-- L814: March on
-- L831: Mythic
-- L834: Downside — {m.downside}
-- L850: {aimed.name} already carries this one.
-- L853: Already carried
-- L853: Give {aimed.name} {name}
-- L857: Yes — mutate {aimed.name}
-- L858: {name} is permanent and can't be rerolled.{m.downside ? ` It costs }
-- L870: Aim at {h.name} instead
-- L873: The same {mutations.length} mutations, for {h.name}
-- L874: Aim at {h.name}
-- L879: Back to the hires
-- L879: Pick someone else
-- L880: Aiming at {aimed.name}
-- L883: Nothing spent. The same mutations will wait.
-- L884: Back to the hires
-- L884: Pick someone else
-- L902: A mutation instead
-- L903: {mutations.length} Mythics
-- L906: Hire nobody; change how one hero attacks, for good.
-- L907: A mutation instead
-- L920: You have {MAX_ROSTER} heroes, the most you can lead.
-- L924: No room for more heroes
-- L924: Hire {s.name}
-- L925: {s.name} joins your heroes
-- L932: Hire nobody
-- L932: Hire nobody
-- L943: Mutate
-- L949: Change how {h.name} attacks, for good: pick 1 of {mutations.length} Mythic mutations.
-- L950: Carries {mutationName(m.key, m.na} — {m.desc}
-- L951: The same mutations whoever you aim at. Aiming is free.
-- L953: Aim at {h.name}
-- L956: March on
-- L956: March on
-- L961: March on
-- L961: March on
-- L973: Standard
-- L974: Deuteranopia
-- L975: Protanopia
-- L976: Tritanopia
-- L993: Music
-- L994: Effects
-- L995: Interface
-- L1000: On
-- L1000: Off
-- L1004: Sound
-- L1005: Muted
-- L1005: Music {Math.round(s.audio.music} · Effects {Math.round(s.audio.game }
-- L1016: Effects tell you what hit, died or got through; music is safe to lower first.
-- L1018: Unmute
-- L1018: Mute
-- L1022: Calm audio
-- L1025: No drums, a softer mix, effects ahead of the music. Every warning still plays.
-- L1026: Turn off
-- L1026: Turn on
-- L1030: Mono audio
-- L1033: One channel, so one earbud hears everything.
-- L1034: Turn off
-- L1034: Turn on
-- L1038: Reduced motion
-- L1041: Cuts animation and screen shake.
-- L1042: Turn off
-- L1042: Turn on
-- L1047: Effects
-- L1048: Off (reduced motion)
-- L1048: Light
-- L1048: Full
-- L1051: Each company’s world round the panels and the field’s edges: embers, sparks, petals, paint, stars.
-- L1052: Light: half the particles, no glows, still frames. Full drops to Light by itself on a slow device.
-- L1055: Set to Full
-- L1055: Set to Light
-- L1062: High contrast
-- L1065: Stronger borders and text.
-- L1066: Turn off
-- L1066: Turn on
-- L1070: Large UI
-- L1073: All text about 15% larger; touch targets 48px.
-- L1075: Normal size
-- L1075: Make it large
-- L1082: Colour vision
-- L1085: Re-tints rarity, hero and good/bad colours. Rarity also shows pips, so colour is never the only signal.
-- L1087: Switch to {VISION_LABEL[nextVision(}
-- L1094: Assist
-- L1117: Waves, loot and pay stay the same.
-- L1119: A run with assist on, even for one wave, is marked Assisted: it keeps every reward but skips leaderboards.
-- L1122: Set to {assistProfile(nextAssist}
-- L1130: Held waves continue
-- L1133: On: a held sub-wave sends the next after 4 seconds, unless you touch the field. Off: it waits for Next.
-- L1134: Turn off
-- L1134: Turn on
-- L1138: Show everything from the start
-- L1141: Off: features arrive one at a time as you play. On: every screen shows everything now.
-- L1143: Introduce things as they come
-- L1143: Show everything
-- L1150: Tips
-- L1151: Some seen
-- L1151: All waiting
-- L1153: The one-line hints shown the first time something matters. Bring them back for another pass.
-- L1154: Show the tips again
-- L1158: Reset progress
-- L1159: Destructive
-- L1162: Wipes your bank, HQ, standing, unlocks and records. There is no undo.
-- L1164: Erase everything
-- L1169: Yes — erase it all
-- L1170: Everything you have earned will be gone.
-- L1180: Sovereign Route · every kind of goblin from the first fight, {MUSTER_PCT}% stronger.
-- L1182: Escort · standard raiders.
-- L1186: Opens after your first contract
-- L1188: Opens when your bank first holds {HQ_OPENS_AT.toLocaleStri} gold
-- L1189: Opens after your first delivered contract
-- L1200: Back
-- L1204: Back
-- L1212: Your militia
-- L1216: Its name and flag. The flag flies over your wagons and HQ.
-- L1217: Change
-- L1234: Start a Run
-- L1235: Your first contract
-- L1235: The focused road’s terms
-- L1240: Peppercorn Co. needs its spice escorted. It’s free, and every city pays you.
-- L1241: Pick a road, then read its terms: escort free, or stake cargo for more pay.
-- L1242: Begin
-- L1252: Headquarters
-- L1253: HQ
-- L1254: {moneyText(meta.bank, 'go} banked
-- L1257: Two offices, HR and Operations: bank gold buys upgrades that last.
-- L1258: Open
-- L1263: Sealed crates
-- L1264: Crates
-- L1265: {moneyText(PULL_PRICE, 'g} a crate
-- L1268: A side bet: one random item, yours for good.
-- L1269: Open
-- L1275: Codex
-- L1276: Glossary
-- L1276: Standing {best}
-- L1279: Every item, skill, goblin, relic and feat, found and unfound, plus the glossary.
-- L1280: Open
-- L1284: Settings
-- L1287: Sound, motion, contrast, size, colour, assist and tips.
-- L1288: Open
+- L393: Curse · {e.label} — {t}
+- L393: {e.label} — {t}
+- L401: {SOVEREIGN_TIER} tier
+- L426: STR
+- L427: DEX
+- L428: INT
+- L465: Holds
+- L466: Targets
+- L466: a group
+- L479: Skill · {k.name} — {k.desc}
+- L604: Walk on
+- L604: Nothing here to take.
+- L605: March on
+- L605: Leave the city.
+- L606: Walk on
+- L606: Leave this stop.
+- L609: Back to the menu
+- L609: End the charter and head home. Its fee is lost.
+- L609: End the contract and head home.
+- L647: Choose {c.name}
+- L652: Back
+- L652: Back
+- L675: Buy
+- L677: {itemName(e.item)} added to your pack
+- L694: −{cargoShare(-fx.baseHpDel}% cargo now
+- L705: Bargain
+- L712: Boon — {s.boon}
+- L713: Curse — {shrineCurse(st, s)}
+- L714: Accept the terms
+- L715: Walk away
+- L738: to pack
+- L744: Downside — {c.downside}
+- L757: How effects stack
+- L762: Take {c.item ? itemName(c.item}
+- L811: {cr.revealed.heroName} · Mythic
+- L814: Downside — {m.downside}
+- L816: How effects stack
+- L817: March on
+- L834: Mythic
+- L837: Downside — {m.downside}
+- L853: {aimed.name} already carries this one.
+- L856: Already carried
+- L856: Give {aimed.name} {name}
+- L860: Yes — mutate {aimed.name}
+- L861: {name} is permanent and can't be rerolled.{m.downside ? ` It costs }
+- L873: Aim at {h.name} instead
+- L876: The same {mutations.length} mutations, for {h.name}
+- L877: Aim at {h.name}
+- L882: Back to the hires
+- L882: Pick someone else
+- L883: Aiming at {aimed.name}
+- L886: Nothing spent. The same mutations will wait.
+- L887: Back to the hires
+- L887: Pick someone else
+- L905: A mutation instead
+- L906: {mutations.length} Mythics
+- L909: Hire nobody; change how one hero attacks, for good.
+- L910: A mutation instead
+- L923: You have {MAX_ROSTER} heroes, the most you can lead.
+- L927: No room for more heroes
+- L927: Hire {s.name}
+- L928: {s.name} joins your heroes
+- L935: Hire nobody
+- L935: Hire nobody
+- L946: Mutate
+- L952: Change how {h.name} attacks, for good: pick 1 of {mutations.length} Mythic mutations.
+- L953: Carries {mutationName(m.key, m.na} — {m.desc}
+- L954: The same mutations whoever you aim at. Aiming is free.
+- L956: Aim at {h.name}
+- L959: March on
+- L959: March on
+- L964: March on
+- L964: March on
+- L976: Standard
+- L977: Deuteranopia
+- L978: Protanopia
+- L979: Tritanopia
+- L996: Music
+- L997: Effects
+- L998: Interface
+- L1003: On
+- L1003: Off
+- L1007: Sound
+- L1008: Muted
+- L1008: Music {Math.round(s.audio.music} · Effects {Math.round(s.audio.game }
+- L1019: Effects tell you what hit, died or got through; music is safe to lower first.
+- L1021: Unmute
+- L1021: Mute
+- L1025: Calm audio
+- L1028: No drums, a softer mix, effects ahead of the music. Every warning still plays.
+- L1029: Turn off
+- L1029: Turn on
+- L1033: Mono audio
+- L1036: One channel, so one earbud hears everything.
+- L1037: Turn off
+- L1037: Turn on
+- L1041: Reduced motion
+- L1044: Cuts animation and screen shake.
+- L1045: Turn off
+- L1045: Turn on
+- L1050: Effects
+- L1051: Off (reduced motion)
+- L1051: Light
+- L1051: Full
+- L1054: Each company’s world round the panels and the field’s edges: embers, sparks, petals, paint, stars.
+- L1055: Light: half the particles, no glows, still frames. Full drops to Light by itself on a slow device.
+- L1058: Set to Full
+- L1058: Set to Light
+- L1065: High contrast
+- L1068: Stronger borders and text.
+- L1069: Turn off
+- L1069: Turn on
+- L1073: Large UI
+- L1076: All text about 15% larger; touch targets 48px.
+- L1078: Normal size
+- L1078: Make it large
+- L1085: Colour vision
+- L1088: Re-tints rarity, hero and good/bad colours. Rarity also shows pips, so colour is never the only signal.
+- L1090: Switch to {VISION_LABEL[nextVision(}
+- L1097: Assist
+- L1120: Waves, loot and pay stay the same.
+- L1122: A run with assist on, even for one wave, is marked Assisted: it keeps every reward but skips leaderboards.
+- L1125: Set to {assistProfile(nextAssist}
+- L1133: Held waves continue
+- L1136: On: a held sub-wave sends the next after 4 seconds, unless you touch the field. Off: it waits for Next.
+- L1137: Turn off
+- L1137: Turn on
+- L1141: Show everything from the start
+- L1144: Off: features arrive one at a time as you play. On: every screen shows everything now.
+- L1146: Introduce things as they come
+- L1146: Show everything
+- L1153: Tips
+- L1154: Some seen
+- L1154: All waiting
+- L1156: The one-line hints shown the first time something matters. Bring them back for another pass.
+- L1157: Show the tips again
+- L1161: Reset progress
+- L1162: Destructive
+- L1165: Wipes your bank, HQ, standing, unlocks and records. There is no undo.
+- L1167: Erase everything
+- L1172: Yes — erase it all
+- L1173: Everything you have earned will be gone.
+- L1183: Sovereign Route · every kind of goblin from the first fight, {MUSTER_PCT}% stronger.
+- L1185: Escort · standard raiders.
+- L1189: Opens after your first contract
+- L1191: Opens when your bank first holds {HQ_OPENS_AT.toLocaleStri} gold
+- L1192: Opens after your first delivered contract
+- L1203: Back
+- L1207: Back
+- L1215: Your militia
+- L1219: Its name and flag. The flag flies over your wagons and HQ.
+- L1220: Change
+- L1237: Start a Run
+- L1238: Your first contract
+- L1238: The focused road’s terms
+- L1243: Peppercorn Co. needs its spice escorted. It’s free, and every city pays you.
+- L1244: Pick a road, then read its terms: escort free, or stake cargo for more pay.
+- L1245: Begin
+- L1255: Headquarters
+- L1256: HQ
+- L1257: {moneyText(meta.bank, 'go} banked
+- L1260: Two offices, HR and Operations: bank gold buys upgrades that last.
+- L1261: Open
+- L1266: Sealed crates
+- L1267: Crates
+- L1268: {moneyText(PULL_PRICE, 'g} a crate
+- L1271: A side bet: one random item, yours for good.
+- L1272: Open
+- L1278: Codex
+- L1279: Glossary
+- L1279: Standing {best}
+- L1282: Every item, skill, goblin, relic and feat, found and unfound, plus the glossary.
+- L1283: Open
+- L1287: Settings
+- L1290: Sound, motion, contrast, size, colour, assist and tips.
+- L1291: Open
 
 ### `src/ui/shell/oneTap.tsx`
 
@@ -3075,188 +3078,188 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 
 ### `src/game/data/clans.ts`
 
-- L71: hood, torch
-- L71: hood, torch
-- L71: hood, torch
-- L71: hood, torch
-- L71: hood, torch, champion scale
-- L72: goggles, dynamite pack, lit stick
-- L72: goggles, dynamite pack, lit stick
-- L72: goggles, dynamite pack, lit stick
-- L72: goggles, dynamite pack, lit stick
-- L72: goggles, dynamite pack, champion scale
-- L73: TNT keg, fuse
-- L73: TNT keg, fuse
-- L73: TNT keg, fuse
-- L73: TNT keg, fuse
-- L73: TNT keg, fuse, champion scale
-- L81: Hoods that burn at the tip and soot iron; the torch burns on, the kegs wear a chilli stem and a spice label.
-- L83: Ember Runt
-- L83: Cinder Goblin
-- L83: Pepper Raider
-- L83: Blaze Berserker
-- L83: Chief Scorchgut
-- L84: Spark Whelp
-- L84: Firepot Bomber
-- L84: Kiln Smasher
-- L84: Ash Sapper
-- L84: The Cayenne King
-- L85: Spice Keg
-- L85: Pepper Roller
-- L85: Charred Keg
-- L85: Furnace Barrel
-- L85: The Brimstone Vat
-- L87: Ember Shaman
-- L87: Hearth Bearer
-- L89: burning hood tip, torch
-- L89: + soot pauldron
-- L89: + chilli banner
-- L89: taller flame
-- L89: horned fire crown, ember mantle
-- L90: burning cap, firepot pack, firepot
-- L90: + soot pauldron
-- L90: + chilli banner
-- L90: taller flame
-- L90: horned fire crown, ember standard
-- L91: chilli stem, spice label
-- L91: + ember studs
-- L91: + ember fins
-- L91: + taller stem
-- L91: brimstone crown, ember fins
-- L98: Paint-poured buckets for helmets, brushes for weapons, paint dripping off everything.
-- L100: Smudge Runt
-- L100: Dauber
-- L100: Splatter Raider
-- L100: Brush Berserker
-- L100: Old Gesso
-- L101: Pigment Whelp
-- L101: Paint Bomber
-- L101: Varnish Wrecker
-- L101: Turps Sapper
-- L101: The Lacquer King
-- L102: Paint Pot
-- L102: Bucket Roller
-- L102: Tin Drum
-- L102: Siege Vat
-- L102: The Big Tin
-- L104: Smear Shaman
-- L104: Canvas Bearer
-- L106: paint-poured bucket helm, brush
-- L106: + palette pauldron
-- L106: + canvas flag
-- L106: stacked bucket helm
-- L106: brush crown, splattered smock
-- L107: paint-poured bucket helm, tube pack, paint bomb
-- L107: + palette pauldron
-- L107: + canvas flag
-- L107: stacked bucket helm
-- L107: brush crown, easel standard
-- L108: wire bail, paint splotch
-- L108: + paint drips
-- L108: + paint tubes
-- L108: + brush in the tin
-- L108: brush crown, drips
-- L115: Riveted iron: lamp helmets, picks for torches, ore baskets on their backs.
-- L117: Pit Runt
-- L117: Pick Goblin
-- L117: Tunnel Raider
-- L117: Drill Berserker
-- L117: Overseer Krag
-- L118: Blast Whelp
-- L118: Charge Bomber
-- L118: Rockbreaker
-- L118: Tunnel Sapper
-- L118: The Blasting King
-- L119: Ore Tub
-- L119: Cart Roller
-- L119: Rivet Keg
-- L119: Siege Boiler
-- L119: The Iron Crucible
-- L121: Lamp Shaman
-- L121: Rivet Bearer
-- L123: lamp helmet, pick
-- L123: + riveted pauldron
-- L123: + mine lantern pole
-- L123: twin-lamp helmet
-- L123: great helm, iron mantle
-- L124: lamp helmet, ore basket, charge
-- L124: + riveted pauldron
-- L124: + mine lantern pole
-- L124: twin-lamp helmet
-- L124: great helm, iron standard
-- L125: rivet cap, rivet plate
-- L125: + studded hoops
-- L125: + iron side plates
-- L125: + lamp on the cap
-- L125: crucible crown, side plates
-- L132: Wide brims and roses, needle blades, spools on their backs; the barrel is a reel.
-- L134: Snip Runt
-- L134: Needle Goblin
-- L134: Thread Raider
-- L134: Shear Berserker
-- L134: Madam Briar
-- L135: Tangle Whelp
-- L135: Bobbin Bomber
-- L135: Loom Wrecker
-- L135: Snare Sapper
-- L135: The Spindle Queen
-- L136: Spool Imp
-- L136: Bobbin Roller
-- L136: Iron Spool
-- L136: Siege Spindle
-- L136: The Great Reel
-- L138: Silk Shaman
-- L138: Veil Bearer
-- L140: brimmed hat, rose, needle
-- L140: + ribbon pauldron
-- L140: + pennant
-- L140: plumed hat
-- L140: rose crown, silk train
-- L141: brimmed hat, spool pack, thread bomb
-- L141: + ribbon pauldron
-- L141: + pennant
-- L141: plumed hat
-- L141: rose crown, silk standard
-- L142: reel flanges, wound thread
-- L142: + needle
-- L142: + loose thread end
-- L142: + rose on top
-- L142: rose crown, flanges
-- L149: Crescent horns and moon masks, quill staves, scroll cases; kegs become rune urns.
-- L151: Hex Runt
-- L151: Moon Goblin
-- L151: Rune Raider
-- L151: Lunar Berserker
-- L151: The Pale Seer
-- L152: Glyph Whelp
-- L152: Hex Bomber
-- L152: Rune Breaker
-- L152: Curse Sapper
-- L152: The Eclipse King
-- L153: Rune Urn
-- L153: Star Roller
-- L153: Moon Keg
-- L153: Siege Orrery
-- L153: The Lunar Vault
-- L155: Moon Shaman
-- L155: Ward Bearer
-- L157: crescent horns, moon mask, quill staff
-- L157: + rune pauldron
-- L157: + scroll pole
-- L157: full-moon horns
-- L157: moon halo crown, star mantle
-- L158: crescent horns, moonlit goggles, scroll cases, hex vial
-- L158: + rune pauldron
-- L158: + scroll pole
-- L158: full-moon horns
-- L158: moon halo crown, star standard
-- L159: crescent moon lid, moon-and-stars plate
-- L159: + star studs
-- L159: + rune stones
-- L159: + star by the moon
-- L159: full-moon crown, rune stones
-- L186: {clan ?? 'plain'}.{faction}{tier}
-- L193: {clan ?? DEFAULT_CLAN}_{artId}
+- L74: hood, torch
+- L74: hood, torch
+- L74: hood, torch
+- L74: hood, torch
+- L74: hood, torch, champion scale
+- L75: goggles, dynamite pack, lit stick
+- L75: goggles, dynamite pack, lit stick
+- L75: goggles, dynamite pack, lit stick
+- L75: goggles, dynamite pack, lit stick
+- L75: goggles, dynamite pack, champion scale
+- L76: TNT keg, fuse
+- L76: TNT keg, fuse
+- L76: TNT keg, fuse
+- L76: TNT keg, fuse
+- L76: TNT keg, fuse, champion scale
+- L84: Hoods that burn at the tip and soot iron; the torch burns on, the kegs wear a chilli stem and a spice label.
+- L86: Ember Runt
+- L86: Cinder Goblin
+- L86: Pepper Raider
+- L86: Blaze Berserker
+- L86: Chief Scorchgut
+- L87: Spark Whelp
+- L87: Firepot Bomber
+- L87: Kiln Smasher
+- L87: Ash Sapper
+- L87: The Cayenne King
+- L88: Spice Keg
+- L88: Pepper Roller
+- L88: Charred Keg
+- L88: Furnace Barrel
+- L88: The Brimstone Vat
+- L90: Ember Shaman
+- L90: Hearth Bearer
+- L92: burning hood tip, torch
+- L92: + soot pauldron
+- L92: + chilli banner
+- L92: taller flame
+- L92: horned fire crown, ember mantle
+- L93: burning cap, firepot pack, firepot
+- L93: + soot pauldron
+- L93: + chilli banner
+- L93: taller flame
+- L93: horned fire crown, ember standard
+- L94: chilli stem, spice label
+- L94: + ember studs
+- L94: + ember fins
+- L94: + taller stem
+- L94: brimstone crown, ember fins
+- L101: Boar skulls for helms, meat hooks for torches, hides and smoke racks; the kegs come heaped with salt.
+- L103: Gnaw Runt
+- L103: Hook Goblin
+- L103: Marsh Raider
+- L103: Bone Berserker
+- L103: Chief Gristle
+- L104: Salt Whelp
+- L104: Brine Bomber
+- L104: Rack Wrecker
+- L104: Fen Sapper
+- L104: The Marrow King
+- L105: Salt Keg
+- L105: Brine Roller
+- L105: Bone Cask
+- L105: Siege Smoker
+- L105: The Pickling Vat
+- L107: Bone Shaman
+- L107: Hide Bearer
+- L109: boar-skull helm, meat hook
+- L109: + hide pauldron
+- L109: + smoke rack of meat
+- L109: tusked skull
+- L109: bone crown, hide cape
+- L110: boar-skull helm, salt sacks, salt pouch
+- L110: + hide pauldron
+- L110: + smoke rack of meat
+- L110: tusked skull
+- L110: bone crown, hide standard
+- L111: salt heap, crossed-bones label
+- L111: + twine
+- L111: + hanging bones
+- L111: + a bone in the salt
+- L111: bone crown, hanging bones
+- L118: Riveted iron: lamp helmets, picks for torches, ore baskets on their backs.
+- L120: Pit Runt
+- L120: Pick Goblin
+- L120: Tunnel Raider
+- L120: Drill Berserker
+- L120: Overseer Krag
+- L121: Blast Whelp
+- L121: Charge Bomber
+- L121: Rockbreaker
+- L121: Tunnel Sapper
+- L121: The Blasting King
+- L122: Ore Tub
+- L122: Cart Roller
+- L122: Rivet Keg
+- L122: Siege Boiler
+- L122: The Iron Crucible
+- L124: Lamp Shaman
+- L124: Rivet Bearer
+- L126: lamp helmet, pick
+- L126: + riveted pauldron
+- L126: + mine lantern pole
+- L126: twin-lamp helmet
+- L126: great helm, iron mantle
+- L127: lamp helmet, ore basket, charge
+- L127: + riveted pauldron
+- L127: + mine lantern pole
+- L127: twin-lamp helmet
+- L127: great helm, iron standard
+- L128: rivet cap, rivet plate
+- L128: + studded hoops
+- L128: + iron side plates
+- L128: + lamp on the cap
+- L128: crucible crown, side plates
+- L135: Wide brims and roses, needle blades, spools on their backs; the barrel is a reel.
+- L137: Snip Runt
+- L137: Needle Goblin
+- L137: Thread Raider
+- L137: Shear Berserker
+- L137: Madam Briar
+- L138: Tangle Whelp
+- L138: Bobbin Bomber
+- L138: Loom Wrecker
+- L138: Snare Sapper
+- L138: The Spindle Queen
+- L139: Spool Imp
+- L139: Bobbin Roller
+- L139: Iron Spool
+- L139: Siege Spindle
+- L139: The Great Reel
+- L141: Silk Shaman
+- L141: Veil Bearer
+- L143: brimmed hat, rose, needle
+- L143: + ribbon pauldron
+- L143: + pennant
+- L143: plumed hat
+- L143: rose crown, silk train
+- L144: brimmed hat, spool pack, thread bomb
+- L144: + ribbon pauldron
+- L144: + pennant
+- L144: plumed hat
+- L144: rose crown, silk standard
+- L145: reel flanges, wound thread
+- L145: + needle
+- L145: + loose thread end
+- L145: + rose on top
+- L145: rose crown, flanges
+- L152: Huge spotted caps with glowing gills, swinging spore censers, moss; the kegs are vats foaming with green rot.
+- L154: Spore Runt
+- L154: Cap Goblin
+- L154: Rot Raider
+- L154: Mould Berserker
+- L154: Mother Mildew
+- L155: Puff Whelp
+- L155: Spore Bomber
+- L155: Rot Wrecker
+- L155: Blight Sapper
+- L155: The Toadstool King
+- L156: Rot Jar
+- L156: Moss Roller
+- L156: Mould Cask
+- L156: Siege Still
+- L156: The Rot Vat
+- L158: Spore Shaman
+- L158: Moss Bearer
+- L160: spotted cap, spore censer
+- L160: + moss pauldron
+- L160: + glow-cap pole
+- L160: double cap
+- L160: toadstool ring, moss cloak
+- L161: spotted cap, rot jars, puffball
+- L161: + moss pauldron
+- L161: + glow-cap pole
+- L161: double cap
+- L161: toadstool ring, moss standard
+- L162: rot ooze, bubbling window
+- L162: + moss patches
+- L162: + side toadstools
+- L162: + a toadstool on the lid
+- L162: toadstool ring, side toadstools
+- L189: {clan ?? 'plain'}.{faction}{tier}
+- L196: {clan ?? DEFAULT_CLAN}_{artId}
 
 ### `src/game/run/ranking.ts`
 

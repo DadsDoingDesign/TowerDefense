@@ -19,6 +19,7 @@ import { drawField } from '../src/game/render/renderer'
 import { onSpritesReady, preloadSprites } from '../src/game/render/sprites'
 import { setActiveTheme } from '../src/game/render/themes'
 import { FIRST_MAP } from '../src/game/data/maps'
+import { BUTCHERBLOCK, GREENVIAL } from '../src/game/data/companies'
 import {
   CELL, CX, FEET, ITEMS, LAYERS, LIVERIES, RACES, RACE_DEFAULTS, RARITIES, STATUSES, TELLS, FRAME_COUNT, FRAME_MS,
   composeFrame, resolveLook, layerIndex, FACES,
@@ -37,8 +38,8 @@ export const PEOPLE_OF: Readonly<Record<RaceId, { title: string; company: string
   human: { title: 'Humans', company: 'Peppercorn' },
   elf: { title: 'Elves', company: 'Rosethread' },
   dwarf: { title: 'Dwarves', company: 'Ironvein' },
-  reptilian: { title: 'Reptilians', company: 'Butcherblock' },
-  gnome: { title: 'Gnomes', company: 'Greenvial' },
+  reptilian: { title: 'Reptilians', company: BUTCHERBLOCK },
+  gnome: { title: 'Gnomes', company: GREENVIAL },
 }
 const ITEM_PEOPLE: RaceId[] = ITEMS.map((_, i) => RACES[Math.floor(i / 20)])
 
@@ -46,8 +47,8 @@ export const BASE_KIT: Readonly<Record<RaceId, HeroLook>> = {
   human: { race: 'human', company: 'Peppercorn', gear: { main: 'Sword', off: 'Shield', body: 'Mail' } },
   elf: { race: 'elf', company: 'Rosethread', gear: { main: 'Bow', off: 'Quiver', body: 'Cloak' } },
   dwarf: { race: 'dwarf', company: 'Ironvein', gear: { main: 'Axe', off: 'Round Shield', body: 'Plate' } },
-  reptilian: { race: 'reptilian', company: 'Butcherblock', gear: { main: 'Spear', body: 'Leather' } },
-  gnome: { race: 'gnome', company: 'Greenvial', gear: { main: 'Wand', off: 'Flask', body: 'Robe' } },
+  reptilian: { race: 'reptilian', company: BUTCHERBLOCK, gear: { main: 'Spear', body: 'Leather' } },
+  gnome: { race: 'gnome', company: GREENVIAL, gear: { main: 'Wand', off: 'Flask', body: 'Robe' } },
 }
 
 // ── canvas helpers ─────────────────────────────────────────────────────────

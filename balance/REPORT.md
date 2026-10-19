@@ -984,10 +984,10 @@ off the others is a lever for the tuning pass.
 | Company | Ground | Delivered | Contract pay (policy) | Bank net (policy) |
 |---|---|--:|--:|--:|
 | Peppercorn Co. (Spice) | Wildfire | 14% | 122.1 | 369.9 |
-| Easel House (Art) | Flooded canals | 17% | 127.6 | 386.1 |
+| Butcherblock (Salt) | Flooded canals | 17% | 127.6 | 386.1 |
 | Ironvein (Metals & Stones) | Quarry boulders | 16% | 125.5 | 381.2 |
 | Rosethread (Silk) | Fords and fires | 16% | 125.3 | 379.6 |
-| Moonquill (Scrolls & Arcana) | Cursed ground | 19% | 127.9 | 395.2 |
+| Greenvial (Potions) | Cursed ground | 19% | 127.9 | 395.2 |
 
 ## 14. Run variety — battlefields and wave composition
 
@@ -1402,10 +1402,10 @@ not priced in gold below). It deals every pool the player owns for no company (n
 company sets a condition at once:
 
 - **Peppercorn Co.: Wildfire on every field.** Fire covers part of every field.
-- **Easel House: The canals flood.** Lakes cover some of the best ground.
+- **Butcherblock: The channels flood.** Lakes cover some of the best ground.
 - **Ironvein: Quarry boulders.** 4 more boulders a field. They can’t be cleared.
 - **Rosethread: Merchants charge double.** Every merchant price is twice as much.
-- **Moonquill: More cursed ground.** 2 more cursed patches on every field.
+- **Greenvial: More cursed ground.** 2 more cursed patches on every field.
 - And every goblin clan marches from the first fight, 7% stronger and stealing 7% more (the muster).
 
 **The company.** A strong late-game militia: every skill card a contract can unlock (46, feat cards aside), every Level 1–3

@@ -7,14 +7,17 @@
  *
  *  - Peppercorn → the **Cinder Clan**, ember-and-spice raiders: hoods that
  *    burn at the tip, soot-black iron, firepots, chilli-stemmed spice kegs.
- *  - Easel House → the **Smudge Gang**, paint-splattered scavengers: bucket
- *    helmets, brushes for weapons, paint-tube packs, dripping paint tins.
+ *  - Butcherblock → the **Gnawbone Pack**, marsh raiders of the smokehouse
+ *    barges: boar-skull helms, meat hooks, hides, kegs heaped with salt.
  *  - Ironvein → the **Deepdelve**, miners in riveted iron: lamp helmets,
  *    picks, ore baskets, riveted iron kegs.
  *  - Rosethread → the **Silkcut Gang**, thread-and-silk cutthroats: wide
  *    brimmed hats with a rose, needle blades, spools, a reel for a barrel.
- *  - Moonquill → the **Hexmoon Coven**, rune-masked moonlit hexers: crescent
- *    horns, moon masks, quill staves, scroll cases, rune urns.
+ *  - Greenvial → the **Sporecap Rot**, hollow-dwellers who brew spoiled stock
+ *    into rot: huge spotted caps, spore censers, moss, vats foaming over.
+ *
+ * (Oct 2026, the companies' rename: the `smudge` and `hexmoon` ids stay — a
+ * save's Codex keeps them — and wear the Gnawbone and Sporecap looks and names.)
  *
  * **A clan is a LOOK and a NAME, nothing else.** Stats, behaviours, wave
  * make-up and every RNG draw are the faction's own (`enemies.ts`,
@@ -94,18 +97,18 @@ export const CLANS: readonly Clan[] = [
   {
     id: 'smudge',
     company: 'art',
-    name: 'Smudge Gang',
-    tell: 'Paint-poured buckets for helmets, brushes for weapons, paint dripping off everything.',
+    name: 'Gnawbone Pack',
+    tell: 'Boar skulls for helms, meat hooks for torches, hides and smoke racks; the kegs come heaped with salt.',
     units: {
-      torch: ['Smudge Runt', 'Dauber', 'Splatter Raider', 'Brush Berserker', 'Old Gesso'],
-      tnt: ['Pigment Whelp', 'Paint Bomber', 'Varnish Wrecker', 'Turps Sapper', 'The Lacquer King'],
-      barrel: ['Paint Pot', 'Bucket Roller', 'Tin Drum', 'Siege Vat', 'The Big Tin'],
+      torch: ['Gnaw Runt', 'Hook Goblin', 'Marsh Raider', 'Bone Berserker', 'Chief Gristle'],
+      tnt: ['Salt Whelp', 'Brine Bomber', 'Rack Wrecker', 'Fen Sapper', 'The Marrow King'],
+      barrel: ['Salt Keg', 'Brine Roller', 'Bone Cask', 'Siege Smoker', 'The Pickling Vat'],
     },
-    specialists: { shaman: 'Smear Shaman', bearer: 'Canvas Bearer' },
+    specialists: { shaman: 'Bone Shaman', bearer: 'Hide Bearer' },
     looks: {
-      torch: ['paint-poured bucket helm, brush', '+ palette pauldron', '+ canvas flag', 'stacked bucket helm', 'brush crown, splattered smock'],
-      tnt: ['paint-poured bucket helm, tube pack, paint bomb', '+ palette pauldron', '+ canvas flag', 'stacked bucket helm', 'brush crown, easel standard'],
-      barrel: ['wire bail, paint splotch', '+ paint drips', '+ paint tubes', '+ brush in the tin', 'brush crown, drips'],
+      torch: ['boar-skull helm, meat hook', '+ hide pauldron', '+ smoke rack of meat', 'tusked skull', 'bone crown, hide cape'],
+      tnt: ['boar-skull helm, salt sacks, salt pouch', '+ hide pauldron', '+ smoke rack of meat', 'tusked skull', 'bone crown, hide standard'],
+      barrel: ['salt heap, crossed-bones label', '+ twine', '+ hanging bones', '+ a bone in the salt', 'bone crown, hanging bones'],
     },
   },
   {
@@ -145,18 +148,18 @@ export const CLANS: readonly Clan[] = [
   {
     id: 'hexmoon',
     company: 'scrolls',
-    name: 'Hexmoon Coven',
-    tell: 'Crescent horns and moon masks, quill staves, scroll cases; kegs become rune urns.',
+    name: 'Sporecap Rot',
+    tell: 'Huge spotted caps with glowing gills, swinging spore censers, moss; the kegs are vats foaming with green rot.',
     units: {
-      torch: ['Hex Runt', 'Moon Goblin', 'Rune Raider', 'Lunar Berserker', 'The Pale Seer'],
-      tnt: ['Glyph Whelp', 'Hex Bomber', 'Rune Breaker', 'Curse Sapper', 'The Eclipse King'],
-      barrel: ['Rune Urn', 'Star Roller', 'Moon Keg', 'Siege Orrery', 'The Lunar Vault'],
+      torch: ['Spore Runt', 'Cap Goblin', 'Rot Raider', 'Mould Berserker', 'Mother Mildew'],
+      tnt: ['Puff Whelp', 'Spore Bomber', 'Rot Wrecker', 'Blight Sapper', 'The Toadstool King'],
+      barrel: ['Rot Jar', 'Moss Roller', 'Mould Cask', 'Siege Still', 'The Rot Vat'],
     },
-    specialists: { shaman: 'Moon Shaman', bearer: 'Ward Bearer' },
+    specialists: { shaman: 'Spore Shaman', bearer: 'Moss Bearer' },
     looks: {
-      torch: ['crescent horns, moon mask, quill staff', '+ rune pauldron', '+ scroll pole', 'full-moon horns', 'moon halo crown, star mantle'],
-      tnt: ['crescent horns, moonlit goggles, scroll cases, hex vial', '+ rune pauldron', '+ scroll pole', 'full-moon horns', 'moon halo crown, star standard'],
-      barrel: ['crescent moon lid, moon-and-stars plate', '+ star studs', '+ rune stones', '+ star by the moon', 'full-moon crown, rune stones'],
+      torch: ['spotted cap, spore censer', '+ moss pauldron', '+ glow-cap pole', 'double cap', 'toadstool ring, moss cloak'],
+      tnt: ['spotted cap, rot jars, puffball', '+ moss pauldron', '+ glow-cap pole', 'double cap', 'toadstool ring, moss standard'],
+      barrel: ['rot ooze, bubbling window', '+ moss patches', '+ side toadstools', '+ a toadstool on the lid', 'toadstool ring, side toadstools'],
     },
   },
 ]

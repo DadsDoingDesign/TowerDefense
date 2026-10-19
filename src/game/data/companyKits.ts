@@ -65,18 +65,19 @@ export const COMPANY_KITS: Readonly<Record<CompanyId, readonly KitPiece[]>> = {
     emblem('flame'),
     emblem('sack'),
   ],
-  // Easel House: the painter's studio — lilac and raw canvas, chequers, frames.
+  // Butcherblock: the smokehouse — oxblood and hide, a chopping block's
+  // chequers, a hide's tattered edge, the butcher's tools.
   art: [
     pattern('checky'),
-    colour('lilac', ['lilac', 'sable']),
-    cut('scallop'),
-    emblem('brush'),
-    trim('verdigris'),
+    colour('oxblood', ['oxblood', 'sable']),
+    cut('wave'),
+    emblem('cleaver'),
+    trim('steel'),
     pattern('paly'),
-    colour('canvas', ['lilac', 'canvas']),
+    colour('hide', ['hide', 'oxblood']),
     cut('square'),
-    emblem('frame'),
-    emblem('palette'),
+    emblem('hook'),
+    emblem('bone'),
   ],
   // Ironvein: the mine and the forge — cobalt and iron, a battled foot.
   metals: [
@@ -104,18 +105,19 @@ export const COMPANY_KITS: Readonly<Record<CompanyId, readonly KitPiece[]>> = {
     emblem('rose'),
     emblem('moth'),
   ],
-  // Moonquill: the scriptorium by night — ink and moonsilver, a crescent foot.
+  // Greenvial: the glasshouse — jade and lichen, a leaf-lobed foot, the
+  // copper's verdigris, what grows in the hollows.
   scrolls: [
     pattern('saltire'),
-    colour('ink', ['ink', 'slate']),
-    cut('crescent'),
-    emblem('quill'),
-    trim('electrum'),
+    colour('jade', ['jade', 'sable']),
+    cut('scallop'),
+    emblem('vial'),
+    trim('verdigris'),
     pattern('pall'),
-    colour('moonsilver', ['ink', 'moonsilver']),
-    cut('wave'),
-    emblem('candle'),
-    emblem('eye'),
+    colour('lichen', ['jade', 'lichen']),
+    cut('crescent'),
+    emblem('leaf'),
+    emblem('mushroom'),
   ],
 }
 

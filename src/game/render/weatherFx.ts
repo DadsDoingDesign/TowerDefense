@@ -8,7 +8,7 @@ import { hash01 } from './seasonHash'
 /**
  * The season's weather on the battlefield (Oct 2026; the designer: "map
  * seasons should have more visual interest beyond a color filter"): rain
- * with its splashes, steady snow, petals and a pair of butterflies, dust and
+ * with its splashes, steady snow, petals, glowing spores rising, dust and
  * seed fluff in a low sun, dew twinkling, fog banks drifting at different
  * speeds, cloud shadows crossing the field, and now and then a far flash.
  *
@@ -63,6 +63,7 @@ const COLORS: Record<WeatherKind, readonly string[]> = {
   fluff: ['#fffaf0', '#f4ecdc'],
   butterfly: ['#fdf6e8', '#f6dc6a', '#c8dcf4'],
   dew: ['#ffffff', '#e6f4ff'],
+  spore: ['#cfe86a', '#a8e08a', '#7fe0c4'],
 }
 
 /** A drifting shape for the fog or the cloud shadows: a posterised blob on a small canvas. */
@@ -496,6 +497,10 @@ export class WeatherLayer {
           q.vx = Math.cos(q.age * 0.6 + q.phase) * 26 * k
           q.vy = Math.sin(q.age * 1.1 + q.phase * 2) * 18 * k
           break
+        case 'spore':
+          // Riding the warm air up out of the hollows, swaying.
+          q.vx = Math.sin(q.age * 0.8 + q.phase) * 5 * k
+          break
       }
       q.x += q.vx * dt
       q.y += q.vy * dt
@@ -612,6 +617,20 @@ export class WeatherLayer {
           }
           break
         }
+        case 'spore': {
+          // A glowing spore: its core, a faint cross of glow round it that
+          // swells and ebbs slowly.
+          const glow = 0.5 + 0.5 * Math.sin(q.age * 1.1 + q.phase)
+          const s = Math.max(1, Math.round(u / 2))
+          B.alpha = (0.55 + 0.35 * glow) * fade * over
+          B.rect(x, y, s, s)
+          B.alpha = 0.35 * glow * fade * over
+          B.rect(x - s, y, s, s)
+          B.rect(x + s, y, s, s)
+          B.rect(x, y - s, s, s)
+          B.rect(x, y + s, s, s)
+          break
+        }
         case 'dew': {
           const tw = Math.sin((q.age / q.life) * Math.PI)
           B.alpha = tw * 0.9 * WEATHER_PEAK
@@ -655,6 +674,8 @@ export class WeatherLayer {
         return { ...base, life: 9 + r() * 6 }
       case 'dew':
         return { ...base, life: 0.9 + r() * 0.8 }
+      case 'spore':
+        return { ...base, vy: -(5 + r() * 6) * k, life: 6 + r() * 4 }
     }
   }
 }

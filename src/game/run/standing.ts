@@ -129,7 +129,7 @@ export const standingOf = (xp: StandingXp, company: CompanyId): number => standi
 /** The best standing held with any company. */
 export const topStanding = (xp: StandingXp): number => Math.max(0, ...COMPANY_IDS.map((c) => standingOf(xp, c)))
 
-/** Whether `company` hires yet: Moonquill opens at standing 3 with any company. */
+/** Whether `company` hires yet: Greenvial opens at standing 3 with any company. */
 export function companyOpen(company: CompanyId, xp: StandingXp): boolean {
   const at = companyById(company).opensAt
   return !at || topStanding(xp) >= at
