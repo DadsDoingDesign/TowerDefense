@@ -6,6 +6,7 @@
  *   npx tsx scripts/designs/saffra.ts --preview DIR   # 8× stills + 1×/3× line-ups for the critique rounds
  *   npx tsx scripts/designs/saffra.ts --cards         # the cards in docs/characters/cards/designs/saffra/
  *   npx tsx scripts/designs/saffra.ts --props [DIR]   # design 03 refined, five props: preview to DIR, or the props cards
+ *   npx tsx scripts/designs/saffra.ts --body [DIR]    # design 03 on her own body (ember pot, ristra): preview, or the body cards
  *
  * Every figure is a hand-authored pixel map (saffra-d01.ts … saffra-d10.ts);
  * saffra-lib.ts only stamps the pack's outline and composes the frames. The
@@ -19,7 +20,7 @@ import sharp from 'sharp'
 import { H, W, idleFrames, measure, misses, orphans, render, ticFrames, type Design, type Rgba } from './saffra-lib'
 import { DESIGNS } from './saffra-all'
 import { D03 } from './saffra-d03'
-import { PROPS } from './saffra-d03-props'
+import { OWN_BODY, PROPS } from './saffra-d03-props'
 
 const ROOT = resolve(import.meta.dirname, '..', '..')
 const PACK = join(ROOT, 'public', 'assets', 'sprites', 'tinyswords')
@@ -362,6 +363,61 @@ async function propsCards() {
   writeFileSync(mpath, JSON.stringify(keep, null, 2) + '\n')
 }
 
+// ── design 03 on her own body ──────────────────────────────────────────────────
+
+async function bodyPreview(dir: string) {
+  mkdirSync(dir, { recursive: true })
+  const grass = b64(await sharp(join(PACK, 'grass.png')).png().toBuffer())
+  const pack = await Promise.all(PACK_PEOPLE.map(async (p) => ({ ...p, img: await readPack(p.file) })))
+  const tag = process.env.TAG ?? 0
+  const set = [PROPS[0], OWN_BODY[0], PROPS[2], OWN_BODY[1]]
+  for (const d of OWN_BODY) {
+    await sharp(await png(render(d), 8)).flatten({ background: '#79a863' }).toFile(join(dir, `${d.id}-8x-${tag}.png`))
+    const strip = await Promise.all([...idleFrames(d), ...ticFrames(d)].map((f) => png(f, 2)))
+    await shoot(`<!doctype html><style>${CSS(grass)} .row{display:flex;flex-wrap:wrap;gap:2px;padding:6px}</style><div class="grass row">${strip.map((x) => `<img src="${b64(x)}">`).join('')}</div>`, join(dir, `${d.id}-frames-${tag}.png`), 1100)
+  }
+  const at = async (s: number) => (await Promise.all([pack[0], pack[1], pack[3]].map(async (p) => `<img src="${b64(await png(p.img, s))}">`))).join('') + (await Promise.all(set.map(async (d) => `<img src="${b64(await png(render(d), s))}">`))).join('')
+  await shoot(`<!doctype html><style>${CSS(grass)} .row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:4px;padding:6px}</style><div class="grass row">${await at(3)}</div><div class="grass row">${await at(1)}</div>`, join(dir, `body-lineup-${tag}.png`), 1500)
+}
+
+async function bodyCards() {
+  mkdirSync(OUT, { recursive: true })
+  const grass = b64(await sharp(join(PACK, 'grass.png')).png().toBuffer())
+  const pack = await Promise.all(PACK_PEOPLE.map(async (p) => ({ ...p, img: await readPack(p.file) })))
+  const pairs: [Design, Design, string][] = [[PROPS[0], OWN_BODY[0], 'Ember Pot'], [PROPS[2], OWN_BODY[1], 'Pepper Ristra']]
+  const box = frameBox(pairs.flatMap(([a, b]) => [...idleFrames(a), ...ticFrames(a), ...idleFrames(b), ...ticFrames(b)]))
+  const bx = Math.max(0, box.x0 - 1), by = Math.max(0, box.y0 - 1)
+  const cut = (d: Design) => crop(render(d), bx, by, Math.min(W, box.x1 + 2) - bx, Math.min(H, box.y1 + 2) - by)
+  const cell = async (img: Rgba, sc: number) => b64(await png(img, sc))
+  const rows = await Promise.all(pairs.map(async ([a, b, name]) => `<div class="k">${name}</div><div class="top grass"><img src="${await cell(cut(a), 4)}"><img src="${await cell(cut(b), 4)}"></div><div class="lab"><span>Shared bell tunic (before)</span><span>Her own body (after)</span></div>`))
+  const ones = (await Promise.all([pack[0], pack[1], pack[3]].map(async (p) => `<img src="${await cell(p.img, 1)}">`))).join('') + (await Promise.all(pairs.flatMap(([a, b]) => [a, b]).map(async (d) => `<img src="${await cell(cut(d), 1)}">`))).join('')
+  const html = `<!doctype html><meta charset="utf-8"><style>${CSS(grass)}
+    .wrap{padding:12px;width:876px} h1{font-size:20px;margin:0} p{margin:2px 0 6px;color:#c9cbbf;font-size:13.5px}
+    .top{display:flex;align-items:flex-end;justify-content:space-around;padding:8px 6px 2px;border-radius:8px}
+    .lab{display:flex;justify-content:space-around;font-size:13px;color:#c9cbbf;margin:4px 0 0}
+    .k{font-size:14px;color:#ffe46b;margin:10px 0 3px;font-weight:600}
+    .row{display:flex;align-items:flex-end;gap:6px;padding:8px;border-radius:8px}
+    </style><div class="wrap"><h1>Field Burner · her own body</h1><p>The shared, re-inked bell tunic (left) against a body drawn for her (right), at 4×: an oxblood work smock, a tan leather apron singed and smouldering at the hem, an ember sash knotted at the back hip with a leather spice pouch, and work boots planted one ahead of the other.</p>
+    ${rows.join('')}
+    <div class="k">At 1× beside the CC0 pawn, knight and torch goblin: before, after, before, after</div><div class="row grass">${ones}</div></div>`
+  await shoot(html, join(OUT, 'd03-body.png'), 900)
+  for (const [d, file] of [[OWN_BODY[0], 'd03-body-ember.webp'], [OWN_BODY[1], 'd03-body-ristra.webp']] as const) {
+    const fr = [...idleFrames(d), ...ticFrames(d)]
+    const b = frameBox(fr)
+    const x = Math.max(0, b.x0 - 2), y = Math.max(0, b.y0 - 2)
+    await motion(d, join(OUT, file), { x, y, w: Math.min(W, b.x1 + 3) - x, h: Math.min(H, b.y1 + 3) - y })
+  }
+  const mpath = join(OUT, 'manifest.json')
+  const manifest: { id: string; group: string; people: string; title: string; caption: string; file: string }[] = existsSync(mpath) ? JSON.parse(readFileSync(mpath, 'utf8')) : []
+  const keep = manifest.filter((m) => !m.id.startsWith('saffra-d03-body'))
+  keep.push(
+    { id: 'saffra-d03-body', group: 'Saffra designs', people: 'Saffra', title: '3. Field Burner · her own body', caption: 'The shared bell tunic against a body drawn for her, with the ember pot and the ristra. Judge: is it hers, and does the hat still lead?', file: 'd03-body.png' },
+    { id: 'saffra-d03-body-ember', group: 'Saffra designs', people: 'Saffra', title: '3. Field Burner · own body · Ember Pot', caption: 'The idle and the pot’s tic on her own body. Judge: weight and timing.', file: 'd03-body-ember.webp' },
+    { id: 'saffra-d03-body-ristra', group: 'Saffra designs', people: 'Saffra', title: '3. Field Burner · own body · Pepper Ristra', caption: 'The idle and the ristra’s tic on her own body. Judge: weight and timing.', file: 'd03-body-ristra.webp' },
+  )
+  writeFileSync(mpath, JSON.stringify(keep, null, 2) + '\n')
+}
+
 async function main() {
   const args = process.argv.slice(2)
   for (const d of DESIGNS) report(d)
@@ -370,6 +426,17 @@ async function main() {
   if (args.includes('--cards')) {
     await cards()
     await propsCards()
+    await bodyCards()
+  }
+  const bb = args.indexOf('--body')
+  if (bb >= 0) {
+    for (const d of OWN_BODY) report(d)
+    for (const d of OWN_BODY) {
+      const bad = clearance(d)
+      console.log(`${d.id} clearance ${bad.length ? 'OVERLAPS THE BRIM: ' + bad.join(', ') : 'clear of the brim in every frame'}`)
+    }
+    if (args[bb + 1] && !args[bb + 1].startsWith('--')) await bodyPreview(args[bb + 1])
+    else await bodyCards()
   }
   const pp = args.indexOf('--props')
   if (pp >= 0) {

@@ -265,6 +265,43 @@ const SACK = [
   '..eeeeeeee',
 ]
 
+const SMOCK = [
+  '....xxXXXXXXXXXXXXXXXXRR',
+  '...xxxXXXXXXVbbbbbbVXXXRR',
+  '...xxxXXXXXXVbBBbbbVXXXRR',
+  '..xxxxXXXXXXVbbbbbbVXXXXRR',
+  '..xxxxXXXXXXVbbbbbbVXXXXRR',
+  '..rrrrRRRRRRRRRRRRRRRRRRQQ',
+  '.rrRRrRRRRRRRRRRRRRRRRRRQQ',
+  '.xxrRrxVVbbbbbbbbbbbbbbVXXR',
+  '.xxxrRrVbbbbbbbBbbbbbbVXXR',
+  'xxxxrRrVbbbbbbbbbbbbbbVXXRR',
+  'xxxxxrrVbbbVbbbbbbbbbbVXXRR',
+  'xxxxxxxVbbbbVbbbbbbbVbbVXXR',
+  'xxxxxxxVVbbbVbbbbbbbVbbVXXR',
+  '.xxxxxxuVVVVVVVVVVVVVVVuXXR',
+  '..xxxxxuuUuuUuuHuuUuuHuuxx',
+  '...xxxx.uH.uuu.uHu.uu.x',
+]
+
+const BOOTS = [
+  '..kkk.........kkk',
+  '..kkk.........kkk',
+  '.uUUu........uUUu',
+  '.uUUu........uUUVu',
+  'uUUUUu......uUUUUVu',
+  'uUUUUUu.....uUUUUUVVu',
+  'kkkkkkk.....kkkkkkkkkk',
+]
+
+const SPOUCH = [
+  '.rr',
+  'uVVu',
+  'uVbU',
+  'uUUu',
+  '.uu',
+]
+
 export const P1: Design = {
   ...base,
   id: 'd03p1',
@@ -382,3 +419,77 @@ export const P5: Design = {
 }
 
 export const PROPS: readonly Design[] = [P1, P2, P3, P4, P5]
+
+// ── her own body (the designer: "Body doesn't need to be shared, it should be unique no?") ──
+//
+// Drawn for her, not re-inked from the shared bell: an oxblood work smock, a
+// leather apron singed and still smouldering along its hem, an ember sash
+// knotted at the back hip with a leather spice pouch hung from the knot, and short work boots planted one ahead of the
+// other: brisk, leaning into the next field. Ramps hue-shift like the pack's
+// (purple-brown shade to tan light on the leather, oxblood to ember).
+
+/** The refined figure on her own body. */
+function figureOwn(): Part[] {
+  return [
+    { id: 'shadow', group: 'feet', x: 31, y: 68, rows: SHADOW_M, ring: 0 },
+    { id: 'boots', group: 'feet', x: 36, y: 65, rows: BOOTS },
+    { id: 'tails', group: 'head', x: 18, y: 53, rows: TAILS },
+    { id: 'smock', group: 'body', x: 34, y: 50, rows: SMOCK },
+    { id: 'spouch', group: 'body', x: 37, y: 60, rows: SPOUCH },
+    { id: 'hairB', group: 'head', x: 23, y: 51, rows: HAIRB },
+    { id: 'mask', group: 'head', x: 60, y: 51, rows: MASK },
+    { id: 'hat', group: 'head', x: 19, y: 22, rows: HAT, squash: [6, 10] },
+    { id: 'handB', group: 'hands', x: 30, y: 58, rows: FIST_L },
+  ]
+}
+
+/** The ember pot on her own body: a short wind-up, the puff lands on the third frame and holds. */
+export const B1: Design = {
+  ...base,
+  id: 'd03b1',
+  title: 'Ember Pot',
+  concept: 'Her own work body (a singed leather apron over a smock, a sash and spice pouch, work boots) with the ember pot swung low.',
+  idle: POT_IDLE,
+  parts: [
+    ...figureOwn(),
+    { id: 'chain', group: 'prop', x: 70, y: 61, rows: POT_CHAIN, ring: 0 },
+    { id: 'pot', group: 'prop', x: 64, y: 62, rows: POT },
+    { id: 'smokeS', group: 'fx', x: 77, y: 57, rows: SMOKE_S, ring: 1 },
+    { id: 'smokeB', group: 'fx', x: 80, y: 55, rows: SMOKE_B, ring: 1, hidden: true },
+    { id: 'handF', group: 'hands', x: 68, y: 56, rows: FIST_R },
+  ],
+  tic: [
+    { nudge: { pot: [-1, 0] }, hide: ['smokeS'] },
+    { nudge: { pot: [2, -1] }, squash: 1, hide: ['smokeS'] },
+    { nudge: { pot: [1, 0] }, show: ['smokeB'], hide: ['smokeS'], squash: 2, move: { body: [0, 1] } },
+    { show: ['smokeB'], nudge: { smokeB: [1, -1] }, hide: ['smokeS'] },
+    { show: ['smokeB'], nudge: { smokeB: [3, -1] } },
+    { move: { head: [0, -1] } },
+    {},
+  ],
+  ticMs: [90, 100, 260, 200, 220, 120, 160],
+}
+
+/** The pepper ristra on her own body: a shake whose swing peaks on the third frame. */
+export const B3: Design = {
+  ...base,
+  id: 'd03b3',
+  title: 'Pepper Ristra',
+  concept: 'Her own work body (a singed leather apron over a smock, a sash and spice pouch, work boots) with the string of dried peppers.',
+  parts: [
+    ...figureOwn(),
+    { id: 'ristra', group: 'prop', x: 63, y: 58, rows: RISTRA },
+    { id: 'handF', group: 'hands', x: 68, y: 56, rows: FIST_R },
+  ],
+  tic: [
+    { nudge: { ristra: [-1, 0] } },
+    { swap: { ristra: RISTRA_L }, at: { ristra: [65, 58] }, squash: 1 },
+    { swap: { ristra: RISTRA_L }, at: { ristra: [66, 58] }, squash: 2, move: { body: [0, 1] } },
+    { swap: { ristra: RISTRA_L }, at: { ristra: [65, 58] } },
+    { nudge: { ristra: [-1, 0] }, move: { head: [0, -1] } },
+    {},
+  ],
+  ticMs: [90, 100, 260, 120, 160, 200],
+}
+
+export const OWN_BODY: readonly Design[] = [B1, B3]

@@ -230,5 +230,29 @@
     "title": "3.5 Field Burner · Smoked Sack",
     "caption": "A sack of the smoked pepper the burn leaves behind, swung from her fist, stamped with the company pepper. The idle and the prop’s tic, looped. Judge: does the tic say who she is?",
     "file": "d03-props-05.webp"
+  },
+  {
+    "id": "saffra-d03-body",
+    "group": "Saffra designs",
+    "people": "Saffra",
+    "title": "3. Field Burner · her own body",
+    "caption": "The shared bell tunic against a body drawn for her, with the ember pot and the ristra. Judge: is it hers, and does the hat still lead?",
+    "file": "d03-body.png"
+  },
+  {
+    "id": "saffra-d03-body-ember",
+    "group": "Saffra designs",
+    "people": "Saffra",
+    "title": "3. Field Burner · own body · Ember Pot",
+    "caption": "The idle and the pot’s tic on her own body. Judge: weight and timing.",
+    "file": "d03-body-ember.webp"
+  },
+  {
+    "id": "saffra-d03-body-ristra",
+    "group": "Saffra designs",
+    "people": "Saffra",
+    "title": "3. Field Burner · own body · Pepper Ristra",
+    "caption": "The idle and the ristra’s tic on her own body. Judge: weight and timing.",
+    "file": "d03-body-ristra.webp"
   }
 ]
