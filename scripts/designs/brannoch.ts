@@ -7,6 +7,7 @@
  *   npx tsx scripts/designs/brannoch.ts --preview DIR   # 8× stills + 1×/3× line-ups for the critique rounds
  *   npx tsx scripts/designs/brannoch.ts --cards         # the cards in docs/characters/cards/designs/brannoch/
  *   npx tsx scripts/designs/brannoch.ts --bodies [DIR]  # the top three's own bodies: before/after card + motion (or a preview into DIR)
+ *   npx tsx scripts/designs/brannoch.ts --final [DIR]   # the designer's pick, d07, with his boots: before/after + 1× line-up, and the loop
  *
  * Every figure is a hand-authored pixel map (brannoch-d01.ts … brannoch-d10.ts);
  * brannoch-lib.ts only stamps the pack's outline and composes the frames. The
@@ -22,7 +23,7 @@ import { DESIGNS } from './brannoch-all'
 import { AT, DASH } from './brannoch-common'
 import { BODY_SHARED as D01_SHARED } from './brannoch-d01'
 import { BODY_SHARED as D06_SHARED } from './brannoch-d06'
-import { BODY_SHARED as D07_SHARED } from './brannoch-d07'
+import { BODY_SHARED as D07_SHARED, D07_BEFORE } from './brannoch-d07'
 import { packColours } from './brannoch-pal'
 
 const ROOT = resolve(import.meta.dirname, '..', '..')
@@ -340,8 +341,16 @@ function before(d: Design, b: Bodied): Design {
     ...d,
     id: `${d.id}-shared`,
     parts: d.parts
-      .filter((p) => !p.id.startsWith('body') || p.id === 'body')
-      .map((p) => (p.id === 'body' ? { ...p, x: AT.body[0], y: AT.body[1], rows: b.shared } : moved[p.id] ? { ...p, x: moved[p.id][0], y: moved[p.id][1] } : p)),
+      .filter((p) => (!p.id.startsWith('body') || p.id === 'body') && !p.id.startsWith('boot'))
+      .map((p) =>
+        p.id === 'body'
+          ? { ...p, x: AT.body[0], y: AT.body[1], rows: b.shared }
+          : p.id === 'feet'
+            ? { ...p, hidden: false }
+            : moved[p.id]
+              ? { ...p, x: moved[p.id][0], y: moved[p.id][1] }
+              : p,
+      ),
   }
 }
 
@@ -411,6 +420,62 @@ async function bodies(dir?: string) {
   writeFileSync(mpath, JSON.stringify(keep, null, 2) + '\n')
 }
 
+// ── the designer's pick: d07, the Mason Guild Elder ("i dont see his feet") ──
+
+async function final(dir?: string) {
+  const out = dir ?? OUT
+  mkdirSync(out, { recursive: true })
+  const d = DESIGNS.find((x) => x.id === 'd07')
+  if (!d) throw new Error('no d07')
+  const grass = b64(await sharp(join(PACK, 'grass.png')).png().toBuffer())
+  const pack = await Promise.all(PACK_PEOPLE.map(async (p) => ({ ...p, img: await readPack(p.file) })))
+  const box = frameBox([render(D07_BEFORE), ...idleFrames(d), ...ticFrames(d)])
+  const cut = (img: Rgba) => crop(img, box.x0 - 2, box.y0 - 2, box.x1 - box.x0 + 5, box.y1 - box.y0 + 5)
+  const cell = async (img: Rgba, s: number) => b64(await png(img, s))
+  const ones = (await Promise.all(pack.map(async (p) => `<img src="${await cell(p.img, 1)}">`))).join('') + `<img src="${await cell(cut(render(d)), 1)}">`
+  const threes = (await Promise.all(pack.map(async (p) => `<img src="${await cell(p.img, 3)}">`))).join('') + `<img src="${await cell(cut(render(d)), 3)}">`
+  const html = `<!doctype html><meta charset="utf-8"><style>${CSS(grass)}
+    .wrap{padding:12px;width:576px} h1{font-size:20px;margin:0 0 2px} p{margin:2px 0 6px;color:#c9cbbf;font-size:13px}
+    h2{font-size:15px;margin:12px 0 2px}
+    .two{display:flex;justify-content:space-around;align-items:flex-end;border-radius:8px;padding:8px 4px 2px}
+    figure{margin:0;display:flex;flex-direction:column;align-items:center}
+    figcaption{font-size:12px;color:#fff;text-shadow:0 1px 0 #161c2e,0 0 3px #161c2e;margin:2px 0 4px}
+    .row{display:flex;align-items:flex-end;gap:3px;padding:8px;border-radius:8px;flex-wrap:wrap}
+    </style><div class="wrap"><h1>7. Mason Guild Elder · his boots</h1>
+    <p>The apron now stops at his boot tops, so two dark leather boots with iron toe caps stand planted under the stepped hem. The near boot steps out past the apron, and the mallet hangs clear of it.</p>
+    <div class="two grass"><figure><img src="${await cell(cut(render(D07_BEFORE)), 4)}"><figcaption>Before · the apron to the ground</figcaption></figure>
+    <figure><img src="${await cell(cut(render(d)), 4)}"><figcaption>After · his boots</figcaption></figure></div>
+    <h2>At game size (1×) beside the CC0 pawn, knight, archer and torch goblin</h2><div class="row grass">${ones}</div>
+    <h2>The same at 3×</h2><div class="row grass">${threes}</div></div>`
+  await shoot(html, join(out, 'd07-final.png'), 600)
+  const b = frameBox([...idleFrames(d), ...ticFrames(d)])
+  const bx = Math.max(0, b.x0 - 2), by = Math.max(0, b.y0 - 2)
+  await motion(d, join(out, 'd07-final.webp'), { x: bx, y: by, w: Math.min(W, b.x1 + 3) - bx, h: Math.min(H, b.y1 + 3) - by })
+  if (dir) return
+  type Card = { id: string; group: string; people: string; title: string; caption: string; file: string }
+  const mpath = join(OUT, 'manifest.json')
+  const keep = (JSON.parse(readFileSync(mpath, 'utf8')) as Card[]).filter((m) => !m.id.startsWith('brannoch-d07-final'))
+  keep.push(
+    {
+      id: 'brannoch-d07-final',
+      group: GROUP,
+      people: 'Brannoch',
+      title: '7. Mason Guild Elder · his boots',
+      caption: 'The pick, now with his boots showing under a shorter apron, before and after at 4×, then at 1× and 3× beside the pack. Judge: do his feet read at game size?',
+      file: 'd07-final.png',
+    },
+    {
+      id: 'brannoch-d07-final-motion',
+      group: GROUP,
+      people: 'Brannoch',
+      title: '7. Mason Guild Elder · his boots, motion',
+      caption: 'The idle and the beard-stroke tic with his boots planted. Judge: does he stand firm, and does the tic still read?',
+      file: 'd07-final.webp',
+    },
+  )
+  writeFileSync(mpath, JSON.stringify(keep, null, 2) + '\n')
+}
+
 async function main() {
   const args = process.argv.slice(2)
   const pack = await packColours()
@@ -425,6 +490,11 @@ async function main() {
   if (args.includes('--cards')) {
     if (fail && !args.includes('--force')) throw new Error(`${fail} design(s) out of band: fix them before making cards`)
     await cards()
+  }
+  const fi = args.indexOf('--final')
+  if (fi >= 0) {
+    if (fail && !args.includes('--force')) throw new Error(`${fail} design(s) out of band: fix them before making cards`)
+    await final(args[fi + 1] && !args[fi + 1].startsWith('--') ? args[fi + 1] : undefined)
   }
   const bi = args.indexOf('--bodies')
   if (bi >= 0) {

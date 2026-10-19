@@ -102,10 +102,25 @@ const BODY = [
 ]
 
 /**
- * The long leather mason's apron that hangs below the smock to his boots (the stepped hem is
+ * The leather mason's apron that hangs below the smock to his boot tops (the stepped hem is
  * his silhouette): stone dust ground into it, a stitched pocket with a chisel's steel showing.
  */
 const APRON = [
+  '..VVVVVVVVVVVVVUUu',
+  '..VVTVVVVVVVVVVUUu',
+  '..VTTVVVVVVVVVVUUu',
+  '.VVVVVVVVVVVVVVVUUu',
+  '.VVVVVVVVVVJIVVVUUu',
+  '.VVVVVVVVVuJIuuuUUu',
+  '.VVVVVVTVVuUVUUuUUu',
+  'VVVVVVTTVVuuuuuuUUuu',
+  'VtVVtVVtVVtVVtVVtUuu',
+  'UVVVVVVVVVVVVVVVUUuu',
+  '.uUUUUUUUUUUUUUUUuu',
+]
+
+/** The apron as it hung in the body round, to the ground over his feet (for the before/after card). */
+export const APRON_LONG = [
   '..VVVVVVVVVVVVVUUu',
   '..VVTVVVVVVVVVVUUu',
   '..VTTVVVVVVVVVVUUu',
@@ -120,6 +135,25 @@ const APRON = [
   'UVVVVVVVVVVVVVVVUUuu',
   '.uUUUUUUUUUUUUUUUuu',
   '..uuuuuuuuuuuuuuuu',
+]
+
+/**
+ * His boots, planted wide under the hem in the pack's nub-foot way: dark leather lit
+ * on the shin, an iron toe cap, a soot-black sole; the near boot a size up and its toe out past the apron.
+ */
+const BOOT_B = [
+  '.ubbbu..',
+  '.ubbuuu.',
+  '.uuuuIJi',
+  'uuuuuIJi',
+  'zzzzzzzz',
+]
+const BOOT_F = [
+  '.ubbbbu..',
+  '.ubbbuuu.',
+  '.uuuuuIJi',
+  'uuuuuuIJi',
+  'zzzzzzzzz',
 ]
 
 /** A leather pouch on the back hip, its flap held by a brass stud. */
@@ -163,7 +197,9 @@ export const D07: Design = {
   headBottom: 56,
   parts: [
     { id: 'shadow', group: 'feet', x: AT.shadow[0], y: AT.shadow[1], rows: SHADOW, ring: 0 },
-    { id: 'feet', group: 'feet', x: AT.feet[0], y: AT.feet[1], rows: FEET, ring: 0 },
+    { id: 'feet', group: 'feet', x: AT.feet[0], y: AT.feet[1], rows: FEET, ring: 0, hidden: true },
+    { id: 'bootB', group: 'feet', x: 36, y: 66, rows: BOOT_B },
+    { id: 'bootF', group: 'feet', x: 57, y: 66, rows: BOOT_F },
     { id: 'body', group: 'body', x: 32, y: 52, rows: BODY },
     { id: 'bodyPouch', group: 'body', x: 34, y: 57, rows: POUCH },
     { id: 'bodyChisel', group: 'body', x: 61, y: 57, rows: CHISEL, ring: 1 },
@@ -174,9 +210,9 @@ export const D07: Design = {
     { id: 'brows', group: 'head', x: 46, y: 30, rows: BROWS },
     { id: 'moustache', group: 'head', x: 42, y: 37, rows: MOUSTACHE },
     { id: 'nose', group: 'head', x: 58, y: 34, rows: NOSE },
-    { id: 'mallet', group: 'prop', x: 64, y: 61, rows: MALLET },
+    { id: 'mallet', group: 'prop', x: 70, y: 59, rows: MALLET },
     { id: 'handB', group: 'hands', x: 27, y: 58, rows: FIST_B },
-    { id: 'handF', group: 'hands', x: 67, y: 58, rows: FIST_F },
+    { id: 'handF', group: 'hands', x: 72, y: 56, rows: FIST_F },
   ],
   idle: [
     {},
@@ -197,4 +233,20 @@ export const D07: Design = {
     { nudge: { handB: [3, -1] }, squash: 2, sag: 1 },
   ],
   ticMs: [260, 280, 300, 240, 300, 320],
+}
+
+/** The body round's d07, before the boots: the apron to the ground, the pack's ink stub feet under it. */
+export const D07_BEFORE: Design = {
+  ...D07,
+  id: 'd07-apron',
+  parts: D07.parts
+    .filter((p) => !p.id.startsWith('boot'))
+    .map((p) => {
+      if (p.id === 'feet') return { ...p, hidden: false }
+      if (p.id === 'bodyApron') return { ...p, rows: APRON_LONG }
+      // where the mallet and its fist hung before the near boot stepped out
+      if (p.id === 'mallet') return { ...p, x: 64, y: 61 }
+      if (p.id === 'handF') return { ...p, x: 67, y: 58 }
+      return p
+    }),
 }
