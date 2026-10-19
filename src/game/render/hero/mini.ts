@@ -1,15 +1,19 @@
 /**
- * The company faces at DOCK size — redrawn for a 24 × 28 cell (shown at 2×
- * in the home dock's slot), never a downscale of the field figure.
- * Hand-drawn pixel PARTS in the pack's inks; each part is stamped back to
+ * The company faces at DOCK size — the five liaisons as the designer
+ * APPROVED them (Oct 2026: Saffra, Hask, Brannoch, Odile, Wren; the finals
+ * are `scripts/designs/`, listed in `scripts/liaison-finals.ts`), each
+ * REDRAWN by hand for a 28 × 28 cell (shown at 2× in the home dock's slot) as
+ * a small version of its final: the same silhouette, the same head-led
+ * shapes and the final's own inks, letter for letter — never a downscale.
+ * Hand-drawn pixel PARTS; each part is stamped back to
  * front with its own 1 px ring of the pack's outline (at 2× that is the
  * field figures' 2 px weight), so a head is outlined against its body and a
  * prop against its hand. Arms are drawn ON (sleeve to hand), never floating.
  *
  * Swappable like the field rig: a face is named parts + a palette; a frame
  * moves part GROUPS a pixel (or `nudge`s one part), hides / shows / swaps a
- * part (an arm reaching across, a tipped brim), and sets the eyes and where
- * they look. Each face's motion is BRANDED (round 4, Oct 2026: the designer
+ * part (an arm reaching across, a sinking hat), and sets the eyes and where
+ * they look (the five finals show none: hats, brows and pots hide them). Each face's motion is BRANDED (round 4, Oct 2026: the designer
  * asked for "unique movement in a branded way for that character"): its own
  * tempo, weight and kind of motion, held key poses (`idleMs`) at its own
  * co-prime period (2111, 3301, 4703, 3907, 5303 ms), its own tic on its own
@@ -25,7 +29,7 @@
 import { INK, RAMPS, SHADOW_ALPHA, rgbOf, type RampId } from './palette'
 import type { PersonaId } from './rig'
 
-export const MINI_W = 24
+export const MINI_W = 28
 export const MINI_H = 28
 /** The row the feet stand on (the shadow is the two rows under it). */
 export const MINI_FEET = 24
@@ -63,8 +67,12 @@ export interface MiniKey {
 }
 
 export interface MiniFace {
-  /** letter → [ramp, tone 0..3] (0 shade · 1 mid · 2 light · 3 specular). */
-  inks: Readonly<Record<string, readonly [RampId, number]>>
+  /**
+   * letter → [ramp, tone 0..3] (0 shade · 1 mid · 2 light · 3 specular), or a
+   * colour as `#rrggbb`: a liaison's dock figure keeps its approved final's
+   * own inks (`scripts/designs/`), letter for letter.
+   */
+  inks: Readonly<Record<string, readonly [RampId, number] | string>>
   parts: readonly MiniPart[]
   /** The eyes (cell px of the base pose; they ride the head group). */
   eyes: readonly (readonly [number, number])[]
@@ -85,316 +93,384 @@ export interface MiniFace {
   reactMs: readonly number[]
 }
 
-const BOOTS = { b: ['leather', 0], B: ['leather', 1] } as const
+/** A part's rows with row `i` dropped and a blank row on top: the mass sinks a px while its foot stays put (a squash). */
+const sink = (rows: readonly string[], i: number): string[] => ['.'.repeat(rows[0].length), ...rows.filter((_, r) => r !== i)]
+/** A part's rows with row `i` doubled (the last row dropped): it sags a px at that row. */
+const sag = (rows: readonly string[], i: number): string[] => [...rows.slice(0, i + 1), ...rows.slice(i, -1)]
 
-const CLOAK = ['....cCCCCD...', '...cCCCCCCD..', '..cCCCCCCCCD.', '..cCCCCCCCCD.', '.cCCCCCCCCCC.', '.cCCCCCCCCCC.', 'cCCCCCCCCCCC.', 'cCCCCCCCCCCC.', 'ccCCCCCCCCCc.', 'cccc..ccccc..', 'ccc..........']
-/** Odile's cloak with its back edge billowed a px: high (at the shoulder blades), low (at the waist), then at the hem. */
-const CLOAK_OUT_HI = CLOAK.map((r, i) => (i === 2 || i === 3 ? '.cCCCCCCCCCD.' : r))
-const CLOAK_OUT_LO = CLOAK.map((r, i) => (i === 4 || i === 5 ? 'cCCCCCCCCCCC.' : r))
-const CLOAK_OUT_HEM = CLOAK.map((r, i) => (i === 9 ? 'ccccc.ccccc..' : i === 10 ? 'cccc.........' : r))
-/** Wren's vial at the ebb and at the swell of its light. */
-const VIAL_DIM = ['.w.', '.a.', 'aea', 'eEe', 'eee']
-const VIAL_BRIGHT = ['.w.', '.a.', 'aVa', 'EVE', 'eEe']
-/** Wren's hat with its sprout sagging over the back. */
-/** Saffra's far boot alone (the near one lifted for a tap). */
-const SAFFRA_FAR_BOOT = ['bBB.....', 'bBBB....']
-/** Shear a part's front columns (from `c0`) up a px: a brim tipped back. */
-const liftFront = (rows: readonly string[], c0: number): string[] => rows.map((row, r) => [...row].map((ch, c) => (c < c0 ? ch : rows[r + 1]?.[c] ?? '.')).join(''))
-const HAT = ['.lG..........', '..g..........', '...gG........', '...gHG.......', '..gHHHG......', '..gHHHHG.....', '.gHHHHHHGG...', 'tTTTTTTTTTTT.']
-const HAT_SAG = ['.............', 'lGg..........', '...gG........', '...gHG.......', '..gHHHG......', '..gHHHHG.....', '.gHHHHHHGG...', 'tTTTTTTTTTTT.']
-
-/** Shear a part's front columns (from `c0`) down a px: a head cocked snout-down (a predator's tilt). */
-const dropFront = (rows: readonly string[], c0: number): string[] =>
-  [...rows, '.'.repeat(rows[0].length)].map((row, r) => [...row].map((ch, c) => (c < c0 ? ch : r ? rows[r - 1][c] ?? '.' : '.')).join(''))
-
-/** Hask's tail with its tip lashed up. */
-const HASK_LASH = ['.......sS', '.....sSSS', '...sSSSs.', 'SsSSSs...', 'sSs......', '.........']
-const HASK_HEAD = ['..xXxXx......', '.sSSSSSL.....', 'sSSLLLLLL....', 'sSSS.SLLLLLLL', 'sSSSSSSSSSSSS', 'sSSSSSSSSSSSL', '.sSjjjjjjjjj.', '..sSJJJJJJ...']
+// ── Saffra (Peppercorn Co.), the Field Burner: saffra-d03-props.ts B1 ────────
+const SAFFRA_HAT = [
+  '.........VVbVVuUU.........',
+  '.......VVbbVVVVuUUUU......',
+  '......VVbVVVVVVuUUUUu.....',
+  '......VbVVVVVVVuUUUUu.....',
+  '......VVVVVVVVVuUUUUu.....',
+  '......UVVVVVVVVuUUUuu.....',
+  '......rRRRRRRRRRRRyOr.....',
+  '......rrrrrrrrrrrrrrr.....',
+  '.bVVVVVVVVVVVVVVVVVVVVVVU.',
+  'UUUUUUUUUUUUUUUUUUUUUUUUUu',
+  '.uuu..................uuu.',
+]
+const SAFFRA_SINK = sink(SAFFRA_HAT, 3)
+// ── Hask (Butcherblock), the Salt-Barge Poleman: hask-d03.ts D03 ────────────
+const HASK_CONE = [
+  '.........T.........',
+  '........uOo........',
+  '.......uOOoo.......',
+  '......uOOOooh......',
+  '....uuOOOOOooh.....',
+  '...uOOOOOOOooohh...',
+  '.uuOOOOOOOOOoooHh..',
+  'uuuuuuuuuuuuuuuuhhH',
+]
+const HASK_CONE_SINK = sink(HASK_CONE, 4)
+const HASK_TAIL = ['GG.......', 'gGG......', '.gGGGGGGG', '..zgggggg']
+const HASK_TAIL_UP = ['.GG......', 'gGG......', 'gGGGGGGGG', '.zgggggg.']
+const HASK_TAIL_DOWN = ['.........', 'GG.......', 'gGGGGGGGG', 'zzgggggg.']
+// ── Brannoch (Ironvein), the Mason Guild Elder: brannoch-d07.ts D07 ─────────
+const BRANNOCH_DOME = ['...EEEEEE...', '..EFFEEEEe..', '.EFEEEEEEee.', 'EEEEEEEEeeee', 'eeEEEEEeeee.']
+const BRANNOCH_DOME_SINK = sink(BRANNOCH_DOME, 2)
+const BRANNOCH_BEARD = [
+  '...LLLLLLLLLLMM.',
+  '.LLLLLLLLLLLLMMM',
+  '.LLLLLLLLLLLLMMM',
+  'LLlLLLLLLLLMMMMM',
+  'MLLLLLLLLMMMMMMm',
+  '.MLMMMLMMMLMMmmm',
+  '.MmmMmmMMmmMmmm.',
+  '...mmmmmmmmm....',
+]
+const BRANNOCH_SAG = sag(BRANNOCH_BEARD, 5)
+// ── Odile (Rosethread), the Ford Toll-Keeper: odile-d04-a-final.ts ──────────
+const ODILE_LANTERN = ['.uo.', 'uyyo', 'uyyo', '.uu.']
+const ODILE_LANTERN_LIT = ['.uo.', 'uwyo', 'uyyo', '.uu.']
+const ODILE_BUD = ['.jQ.', 'jjQR', 'QQRr']
+const ODILE_BUD_OPEN = ['j..Q', 'jjQR', 'QQRr']
+// ── Wren (Greenvial), the Flowerpot Potter: wren-d09-E-smock-final.ts ───────
+const WREN_POT = [
+  '....ffLLLll....',
+  '....fLLLLll....',
+  '...ffLLLLlll...',
+  '...fLLLLLlll...',
+  '..ffLLLLLLJll..',
+  '..fLLLLLLLlll..',
+  '.ffLLLLLLLllll.',
+  'ffffffffffLllll',
+  'LLLLLLLLLLLLlll',
+  'lllllllllllllll',
+]
+const WREN_POT_SINK = sink(WREN_POT, 3)
+const WREN_NOSE = ['NNN', 'NmNN', 'NNMN', '.MM.']
+const WREN_NOSE_BACK = ['NNN', 'NmNN', 'NMNN', 'MM..']
+const WREN_NOSE_FWD = ['NNN', 'NmNN', 'NNNM', '..MM']
+const WREN_NOSE_DROP = ['NNN', 'NmNN', 'NNNN', 'NNMN', '.MM.']
 
 /*
- * BRANDED MOTION (round 4, Oct 2026; the designer: "not unique movement in a
- * branded way for that character"). Each face moves in its own KIND of way —
- * tempo, weight and shape — so that with the figures blurred to blobs you
- * could still say who is who:
- *   Saffra   snappy and rhythmic: a double toe-tap, then a short wait (1.75 s); she flips the sack; "Deal!" — a point and a wink
- *   Odile    flowing and never still: the head leads, a wave runs down the cloak behind it (3.3 s); she strokes the silk; a slow half-bow
- *   Brannoch planted: one slow breath, then nothing (4.7 s); he chalks the tally; one gruff nod
- *   Hask     coiled: stone still, then the tail's tip lashes (3.9 s), never a blink; the hook glints; a snap and a cocked head
- *   Wren     nearly motionless: only the vial's light breathes, slowly (5.3 s); a spore drifts up; a slow look up from under the hat
+ * THE FIVE LIAISONS (Oct 2026): each dock figure is a small, hand-drawn
+ * version of its company liaison's APPROVED final (`scripts/designs/`, listed
+ * in `scripts/liaison-finals.ts`): the same silhouette, the same head-led
+ * shapes and the final's own inks, letter for letter; never a downscale. Each
+ * moves in its final's spirit, at the dock's own co-prime clock (the periods
+ * and tic intervals below never sync):
+ *   Saffra   the weighty bob: the hat sinks, the body settles a beat later, the hat rebounds; smoke drifts off the ember pot;
+ *            tic: the pot swung, the puff of smoke landing; react: the brim tipped up, a puff
+ *   Odile    the ears lag: the lily pad and the head dip, the leaf ears follow a frame late and overshoot;
+ *            tic: the ears prick, the toll lantern swings out blazing, the lotus opens; react: a slow half-bow, the ears trailing
+ *   Brannoch planted: one slow breath (the dome sinks, the brows drop, the beard sags), then nothing;
+ *            tic: the back hand strokes the beard down, twice, the brows lift; react: one gruff nod
+ *   Hask     the poling breath: he leans in and settles, the pole following a frame late;
+ *            tic: the stroke (draw up, plant, DRIVE, the brine thrown up); react: the cone dipped, the tail flicked
+ *   Wren     the nose flop: the pot settles on his shoulders and the potato nose swings forward and back;
+ *            tic: the root stick stamped (dust), the nose bouncing; react: the pot jolted, the nose flopping
  */
 export const MINI_FACES: Readonly<Record<PersonaId, MiniFace>> = {
-  // ── Saffra: ginger hair under a saffron bandana with a gold band, the knot's two tails streaming behind (the notch no
-  //    other face has); a narrow red vest with a gold sash; the near arm bent forward, a burlap pepper sack held out at the
-  //    knee (at 24 px a balance reads as a crossbow). Lean and asymmetric against Brannoch's square block.
-  //    MOTION — brisk, light, impatient: quick crisp beats and short holds; the most often of the five (every 4.3 s).
   saffra: {
     inks: {
-      s: ['skinTan', 0], S: ['skinTan', 1], L: ['skinTan', 2], ...BOOTS,
-      c: ['ochre', 0], C: ['ochre', 1], D: ['ochre', 2], y: ['gold', 2], Y: ['gold', 0], a: ['gold', 1],
-      q: ['hairGinger', 0], h: ['hairGinger', 1], H: ['hairGinger', 2],
-      r: ['red', 0], R: ['red', 1], Q: ['red', 2], n: ['navy', 0], N: ['navy', 1], l: ['leather', 0], m: ['leather', 1], z: ['brass', 2],
-      u: ['wood', 1], U: ['wood', 2], V: ['wood', 3], e: ['red', 0], E: ['red', 2],
+      u: '#5a4646', U: '#866353', V: '#b48355', b: '#dab570', B: '#f5efa9',
+      r: '#693d5b', R: '#b65555', Q: '#f76666', y: '#ffed44', O: '#d08c41', o: '#a38250', g: '#dab570',
+      x: '#5e474e', X: '#87465a', h: '#b16c4d', H: '#d9945f', q: '#87465a',
+      e: '#977b6b', E: '#d5b583', F: '#efe1ab',
+      i: '#394243', I: '#4f5e65', J: '#737f8e', K: '#bac1c8',
     },
-    skin: 'L',
+    skin: 'E',
     parts: [
-      { id: 'knot', group: 'head', x: 2, y: 7, rows: ['DCc..', '.DCCc', '..CCc', '.DCc.', 'DCc..'] },
-      { id: 'offArm', group: 'off', x: 7, y: 13, rows: ['.cC', '.cC', 'cC.', 'LS.'] },
-      { id: 'legs', group: 'body', x: 10, y: 20, rows: ['nN.nN', 'nN.nN'] },
-      { id: 'boots', group: 'body', x: 9, y: 22, rows: ['bBB.bBB.', 'bBBBbBBB'] },
-      // the near boot, lifted a px off the ground (a tap): shown with the far boot alone below
-      { id: 'bootUp', group: 'body', x: 13, y: 21, hidden: true, rows: ['bBB.', 'bBBB'] },
-      { id: 'body', group: 'body', x: 9, y: 13, rows: ['.RRRRR.', 'QRaRRRr', 'QRRaRRr', 'QRRRaRr', 'lmmzmml', 'DCCCCCc', '.DCCCc.'] },
-      { id: 'mainArm', group: 'main', x: 15, y: 13, rows: ['Cc...', 'Cc...', 'CCcLS', '.ccSs'] },
-      // "Deal!": the near arm straight out at the chest, one finger forward (below the chin: nothing at the mouth)
-      { id: 'point', group: 'main', x: 15, y: 13, hidden: true, rows: ['Cc......', 'CCCCcSLL', '.cccsS..'] },
-      { id: 'head', group: 'head', x: 6, y: 4, rows: ['...DDCCc....', '.DDDCCCCcc..', 'DDCCCCCCCcc.', 'yyyyyyyyyyY.', 'HhhhqSSSSSq.', 'HhhhqLLLLLLs', 'hhhhqLLLLLLs', '.hhqLLLLLss.', '..qqsLLLss..', '....ssss....'] },
-      { id: 'sack', group: 'main', x: 17, y: 17, rows: ['.eE..', 'uUUV.', 'uUEUV', 'uUUUV', '.uUU.'] },
+      { id: 'tails', group: 'head', x: 3, y: 15, rows: ['RQ.', '.RR'] },
+      { id: 'boots', group: 'back', x: 9, y: 22, rows: ['uUU...uUU..', 'uUUU..uUUUV'] },
+      { id: 'body', group: 'body', x: 8, y: 15, rows: ['..xXXXXXXx..', '.xXXgggggXx.', '.xRRRRRRRRRx', 'xxXgggggggXx', 'xUXOggggOgXx', 'xuXOOgOgOOXx', '.xuuQuuyuux.'] },
+      { id: 'hair', group: 'head', x: 5, y: 15, rows: ['hHHh', 'qhh.'] },
+      { id: 'mask', group: 'head', x: 16, y: 15, rows: ['EEFE', 'RRRR', '.RR.'] },
+      { id: 'head', group: 'head', x: 1, y: 3, rows: SAFFRA_HAT },
+      { id: 'handB', group: 'off', x: 6, y: 18, rows: ['EE', 'eE'] },
+      { id: 'pot', group: 'main', x: 20, y: 19, rows: ['.QyyQ.', 'JKKKKJ', 'iIJJIi', 'iIIIIi', '.iiii.'] },
+      { id: 'handF', group: 'main', x: 20, y: 18, rows: ['EE', 'Ee'] },
+      { id: 'smoke', group: 'main', x: 25, y: 17, rows: ['K'] },
+      { id: 'puff', group: 'main', x: 23, y: 13, hidden: true, rows: ['.KK.', 'KJJK', '.JJ.'] },
     ],
-    eyes: [[13, 9], [16, 9]],
-    // a quick double tap of the near foot, the bandana's tails bouncing after it, then a short impatient wait
+    eyes: [],
+    // the weighty bob: the hat sinks, the hands and the pot settle a beat later, the hat rebounds a px; the smoke drifts up and thins
+    // (two of the final's loops in the dock's one)
     idle: [
       {},
-      { show: ['bootUp'], swap: { boots: SAFFRA_FAR_BOOT } },
+      { swap: { head: SAFFRA_SINK }, nudge: { smoke: [0, -1] } },
+      { swap: { head: SAFFRA_SINK }, move: { main: [0, 1], off: [0, 1] }, nudge: { smoke: [0, -1] } },
+      { move: { main: [0, 1], off: [0, 1] }, nudge: { smoke: [1, -2] } },
+      { move: { head: [0, -1] }, nudge: { smoke: [1, -2] } },
+      { hide: ['smoke'] },
       {},
-      { show: ['bootUp'], swap: { boots: SAFFRA_FAR_BOOT } },
-      { nudge: { knot: [0, 1] } },
-      {},
+      { swap: { head: SAFFRA_SINK }, nudge: { smoke: [0, -1] } },
+      { swap: { head: SAFFRA_SINK }, move: { main: [0, 1], off: [0, 1] }, nudge: { smoke: [0, -1] } },
+      { move: { main: [0, 1], off: [0, 1] }, nudge: { smoke: [1, -2] } },
+      { move: { head: [0, -1] }, nudge: { smoke: [1, -2] } },
+      { hide: ['smoke'] },
     ],
-    idleMs: [1150, 110, 110, 110, 160, 471],
+    idleMs: [220, 130, 150, 230, 140, 170, 220, 130, 150, 230, 140, 201],
     period: 2111,
-    // she flips the sack off her palm (never higher than her chest) and catches it — feels the weight — and knows the price (a sly look, a grin)
+    // the ember pot swung back, then forward and up: the puff lands on the third frame and drifts off; the hat lifts
     tic: [
-      { move: { main: [0, 1] } },
-      { nudge: { sack: [0, -1] } },
-      { nudge: { sack: [0, -2] }, eyes: 'smug' },
-      { nudge: { sack: [0, -1] }, eyes: 'smug' },
-      { move: { main: [0, 1] }, nudge: { sack: [0, 1] }, eyes: 'smug' },
-      { eyes: 'smug' },
-      { eyes: 'happy' },
+      { nudge: { pot: [-1, 0] }, hide: ['smoke'] },
+      { nudge: { pot: [1, -1] }, swap: { head: SAFFRA_SINK }, hide: ['smoke'] },
+      { nudge: { pot: [1, 0] }, swap: { head: SAFFRA_SINK }, show: ['puff'], hide: ['smoke'] },
+      { show: ['puff'], nudge: { puff: [1, -1] }, hide: ['smoke'] },
+      { show: ['puff'], nudge: { puff: [2, -2] } },
+      { move: { head: [0, -1] } },
+      {},
     ],
-    ticMs: [120, 110, 130, 90, 140, 300, 320],
+    ticMs: [90, 100, 260, 200, 220, 120, 160],
     ticEvery: 4300,
-    // "Deal!": a snap back, then the point and a wink with a little hop, held; then a grin
+    // "Deal!": the brim tipped up at you, a puff off the coals, held
     react: [
-      { move: { main: [-1, 0] }, eyes: 'smug' },
-      { all: [0, -1], hide: ['mainArm'], show: ['point'], nudge: { sack: [1, -1] }, eyes: 'wink' },
-      { hide: ['mainArm'], show: ['point'], nudge: { sack: [1, -1] }, eyes: 'wink' },
-      { eyes: 'happy' },
+      { move: { head: [0, -1] } },
+      { move: { head: [0, -1] }, show: ['puff'], nudge: { pot: [1, -1] } },
+      { show: ['puff'], nudge: { puff: [1, -1] } },
+      {},
     ],
-    reactMs: [80, 100, 460, 200],
+    reactMs: [80, 120, 440, 200],
   },
-  // ── Odile: tall; a raven topknot; a long ear reaching out sideways; a rose cloak (the biggest mass), a plum tunic; a cream bolt of silk on the arm.
-  //    MOTION — fluid and unhurried, never quite still: even beats, the head leading and the cloak following in a wave.
   odile: {
     inks: {
-      s: ['skinRose', 0], S: ['skinRose', 1], L: ['skinRose', 2], ...BOOTS,
-      h: ['hairBlack', 0], H: ['hairBlack', 1], G: ['hairBlack', 2],
-      c: ['plum', 0], C: ['plum', 1], D: ['plum', 2], r: ['rose', 0], R: ['rose', 1], Q: ['rose', 2],
-      T: ['linen', 1], p: ['linen', 0], P: ['linen', 1], W: ['linen', 2],
+      e: '#977b6b', E: '#d5b583', F: '#efe1ab', r: '#693d5b', R: '#ab6282', Q: '#c5836e',
+      p: '#433d5b', P: '#775396', i: '#a8719a', g: '#2f966a', G: '#38b251', v: '#95d562', V: '#bdd763',
+      o: '#b48355', O: '#d9945f', y: '#ffed44', u: '#6f5a48', U: '#866353',
+      n: '#404e75', N: '#3e8698', t: '#5ab3ac', j: '#ffcfb4', w: '#ffffff',
     },
-    skin: 'L',
+    skin: 'E',
     parts: [
-      { id: 'cloak', group: 'back', x: 2, y: 12, rows: CLOAK },
-      { id: 'offArm', group: 'off', x: 5, y: 14, rows: ['..rR', '.rR.', '.rR.', '.SL.', '.sS.'] },
-      { id: 'body', group: 'body', x: 8, y: 13, rows: ['.rRRRQ.', 'rRRRRRQ', 'rRRRRRQ', 'rRRRRRQ', 'rTTTTTT', 'rRRRRRQ', 'rRRRRRQ', '.rRRRQ.', '.r..rQ.'] },
-      { id: 'boots', group: 'body', x: 8, y: 22, rows: ['bB..bB', 'bBB.bBB'] },
-      { id: 'head', group: 'head', x: 7, y: 2, rows: ['.....hHh...', '.....hHH...', '...hhHHHh..', '..hHHHHHHh.', '.hHHHLLLLL.', '.hHHLLLLLL.', '.hHHLLLLLLL', '..hHLLLLLL.', '..hHSLLLL..', '...hSSLL...', '....SSS....'] },
-      { id: 'ear', group: 'head', x: 2, y: 8, rows: ['L.....', 'LLSs..', '.sSSSs'] },
-      { id: 'bolt', group: 'off', x: 1, y: 18, rows: ['pPPPW', 'pPPPP', '.ppp.'] },
-      { id: 'collar', group: 'body', x: 8, y: 13, rows: ['cCCCCD.', '.cCCD..'] },
-      { id: 'mainArm', group: 'main', x: 14, y: 14, rows: ['Rr..', 'RRr.', '.RR.', '.LS.', '.sS.'] },
-      { id: 'smooth', group: 'body', x: 6, y: 17, hidden: true, rows: ['....RRR', '..LSRr.', '..sS...'] },
-      // the stroke's far end: the hand at the bolt
-      { id: 'smoothFar', group: 'body', x: 5, y: 17, hidden: true, rows: ['.....RRR', '..LSRRr.', '..sS....'] },
-      // the bow's flourish: the near arm swept out and low, palm open ("after you") — low, so it never reads as Saffra's point
-      { id: 'sweep', group: 'main', x: 14, y: 14, hidden: true, rows: ['Rr...', 'RRr..', '.RRr.', '..RRL', '...LS'] },
+      { id: 'boots', group: 'body', x: 11, y: 22, rows: ['uU.uU.', 'uUU.uUU'] },
+      { id: 'cloak', group: 'body', x: 7, y: 13, rows: ['....tttNNn....', '...ttttNjNn...', '...tttNNjQNn..', '..ttttNNjjQn..', '..tttNNNjjQQn.', '.ttttNNNjjjQn.', '.tttNNNNjjjQQn', 'tttNNNNjjjjQQn', 'nnnnnnnjjjjQQQ'] },
+      { id: 'satchel', group: 'body', x: 6, y: 17, rows: ['UOU', 'UyU', 'uuu'] },
+      { id: 'earL', group: 'back', x: 1, y: 10, rows: ['FFEe...', '.eEEEe.'] },
+      { id: 'earR', group: 'back', x: 21, y: 7, rows: ['....F', '..EEF', 'eEEE.', '.e...'] },
+      { id: 'face', group: 'head', x: 13, y: 12, rows: ['FEE', 'EEE', '.e.'] },
+      { id: 'hair', group: 'head', x: 7, y: 11, rows: ['.pPPiPPPPPPPp.', 'pPPiPPp...PPPp', 'pPPPPp.....PPp', '.pPPp......pp.'] },
+      { id: 'head', group: 'head', x: 6, y: 8, rows: ['..VVVVVVvvvv..', 'VVVwVVVvvvvvvG', '.GGGGGGGG.GGG.'] },
+      { id: 'lotus', group: 'head', x: 11, y: 5, rows: ODILE_BUD },
+      { id: 'lantern', group: 'main', x: 20, y: 18, rows: ODILE_LANTERN },
+      { id: 'handB', group: 'off', x: 5, y: 16, rows: ['EE', 'eE'] },
+      { id: 'handF', group: 'main', x: 20, y: 16, rows: ['EEe', '.e.'] },
     ],
-    eyes: [[13, 9], [16, 9]],
-    // a slow sway that travels: the head leans, the arm follows, then the cloak's back edge billows a beat behind,
-    // the wave running down it to the hem as she settles — even beats, no hold, no snap
+    eyes: [],
+    // the head mass dips (the pad, the bud, the hair), the leaf ears follow a frame late and overshoot, then rise
+    // (two of the final's loops, a touch slower, then a held breath)
     idle: [
       {},
-      { move: { head: [1, 0] } },
-      { move: { head: [1, 0], main: [1, 0] }, swap: { cloak: CLOAK_OUT_HI } },
-      { move: { head: [1, 0], main: [1, 0] }, swap: { cloak: CLOAK_OUT_LO } },
-      { move: { head: [1, 0] }, eyes: 'closed', swap: { cloak: CLOAK_OUT_HEM } },
-      { swap: { cloak: CLOAK_OUT_LO } },
-      { swap: { cloak: CLOAK_OUT_HEM } },
+      { move: { head: [0, 1] } },
+      { move: { head: [0, 1], main: [0, 1], off: [0, 1], back: [0, 1] } },
+      { move: { head: [0, 1], main: [0, 1], off: [0, 1], back: [0, 2] } },
+      { move: { back: [0, 2] } },
+      { move: { back: [0, 1] } },
+      {},
+      { move: { head: [0, 1] } },
+      { move: { head: [0, 1], main: [0, 1], off: [0, 1], back: [0, 1] } },
+      { move: { head: [0, 1], main: [0, 1], off: [0, 1], back: [0, 2] } },
+      { move: { back: [0, 2] } },
+      { move: { back: [0, 1] } },
       {},
     ],
-    idleMs: [413, 413, 413, 412, 412, 413, 413, 412],
+    idleMs: [285, 195, 225, 300, 225, 255, 285, 195, 225, 300, 225, 255, 331],
     period: 3301,
-    // she strokes the silk along its bolt, eyes shut — savouring it
+    // her ears prick at a barge's bell; the lantern swings back, then out at arm's length, blazing, the lotus opening; held; home
     tic: [
-      { eyes: 'smug' },
-      { eyes: 'smug', hide: ['mainArm'], show: ['smooth'] },
-      { eyes: 'closed', hide: ['mainArm'], show: ['smoothFar'], move: { off: [0, -1] } },
-      { eyes: 'closed', hide: ['mainArm'], show: ['smooth'] },
-      { eyes: 'closed', hide: ['mainArm'], show: ['smoothFar'], move: { off: [0, -1] } },
-      { eyes: 'smug' },
+      { nudge: { earL: [-1, -1], earR: [1, -1], lantern: [-1, 0] } },
+      { nudge: { earL: [-1, -1], earR: [1, -1], lantern: [1, 0], handF: [1, 0] } },
+      { nudge: { earL: [-1, -1], earR: [1, -1], lantern: [2, 0], handF: [1, 0] }, swap: { lantern: ODILE_LANTERN_LIT, lotus: ODILE_BUD_OPEN } },
+      { nudge: { lantern: [2, 0], handF: [1, 0] }, swap: { lantern: ODILE_LANTERN_LIT, lotus: ODILE_BUD_OPEN } },
+      { nudge: { lantern: [1, 0] }, swap: { lotus: ODILE_BUD_OPEN } },
+      { nudge: { lotus: [0, 1] } },
     ],
-    ticMs: [240, 260, 340, 280, 340, 260],
+    ticMs: [130, 90, 190, 320, 180, 170],
     ticEvery: 6300,
-    // a graceful half-bow: the arm sweeps out, she bows low and holds it, rises with a knowing look
+    // a slow half-bow, the ears trailing a beat behind; she rises
     react: [
-      { eyes: 'smug', hide: ['mainArm'], show: ['sweep'] },
-      { move: { head: [1, 1], main: [1, 1] }, eyes: 'closed', hide: ['mainArm'], show: ['sweep'] },
-      { move: { head: [1, 2], main: [1, 1] }, eyes: 'closed', hide: ['mainArm'], show: ['sweep'], swap: { cloak: CLOAK_OUT_HI } },
-      { move: { head: [1, 1] }, eyes: 'closed' },
-      { eyes: 'smug' },
+      { move: { head: [0, 1] } },
+      { move: { head: [0, 1], back: [0, 1] } },
+      { move: { head: [0, 2], back: [0, 1] } },
+      { move: { head: [0, 1] }, nudge: { earL: [0, 1], earR: [0, 1] } },
+      {},
     ],
-    reactMs: [200, 240, 480, 260, 280],
+    reactMs: [200, 240, 460, 240, 260],
   },
-  // ── Brannoch: wide and square; a bald dome, heavy brows, a ginger forked beard with gold beads; an iron-blue shirt (the biggest mass) under a leather apron; a tally slate.
-  //    MOTION — planted and heavy, an economy of motion: one slow breath and a long stillness; the rarest tic (every 7.9 s).
   brannoch: {
     inks: {
-      s: ['skinTan', 0], S: ['skinTan', 1], L: ['skinTan', 2], W: ['skinTan', 3], ...BOOTS,
-      h: ['hairGinger', 0], H: ['hairGinger', 1], G: ['hairGinger', 2],
-      n: ['navy', 0], N: ['navy', 1], M: ['navy', 2], l: ['leather', 1], m: ['leather', 2],
-      T: ['gold', 2], w: ['wood', 1], z: ['soot', 1], X: ['white', 1],
+      e: '#977b6b', E: '#d5b583', F: '#efe1ab', c: '#a06961', C: '#c88176', D: '#f69e7d',
+      m: '#a29395', M: '#c3c1a6', L: '#e1d4bd', l: '#fffce7',
+      i: '#4f5e65', I: '#737f8e', J: '#bac1c8',
+      u: '#5a4646', U: '#866353', V: '#b48355', p: '#796865', P: '#a39681', T: '#bcaba8', b: '#6f5a48',
     },
-    skin: 'L',
+    skin: 'E',
     parts: [
-      { id: 'offArm', group: 'off', x: 3, y: 16, rows: ['..nN', '.nN.', '.nN.', '.SL.'] },
-      { id: 'body', group: 'body', x: 4, y: 15, rows: ['.nNNNNNNNNNNM.', 'nNNNNNNNNNNNMM', 'nNNNlmmmmlNNNM', 'nNNNlmmmmlNNNM', 'nNNNlmmmmlNNNM', 'nNNNllllllNNNM', '.nn.......nM..'] },
-      { id: 'boots', group: 'body', x: 4, y: 22, rows: ['.bBBB..bBBB.', 'bBBBBB.bBBBBB'] },
-      { id: 'head', group: 'head', x: 6, y: 6, rows: ['...sSLLL....', '..sSLLLLWL..', '.sSSLLLLLLL.', '.sSHHHLHHHL.', 'sSSLLLLLLLL.', 'sSSLLLLLLLLL', 'sSHHHHHHHHH.', '.hHHHHHHHHH.', '.hHHHHGHHHh.', '..hHHh.hHH..', '..hTh..hTh..'] },
-      // the tally: one cart chalked
-      { id: 'slate', group: 'off', x: 0, y: 18, rows: ['wwwww', 'wXzzw', 'wXzzw', 'wzzzw', 'wwwww'] },
-      { id: 'mainArm', group: 'main', x: 17, y: 16, rows: ['Nn..', 'NNn.', '.NN.', '.LS.'] },
+      { id: 'boots', group: 'back', x: 8, y: 22, rows: ['.bu.....bb.', 'uuI.....uuuJ'] },
+      { id: 'body', group: 'body', x: 6, y: 17, rows: ['.TPPPPPPPPPPpp.', '.UUUUUUUUUUUuu.', 'TPPPPPPPPPPPPpp', 'TPPPPPPPPPPpPpp'] },
+      { id: 'pouch', group: 'body', x: 7, y: 19, rows: ['VVu', 'Uuu'] },
+      { id: 'chisel', group: 'body', x: 18, y: 19, rows: ['J', 'J'] },
+      { id: 'apron', group: 'body', x: 10, y: 18, rows: ['.VVVVVU.', 'VVVVVVUu', 'VVVVuuUu', 'VVVVVVUu'] },
+      { id: 'fringe', group: 'head', x: 6, y: 7, rows: ['.LLM', 'LLMm', 'MMMm'] },
+      { id: 'dome', group: 'head', x: 8, y: 4, rows: BRANNOCH_DOME },
+      { id: 'head', group: 'head', x: 5, y: 10, rows: BRANNOCH_BEARD },
+      { id: 'brows', group: 'head', x: 11, y: 8, rows: ['LLLL.LLLL', '.MM...MM.'] },
+      { id: 'moustache', group: 'head', x: 10, y: 11, rows: ['.LLLLLLLLLM', 'LLL.....MMM'] },
+      { id: 'nose', group: 'head', x: 17, y: 9, rows: ['.DC.', 'DCCc', '.cc.'] },
+      { id: 'mallet', group: 'main', x: 21, y: 20, rows: ['...V..', 'JVVVVJ', 'IVVVUI'] },
+      { id: 'handB', group: 'off', x: 4, y: 19, rows: ['.EE', 'eEE'] },
+      { id: 'handF', group: 'main', x: 22, y: 18, rows: ['.E.', 'eEE', '.e.'] },
     ],
-    eyes: [[11, 10], [14, 10]],
-    // one slow breath — the chest and arms rise a px, a slow blink at the top, held, let go — then a long, planted stillness
+    eyes: [],
+    // one slow breath: the dome sinks a px, the brows drop, the beard sags and the hands settle; held; then a long, planted stillness
     idle: [
       {},
-      { move: { head: [0, -1], off: [0, -1], main: [0, -1] } },
-      { move: { head: [0, -1], off: [0, -1], main: [0, -1] }, eyes: 'closed' },
-      { move: { head: [0, -1], off: [0, -1], main: [0, -1] } },
+      { swap: { dome: BRANNOCH_DOME_SINK }, nudge: { brows: [0, 1] } },
+      { swap: { dome: BRANNOCH_DOME_SINK, head: BRANNOCH_SAG }, nudge: { brows: [0, 1] }, move: { main: [0, 1], off: [0, 1] } },
+      { swap: { dome: BRANNOCH_DOME_SINK }, nudge: { brows: [0, 1] } },
+      {},
     ],
-    idleMs: [2903, 700, 200, 900],
+    idleMs: [2400, 300, 1120, 300, 583],
     period: 4703,
-    // he lifts the slate and looks down at it, chalks the next cart, strikes the total, looks up; then lowers it (wiped)
+    // the back hand comes up onto the beard and strokes it down, twice; the brows lift, fond
     tic: [
-      { move: { off: [0, -1] }, eyes: 'smug' },
-      { move: { off: [0, -1] }, eyes: 'smug', swap: { slate: ['wwwww', 'wXzXw', 'wXzXw', 'wzzzw', 'wwwww'] } },
-      { move: { off: [0, -1] }, eyes: 'smug', swap: { slate: ['wwwww', 'wXzXw', 'wXzXw', 'wXXXw', 'wwwww'] } },
-      { move: { off: [0, -1] }, swap: { slate: ['wwwww', 'wXzXw', 'wXzXw', 'wXXXw', 'wwwww'] } },
+      { nudge: { handB: [2, -5] }, swap: { dome: BRANNOCH_DOME_SINK } },
+      { nudge: { handB: [2, -3], brows: [0, -1] }, swap: { head: BRANNOCH_SAG } },
+      { nudge: { handB: [2, -1], brows: [0, -1] }, swap: { head: BRANNOCH_SAG } },
+      { nudge: { handB: [2, -5], brows: [0, -1] }, swap: { dome: BRANNOCH_DOME_SINK } },
+      { nudge: { handB: [2, -3], brows: [0, -1] }, swap: { head: BRANNOCH_SAG } },
+      { nudge: { handB: [1, 0] }, swap: { dome: BRANNOCH_DOME_SINK, head: BRANNOCH_SAG } },
     ],
-    ticMs: [420, 480, 520, 440],
+    ticMs: [260, 280, 300, 240, 300, 320],
     ticEvery: 7900,
-    // one gruff nod: the brows drop first, the head goes down a px and holds, comes back; nothing else moves
-    react: [{ eyes: 'smug' }, { move: { head: [0, 1] }, eyes: 'smug' }, { eyes: 'smug' }],
+    // one gruff nod: the brows drop first, the head goes down a px and holds, comes back
+    react: [{ nudge: { brows: [0, 1] } }, { move: { head: [0, 1] }, nudge: { brows: [0, 1] } }, {}],
     reactMs: [120, 380, 220],
   },
-  // ── Hask: low and long; a flat, wide snout with a nostril and a lipless mouth line; a gold slit eye under a brow ridge;
-  //    teal scales with a low oxblood back ridge; a thick tapering tail; an oxblood apron (the biggest mass); a hook hanging down.
-  //    MOTION — coiled stillness, then sudden: long frozen holds broken by single fast flicks; the eye never blinks.
   hask: {
     inks: {
-      s: ['scaleTeal', 0], S: ['scaleTeal', 1], L: ['scaleTeal', 2], ...BOOTS,
-      x: ['oxblood', 0], X: ['oxblood', 1], o: ['oxblood', 0], O: ['oxblood', 1], Q: ['oxblood', 2],
-      Y: ['gold', 2], j: ['bone', 1], J: ['bone', 2], g: ['steel', 0], G: ['steel', 2], w: ['wood', 1],
-      W: ['white', 2],
+      z: '#3d4f4d', g: '#5a7d53', G: '#728844', v: '#9bb94e', V: '#bdd763', y: '#ffed44',
+      c: '#977b6b', C: '#d5b583', d: '#efe1ab', h: '#5a4646', H: '#866353', i: '#b48355', a: '#6f5a48',
+      l: '#9e8776', L: '#e1d4bd', m: '#fffce7', o: '#a38250', O: '#cea554', u: '#f1da84', T: '#b3a645',
+      '4': '#2a485e', '5': '#4f7585', '6': '#83a2ac', w: '#ffffff',
     },
-    skin: 'S',
-    slit: true,
+    skin: 'G',
     parts: [
-      { id: 'tail', group: 'back', x: 0, y: 16, rows: ['.......sS', '.....sSSS', '...sSSSs.', '.sSSSs...', 'sSSs.....', 'Ss.......'] },
-      { id: 'offArm', group: 'off', x: 4, y: 15, rows: ['..sS', '.sS.', '.sS.', '.SL.'] },
-      { id: 'body', group: 'body', x: 6, y: 13, rows: ['..sSSSL...', '.sSoOOOOL.', 'sSoOOOOOQL', 'sSoOOOOOQ.', 'sSoOOxOOQ.', 'sSoOOOOOQ.', '.soOOOOOQ.', '..sS..sS..'] },
-      { id: 'boots', group: 'body', x: 7, y: 22, rows: ['sSS..sSS', 'sSSS.sSSS'] },
-      // the arm and hook before the head: a cocked head's jaw falls over the shoulder, never under it
-      { id: 'mainArm', group: 'main', x: 15, y: 14, rows: ['Ss...', 'SSs..', '.SSs.', '..SL.'] },
-      // the forearm raised to look at the hook (the shoulder stays put, clear of the jaw)
-      { id: 'armUp', group: 'main', x: 15, y: 14, hidden: true, rows: ['Ss...', 'SSs..', '.SSL.'] },
-      { id: 'hook', group: 'main', x: 17, y: 18, rows: ['.w...', '.w...', '.G...', '.G..G', '..GG.'] },
-      { id: 'head', group: 'head', x: 6, y: 5, rows: HASK_HEAD },
+      { id: 'tail', group: 'back', x: 2, y: 18, rows: HASK_TAIL },
+      { id: 'legs', group: 'back', x: 12, y: 20, rows: ['G...G.', 'Gv..Gv', 'gv..gv'] },
+      { id: 'feet', group: 'back', x: 12, y: 23, ring: 0, rows: ['kk..kk'] },
+      { id: 'pole', group: 'off', x: 5, y: 13, rows: ['i...................', '.HH.................', '...HH...............', '.....HH.............', '.......HH...........', '.........HH.........', '...........HH.......', '.............HH.....', '...............HH...', '.................556'] },
+      { id: 'smock', group: 'body', x: 9, y: 13, rows: ['...5566...', '..556666..', '.55566665.', '.OuOuOuOu.', '4555555554', '45L5mL5m54', '4mLmLmLmL4'] },
+      { id: 'snout', group: 'head', x: 16, y: 11, rows: ['gGGGGyz..', 'gGGGGGGVV', '.gCCCCCC.'] },
+      { id: 'head', group: 'head', x: 8, y: 3, rows: HASK_CONE },
+      { id: 'gripFar', group: 'main', x: 5, y: 12, rows: ['Gv', 'gG'] },
+      { id: 'armF', group: 'main', x: 18, y: 15, rows: ['G.', 'Gv', 'gv', 'zg'] },
+      { id: 'splash', group: 'off', x: 23, y: 20, hidden: true, ring: 0, rows: ['.w..', 'w6.6', '.66.'] },
+      { id: 'splash2', group: 'off', x: 21, y: 17, hidden: true, ring: 0, rows: ['..w..w', '.w6.w6', 'w66w66', '.6556.'] },
     ],
-    eyes: [[11, 8]],
-    // stone still; the tail's tip lashes (two fast frames); stone; the tip twitches once; stone — and the eye never shuts
+    eyes: [],
+    // the poling breath, twice a loop: he leans into the pole and settles onto his legs, the pole following a frame late
     idle: [
       {},
-      { swap: { tail: HASK_LASH } },
-      { swap: { tail: ['.......sS', '.....sSSS', '...sSSSs.', '.sSSSs...', 'sSSs.....', '.Ss......'] } },
+      { move: { head: [1, 0], body: [1, 0], main: [1, 0] } },
+      { move: { head: [1, 1], body: [1, 0], main: [1, 1] }, swap: { head: HASK_CONE_SINK } },
+      { move: { head: [1, 1], body: [1, 0], main: [1, 1], off: [1, 1] }, swap: { head: HASK_CONE_SINK } },
+      { move: { head: [1, 0], body: [1, 0], main: [1, 0], off: [1, 1] } },
       {},
-      { swap: { tail: ['.......sS', '.....sSSS', '...sSSSs.', '.sSSSs...', 'sSSs.....', '.........'] } },
-      {},
+      { move: { head: [1, 0], body: [1, 0], main: [1, 0] } },
+      { move: { head: [1, 1], body: [1, 0], main: [1, 1] }, swap: { head: HASK_CONE_SINK } },
+      { move: { head: [1, 1], body: [1, 0], main: [1, 1], off: [1, 1] }, swap: { head: HASK_CONE_SINK } },
+      { move: { head: [1, 0], body: [1, 0], main: [1, 0], off: [1, 1] } },
     ],
-    idleMs: [1500, 110, 100, 1450, 90, 657],
+    idleMs: [1000, 180, 200, 300, 200, 667, 180, 200, 300, 680],
     period: 3907,
-    // he lifts the hook and narrows his eye at it; a glint runs along the curve to the point; held; it snaps down and the tail lashes
+    // the stroke: draw up (the tail lifts), plant, DRIVE — the brine thrown up — hold, recover
     tic: [
-      { hide: ['mainArm'], show: ['armUp'], nudge: { hook: [0, -1] }, eyes: 'smug' },
-      { hide: ['mainArm'], show: ['armUp'], nudge: { hook: [0, -1] }, eyes: 'smug', extra: [[20, 21, 'W']] },
-      { hide: ['mainArm'], show: ['armUp'], nudge: { hook: [0, -1] }, eyes: 'smug', extra: [[21, 20, 'W']] },
-      { hide: ['mainArm'], show: ['armUp'], nudge: { hook: [0, -1] }, eyes: 'smug' },
-      { swap: { tail: HASK_LASH } },
+      { move: { head: [-1, 0], body: [-1, 0], main: [-1, 0], off: [-1, 0] }, swap: { tail: HASK_TAIL_UP } },
+      { show: ['splash'] },
+      { move: { head: [1, 1], body: [1, 0], main: [1, 1], off: [-1, 0] }, swap: { tail: HASK_TAIL_DOWN, head: HASK_CONE_SINK }, show: ['splash2'] },
+      { move: { head: [1, 1], body: [1, 0], main: [1, 1], off: [-1, 0] }, swap: { tail: HASK_TAIL_DOWN, head: HASK_CONE_SINK }, show: ['splash2'], nudge: { splash2: [0, -1] } },
+      { move: { head: [1, 0], body: [1, 0], main: [1, 0] } },
       {},
     ],
-    ticMs: [200, 120, 160, 440, 100, 130],
+    ticMs: [200, 100, 140, 340, 220, 240],
     ticEvery: 5500,
-    // a predator's lock-on: the head snaps forward and cocks snout-down, eye narrowed; the tail lashes; holds, staring; slowly back
+    // dry and patient: the cone dips at you, slowly; the tail's tip flicks; he straightens
     react: [
-      { move: { head: [1, 0] }, swap: { head: dropFront(HASK_HEAD, 8) }, eyes: 'smug' },
-      { move: { head: [1, 0] }, swap: { head: dropFront(HASK_HEAD, 8), tail: HASK_LASH }, eyes: 'smug' },
-      { move: { head: [1, 0] }, swap: { head: dropFront(HASK_HEAD, 8) } },
-      { move: { head: [1, 0] } },
+      { move: { head: [0, 1] } },
+      { move: { head: [0, 1] }, swap: { head: HASK_CONE_SINK, tail: HASK_TAIL_UP } },
+      { move: { head: [0, 1] }, swap: { head: HASK_CONE_SINK } },
+      {},
     ],
-    reactMs: [70, 110, 560, 260],
+    reactMs: [140, 160, 420, 260],
   },
-  // ── Wren: a small round body under a huge green hat with a sprout; a big round nose, a rosy cheek, a little white beard;
-  //    a moss coat (with the hat, the biggest mass); short legs; a glowing vial hanging from the off hand, at the side.
-  //    MOTION — small, odd, ominous: the body never moves in the idle; only the vial's light breathes, and the lids grow heavy.
   wren: {
     inks: {
-      s: ['skinRose', 0], S: ['skinRose', 1], L: ['skinRose', 2], ...BOOTS,
-      l: ['leaf', 2], g: ['leaf', 0], G: ['leaf', 2], H: ['leaf', 1], T: ['aqua', 2], t: ['aqua', 1],
-      W: ['hairWhite', 2], w: ['hairWhite', 1], N: ['skinRose', 2], n: ['skinRose', 1],
-      m: ['moss', 0], M: ['moss', 1], Q: ['moss', 2], a: ['glass', 1], E: ['venom', 2], e: ['venom', 1], X: ['white', 2], V: ['venom', 3],
+      g: '#27716f', j: '#2f966a', J: '#5ab659', i: '#bdd763', v: '#387253', V: '#529650', W: '#7cbb4e',
+      y: '#f4e341', H: '#dab570', h: '#b48355', d: '#5a4646', D: '#866353',
+      e: '#977b6b', E: '#d5b583', n: '#9e7466', N: '#c5836e', m: '#ffcfb4', M: '#eb876a',
+      l: '#a55a50', L: '#cc804b', f: '#d9945f', I: '#bcada7', X: '#8e7b67',
     },
-    skin: 'L',
+    skin: 'N',
     parts: [
-      { id: 'offArm', group: 'off', x: 5, y: 17, rows: ['..mM', '.mM.', '.SL.'] },
-      { id: 'body', group: 'body', x: 7, y: 16, rows: ['.mMMMMQ..', 'mMMMMMMQ.', 'mMMMMMMMQ', 'mTTTTTTTQ', 'mMMMMMMMQ', '.mMMMMMQ.'] },
-      { id: 'boots', group: 'body', x: 8, y: 22, rows: ['bBB.bBB', 'bBBBbBBB'] },
-      { id: 'head', group: 'head', x: 5, y: 10, rows: ['WwSSSLLLLL...', 'WwSSLLLLLLNN.', 'WSSSLLLLLLNNN', 'WSSSLLLLWWnnn', '.sSSSLWWWWW..', '.sSSSWWWWW...', '..sSWWWW.....'] },
-      { id: 'hat', group: 'head', x: 5, y: 2, rows: HAT },
-      { id: 'vial', group: 'off', x: 3, y: 20, rows: ['.w.', '.a.', 'aEa', 'EEE', 'eEe'] },
-      { id: 'mainArm', group: 'main', x: 15, y: 17, rows: ['Mm.', 'MM.', 'LS.'] },
+      { id: 'boots', group: 'back', x: 9, y: 22, rows: ['DhD..Dh.', 'dDDd.dDDd'] },
+      { id: 'body', group: 'body', x: 6, y: 14, rows: ['...iiiiiiiii...', '..iJJJJJJJJJj..', '.dJJJJJJJJJJjg.', 'jJddJJJJJJJJjgg', 'jJJJddddydddjgg', 'jJjJJjJJjJJjggg', '.jJjJJjJJjJjgg.', '..jjjjjjjjjgg..'] },
+      { id: 'armB', group: 'off', x: 4, y: 15, rows: ['.jj', 'jJ.', 'jj.', '.jj'] },
+      { id: 'handB', group: 'off', x: 7, y: 18, rows: ['eE', 'Ee'] },
+      { id: 'beard', group: 'head', x: 9, y: 14, rows: ['IIII..IIII', '.XII..IIX.'] },
+      { id: 'nose', group: 'head', x: 13, y: 14, rows: WREN_NOSE },
+      { id: 'head', group: 'head', x: 6, y: 4, rows: WREN_POT },
+      { id: 'sprout', group: 'head', x: 11, y: 2, rows: ['iJ.Ji', '..v..'] },
+      { id: 'armF', group: 'main', x: 19, y: 15, rows: ['jj.', '.jj', '..j'] },
+      { id: 'stick', group: 'main', x: 23, y: 16, rows: ['H', 'D', 'D', 'D', 'D', 'D', 'D', 'd'] },
+      { id: 'handF', group: 'main', x: 22, y: 17, rows: ['eE', 'Ee'] },
+      { id: 'dust', group: 'main', x: 22, y: 22, hidden: true, ring: 0, rows: ['I...I', '.I.I.'] },
     ],
-    eyes: [[11, 11], [14, 11]],
-    // still as a stone, the longest loop of the five: a long dark, then the vial's light swells, holds and ebbs; at the ebb his lids sink
+    eyes: [],
+    // the pot settles onto his shoulders (it sinks a px, the hands with it) and the potato nose swings forward and back under the rim
     idle: [
-      { swap: { vial: VIAL_DIM } },
+      { swap: { nose: WREN_NOSE_BACK } },
+      { swap: { head: WREN_POT_SINK }, nudge: { sprout: [0, 1] } },
+      { swap: { head: WREN_POT_SINK }, nudge: { sprout: [0, 1] }, move: { main: [0, 1], off: [0, 1] } },
+      { swap: { head: WREN_POT_SINK, nose: WREN_NOSE_FWD }, nudge: { sprout: [0, 1] }, move: { main: [0, 1], off: [0, 1] } },
+      { swap: { nose: WREN_NOSE_FWD }, move: { main: [0, 1], off: [0, 1] } },
       {},
-      { swap: { vial: VIAL_BRIGHT } },
-      {},
-      { swap: { vial: VIAL_DIM }, eyes: 'smug' },
     ],
-    idleMs: [2700, 300, 900, 300, 1103],
+    idleMs: [2400, 300, 280, 900, 450, 973],
     period: 5303,
-    // the vial flares and a spore slips out, drifting up past him, slowly; his eyes follow it back; the hat's sprout sags
+    // he lifts the root stick and stamps it (dust, the pot jolts); the nose drops, swings forward and back, and hangs still
     tic: [
-      { swap: { vial: VIAL_BRIGHT } },
-      { swap: { vial: VIAL_BRIGHT }, extra: [[4, 18, 'V']] },
-      { extra: [[3, 16, 'E']], look: [-1, 0] },
-      { swap: { vial: VIAL_DIM }, extra: [[4, 14, 'E']], look: [-1, 0] },
-      { swap: { vial: VIAL_DIM, hat: HAT_SAG }, extra: [[3, 12, 'e']], look: [-1, 0] },
-      { swap: { vial: VIAL_DIM, hat: HAT_SAG }, extra: [[2, 10, 'e']] },
-      { swap: { vial: VIAL_DIM } },
+      { nudge: { stick: [0, -1], handF: [0, -1], armF: [0, -1] }, swap: { nose: WREN_NOSE_BACK } },
+      { nudge: { stick: [0, -2], handF: [0, -2], armF: [0, -1] } },
+      { swap: { head: WREN_POT_SINK, nose: WREN_NOSE_DROP }, nudge: { sprout: [0, 1] }, move: { main: [0, 1], off: [0, 1] }, show: ['dust'] },
+      { swap: { head: WREN_POT_SINK, nose: WREN_NOSE_FWD }, show: ['dust'], nudge: { dust: [0, -1], sprout: [0, 1] } },
+      { swap: { nose: WREN_NOSE_BACK } },
+      {},
     ],
-    ticMs: [260, 300, 340, 340, 360, 340, 240],
+    ticMs: [200, 200, 190, 240, 200, 260],
     ticEvery: 7100,
-    // a slow look up from under the hat: the brim sinks over the eyes; then it tips back and he is looking up at you, staring; the vial flares
+    // the pot jolts down onto his shoulders and the nose flops: down, forward, back, still
     react: [
-      { nudge: { hat: [0, 1] }, eyes: 'hidden' },
-      { eyes: 'closed' },
-      { swap: { hat: liftFront(HAT, 6), vial: VIAL_BRIGHT }, look: [0, -1] },
-      { swap: { hat: liftFront(HAT, 6), vial: VIAL_BRIGHT }, look: [0, -1], eyes: 'smug' },
-      { eyes: 'smug' },
+      { swap: { head: WREN_POT_SINK, nose: WREN_NOSE_DROP }, nudge: { sprout: [0, 1] } },
+      { swap: { nose: WREN_NOSE_FWD } },
+      { swap: { nose: WREN_NOSE_BACK } },
+      { swap: { nose: WREN_NOSE_FWD } },
+      {},
     ],
-    reactMs: [420, 300, 640, 420, 300],
+    reactMs: [140, 180, 220, 200, 260],
   },
 }
 
@@ -511,7 +587,7 @@ export interface SpriteSize {
   eyes: 'dot' | 'pack'
 }
 
-export const DOCK_SIZE: SpriteSize = { w: MINI_W, h: MINI_H, shadow: { cx: 11.5, cy: MINI_FEET + 1.6, rx: 7, ry: 1.3, rows: [MINI_FEET + 1, MINI_FEET + 2] }, outer: false, eyes: 'dot' }
+export const DOCK_SIZE: SpriteSize = { w: MINI_W, h: MINI_H, shadow: { cx: 13.5, cy: MINI_FEET + 1.6, rx: 8, ry: 1.3, rows: [MINI_FEET + 1, MINI_FEET + 2] }, outer: false, eyes: 'dot' }
 
 /** One dock frame. `locked`: the figure as a shadow (the company not open yet). */
 export function miniFrame(id: PersonaId, anim: MiniAnim, frame: number, locked = false): MiniFrame {
@@ -543,6 +619,11 @@ export function paintSprite(face: MiniFace, anim: MiniAnim, frame: number, locke
     if (ch === 'k') return INK_RGB
     const ink = face.inks[ch]
     if (!ink) return INK_RGB
+    if (typeof ink === 'string') {
+      const rgb = rgbOf(ink)
+      // a shadow: the lit half of the inks in the lighter navy, the rest in the darker
+      return locked ? rgbOf(RAMPS.navy[rgb[0] * 0.3 + rgb[1] * 0.59 + rgb[2] * 0.11 >= 150 ? 1 : 0]) : rgb
+    }
     if (locked) return rgbOf(RAMPS.navy[ink[1] >= 2 ? 1 : 0])
     return rgbOf(RAMPS[ink[0]][ink[1]])
   }

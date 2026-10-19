@@ -4,10 +4,10 @@
  * `liaison-<company>`), from the CC0 Tiny Swords pack.
  *
  *   npx tsx scripts/stop-scenes.ts
- *   npx tsx scripts/stop-scenes.ts --proposals <dir>   # also the two proposed posts, into <dir> only
- *   npx tsx scripts/stop-scenes.ts --faces <dir>       # ONLY the posts, each with its company face (the
- *                                                       # hand-drawn prototype, `render/hero/post.ts`) at the
- *                                                       # counter, into <dir>: the review cards; nothing shipped
+ *
+ * Each post's liaison is the designer's approved final (Oct 2026), drawn
+ * pixel for pixel by its own design module (`scripts/liaison-finals.ts`):
+ * Saffra, Hask, Brannoch, Odile and Wren, at the pack's scale.
  *
  * Writes `public/assets/scenes/<scene>.png` (native pixels; the page draws them
  * at 2× with `image-rendering: pixelated`) and `src/ui/shell/stopScenes.generated.ts`
@@ -38,8 +38,8 @@ import { dirname, join, resolve } from 'node:path'
 import sharp from 'sharp'
 import { companyById, type CompanyId } from '../src/game/data/companies'
 import { companyStandardPalette, companyStandardRows } from '../src/game/data/companyStandard'
-import { postFrame } from '../src/game/render/hero/post'
 import type { PersonaId } from '../src/game/render/hero/rig'
+import { LIAISON_FINALS, boxOf, measureFinal } from './liaison-finals'
 
 const ROOT = resolve(import.meta.dirname, '..')
 const CACHE = join(ROOT, 'node_modules', '.cache', 'cc0-pack')
@@ -717,25 +717,13 @@ interface Anchors {
   fire?: Pt
   /** A tall speaker: the bubble hangs beside the face, never over the plume. */
   beside?: true
+  /** A liaison's post: where the bubble's point hangs, beside the head and clear of the liaison in every frame. */
+  talk?: Pt
+  /** A liaison's post: the top-left of the receipt's 52 px cameo, framing the head mass. */
+  cameo?: Pt
 }
 
-/**
- * `--faces <dir>`: every post bakes with its company's face at the counter in
- * place of the CC0 pawn (the review cards), and only the posts are written,
- * only into <dir>. The face stands as the pawn does: feet on the post's floor,
- * turned as the pawn is turned.
- */
-const fi = process.argv.indexOf('--faces')
-const FACES_DIR = fi > 0 ? resolve(process.argv[fi + 1] ?? 'faces') : null
-function faceOr(id: PersonaId, pawn: Cv, turned: boolean): Cv {
-  if (!FACES_DIR) return pawn
-  const f = postFrame(id, 'idle', 0)
-  const c = new Cv(f.w, f.h)
-  c.d.set(f.rgba)
-  return turned ? flip(trim(c)) : trim(c)
-}
-
-async function bake(proposals: string | null): Promise<Record<string, Anchors>> {
+async function bake(): Promise<Record<string, Anchors>> {
   const flat = await load(P.flat)
   const grass = crop(flat, 64, 64, 64, 64)
   const earth = crop(flat, 384, 64, 64, 64)
@@ -900,285 +888,310 @@ async function bake(proposals: string | null): Promise<Record<string, Anchors>> 
     await write('recruit', c)
   }
 
-  // ---- the liaisons' posts (Draft 4 · D): each company's own stall on its
-  // own land, its standard on a pole to the left, its liaison behind the
-  // counter. Every post keeps one layout, so a city's band crops them alike:
-  // the liaison's head at y ≈ 70, the counter from y 108, the bubble's room to
-  // the right of the head (rows 40–80), the land behind and beside the stall.
-  const LX = 110
+  // ---- the liaisons' posts (Draft 4 · D): each company's own place on its
+  // own land, its standard on a pole at the left, its liaison behind the
+  // stall's counter. The liaison is the designer's approved final, pixel for
+  // pixel and unlit by the post's light (`scripts/liaison-finals.ts`, the
+  // still: idle frame 1), feet on the post's floor at FEET. Every post keeps
+  // one layout, so a city's band crops them alike: the counter is LOW (its
+  // top 10 px over the feet) and runs in from the left to stop short of the
+  // liaison's near side, so the head, the hat and the prop all read; the
+  // phone's upper right is the bubble's sky, so nothing tall stands there.
   const FEET = 130
-  const liaisonPost = async (name: string, fig: Cv, draw: (c: Cv, top: number) => Promise<void>, lit?: (c: Cv) => void, dir = OUT) => {
-    const c = scene()
-    const top = FEET - fig.h
-    await draw(c, top)
-    if (lit) lit(c)
-    // The speaker's mouth level, not a plume's tip: the bubble's tail points at the face.
-    if (dir === OUT) out[name] = { speaker: [OX + LX, Math.max(top, FEET - 60)] }
-    await write(name, c, dir)
+  /** The counter's top: 10 px over the feet, under every liaison's prop hand. */
+  const COUNTER_TOP = FEET - 10
+  /** A liaison's bubble at its biggest (172 × 88 CSS px at 2×, `liaisons.css`), in native px: `talk` keeps it clear of the liaison in every frame. */
+  const BUBBLE = { w: 86, h: 44 }
+  /** What a phone's city band sees of a post: native x 102..298 (local 32..228), from row 36. */
+  const PHONE = { x1: OX + 228, y0: 36 }
+  interface Stand {
+    /** The liaison's ground shadow centre (local x). */
+    fx: number
+    /** The top of the liaison's head mass, and its left and right extent (local). */
+    top: number
+    left: number
+    right: number
+    /** Draw the liaison now: after the post's back, before its counter. */
+    stand: () => void
   }
-  const flagAt = (c: Cv, company: CompanyId, x = 50) => stand(c, standard(company, 30), x, FEET + 2, 10)
-  const cloth = (company: CompanyId): [RGB, RGB] => {
-    const k = hex(companyById(company).color)
-    return [k, darker(k, 0.3)]
+  const liaisonPost = async (name: string, persona: PersonaId, fx: number, draw: (c: Cv, at: Stand) => Promise<void>, lit?: (c: Cv) => void) => {
+    const L = LIAISON_FINALS[persona]
+    const m = measureFinal(L)
+    const frames = [...L.idle(), ...L.tic()]
+    const still = new Cv(frames[0].w, frames[0].h)
+    still.d.set(frames[0].data)
+    // the design canvas → the post's local px: the shadow's centre on fx, the boots on FEET
+    const ox = fx - m.cx
+    const oy = FEET - m.feet
+    const b = boxOf(frames[0])
+    const c = scene()
+    let drawn: Uint8ClampedArray | null = null
+    const at: Stand = {
+      fx,
+      top: oy + b.y0,
+      left: ox + b.x0,
+      right: ox + b.x1,
+      stand: () => {
+        c.draw(still, ox, oy)
+        drawn = c.d.slice()
+      },
+    }
+    await draw(c, at)
+    const was = drawn as Uint8ClampedArray | null
+    if (!was) throw new Error(`${name}: the liaison never stood at the post`)
+    // The liaison's own opaque pixels that still show (not behind the counter)
+    // keep the approved inks: the post's light falls on the place, not on them.
+    const mine: number[] = []
+    for (let y = 0; y < still.h; y++)
+      for (let x = 0; x < still.w; x++) {
+        if (still.d[(y * still.w + x) * 4 + 3] < 255) continue
+        const X = OX + ox + x
+        const Y = oy + y
+        if (X < 0 || Y < 0 || X >= c.w || Y >= c.h) continue
+        const i = (Y * c.w + X) * 4
+        if (c.d[i] === was[i] && c.d[i + 1] === was[i + 1] && c.d[i + 2] === was[i + 2]) mine.push(i)
+      }
+    const keep = c.d.slice()
+    if (lit) lit(c)
+    for (const i of mine) for (let k = 0; k < 4; k++) c.d[i + k] = keep[i + k]
+
+    // The anchors. The speaker is the face (the bubble's sense of who
+    // speaks); the bubble's point, `talk`, is the nearest place beside the
+    // head where the biggest bubble clears the liaison in EVERY frame of its
+    // idle and tic (2 px to spare), its top inside the phone's band — a hat
+    // narrows upward, so that is high beside the crown; the cameo frames the
+    // head mass (hat to chin) in the receipt's 52 px box.
+    const speaker: Pt = [OX + ox + m.face[0], oy + m.face[1]]
+    const clearOf = (ty: number) => {
+      let tx = OX + ox + m.face[0]
+      for (const f of frames)
+        for (let y = 0; y < f.h; y++) {
+          const Y = oy + y
+          if (Y < ty + 11 - BUBBLE.h - 2 || Y > ty + 13) continue
+          for (let x = 0; x < f.w; x++) if (f.data[(y * f.w + x) * 4 + 3]) tx = Math.max(tx, OX + ox + x + 3 - 9)
+        }
+      return tx
+    }
+    // nearest the head wins; between two as near, the higher (the post's sky, not its yard)
+    const ty0 = PHONE.y0 + BUBBLE.h - 11 + 2
+    let [tx, ty, best] = [0, 0, Infinity]
+    for (let y = ty0; y <= speaker[1]; y++) {
+      const x = clearOf(y)
+      const cost = x + (y - ty0) / 2
+      if (cost < best) [tx, ty, best] = [x, y, cost]
+    }
+    if (tx + 9 + BUBBLE.w > PHONE.x1) console.warn(`  ! ${name}: the bubble runs ${tx + 9 + BUBBLE.w - PHONE.x1}px past a phone's view (fx ${fx})`)
+    const hx = Math.round((m.head.x0 + m.head.x1 + 1) / 2)
+    out[name] = { speaker, talk: [tx, ty], cameo: [OX + ox + hx - 26, oy + m.head.y0 - 2] }
+    await write(name, c)
+  }
+  const flagAt = (c: Cv, company: CompanyId, x: number) => stand(c, standard(company, 30), x, FEET - 2, 10)
+  /** The stall: two posts and an awning from `x0` across `w`, its fringe `gap` px over the liaison's head. */
+  const stall = (c: Cv, at: Stand, x0: number, w: number, cloth: RGB, trimK: RGB, gap = 4, h = 14) => {
+    const y = at.top - gap - h - 3
+    c.draw(post(FEET - y - 4), x0 + 2, y + 6)
+    c.draw(post(FEET - y - 4), x0 + w - 7, y + 6)
+    c.draw(awning(w + 8, h, cloth, trimK), x0 - 4, y)
+    return y + h + 3
   }
 
   // Peppercorn Co. — Saffra's spice stall at the edge of its fields: chili
   // rows behind, a charred strip where last summer's burn ran, sacks of spice
-  // and a brazier (the burning road).
-  {
-    const fig = faceOr('saffra', await idle(P.pawn('Red')), false)
-    await liaisonPost(
-      'liaison-spice',
-      fig,
-      async (c, top) => {
-        meadow(c, 51)
-        field(c, earth, 60, 98, 53)
-        yard(c, earth, 120, 132, 160, 30, 52)
-        await wings(c, 'day')
-        c.put(await tree(1), 2, 62)
-        c.put(await tree(3), 250, 58)
-        c.put(trim(await load(P.house)), -30, 72)
-        flagAt(c, 'spice')
-        const w = 108
-        const x0 = LX - w / 2
-        c.draw(post(56), x0 + 2, top - 14)
-        c.draw(post(56), x0 + w - 7, top - 14)
-        c.put(fig, LX, FEET)
-        c.draw(counter(w, 24, [hex('#c44a3a'), CREAM]), x0, 108)
-        for (const [i, k] of [[8, 0], [30, 1], [78, 2], [100, 3]] as const) c.draw(chilies(14 + (k % 2) * 5), x0 + i, top - 20)
-        c.draw(awning(w + 8, 14, hex(companyById('spice').color), CREAM), x0 - 4, top - 32)
-        c.put(sack([214, 72, 44]), x0 + 18, 112)
-        c.put(sack([236, 160, 52]), x0 + 40, 112)
-        c.put(sack([132, 92, 52]), x0 + 68, 112)
-        stand(c, sack([226, 196, 70], 18), 176, 140)
-        stand(c, sack([214, 72, 44], 18), 192, 147)
-        stand(c, brazier(), 212, 136, 16)
-        c.put(half(fireFrame), 212, 114)
-        c.put(await deco(10), 18, 148)
-      },
-      (c) => {
-        multiply(c, [255, 236, 212])
-        light(c, OX + 212, 110, 46, [255, 150, 60], 1.1)
-      },
-    )
-  }
-
-  // Easel House — Vell's canal gallery: a lavender tent, an easel and framed
-  // canvases, the canal at the bank's foot. (The slot becomes Butcherblock's:
-  // its smokehouse is a proposal, `--proposals`.)
-  {
-    const fig = flip(await idle(P.pawn('Purple')))
-    await liaisonPost('liaison-art', fig, async (c, top) => {
-      meadow(c, 61)
-      yard(c, earth, 120, 118, 150, 22, 62)
+  // on the counter and a brazier in the yard (the burning road). Her ember
+  // pot hangs clear past the counter's end.
+  await liaisonPost(
+    'liaison-spice',
+    'saffra',
+    92,
+    async (c, at) => {
+      meadow(c, 51)
+      field(c, earth, 60, 98, 53)
+      yard(c, earth, 120, 132, 160, 30, 52)
       await wings(c, 'day')
-      c.put(await tree(2), 12, 70)
-      c.put(await tree(0), 246, 66)
-      c.put(await tree(1), 196, 30)
-      const lav = hex(companyById('art').color)
-      c.put(tent(84, 58, mix(lav, CREAM, 0.35), darker(lav, 0.25)), LX + 6, top + 6)
-      flagAt(c, 'art')
-      c.put(fig, LX, FEET)
-      c.draw(counter(100, 24, cloth('art')), LX - 48, 108)
-      c.put(painting(16, 14, 0), LX - 28, 110)
-      c.put(painting(12, 16, 1), LX + 28, 110)
-      stand(c, easel(), 188, 134, 18)
-      stand(c, painting(18, 14, 2), 214, 136)
-      stand(c, crate(), 220, 147)
-      c.draw(canal(), -OX, 136)
-    })
-  }
+      c.put(await tree(1), 2, 62)
+      c.put(await tree(3), 250, 58)
+      c.put(trim(await load(P.house)), -30, 72)
+      const x0 = at.fx - 74
+      const under = stall(c, at, x0, 100, hex(companyById('spice').color), CREAM)
+      for (const [i, k] of [[34, 0], [46, 1], [58, 2], [70, 3]] as const) c.draw(chilies(14 + (k % 2) * 5), x0 + i, under - 2)
+      flagAt(c, 'spice', 40)
+      at.stand()
+      c.draw(counter(82, 18, [hex('#c44a3a'), CREAM]), x0, COUNTER_TOP)
+      c.put(sack([214, 72, 44]), x0 + 16, COUNTER_TOP + 3)
+      c.put(sack([236, 160, 52]), x0 + 34, COUNTER_TOP + 3)
+      c.put(sack([132, 92, 52]), x0 + 54, COUNTER_TOP + 3)
+      stand(c, sack([226, 196, 70], 18), 178, 142)
+      stand(c, sack([214, 72, 44], 18), 194, 147)
+      stand(c, brazier(), 214, 136, 16)
+      c.put(half(fireFrame), 214, 114)
+      c.put(await deco(10), 18, 148)
+    },
+    (c) => {
+      multiply(c, [255, 236, 212])
+      light(c, OX + 214, 110, 46, [255, 150, 60], 1.1)
+    },
+  )
+
+  // Butcherblock — the salters' landing on the salt marsh, where Hask ties up
+  // his barge: a plank smokehouse breathing smoke, haunches on the hooks, the
+  // reed channel behind with a salt barge moored at its jetty, sacks of salt
+  // on its deck, the marsh mist low over the water. His salting block stands
+  // ahead of him on the landing (his tail and his pole stay clear of it).
+  await liaisonPost(
+    'liaison-art',
+    'hask',
+    86,
+    async (c, at) => {
+      meadow(c, 101)
+      await river(c, 78, 26, true)
+      yard(c, earth, 130, 136, 170, 24, 102)
+      await wings(c, 'day')
+      c.put(await tree(2), -16, 70)
+      c.put(await tree(0), 262, 66)
+      for (const x of [-34, 96, 250, 284]) c.draw(reeds(), x, 82)
+      c.draw(barge(), 136, 80)
+      stand(c, smokehouse(), 4, 116, 60)
+      c.put(smoke(), 12, 62)
+      // the hook rail between the smokehouse and Hask: two haunches curing
+      const rx = 2
+      const rail = 92
+      c.draw(post(FEET - rail - 6), rx, rail - 2)
+      c.draw(post(FEET - rail - 6), rx + 26, rail - 2)
+      c.rect(OX + rx, rail, 29, 2, WD.dk)
+      c.rect(OX + rx, rail, 29, 1, WD.md)
+      for (const x of [rx + 8, rx + 20]) {
+        c.rect(OX + x, rail + 2, 1, 3, IRON)
+        c.put(haunch(), x, rail + 17)
+      }
+      flagAt(c, 'art', 40)
+      at.stand()
+      const bx = at.fx + 44
+      c.draw(butcherBlock(68, 18), bx, COUNTER_TOP)
+      c.put(sack([244, 240, 228], 14), bx + 12, COUNTER_TOP + 3)
+      c.put(haunch(), bx + 32, COUNTER_TOP + 3)
+      c.put(cleaver(), bx + 52, COUNTER_TOP + 2)
+      stand(c, sack([244, 240, 228], 18), 222, 144)
+      stand(c, sack([236, 232, 220], 16), 238, 149)
+      c.put(await deco(15), 30, 150)
+    },
+    (c) => {
+      multiply(c, [234, 236, 226])
+      mist(c, 80, 104)
+    },
+  )
 
   // Ironvein — Brannoch's ore yard at the foot of its quarry: the cut cliff
   // behind with a timbered adit and a cart of ore on its rails, a stone
-  // counter, ore heaps and an anvil in its forge glow.
-  {
-    const fig = faceOr('brannoch', await idle(P.warrior('Blue')), false)
-    await liaisonPost(
-      'liaison-metals',
-      fig,
-      async (c, top) => {
-        meadow(c, 71)
-        await quarry(c, 102)
-        yard(c, earth, 120, 128, 170, 34, 72)
-        await wings(c, 'wood')
-        c.put(await tree(1), -4, 74)
-        c.put(await tree(3), 262, 76)
-        c.put(adit(), 206, 104)
-        c.put(rails(46), 210, 116)
-        stand(c, oreCart(), 220, 116, 24)
-        c.put(await deco(5), 160, 104)
-        c.put(await deco(4), 248, 106)
-        flagAt(c, 'metals')
-        // A lean-to over the counter, slate and the company's blue.
-        c.draw(post(80), LX - 54, top - 12)
-        c.draw(post(80), LX + 49, top - 12)
-        c.put(fig, LX, FEET)
-        c.draw(stoneCounter(104, 24), LX - 52, 108)
-        c.draw(awning(116, 12, hex(companyById('metals').color), STONE.md), LX - 58, top - 24)
-        c.put(oreHeap(26, 12, [120, 176, 255]), LX - 28, 111)
-        c.put(oreHeap(20, 10, [246, 206, 96]), LX + 30, 111)
-        stand(c, forge(), 166, 140, 24)
-        stand(c, anvil(), 196, 146, 26)
-        stand(c, oreHeap(30, 14, [96, 150, 236]), 222, 148)
-        stand(c, crate(), 22, 142)
-        c.put(await deco(9), 252, 150)
-      },
-      (c) => {
-        multiply(c, [214, 222, 236])
-        light(c, OX + 166, 126, 36, [255, 140, 60], 0.75)
-      },
-    )
-  }
+  // counter with ore under a slate lean-to, and the forge and anvil in its
+  // glow. He stands at the counter's end, boots and mallet clear of it.
+  await liaisonPost(
+    'liaison-metals',
+    'brannoch',
+    104,
+    async (c, at) => {
+      meadow(c, 71)
+      await quarry(c, 102)
+      yard(c, earth, 120, 128, 170, 34, 72)
+      await wings(c, 'wood')
+      c.put(await tree(1), -4, 74)
+      c.put(await tree(3), 262, 76)
+      c.put(adit(), 214, 104)
+      c.put(rails(46), 218, 116)
+      stand(c, oreCart(), 228, 116, 24)
+      c.put(await deco(5), 160, 104)
+      const x0 = at.fx - 92
+      // A lean-to over the counter, slate and the company's blue.
+      const y = at.top - 10
+      c.draw(post(FEET - y - 2), x0 + 2, y + 4)
+      c.draw(post(FEET - y - 2), x0 + 62, y + 4)
+      c.draw(awning(70, 12, hex(companyById('metals').color), STONE.md), x0 - 2, y - 8)
+      flagAt(c, 'metals', 40)
+      at.stand()
+      c.draw(stoneCounter(64, 20), x0 + 2, COUNTER_TOP - 2)
+      c.put(oreHeap(22, 10, [120, 176, 255]), x0 + 18, COUNTER_TOP + 1)
+      c.put(oreHeap(16, 8, [246, 206, 96]), x0 + 44, COUNTER_TOP + 1)
+      stand(c, forge(), 176, 140, 24)
+      stand(c, anvil(), 206, 146, 26)
+      stand(c, oreHeap(30, 14, [96, 150, 236]), 236, 148)
+      c.put(await deco(9), 252, 150)
+    },
+    (c) => {
+      multiply(c, [222, 228, 240])
+      light(c, OX + 176, 126, 36, [255, 140, 60], 0.75)
+    },
+  )
 
-  // Rosethread — Odile's silk stall by the ford: the river behind with its
-  // stepping stones, reeds on the bank, bolts hung on a line and a loom.
-  {
-    const fig = faceOr('odile', await idle(P.pawn('Yellow')), false)
-    await liaisonPost('liaison-silk', fig, async (c, top) => {
+  // Rosethread — Odile's toll post by the ford: the river behind with its
+  // stepping stones, reeds on the bank, bolts hung on a line over the
+  // counter, more on it, and a loom in the yard. Her lantern swings clear.
+  await liaisonPost(
+    'liaison-silk',
+    'odile',
+    90,
+    async (c, at) => {
       meadow(c, 81)
       await river(c, 66, 22)
       yard(c, earth, 120, 130, 160, 30, 82)
       await wings(c, 'day')
       c.put(await tree(3), 4, 66)
       c.put(await tree(2), 254, 64)
-      c.put(await tree(0), 150, 48)
       c.put(await tree(1), 40, 46)
-      for (const x of [-20, 30, 168, 238, 290]) c.draw(reeds(), x, 76)
-      flagAt(c, 'silk')
+      for (const x of [-20, 168, 238, 290]) c.draw(reeds(), x, 76)
       const rose = hex(companyById('silk').color)
-      const line = top - 16
-      c.draw(post(48), LX - 52, line - 2)
-      c.draw(post(48), LX + 47, line - 2)
-      c.rect(OX + LX - 50, line, 98, 1, WD.dk)
-      const hung: RGB[] = [rose, CREAM, [196, 74, 96], GOLD, mix(rose, CREAM, 0.5), [150, 70, 120]]
-      hung.forEach((k, i) => c.draw(drape(13, 22 + ((i * 7) % 9), k), LX - 46 + i * 16, line + 1))
-      c.put(fig, LX, FEET)
-      c.draw(counter(100, 24, [mix(rose, CREAM, 0.3), rose]), LX - 48, 108)
-      c.put(bolts([rose, CREAM, GOLD]), LX - 26, 110)
-      c.put(bolts([[196, 74, 96], mix(rose, CREAM, 0.5)]), LX + 30, 110)
-      stand(c, loom(rose), 196, 138, 30)
-      stand(c, bolts([CREAM, rose, [150, 70, 120]]), 226, 146)
+      const x0 = at.fx - 76
+      // the drying line, west of the counter (a desk's wider view)
+      const line = at.top + 2
+      c.draw(post(FEET - line), -46, line - 2)
+      c.draw(post(FEET - line), 4, line - 2)
+      c.rect(OX - 44, line, 50, 1, WD.dk)
+      const hung: RGB[] = [rose, CREAM, [196, 74, 96]]
+      hung.forEach((k, i) => c.draw(drape(11, 18 + ((i * 7) % 7), k), -40 + i * 14, line + 1))
+      flagAt(c, 'silk', 40)
+      at.stand()
+      c.draw(counter(80, 18, [mix(rose, CREAM, 0.3), rose]), x0, COUNTER_TOP)
+      c.put(bolts([rose, CREAM, GOLD]), x0 + 20, COUNTER_TOP + 2)
+      c.put(bolts([[196, 74, 96], mix(rose, CREAM, 0.5)]), x0 + 46, COUNTER_TOP + 2)
+      stand(c, loom(rose), 200, 140, 30)
+      stand(c, bolts([CREAM, rose, [150, 70, 120]]), 230, 148)
       c.put(await deco(10), 22, 148)
-    })
-  }
+    },
+  )
 
-  // Moonquill — Wren's scriptorium by night: a rack of sealed scrolls, a
-  // lectern with the open ledger, candles and a warded stone. (The slot
-  // becomes Greenvial's: its glasshouse is a proposal, `--proposals`.)
-  {
-    const fig = flip(await idle(P.pawn('Blue')))
-    await liaisonPost(
-      'liaison-scrolls',
-      fig,
-      async (c, top) => {
-        meadow(c, 91)
-        await wings(c, 'wood')
-        c.put(await tree(0), 18, 70)
-        c.put(await tree(2), 248, 72)
-        c.put(await tree(1), 60, 32)
-        c.put(await tree(3), 200, 28)
-        stand(c, scrollRack(72, 48), LX, top + 18, 64)
-        flagAt(c, 'scrolls')
-        c.put(fig, LX, FEET)
-        c.draw(counter(100, 24, cloth('scrolls')), LX - 48, 108)
-        c.put(ledger(), LX - 20, 110)
-        c.put(candle(7), LX + 20, 110)
-        c.put(candle(5), LX + 26, 110)
-        c.put(candle(6), LX + 38, 110)
-        stand(c, monolith(20, 40, true), 200, 140, 18)
-        c.put(candle(5), 180, 146)
-        c.put(candle(7), 222, 146)
-        c.put(await deco(1), 236, 148)
-        c.put(await deco(11), 30, 150)
-      },
-      (c) => {
-        multiply(c, [96, 104, 168])
-        light(c, OX + LX + 10, 96, 70, [255, 180, 90], 1.2, 0.8)
-        light(c, OX + 200, 112, 40, [120, 230, 240], 0.9)
-        vignette(c, 0.45)
-      },
-    )
-  }
-
-  // ---- PROPOSALS (not shipped): the posts of the two companies that take
-  // Easel House's and Moonquill's slots, for the designer's review cards. The
-  // person at the counter is the slot's current one: a character is being
-  // drawn for each on the new rig, so the post leaves the same room for them.
-  if (proposals) {
-    // Butcherblock — the smokehouse on the salt marsh: a reed channel behind
-    // with its jetty, a plank smokehouse breathing smoke, meat on hooks, salt
-    // sacks, and a butcher's block for a counter.
-    const marshFig = faceOr('hask', flip(await idle(P.pawn('Purple'))), true)
-    await liaisonPost(
-      'proposal-butcherblock',
-      marshFig,
-      async (c, top) => {
-        meadow(c, 101)
-        await river(c, 82, 20, true)
-        yard(c, earth, 120, 136, 160, 26, 102)
-        await wings(c, 'day')
-        c.put(await tree(2), 0, 70)
-        c.put(await tree(0), 262, 66)
-        for (const x of [-30, 10, 52, 150, 236, 270]) c.draw(reeds(), x, 86)
-        c.draw(jetty(), 196, 98)
-        stand(c, smokehouse(), 190, 112, 60)
-        c.put(smoke(), 198, 58)
-        stand(c, pennant([118, 84, 60], [214, 196, 152], 'cleaver'), 50, FEET + 2, 10)
-        c.draw(post(56), LX - 52, top - 14)
-        c.draw(post(56), LX + 47, top - 14)
-        c.rect(OX + LX - 50, top - 10, 98, 2, WD.dk)
-        const meat = trim(await load('Resources/Resources/M_Idle.png'))
-        for (const x of [LX - 36, LX + 26]) {
-          c.rect(OX + x, top - 9, 1, 10, IRON)
-          c.put(half(meat), x, top + 12)
-        }
-        c.put(marshFig, LX, FEET)
-        c.draw(butcherBlock(104, 24), LX - 52, 108)
-        c.put(cleaver(), LX + 30, 109)
-        c.put(sack([244, 240, 228], 14), LX - 30, 112)
-        stand(c, sack([244, 240, 228], 18), 214, 142)
-        stand(c, sack([236, 232, 220], 18), 230, 148)
-        c.put(await deco(14), 196, 146)
-        c.put(await deco(15), 30, 148)
-      },
-      (c) => {
-        multiply(c, [222, 226, 214])
-        mist(c, 76, 92)
-      },
-      proposals,
-    )
-    // Greenvial — the glasshouse in a hidden garden: a glasshouse behind
-    // the stall, vines up its posts, potions on the counter, mushrooms in the
-    // hollow, spores glowing at dusk.
-    const gardenFig = faceOr('wren', flip(await idle(P.pawn('Blue'))), true)
-    await liaisonPost(
-      'proposal-greenvial',
-      gardenFig,
-      async (c, top) => {
-        meadow(c, 111)
-        yard(c, earth, 120, 132, 150, 26, 112)
-        await wings(c, 'wood')
-        c.put(await tree(0), 4, 70)
-        c.put(await tree(2), 258, 68)
-        stand(c, glasshouse(), 208, 118, 80)
-        stand(c, pennant([96, 150, 92], [236, 226, 170], 'vial'), 50, FEET + 2, 10)
-        c.draw(vined(post(56)), LX - 52, top - 14)
-        c.draw(vined(post(56)), LX + 47, top - 14)
-        c.draw(awning(110, 12, [96, 150, 92], [236, 226, 170]), LX - 55, top - 26)
-        c.put(gardenFig, LX, FEET)
-        c.draw(counter(100, 24, [[96, 150, 92], [64, 108, 70]]), LX - 48, 108)
-        for (const [x, k] of [[-30, 0], [-20, 1], [-10, 2], [22, 1], [32, 0]] as const) c.put(vial(k), LX + x, 110)
-        for (const [x, y, n] of [[170, 146, 2], [184, 148, 1], [226, 142, 2], [252, 146, 3], [30, 148, 2], [44, 150, 1]] as const) c.put(await deco(n), x, y)
-      },
-      (c) => {
-        multiply(c, [176, 196, 176])
-        for (const [x, y, r] of [[176, 134, 8], [228, 128, 8], [36, 136, 7], [150, 96, 5], [232, 84, 5], [92, 58, 4], [196, 70, 4]] as const) light(c, OX + x, y, r * 3, [200, 255, 140], 0.9)
-        vignette(c, 0.3)
-      },
-      proposals,
-    )
-  }
+  // Greenvial — Wren's potting yard by the glasshouse: the glasshouse behind
+  // the stall, herbs hung to dry from the awning, a counter of corked tonics
+  // and potted seedlings, stacked clay pots and seed trays in the yard,
+  // mushrooms in the grass, a few spores glowing.
+  await liaisonPost(
+    'liaison-scrolls',
+    'wren',
+    96,
+    async (c, at) => {
+      meadow(c, 111)
+      yard(c, earth, 120, 132, 150, 26, 112)
+      await wings(c, 'wood')
+      c.put(await tree(0), 262, 70)
+      c.put(await tree(2), 248, 40)
+      stand(c, glasshouse(), 24, 114, 80)
+      const x0 = at.fx - 78
+      const green = hex(companyById('scrolls').color)
+      const under = stall(c, at, x0, 90, green, [236, 226, 170], 4, 12)
+      for (const [i, k] of [[8, 0], [22, 1], [36, 2], [50, 0]] as const) c.draw(herbs(k), x0 + i, under - 1)
+      flagAt(c, 'scrolls', 40)
+      at.stand()
+      c.draw(counter(84, 18, [green, darker(green, 0.3)]), x0, COUNTER_TOP)
+      c.put(clayPot(9, true), x0 + 16, COUNTER_TOP + 2)
+      for (const [x, k] of [[27, 0], [35, 1], [43, 2], [51, 1]] as const) c.put(vial(k), x0 + x, COUNTER_TOP + 2)
+      stand(c, potStack(), 170, 140, 22)
+      stand(c, seedTray(), 196, 146, 26)
+      stand(c, clayPot(14, true), 222, 142, 14)
+      for (const [x, y, n] of [[238, 148, 2], [252, 144, 1], [24, 148, 2], [40, 150, 1]] as const) c.put(await deco(n), x, y)
+    },
+    (c) => {
+      multiply(c, [228, 240, 226])
+      // the spores' glow: faint, at the mushrooms and the glasshouse
+      for (const [x, y, r] of [[24, 140, 12], [244, 140, 12], [30, 96, 8]] as const) light(c, OX + x, y, r, [200, 255, 140], 0.6)
+    },
+  )
   return out
 }
 
@@ -1467,63 +1480,6 @@ function loom(cloth: RGB): Cv {
   c.rect(24, 34, 6, 2, WD.dk)
   return outline(c)
 }
-function painting(w: number, h: number, kind: 0 | 1 | 2): Cv {
-  const c = new Cv(w, h)
-  c.rect(0, 0, w, h, GOLD)
-  c.rect(0, 0, w, 1, [250, 214, 120])
-  c.rect(0, h - 1, w, 1, WD.dk)
-  const ix = 2
-  const iy = 2
-  const iw = w - 4
-  const ih = h - 4
-  if (kind === 0) {
-    c.rect(ix, iy, iw, ih, [126, 182, 222])
-    c.rect(ix + iw - 4, iy + 1, 2, 2, [255, 226, 96])
-    for (let x = 0; x < iw; x++) {
-      const hh = Math.round(ih * 0.45 + Math.sin((x / iw) * Math.PI) * ih * 0.2)
-      c.rect(ix + x, iy + ih - hh, 1, hh, x % 3 ? [96, 150, 80] : [80, 128, 66])
-    }
-  } else if (kind === 1) {
-    c.rect(ix, iy, iw, ih, [96, 62, 92])
-    const cx = ix + Math.floor(iw / 2)
-    c.rect(cx - 2, iy + 2, 4, 5, [234, 196, 160])
-    c.rect(cx - 2, iy + 1, 4, 1, [80, 50, 40])
-    c.rect(ix + 1, iy + ih - 4, iw - 2, 4, [70, 100, 170])
-  } else {
-    c.rect(ix, iy, iw, ih, [150, 200, 230])
-    c.rect(ix, iy + Math.floor(ih / 2), iw, Math.ceil(ih / 2), [56, 112, 170])
-    c.rect(ix + 5, iy + 2, 3, 5, CREAM)
-    c.rect(ix + 4, iy + 7, 6, 1, WD.dk)
-  }
-  return outline(c)
-}
-function easel(): Cv {
-  const c = new Cv(24, 38)
-  for (let y = 10; y < 38; y++) {
-    const t = (y - 10) / 28
-    const l = Math.round(7 - t * 6)
-    const r = Math.round(16 + t * 6)
-    c.px(l, y, WD.dk)
-    c.px(l + 1, y, WD.md)
-    c.px(r, y, WD.md)
-    c.px(r + 1, y, WD.dk)
-  }
-  c.rect(11, 0, 2, 38, WD.dk)
-  c.rect(3, 26, 18, 2, WD.md)
-  c.draw(painting(20, 24, 0), 2, 2)
-  return outline(c)
-}
-/** The canal along the bank's foot: a stone lip, the water, its ripples. */
-function canal(): Cv {
-  const c = new Cv(W, 14)
-  for (let x = 0; x < W; x++) {
-    c.px(x, 0, STONE.hi)
-    c.px(x, 1, x % 6 ? STONE.md : STONE.dk)
-    for (let y = 2; y < 14; y++) c.px(x, y, y < 5 ? [70, 128, 178] : [56, 112, 168])
-    if ((x * 7 + 3) % 13 === 0) c.rect(x, 6 + (x % 3) * 2, 3, 1, [150, 206, 236])
-  }
-  return c
-}
 function stoneCounter(w: number, h: number): Cv {
   const c = new Cv(w, h)
   c.rect(0, 0, w, 4, STONE.hi)
@@ -1555,63 +1511,114 @@ function bolts(ks: RGB[]): Cv {
   })
   return outline(c)
 }
-function scrollRack(w: number, h: number): Cv {
-  const c = new Cv(w, h)
-  c.rect(0, 0, w, h, WD.dk)
-  c.rect(0, 0, w, 3, WD.lt)
-  const cols = 6
-  const rows = 4
-  const cw = Math.floor((w - 4) / cols)
-  const ch = Math.floor((h - 6) / rows)
-  for (let j = 0; j < rows; j++)
-    for (let i = 0; i < cols; i++) {
-      const x = 2 + i * cw
-      const y = 4 + j * ch
-      c.rect(x, y, cw - 1, ch - 1, WD.sh)
-      if ((i * 5 + j * 3) % 7 === 6) continue
-      c.rect(x + 2, y + 2, cw - 5, ch - 5, CREAM)
-      c.px(x + 2 + Math.floor((cw - 5) / 2), y + 2 + Math.floor((ch - 5) / 2), [200, 184, 146])
-      if ((i + j) % 3 === 0) c.rect(x + cw - 4, y + ch - 4, 2, 2, RED)
-    }
+
+// ---- Butcherblock's landing and Greenvial's potting yard
+
+/** A salt barge moored on the channel: a flat punt (both ends raked up), its gunwale lit, salt sacks and a cask on deck, a mooring post and its rope at the stern, the water lapping along its side. */
+function barge(): Cv {
+  const c = new Cv(72, 26)
+  const HULL = { lt: [150, 104, 70], md: [116, 78, 54], dk: [84, 56, 44] } as const
+  // the hull: rows 13..21 above the water, its ends raked (the gunwale longest, the waterline shortest)
+  for (let y = 13; y < 22; y++) {
+    const rake = y > 16 ? (y - 16) * 2 : 0
+    for (let x = 8 + rake; x < 70 - rake; x++) c.px(x, y, y === 13 ? WD.hi : y === 14 ? WD.lt : y === 21 ? HULL.dk : (x - 8) % 12 === 0 ? HULL.dk : y < 17 ? HULL.lt : HULL.md)
+  }
+  c.rect(10, 17, 58, 1, HULL.dk)
+  // the cargo: salt sacks, white with a pale shade, and one cask lashed by the bow
+  c.draw(sack([244, 240, 228], 11), 14, 3)
+  c.draw(sack([236, 232, 220], 12), 25, 2)
+  c.draw(sack([244, 240, 228], 10), 38, 4)
+  const cask = new Cv(10, 10)
+  cask.rect(0, 0, 10, 10, WD.md)
+  cask.rect(0, 0, 3, 10, WD.lt)
+  cask.rect(8, 0, 2, 10, WD.dk)
+  for (const y of [2, 7]) cask.rect(0, y, 10, 1, IRON)
+  c.draw(outline(cask), 50, 3)
+  // the mooring post in the water at the stern, its rope to the hull
+  c.rect(1, 8, 3, 18, WD.dk)
+  c.rect(1, 8, 1, 18, WD.md)
+  for (let x = 4; x < 10; x++) c.px(x, 10 + ((x - 4) >> 1), CREAM)
+  const o = outline(c)
+  // the water lapping along the hull's foot (no ink: it is the channel's own light)
+  for (let x = 18; x < 62; x += 3) o.px(x + 1, 23, [150, 184, 150])
+  for (let x = 12; x < 68; x += 7) o.rect(x + 1, 24, 3, 1, [150, 184, 150])
+  return o
+}
+/** A haunch on the bone, salted and curing: the company's mark (`companies.ts` art emblem) as a ware. */
+function haunch(): Cv {
+  const MEAT = { lt: [226, 120, 120], md: [194, 91, 107], dk: [140, 60, 82] } as const
+  const c = new Cv(9, 15)
+  // the bone's knuckle and shaft, at the top (it hangs bone-up)
+  c.rect(3, 0, 3, 2, CREAM)
+  c.px(2, 0, CREAM)
+  c.px(6, 1, [214, 200, 160])
+  c.rect(4, 2, 2, 3, [214, 200, 160])
+  c.px(4, 2, CREAM)
+  for (let y = 5; y < 15; y++) {
+    const r = y < 8 ? y - 4 : y > 12 ? 15 - y : 4
+    for (let x = 4 - r; x <= 4 + r; x++) if (x >= 0 && x < 9) c.px(x, y, x < 3 ? MEAT.lt : x > 5 ? MEAT.dk : MEAT.md)
+  }
+  // the fat's marbling and a rime of salt
+  for (const [x, y] of [[3, 8], [5, 10], [2, 11], [4, 13]] as const) c.px(x, y, [244, 220, 214])
+  c.px(1, 9, [255, 255, 255])
   return outline(c)
 }
-function ledger(): Cv {
-  const c = new Cv(20, 8)
-  c.rect(0, 2, 20, 6, [70, 64, 110])
-  c.rect(1, 0, 8, 6, CREAM)
-  c.rect(11, 0, 8, 6, CREAM)
-  c.rect(9, 1, 2, 6, [200, 184, 146])
-  for (let y = 1; y < 5; y += 2) {
-    c.rect(2, y, 6, 1, [120, 110, 140])
-    c.rect(12, y, 6, 1, [120, 110, 140])
+/** A bunch of herbs hung head-down to dry, tied with twine: three greens. */
+function herbs(k: 0 | 1 | 2): Cv {
+  const leaf = ([LEAF, { lt: [196, 206, 120], md: [160, 176, 92], dk: [120, 138, 76] }, { lt: [170, 150, 200], md: [130, 110, 170], dk: [96, 84, 130] }] as const)[k]
+  const c = new Cv(9, 16)
+  c.rect(4, 0, 1, 4, WD.dk)
+  c.rect(3, 3, 3, 2, WD.lt)
+  for (let y = 5; y < 16; y++) {
+    const r = y < 8 ? y - 4 : y > 13 ? 16 - y : 4
+    for (let x = 4 - r; x <= 4 + r; x++) if (x >= 0 && x < 9) c.px(x, y, x < 3 ? leaf.lt : x > 5 ? leaf.dk : leaf.md)
+  }
+  for (const [x, y] of [[2, 15], [5, 15], [7, 13], [1, 12]] as const) c.px(x, y, leaf.dk)
+  return outline(c)
+}
+const CLAY = { lt: [217, 148, 95], md: [204, 128, 75], dk: [165, 90, 80], sh: [122, 66, 62] } as const
+/** A clay flowerpot `w` px across (Wren's trade: thrown, fired and planted), a seedling in it if `sprout`. */
+function clayPot(w: number, sprout = false): Cv {
+  const h = Math.round(w * 0.9)
+  const c = new Cv(w, h + (sprout ? 6 : 0))
+  const y0 = sprout ? 6 : 0
+  for (let y = 0; y < h; y++) {
+    const inset = y < 3 ? 0 : Math.round(((y - 3) / Math.max(1, h - 3)) * w * 0.18) + 1
+    for (let x = inset; x < w - inset; x++) c.px(x, y0 + y, y < 3 ? (y === 0 ? CLAY.lt : CLAY.md) : x < inset + 2 ? CLAY.lt : x > w - inset - 3 ? CLAY.dk : CLAY.md)
+  }
+  c.rect(0, y0 + 2, w, 1, CLAY.dk)
+  if (sprout) {
+    const m = Math.floor(w / 2)
+    c.rect(m, 1, 1, 5, LEAF.dk)
+    c.rect(m - 3, 1, 3, 2, LEAF.lt)
+    c.px(m - 3, 0, LEAF.lt)
+    c.rect(m + 1, 2, 3, 2, LEAF.md)
+    c.px(m + 3, 1, LEAF.md)
+    c.rect(1, y0, w - 2, 1, [90, 70, 60])
+  }
+  return outline(c)
+}
+/** Clay pots stacked to dry, rims up, three high. */
+function potStack(): Cv {
+  const c = new Cv(22, 26)
+  for (const [x, y, w] of [[0, 14, 12], [10, 15, 11], [5, 4, 12]] as const) c.draw(clayPot(w), x, y)
+  return c
+}
+/** A seed tray: a shallow plank box of soil, seedlings in rows. */
+function seedTray(): Cv {
+  const c = new Cv(26, 10)
+  c.rect(0, 4, 26, 6, WD.md)
+  c.rect(0, 4, 26, 1, WD.hi)
+  c.rect(0, 9, 26, 1, WD.sh)
+  c.rect(1, 5, 24, 2, [90, 70, 60])
+  for (let x = 2; x < 25; x += 4) {
+    c.rect(x, 1, 1, 4, LEAF.dk)
+    c.px(x - 1, 1, LEAF.lt)
+    c.px(x + 1, 2, LEAF.md)
   }
   return outline(c)
 }
 
-// ---- the proposals' props (Butcherblock, Greenvial): drawn for the review cards, never shipped
-
-/** A pennant on its pole, swallow-tailed, with a drawn emblem: a proposal's standard (the real ones come from `companyStandard`). */
-function pennant(cloth: RGB, trimK: RGB, emblem: 'cleaver' | 'vial'): Cv {
-  const c = new Cv(20, 52)
-  c.rect(0, 0, 2, 52, WD.dk)
-  c.rect(0, 0, 1, 52, WD.md)
-  // the cloth, its tail cut in a swallow's V
-  for (let y = 2; y < 24; y++) for (let x = 2; x < 20; x++) if (y <= 18 || Math.abs(x - 11) > (y - 18) * 1.4) c.px(x, y, x < 5 ? mix(cloth, CREAM, 0.15) : cloth)
-  c.rect(2, 2, 18, 2, trimK)
-  if (emblem === 'cleaver') {
-    c.rect(6, 7, 9, 6, STONE.hi)
-    c.rect(6, 12, 9, 1, STONE.lt)
-    c.px(13, 8, cloth)
-    c.rect(15, 9, 3, 2, trimK)
-  } else {
-    c.rect(9, 6, 4, 2, WD.lt)
-    c.rect(10, 8, 2, 3, CREAM)
-    c.rect(7, 11, 8, 6, CREAM)
-    c.rect(8, 13, 6, 3, [150, 214, 96])
-    c.px(8, 12, [255, 255, 255])
-  }
-  return outline(c)
-}
 /** Butcherblock's smokehouse: plank walls, a plank roof, the door open on its embers, a vent for the smoke. */
 function smokehouse(): Cv {
   const c = new Cv(62, 58)
@@ -1649,18 +1656,6 @@ function smoke(): Cv {
       for (let x = -r; x <= r; x++)
         if (x * x + y * y <= r * r) c.px(cx + x, cy + y, x + y < -r * 0.4 ? [236, 230, 214, a] : [196, 190, 178, a])
   return c
-}
-/** A plank jetty out over the channel, on two posts. */
-function jetty(): Cv {
-  const c = new Cv(40, 12)
-  for (let x = 0; x < 40; x++) c.rect(x, 0, 1, 4, x % 6 === 5 ? WD.dk : x < 8 ? WD.lt : WD.md)
-  c.rect(0, 0, 40, 1, WD.hi)
-  c.rect(0, 3, 40, 1, WD.sh)
-  for (const x of [4, 32]) {
-    c.rect(x, 4, 3, 8, WD.dk)
-    c.rect(x, 4, 1, 8, WD.md)
-  }
-  return outline(c)
 }
 /** A butcher's block for a counter: end grain on top, planked front. */
 function butcherBlock(w: number, h: number): Cv {
@@ -1731,24 +1726,6 @@ function glasshouse(): Cv {
   for (let y = 48; y < 60; y++) for (let x = 0; x < 78; x++) c.px(x, y, (y - 48) % 4 === 3 || (x + ((y - 48) >> 2) * 4) % 9 === 0 ? [120, 70, 56] : x < 30 ? [192, 116, 88] : [168, 98, 76])
   return outline(c)
 }
-/** A post with a vine climbing it. */
-function vined(p: Cv): Cv {
-  const c = new Cv(p.w + 4, p.h)
-  c.draw(p, 2, 0)
-  for (let y = 2; y < p.h - 2; y += 1) {
-    const x = 2 + Math.round((Math.sin(y / 5) + 1) * ((p.w - 1) / 2))
-    c.px(x, y, LEAF.dk)
-    if (y % 6 === 0) {
-      c.rect(x - 2, y - 1, 2, 2, LEAF.lt)
-      c.px(x - 2, y + 1, LEAF.md)
-    }
-    if (y % 6 === 3) {
-      c.rect(x + 1, y, 2, 2, LEAF.md)
-      c.px(x + 2, y + 2, LEAF.dk)
-    }
-  }
-  return c
-}
 /** A potion on the counter: green, gold or rose, corked. */
 function vial(k: 0 | 1 | 2): Cv {
   const liquid = ([[150, 214, 96], [236, 196, 80], [230, 120, 150]] as const)[k]
@@ -1763,11 +1740,6 @@ function vial(k: 0 | 1 | 2): Cv {
 }
 
 async function write(name: string, c: Cv, dir = OUT): Promise<void> {
-  if (FACES_DIR) {
-    // the faces mode writes the posts only, and only into its own folder
-    if (!/^(liaison|proposal)-/.test(name)) return
-    dir = FACES_DIR
-  }
   mkdirSync(dir, { recursive: true })
   await sharp(Buffer.from(c.d.buffer), { raw: { width: c.w, height: c.h, channels: 4 } })
     .png({ compressionLevel: 9 })
@@ -1781,12 +1753,7 @@ async function fireCell(): Promise<{ cx: number; by: number }> {
   return { cx: Math.round((b.x0 + b.x1 + 1) / 2), by: b.y1 + 1 }
 }
 
-// `--proposals <dir>` also bakes the two posts proposed for the slots that
-// change company (Butcherblock, Greenvial) into <dir>, for the review cards:
-// never into `public/assets/scenes`, never into the generated anchors.
-const pi = process.argv.indexOf('--proposals')
-const anchors = await bake(FACES_DIR ?? (pi > 0 ? resolve(process.argv[pi + 1] ?? 'proposals') : null))
-if (FACES_DIR) process.exit(0)
+const anchors = await bake()
 const fc = await fireCell()
 writeFileSync(
   GEN,
@@ -1802,7 +1769,7 @@ writeFileSync(
     'export const SCENE_ANCHORS = {',
     ...Object.entries(anchors).map(
       ([k, a]) =>
-        `  ${/^[a-z]+$/.test(k) ? k : `'${k}'`}: { speaker: [${a.speaker.join(', ')}]${a.held ? `, held: [${a.held.join(', ')}]` : ''}${a.fire ? `, fire: [${a.fire.join(', ')}]` : ''}${a.beside ? ', beside: true' : ''} },`,
+        `  ${/^[a-z]+$/.test(k) ? k : `'${k}'`}: { speaker: [${a.speaker.join(', ')}]${a.held ? `, held: [${a.held.join(', ')}]` : ''}${a.fire ? `, fire: [${a.fire.join(', ')}]` : ''}${a.beside ? ', beside: true' : ''}${a.talk ? `, talk: [${a.talk.join(', ')}]` : ''}${a.cameo ? `, cameo: [${a.cameo.join(', ')}]` : ''} },`,
     ),
     '} as const',
     '',

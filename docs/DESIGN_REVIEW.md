@@ -5225,3 +5225,44 @@ to 13 main colours.
 
 The lesson and the bands are in the character-design skill (§ 4a). Nothing
 is wired into the game.
+
+## 2026-10-19 — The approved liaisons, in the game
+
+The designer approved a final for each company's liaison (`scripts/designs/`:
+Saffra d03 with the Ember Pot, Hask d03 with the cone centred, Brannoch d07
+with his boots, Odile d04-A-final, Wren d09-E smock final). They are now in
+every place the game draws a liaison, unredesigned:
+
+- **Posts.** Each `liaison-<company>.png` stands its final pixel for pixel
+  (`scripts/liaison-finals.ts`; unlit by the post's light so its inks stay
+  approved) behind a LOW counter, 10 px over the feet, that stops short of
+  the prop hand. Brannoch stands at his counter's end (his boots were the
+  point of d07); Hask's salting block stands ahead of him so his tail and
+  pole stay clear. Butcherblock's and Greenvial's posts were still Easel
+  House's tent and Moonquill's scriptorium: they are now Hask's salt landing
+  (smokehouse, haunches on hooks, a salt barge on the reed channel, mist) and
+  Wren's potting yard (glasshouse, drying herbs, tonics, clay pots and seed
+  trays, mushrooms), each flying its company standard. The bake finds where
+  the bubble hangs (`talk`: clear of the hat and prop in every idle and tic
+  frame, inside a phone's band; the bubble capped at 172 px) and the
+  receipt's cameo (`cameo`, the head mass).
+- **Dock.** Two options, shot in the running app at 390 px: (b) the full
+  final at 1× overflowed its slot and sat at half the UI's pixel scale; (a)
+  a hand-drawn 28 × 28 small version of each final, at 2×, fits and matches
+  the crests' density. Shipped (a): the cell grew from 24 to 28 for the
+  hats, ears and poles; every figure uses its final's own inks and moves in
+  its spirit (Saffra's hat sinks and the pot smokes; Odile's ears lag; Hask
+  poles and strokes; Brannoch breathes and strokes his beard; Wren's nose
+  flops). Every DockFace rule holds (one rAF, locked shadow, still under
+  reduced motion, the tic halved on Light, asleep when hidden).
+
+Scored against the checklist: each liaison is now the highest-contrast thing
+at its post, and its head, hat and prop read at 390 px (before, the pawns
+were heads over a counter); the bubble no longer covers a brim or prop;
+nothing clipped. Fixed on the way: the flags hidden behind the stall posts on
+a phone (moved to x 40), Hask's tail buried in his counter (the block moved
+ahead of him), the barge reading as a table (raked ends, water at its foot),
+Odile's bubble dropping into the yard (the higher of two equally near spots
+wins), a clay pot in front of Wren's body. Weak spots: Saffra's face sits
+under the counter's top in the receipt's cameo; the dock figures are small
+beside option (b)'s detail. Cards: `docs/characters/cards/liaisons/`.

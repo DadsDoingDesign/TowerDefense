@@ -2,7 +2,8 @@
  * The home dock's company faces — the PURE half (October 2026; the designer,
  * on the review board: "Should the newest version have characters instead of
  * logos?" Yes). Each dock slot shows its company's liaison, the hand-drawn
- * 24 × 28 dock figure (`game/render/hero/mini.ts`), in place of the crest.
+ * 28 × 28 dock figure (`game/render/hero/mini.ts`, a small hand-drawn version
+ * of the liaison's approved final), in place of the crest.
  * `DockFace.tsx` draws it; this file says WHO and WHICH FRAME, no DOM.
  *
  * Crests stay everywhere else (the card head, the track, the notices, the

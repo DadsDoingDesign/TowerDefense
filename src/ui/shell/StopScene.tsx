@@ -57,7 +57,10 @@ export function StopScene({
   const z = scale
   const stageW = SCENE_SIZE.w * z
   const stageH = SCENE_SIZE.h * z
-  const [sx, sy] = a.speaker
+  // A liaison's post bakes the bubble's own point (`talk`): beside the head
+  // mass, clear of a hat's brim and the prop in every frame. A stop's keeper
+  // hangs it off the face.
+  const [sx, sy] = 'talk' in a ? a.talk : a.speaker
   // Speakers right of centre lean their bubble left, the rest lean right, so
   // a bubble always stays inside the middle a phone sees.
   const leftLean = sx * z > stageW / 2 + 40
