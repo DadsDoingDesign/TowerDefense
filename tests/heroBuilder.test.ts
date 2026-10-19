@@ -394,7 +394,7 @@ describe('hero builder: the company faces', () => {
 })
 
 describe('hero builder: the dock figures', () => {
-  it('fit their 24 × 28 cell on every frame, and the locked shadow hides the face', () => {
+  it('fit their dock cell on every frame, and the locked shadow hides the face', () => {
     for (const id of PERSONAS) {
       expect(MINI_FACES[id]).toBeDefined()
       for (const a of ['idle', 'tic', 'react'] as const)

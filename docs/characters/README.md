@@ -154,7 +154,7 @@ people with no gear swaps, so they do not need the rig to look right:
 | Size | Where it shows | Cell | Module |
 |---|---|---|---|
 | field / post | the battlefield and the liaison post, both at the pack's unit scale (the post stands the person where the CC0 pawn stands, at native size; the page draws the scene at 2×) | 72 × 72, feet on row 57 | `post.ts` |
-| dock | the home dock's slot (drawn at 2×) | 24 × 28 | `mini.ts` |
+| dock | the home dock's slot (drawn at 2×) | 28 × 28 (was 24 × 28) | `mini.ts` |
 
 Both are pixel rows in the pack's inks, named parts, each ringed in 1 px of
 ink; the field / post size adds one more px round the whole figure (the
@@ -166,9 +166,14 @@ is no third size for the faces today. The rig stays for the heroes, whose
 gear swaps; it is only ever meant to be drawn 1:1, and its cards say they are
 magnified for critique.
 
-The posts in the cards are the shipped posts' layouts with the face at the
-counter: `npx tsx scripts/stop-scenes.ts --faces <dir>` (only into <dir>;
-nothing shipped changes).
+**Superseded in the game (the liaisons pass, Oct 2026).** The five liaisons
+were then designed afresh, one by one, under `scripts/designs/` (cards in
+`cards/designs/`), and the designer approved a final for each. The shipped
+posts now stand those finals, pixel for pixel (`scripts/liaison-finals.ts`,
+baked by `scripts/stop-scenes.ts`), and the dock figures (`mini.ts`) are
+hand-drawn small versions of them; `post.ts` and the faces below stay as the
+prototype the harness shows. (The posts' old `--faces` and `--proposals`
+modes are gone.) Before / after: `cards/liaisons/`.
 
 | | Saffra | Odile | Brannoch | Hask (proposal) | Wren (proposal) |
 |---|---|---|---|---|---|
@@ -212,13 +217,17 @@ Greenvial keeps the name with a new trade.
 ## The dock figures
 
 `mini.ts`. The faces are **redrawn** for the dock, not downscaled: hand-drawn
-pixel parts in a 24 × 28 cell, shown at 2× (the crests' own pixel scale), so
-the 1 px ring reads as the field figures' 2 px.
+pixel parts in a 28 × 28 cell (24 × 28 before the liaisons pass: the approved
+finals' hats, ears and poles are wider), shown at 2× (the crests' own pixel
+scale), so the 1 px ring reads as the field figures' 2 px. Since the
+liaisons pass each is a small version of its approved final, in the final's
+own inks, moving in its final's spirit (the briefs above `MINI_FACES`).
 
-- **Idle:** each face's own shape and period (the table above), from 4
-  frames (Saffra) to 11 (Brannoch).
-- **Tic:** 6 frames, on the face's own interval and hashed phase.
-- **Reaction:** 4 frames when the slot is picked, each in its own style.
+- **Idle:** each face's own shape and period, from 5 frames (Brannoch's
+  one breath) to 13 (Odile's two dips and a held breath).
+- **Tic:** 6 or 7 frames, the final's own tic, on the face's own interval and
+  hashed phase.
+- **Reaction:** 3 to 5 frames when the slot is picked, each in its own style.
 - **The clock:** `miniAt(id, t, { pickedAt, still, ticEach })` says which
   frame shows at time `t`; the dock runs one rAF for all five
   (`DockFace.tsx`), its `t` counted from the moment the dock appears.

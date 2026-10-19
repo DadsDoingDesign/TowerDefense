@@ -234,6 +234,16 @@ result. Append a short note to the review log when you're done.
   hash, never a run stream) in `src/game/run/liaison.ts`, drawn by
   `LiaisonScene.tsx` (+ `liaisons.css`) on the company's post that the same
   script bakes (`scenes/liaison-<company>.png`); tests `tests/liaisons.test.ts`.
+  The five liaisons are the designer's APPROVED finals (Oct 2026; Saffra,
+  Hask, Brannoch, Odile, Wren: pixel-map modules in `scripts/designs/`, the
+  table `scripts/liaison-finals.ts`) — never redraw one. Each post stands
+  its final pixel for pixel (unlit by the post's light) behind a LOW counter
+  that stops short of the prop hand, and bakes `talk` (where the bubble
+  hangs, clear of the hat and prop in every frame) and `cameo` (the
+  receipt's head crop) beside `speaker`. Butcherblock's post is Hask's salt
+  landing (smokehouse, barge, hooks); Greenvial's is Wren's potting yard
+  (glasshouse, herbs, clay pots). Cards `docs/characters/cards/liaisons/`
+  (`scripts/liaison-cards.ts`, shots `places-shots.mjs`, `dock-shots.mjs`).
   The contract board is the HOME, and the home is the map (Oct 2026, the
   map-first home, `MenuScreen` + `menu.css`): the trade map fills the screen
   and three slim layers float over it — the bar (the purse plaque: seal and
@@ -242,7 +252,8 @@ result. Append a short note to the review log when you're done.
   the foot (the company dock: exactly five fixed slots in `COMPANY_IDS`
   order, the order the map fans its roads west→east, pure model
   `ui/shell/homeDock.ts`; each slot shows its company's FACE, not its crest —
-  the liaison's hand-drawn 24 × 28 dock figure (`render/hero/mini.ts`) at 2×,
+  the liaison's hand-drawn 28 × 28 dock figure (`render/hero/mini.ts`, a
+  small version of its approved final, in the final's inks) at 2×,
   drawn by `ui/shell/DockFace.tsx` on ONE shared rAF (idle and tic on the
   desynced clock, the reaction when its slot is focused, a still shadow while
   the company is not hiring; still under reduced motion, the tic half as

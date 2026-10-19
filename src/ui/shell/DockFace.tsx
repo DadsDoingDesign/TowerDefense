@@ -1,6 +1,6 @@
 /**
  * `DockFace` — a company's face in its home dock slot (October 2026): the
- * hand-drawn 24 × 28 dock figure (`game/render/hero/mini.ts`) on a canvas at
+ * liaison's hand-drawn 28 × 28 dock figure, a small version of its approved final (`game/render/hero/mini.ts`) on a canvas at
  * {@link DOCK_FACE_SCALE}, pixel-crisp (the backing store an integer multiple
  * of the art at the device's pixel ratio, no smoothing, `pixelated`).
  * Who stands in which slot and which frame plays: `dockFace.ts`.
