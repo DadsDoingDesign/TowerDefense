@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { RNG } from '../src/game/core/rng'
-import { describeBase, generateItem, gripOf, itemStyle, shieldHold, type HeroStyle } from '../src/game/data/items'
+import { describeBase, generateItem, gripOf, itemStyle, KIND_EDGE, shieldHold, shieldThorns, type HeroStyle } from '../src/game/data/items'
 import { ITEM_KINDS, kindEffect, kindSlot, SOVEREIGN_ITEM_KINDS } from '../src/game/data/itemKinds'
 import { computeCombat } from '../src/game/engine/combat'
 import { classicHero } from '../src/game/data/sentinels'
@@ -20,11 +20,27 @@ function baseKeys(kind: string): string[] {
   for (let s = 1; s <= 40; s++) for (const [k, v] of Object.entries(roll(kind, s).base)) if (v) keys.add(k)
   return [...keys].sort()
 }
-/** What a kind IS on the field: its base stats, its style, its grip and its hold. */
+/**
+ * The kind's fixed edge (a peoples' kind, `items.KIND_EDGE`): what it adds
+ * beyond its rolled base — its mods' keys and its thorns.
+ */
+function edgeKeys(kind: string): string[] {
+  const e = KIND_EDGE[kind]
+  return e ? [...Object.keys(e.mods ?? {}), ...(e.thorns ? ['thorns'] : [])].sort() : []
+}
+/** A stat's direction: a weapon whose speed is a COST (a handling penalty) is not one whose speed is a gift. */
+function signedKeys(kind: string): string[] {
+  const b = roll(kind, 1).base as Record<string, number>
+  return baseKeys(kind).map((k) => ((b[k] ?? 0) < 0 ? `${k}-` : k))
+}
+/**
+ * What a kind IS on the field: its base stats (and which way each points),
+ * its edge, its style, its grip, its hold and its shield's thorns.
+ */
 function signature(kind: string): string {
   const it = roll(kind, 1)
   const style: HeroStyle | null = itemStyle(it)
-  return JSON.stringify({ keys: baseKeys(kind), style, grip: gripOf(it), hold: shieldHold(it) })
+  return JSON.stringify({ keys: signedKeys(kind), edge: edgeKeys(kind), style, grip: gripOf(it), hold: shieldHold(it), thorns: shieldThorns(it) })
 }
 
 describe('item kinds: one identity each', () => {
@@ -46,7 +62,7 @@ describe('item kinds: one identity each', () => {
     for (const slot of slots) {
       const kinds = KINDS.filter((k) => k.slot === slot).map((k) => k.id)
       for (let s = 1; s <= 10; s++) {
-        const bases = kinds.map((k) => JSON.stringify(roll(k, s).base))
+        const bases = kinds.map((k) => JSON.stringify({ base: roll(k, s).base, edge: KIND_EDGE[k] ?? null }))
         expect(new Set(bases).size, `${slot} seed ${s}`).toBe(kinds.length)
       }
     }

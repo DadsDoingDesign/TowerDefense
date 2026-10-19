@@ -4981,3 +4981,52 @@ skills agent.
 
 Cards: `docs/ui-audit-2026-10/rename/` (`node scripts/rename-shots.mjs <dir>`,
 then `npx tsx scripts/rename-cards.ts <dir> <before>`).
+### 2026-10-18 — the peoples' items and skills, in the game
+
+The designer had played the live build and said "the new content/copy isn't
+in". `docs/peoples/roster.json` is now the game's: 73 new item kinds and 2
+renamed ones (`data/peopleKinds.ts`, folded into `items.ts` /
+`itemKinds.ts`), 5 new skills and 4 renamed ones (`data/skills.ts`), every
+kind and card filed to its people's company. Each new kind has its own atlas
+cell, baked from the reviewed draft by `scripts/fw-icons.ts` (rows 13–22,
+75 cells; `scripts/item-assets.ts`: 100 kinds, 0 sharing an icon). Shot in
+the running app at 390 × 844 (`node scripts/peoples-shots.mjs`) and on the
+figure through the real draw code (`harness/kit.html?peoples=1`); cards in
+`docs/ui-audit-2026-10/peoples-content/`.
+
+**Round 1.**
+- **Merchant (an Ironvein contract):** the shelf leans to the dwarves
+  (Hand Hammer, Deepforge Plate) and still deals others (Glaive). Each new
+  icon reads as its object on the tile at 16 px. Like the old ones, it
+  stands up next to Slay the Spire's relic tiles.
+- **Item card:** the kind's fixed edge printed as "Chainshirt — holds 1
+  more enemy", which says the title twice (COPY.md, "a fact once"). Fixed
+  (`offers.itemBody`): a kind's edge is now its effect alone ("Crits burn
+  12/s for 3s").
+- **Skill choice:** at level 10 the offer showed two new cards (Venom Spit,
+  Overgrowth) beside Siphon. Bolder Bash's token drew the damage slashes
+  while its line led with the splash. Its line now leads with the damage
+  (`skills.test` pins the token to the line).
+- **Codex:** 100 / 100 kinds and 50 cards, with the renames under their new
+  names. Each card says which company deals it more often.
+- **Figure:** a new shield or off-hand piece is drawn on the knight's arm,
+  and a caster's weapon in the robed fists. The blades and bows keep the
+  painted sword or bow (the rule in CLAUDE.md), so on the field the
+  Falchion and the Spear look alike, as an Axe and a Sword always have.
+
+**Balance** (`npm run balance`, every invariant green, nothing re-tuned):
+Bolder Bash reads +53.5pt on a sword-and-shield hero. That ties Wildfire,
+the level's top card; the splash is what a melee hero lacks, and Cleave
+alone reads +42.7. Tinker's Spark's top is the Dagger's +40.9pt, and the
+Level 3 lead moved 16.2 → 15.4. With the new kinds in the veteran pools,
+the zero-meta escort reads 16 → 15% (band 12–20%).
+
+**Still weakest.**
+- Skills still show their headline mark (`skillHeadline`), not the drafted
+  skill art, and the drafted skill tells (pips, rings, roots) are not on
+  the hero yet.
+- Poison and bleed are the engine's burn, so they draw as flames, as
+  Poisoned Tips always did.
+- New kinds are unlocked one at a time like every kind. An existing save
+  sees them as "???" in the Codex until it plays. The charter's door
+  counts only the old catalogue, so a door that was open stays open.

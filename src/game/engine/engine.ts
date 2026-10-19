@@ -46,6 +46,12 @@ const LIFEDRAIN_SCALE = 0.02
 export const BRITTLE_MULT = 1.25
 /** SHATTER: a shock arc (or a shock shot) meeting a frosted enemy bursts it for this share of the hit, and thaws it. */
 export const SHATTER_FRAC = 0.6
+/**
+ * ROOTS (`mods.root`): seconds a rooted body walks free before roots can take
+ * it again — so a staff that roots every burst slows a column, it does not
+ * pin it for the whole wave.
+ */
+export const ROOT_REST = 2
 /** Burn SPREAD: a burning body that dies lights up to this many neighbours… */
 export const SPREAD_COUNT = 2
 /** …within this radius, for what was left of the burn (at least `SPREAD_MIN_DUR` s). */
@@ -253,6 +259,7 @@ export function enemyBehaviourState(key: string, reward: number) {
     healReadyAt: 0,
     healed: 0,
     piece: false,
+    rootReadyAt: 0,
   }
 }
 
@@ -271,6 +278,8 @@ export interface RtSentinel {
   patienceMax: number
   blockIds: string[]
   buffMult: number
+  /** The speed auras covering this Sentinel this step (`rateAura`; 1 = none). */
+  rateBuff: number
   kills: number
   damageDealt: number
   procFlash: number // pulses when an on-hit effect fires (visual feedback, M7)
@@ -316,6 +325,8 @@ export interface RtEnemy {
   brittle: boolean
   /** Frozen per tick: the shield-bearer resist covering this body (0 = none). */
   shield: number
+  /** Roots (`mods.root`): sim time before which this body cannot be rooted again. */
+  rootReadyAt: number
   /** Command: Flare's slow. */
   flareSlow: number
   flareUntil: number
@@ -391,6 +402,8 @@ export interface RtProjectile {
   color: string
   mods: EffectMods
   lifedrain: number
+  /** `spitEvery`: this shot also poisons the enemies nearest its target. */
+  spit?: { count: number; dps: number; dur: number }
 }
 
 export interface RtTrap {
@@ -661,6 +674,7 @@ export class GameEngine {
         patienceMax: 3 + Math.floor(profile.patience / 5),
         blockIds: [],
         buffMult: 1,
+        rateBuff: 1,
         kills: 0,
         damageDealt: 0,
         procFlash: 0,
@@ -1045,11 +1059,15 @@ export class GameEngine {
   private updateAuras(): void {
     for (const s of this.sentinels) {
       let buff = 1
+      let rate = 1
       for (const src of this.sentinels) {
         const m = src.profile.mods
         if (m.buffAura && dist(s.pos, src.pos) <= m.buffAura.radius) buff *= m.buffAura.damageMult
+        // A speed aura (a banner bearer, a captain's shield): the same reach rule.
+        if (m.rateAura && dist(s.pos, src.pos) <= m.rateAura.radius) rate *= m.rateAura.rateMult
       }
       s.buffMult = buff
+      s.rateBuff = rate
     }
   }
 
@@ -1408,6 +1426,8 @@ export class GameEngine {
     if (this.elapsed < this.rallyUntil) rate *= RALLY.rateMult
     // Momentum: faster for each enemy this hero is holding right now.
     if (m.rushPerHeld && s.blockIds.length) rate *= 1 + m.rushPerHeld * s.blockIds.length
+    // A speed aura it stands in (`rateAura`, from any hero near it, itself too).
+    rate *= s.rateBuff
     s.cooldown = 1 / rate
     s.fireFlash = 1
     this.onEvent?.('shoot', { arch: lookOf(s.def), x: this.fieldX(s.pos.x) })
@@ -1415,8 +1435,18 @@ export class GameEngine {
     // stream for anything that fires after it.
     const rolled = this.rng.chance(s.profile.critChance)
     const isCrit = rolled || (!!m.critEvery && s.shots % m.critEvery === 0)
-    const damage = s.profile.damage * (isCrit ? s.profile.critMult : 1) * s.buffMult
+    // Twin Knives: every Nth attack strikes twice — double the hit, no roll.
+    const twice = m.doubleEvery && s.shots % m.doubleEvery === 0 ? 2 : 1
+    const damage = s.profile.damage * (isCrit ? s.profile.critMult : 1) * s.buffMult * twice
     const volley = m.volley && s.shots % m.volley.every === 0 ? m.volley.pierce : 0
+    // Tinker's Spark: every Nth attack also jumps — this shot carries the
+    // extra chains on a copy of the mods (no other shot's mods move).
+    const ce = m.chainEvery && s.shots % m.chainEvery.every === 0 ? m.chainEvery : null
+    const mods = ce
+      ? { ...s.profile.mods, shock: { chains: (m.shock?.chains ?? 0) + ce.chains, dmgFrac: Math.max(m.shock?.dmgFrac ?? 0, ce.dmgFrac) } }
+      : s.profile.mods
+    // Venom Spit: every Nth attack poisons the enemies nearest its target.
+    const spit = m.spitEvery && s.shots % m.spitEvery.every === 0 ? { count: m.spitEvery.count, dps: m.spitEvery.dps, dur: m.spitEvery.dur } : undefined
     this.projectiles.push({
       id: nextId('p'),
       pos: { ...s.pos },
@@ -1430,8 +1460,9 @@ export class GameEngine {
       splashRadius: s.profile.splashRadius,
       pierce: (s.profile.mods.pierce ?? 0) + volley,
       color: lookHue(lookOf(s.def)).accent,
-      mods: s.profile.mods,
+      mods,
       lifedrain: s.profile.mods.lifedrain ?? 0,
+      ...(spit ? { spit } : {}),
     })
   }
 
@@ -1643,6 +1674,34 @@ export class GameEngine {
 
     for (const e of hitList) this.applyHit(e, p)
 
+    // Roots (Bloomstaff, Worldroot Staff): hold up to `count` of the bodies
+    // struck in place — a stun that does not roll, so no combat draw moves —
+    // and none again until it has walked `ROOT_REST` seconds free.
+    if (p.mods.root) {
+      let rooted = 0
+      for (const e of hitList) {
+        if (rooted >= p.mods.root.count) break
+        if (e.hp <= 0 || this.elapsed < e.rootReadyAt) continue
+        e.stunUntil = Math.max(e.stunUntil, this.elapsed + p.mods.root.dur)
+        e.rootReadyAt = this.elapsed + p.mods.root.dur + ROOT_REST
+        rooted++
+      }
+      if (rooted) {
+        const src = this.sentinels.find((x) => x.id === p.srcId)
+        if (src) src.procFlash = 1
+      }
+    }
+
+    // Venom Spit: the bodies nearest the target (not the ones it struck) are poisoned.
+    if (p.spit && hitList.length > 0) {
+      const origin = hitList[0]
+      const near = this.enemies
+        .filter((e) => e.hp > 0 && !hitList.includes(e))
+        .sort((a, b) => distSq(origin.pos, a.pos) - distSq(origin.pos, b.pos))
+        .slice(0, p.spit.count)
+      for (const e of near) this.writeBurn(e, { dps: p.spit.dps, dur: p.spit.dur }, p.srcId, p.damageType)
+    }
+
     // Chain lightning: arc to nearby enemies for a fraction of the hit.
     if (p.mods.shock && hitList.length > 0) {
       const origin = hitList[0]
@@ -1724,6 +1783,9 @@ export class GameEngine {
     let amount = p.damage
     if (p.mods.vsHeld && e.blockedBy) amount *= 1 + p.mods.vsHeld
     if (p.mods.vsSlowed && this.elapsed < e.chillUntil && e.chillSlow > 0) amount *= 1 + p.mods.vsSlowed
+    // A miner's pick, a rune shield: harder on the armoured columns (`ENEMY_MODS`).
+    if (p.mods.vsPlated && e.key.endsWith('_plated')) amount *= 1 + p.mods.vsPlated
+    if (p.mods.vsWarded && e.key.endsWith('_warded')) amount *= 1 + p.mods.vsWarded
     const dealt = this.damageEnemy(e, amount, p.srcId, p.isCrit, p.damageType, false)
 
     // On-hit statuses (only if the enemy is still alive).
@@ -1731,6 +1793,10 @@ export class GameEngine {
       const src = p.srcId ? this.sentinels.find((x) => x.id === p.srcId) : undefined
       if (p.mods.burn) {
         if (this.writeBurn(e, p.mods.burn, p.srcId, p.damageType) && src) src.procFlash = 1
+      }
+      // A crit that burns (the Pepperport Sabre): its own burn, on crits only.
+      if (p.isCrit && p.mods.critBurn) {
+        if (this.writeBurn(e, p.mods.critBurn, p.srcId, p.damageType) && src) src.procFlash = 1
       }
       if (p.mods.chill) {
         e.chillSlow = Math.max(e.chillSlow, p.mods.chill.slow)
@@ -1960,6 +2026,8 @@ export class GameEngine {
       if (s) {
         s.kills++
         if (s.profile.mods.killRush) s.rushUntil = this.elapsed + s.profile.mods.killRush.dur
+        // Whisperfang: a kill readies its next strike at once.
+        if (s.profile.mods.killReady) s.cooldown = 0
         // Bounty: this hero's kills pay more gold.
         if (s.profile.mods.goldPerKill) this.goldEarned += s.profile.mods.goldPerKill
         // Last Rites: every Nth kill it makes mends the Gate.

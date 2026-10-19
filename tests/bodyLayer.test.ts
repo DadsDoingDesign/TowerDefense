@@ -33,7 +33,10 @@ async function rawStrip(name: string) {
 
 let n = 0
 const item = (name: string, slot: Item['slot']): Item => ({ id: `b${n++}`, name, slot, rarity: 'rare', base: {}, enchantments: [] })
-const BODIES = ITEM_KINDS.filter((k) => k.slot === 'body').map((k) => k.id)
+// The classic body kinds each have a worn piece; the peoples' (Oct 2026) are
+// drawn on their own icon cells only, since no body piece is drawn on the
+// figure (`BODY_ON_FIGURE` is off).
+const BODIES = ITEM_KINDS.filter((k) => k.slot === 'body' && !k.peoples).map((k) => k.id)
 
 describe('the body piece a hero wears', () => {
   it('names every body kind the game deals, each its own icon cell', () => {

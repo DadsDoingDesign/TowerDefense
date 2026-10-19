@@ -42,8 +42,8 @@
  * for the tuning pass.
  */
 import { companyById, type CompanyId } from '../data/companies'
-import { RANDOM_UNLOCK_SKILLS } from '../data/skills'
-import { isSovereignKind, SOVEREIGN_ITEM_KINDS, UNLOCK_ITEM_KINDS } from '../data/itemKinds'
+import { CHARTER_SKILLS } from '../data/skills'
+import { CHARTER_ITEM_KINDS, isSovereignKind, SOVEREIGN_ITEM_KINDS } from '../data/itemKinds'
 import type { NodeEncounterRules } from '../data/waves'
 import type { TerrainRuleId } from '../types'
 import { rollFromPool } from './watch'
@@ -130,11 +130,14 @@ export interface CharterDoor {
  * Whether the Sovereign Route is open: every skill card a contract, a
  * standing level or a sealed crate can unlock, and every item kind of Levels
  * 1–3. HQ offices and standing do not count; feat cards follow their feats
- * and are not in it.
+ * and are not in it. The catalogue is the one that stood before the peoples'
+ * rosters (Oct 2026, `CHARTER_SKILLS` / `CHARTER_ITEM_KINDS`): their new
+ * cards and kinds are more to find, not more the door asks of a save that
+ * had already opened it.
  */
 export function charterDoor(v: { skills: readonly string[]; items: readonly string[] }): CharterDoor {
-  const skills = { have: RANDOM_UNLOCK_SKILLS.filter((id) => v.skills.includes(id)).length, need: RANDOM_UNLOCK_SKILLS.length }
-  const items = { have: UNLOCK_ITEM_KINDS.filter((id) => v.items.includes(id)).length, need: UNLOCK_ITEM_KINDS.length }
+  const skills = { have: CHARTER_SKILLS.filter((id) => v.skills.includes(id)).length, need: CHARTER_SKILLS.length }
+  const items = { have: CHARTER_ITEM_KINDS.filter((id) => v.items.includes(id)).length, need: CHARTER_ITEM_KINDS.length }
   const have = skills.have + items.have
   const need = skills.need + items.need
   return { skills, items, progress: need ? have / need : 1, open: have >= need }

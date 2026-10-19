@@ -21,7 +21,7 @@
  * The three sprites stay, picked by the weapon (`lookOf`): the art key is the
  * one place the old class names survive, as file names (`fighter_idle.png`).
  */
-import { heroStyle, itemNoun, shieldHold, type HeroStyle } from './items'
+import { heroStyle, isBow, itemNoun, shieldHold, type HeroStyle } from './items'
 import type { Archetype, Item, Sentinel } from '../types'
 
 export type { HeroStyle }
@@ -49,7 +49,8 @@ export function styleWeapon(hero: Pick<Sentinel, 'equipment'>): Item | null {
   return null
 }
 
-const article = (noun: string) => `${/^[aeiou]/i.test(noun) ? 'an' : 'a'} ${noun}`
+/** "a sword", "an axe" — and a pair's name bare ("twin knives"). */
+const article = (noun: string) => (/s$/.test(noun) && !/ss$/.test(noun) ? noun : `${/^[aeiou]/i.test(noun) ? 'an' : 'a'} ${noun}`)
 const nounOf = (item: Item): string => (itemNoun(item) ?? 'weapon').toLowerCase()
 
 /**
@@ -62,7 +63,11 @@ export function weaponDoes(hero: Pick<Sentinel, 'equipment'>): string {
   if (!w || !style) return 'Throws stones'
   const n = nounOf(w)
   if (style === 'swing') return `Swings ${article(n)} up close`
-  if (style === 'shoot') return n === 'bow' ? 'Shoots a bow from far away' : 'Throws daggers from far away'
+  if (style === 'shoot') {
+    if (n === 'bow') return 'Shoots a bow from far away'
+    if (n === 'dagger') return 'Throws daggers from far away'
+    return isBow(w) ? `Shoots ${article(n)} from far away` : `Throws ${article(n)} from far away`
+  }
   return `Casts magic from ${article(n)} at a group`
 }
 

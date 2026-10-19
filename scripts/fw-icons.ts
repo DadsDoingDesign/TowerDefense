@@ -58,6 +58,8 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import sharp from 'sharp'
+import { isArt, PALETTE as PEOPLES_PALETTE, PEOPLES } from './peoples-art'
+import { peopleIconKey } from '../src/game/data/peopleKinds'
 
 const OUT = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'assets', 'ui')
 
@@ -2508,6 +2510,27 @@ icon('silkwind', [
   '................',
   '................',
 ])
+
+/*
+ * ---------------------------------------------------------------------------
+ * The peoples' kinds (Oct 2026) — rows 13 (cont.) to 22
+ * ---------------------------------------------------------------------------
+ * Every NEW and RENAMED item of the five rosters (`docs/peoples/roster.json`),
+ * baked from the reviewed draft art in `scripts/peoples-art/` — our own pixel
+ * art, drawn in this atlas's palette letter for letter (checked below) and
+ * outlined by the same rule. A kept item already has its cell above. The key
+ * is `peopleKinds.peopleIconKey` of the name, in roster order.
+ */
+for (const [k, hexv] of Object.entries(PEOPLES_PALETTE)) {
+  if (PALETTE[k]?.toLowerCase() !== hexv.toLowerCase()) throw new Error(`peoples-art palette letter ${k} (${hexv}) is not the atlas's (${PALETTE[k]})`)
+}
+for (const people of PEOPLES) {
+  for (const it of people.items) {
+    if (it.status === 'kept') continue
+    if (!isArt(it.icon)) throw new Error(`${people.id}/${it.name}: a ${it.status} item needs drafted art`)
+    icon(peopleIconKey(it.name), [...it.icon])
+  }
+}
 
 /* ========================================================================= */
 

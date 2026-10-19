@@ -358,6 +358,25 @@ export function mergeMods(list: (EffectMods | undefined)[]): EffectMods {
         ? { every: Math.min(out.killMend.every, m.killMend.every), hp: Math.max(out.killMend.hp, m.killMend.hp) }
         : m.killMend
     }
+    // The peoples' kit: an aura and a burn keep the best of each field, the
+    // fractions add, a cadence keeps the shortest interval.
+    out.rateAura = bestOf(out.rateAura, m.rateAura)
+    if (m.vsPlated) out.vsPlated = (out.vsPlated ?? 0) + m.vsPlated
+    if (m.vsWarded) out.vsWarded = (out.vsWarded ?? 0) + m.vsWarded
+    out.critBurn = bestOf(out.critBurn, m.critBurn)
+    if (m.doubleEvery != null) out.doubleEvery = out.doubleEvery != null ? Math.min(out.doubleEvery, m.doubleEvery) : m.doubleEvery
+    if (m.killReady) out.killReady = true
+    if (m.chainEvery) {
+      const a = out.chainEvery
+      out.chainEvery = a ? { every: Math.min(a.every, m.chainEvery.every), chains: Math.max(a.chains, m.chainEvery.chains), dmgFrac: Math.max(a.dmgFrac, m.chainEvery.dmgFrac) } : m.chainEvery
+    }
+    if (m.spitEvery) {
+      const a = out.spitEvery
+      out.spitEvery = a
+        ? { every: Math.min(a.every, m.spitEvery.every), count: Math.max(a.count, m.spitEvery.count), dps: Math.max(a.dps, m.spitEvery.dps), dur: Math.max(a.dur, m.spitEvery.dur) }
+        : m.spitEvery
+    }
+    out.root = bestOf(out.root, m.root)
   }
   return out
 }

@@ -138,6 +138,33 @@ export interface EffectMods {
   rushPerHeld?: number
   /** Every `every`th kill this hero makes mends the Gate by `hp`. */
   killMend?: { every: number; hp: number }
+
+  // ---- the peoples' kit (Oct 2026, `docs/peoples/roster.json`) -------------
+  // Each is read in exactly one place in `engine.ts` and is off unless a
+  // source grants it, so a hero without one fights exactly as before (and no
+  // RNG draw moves: none of these draws).
+  /** Speed aura: heroes within `radius` (itself too) attack ×`rateMult` faster. */
+  rateAura?: { rateMult: number; radius: number }
+  /** This hero's hits deal this fraction more to a Plated enemy (`ENEMY_MODS`). */
+  vsPlated?: number
+  /** This hero's hits deal this fraction more to a Warded enemy. */
+  vsWarded?: number
+  /** This hero's CRITS also burn (its own burn line, not its hits'). */
+  critBurn?: { dps: number; dur: number }
+  /** Every `n`th attack this hero makes strikes twice (double damage). */
+  doubleEvery?: number
+  /** A kill readies this hero's next attack at once (its reload is reset). */
+  killReady?: boolean
+  /** Every `every`th attack also jumps to `chains` more enemies for `dmgFrac`. */
+  chainEvery?: { every: number; chains: number; dmgFrac: number }
+  /** Every `every`th attack poisons the `count` enemies nearest its target. */
+  spitEvery?: { every: number; count: number; dps: number; dur: number }
+  /**
+   * Roots: an impact holds up to `count` of the enemies it strikes in place
+   * for `dur` seconds (a stun that does not roll). A rooted body cannot be
+   * rooted again until `ROOT_REST` seconds after its roots break.
+   */
+  root?: { count: number; dur: number }
 }
 
 /** A run-acquired attack mutation applied to one hero (rolled at the mid-map fork). */

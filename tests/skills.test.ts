@@ -35,9 +35,9 @@ const ALL_POOL = ALL_SKILLS.map((k) => k.id)
 const at = (a: Archetype, level: number, extra: Partial<Sentinel> = {}): Sentinel => ({ ...applyXp(classicHero(a), xpToReach(level)), ...extra })
 
 describe('the skill library (SK1)', () => {
-  it('is 14 / 20 / 11 across the three levels, every id unique', () => {
+  it('is 14 / 24 / 12 across the three levels, every id unique', () => {
     const by = (l: number) => ALL_SKILLS.filter((k) => k.level === l).length
-    expect([by(1), by(2), by(3)]).toEqual([14, 20, 11])
+    expect([by(1), by(2), by(3)]).toEqual([14, 24, 12])
     expect(new Set(ALL_SKILLS.map((k) => k.id)).size).toBe(ALL_SKILLS.length)
   })
 
@@ -292,7 +292,7 @@ describe('the Codex collection (items and skills)', () => {
     expect(`${items.have}/${items.total}`).toBe(`${BASIC_ITEM_KINDS.length + 1}/${ITEM_KINDS.length}`)
     // A locked kind says how it opens: by playing, or — the Sovereign tier — by a delivered Sovereign Route.
     const sovereign = items.sections.find((s) => s.title === 'Sovereign')!
-    expect(sovereign.entries).toHaveLength(5)
+    expect(sovereign.entries).toHaveLength(15)
     for (const e of itemTiles.filter((e) => e.locked)) {
       expect(e.name).toBe('???')
       expect(e.how).toBe(sovereign.entries.includes(e) ? UNLOCK_BY_CHARTER : UNLOCK_BY_PLAYING)

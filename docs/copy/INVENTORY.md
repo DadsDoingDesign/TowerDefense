@@ -9,8 +9,8 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 |---|---|---:|---:|
 | Relics | Say what a relic does to the team, in a number, and that relics stack and reach new hires (once, as a note). | 27 | 41 |
 | Boons and pacts (stat cards) | Say the gain and, for a pact, its bill: numbers and what they touch. | 39 | 18 |
-| Skills | Say what a skill does to its hero, in numbers, so two can be compared at a glance. | 118 | 26 |
-| Items and gear | Name the item and say what it does in the hand: its numbers, its quirk. | 195 | 27 |
+| Skills | Say what a skill does to its hero, in numbers, so two can be compared at a glance. | 132 | 25 |
+| Items and gear | Name the item and say what it does in the hand: its numbers, its quirk. | 292 | 34 |
 | Mutations | Say how a mutation changes one hero's attack, and its cost. | 27 | 31 |
 | Enemies | Name the goblin and the one thing about it that changes how you fight it. | 82 | 31 |
 | Ground and hazards | Say what a tile does to a hero posted on it, in a few words. | 36 | 37 |
@@ -128,92 +128,106 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 
 ### `src/game/data/skills.ts`
 
-- L81: Attacks 15% faster.
-- L82: Hits 15% harder.
-- L87: Crit chance +10%, crit damage +50%.
-- L89: Holds 1 more enemy.
-- L90: Attacks 60% faster for the first 15s of each wave.
-- L91: Each kill makes it attack 25% faster for 1.5s.
-- L92: Every hit poisons 10/s for 3s.
-- L93: Every hit jumps to 1 more enemy for 45% of its damage.
-- L94: Every hit slows 25% for 1.5s.
-- L95: Reaches 20% farther.
-- L96: Every hit also strikes enemies within 14 of its target.
-- L98: Each kill pays 3 more gold.
-- L99: Hits 30% harder on held enemies.
-- L100: Enemies it holds take 80% more thorn damage.
-- L105: Hits 25% harder and attacks 10% faster.
-- L106: Reaches 50% farther, and every shot pierces 1 extra enemy.
-- L110: Kills enemies under 15% health outright; +10% crit chance, +10% damage.
-- L112: Holds 2 more enemies, in a wider circle.
-- L117: Holds 1 more enemy, slows what it hits 30% for 1.4s, and thorns ×3.
-- L120: Every hit has an 18% chance to stun for 0.7s, and hits 10% harder.
-- L121: Lays a snare on the path that burns 14/s and slows 30%; its hits slow 20%.
-- L122: Every hit burns 12/s for 3s and splashes 15 wider.
-- L137: Heroes near it hit 40% harder.
-- L138: Hits 50% harder; every 100 damage wins back 2% cargo.
-- L139: Each kill makes it attack 45% faster for 2s.
-- L140: Hits 25% harder on slowed enemies.
-- L141: Its thorns burn what it holds 12/s for 3s.
-- L142: Its attacks pass through 1 more enemy.
-- L143: Every 4th attack crits; +25% crit damage.
-- L151: Every hit burns 10/s for 3s, and it attacks 15% faster.
-- L152: Reaches 25% farther; +15% crit chance, +25% crit damage.
-- L153: Holds 1 more enemy, and hits 20% harder.
-- L154: Each kill pays 4 more gold, and its hits slow 25% for 1.5s.
-- L155: Every hit jumps to 1 more enemy for 50% and slows 25% for 1.5s.
-- L160: Hits 40% harder and attacks 25% faster.
-- L161: Hits 20% harder; +20% crit chance, +60% crit damage.
-- L162: Every 2nd attack pierces its whole path; reaches 15% farther.
-- L164: Holds 3 more enemies and slows what it hits 45% for 2s.
-- L165: Kills enemies under 28% health outright, and hits 20% harder.
-- L169: Heroes near it hit 50% harder.
-- L170: Attacks 15% faster per enemy it holds.
-- L171: Every 5th kill wins back 5% cargo.
-- L173: Holds 2 more enemies, thorns ×3, and its hits and thorns burn 26/s.
-- L174: Every hit has a 20% chance to stun for 0.7s, and slows 45% for 1.6s.
-- L182: Every hit jumps to 2 more enemies for 45%, and hits 35% harder.
-- L208: Level {level}
-- L236: STR
-- L236: DEX
-- L236: INT
-- L239: physical damage
-- L240: attack speed and crit
-- L241: magic damage
-- L347: +{Math.round((mult - 1) * }%
-- L350: Execute
-- L351: Trap
-- L352: Stun
-- L353: Shock
-- L354: Hold
-- L355: Hold
-- L356: Hold
-- L357: Volley
-- L358: Burn
-- L359: Bounty
-- L360: Dmg
-- L361: Speed
-- L362: Reach
-- L363: Crit
-- L364: Crit
-- L365: Crit
-- L366: Chill
-- L367: Drain
-- L368: Splash
-- L369: Pierce
-- L370: Shots
-- L371: Thorns
-- L372: Thorns
-- L373: Aura
-- L374: Rush
-- L375: Rush
-- L376: Ward
-- L377: Vs held
-- L378: Vs slowed
-- L379: Thorns
-- L380: Rush
-- L381: Mend
-- L386: Skill
+- L82: Attacks 15% faster.
+- L83: Hits 15% harder.
+- L88: Crit chance +10%, crit damage +50%.
+- L90: Holds 1 more enemy.
+- L91: Attacks 60% faster for the first 15s of each wave.
+- L92: Each kill makes it attack 25% faster for 1.5s.
+- L93: Every hit poisons 10/s for 3s.
+- L94: Every hit jumps to 1 more enemy for 45% of its damage.
+- L95: Every hit slows 25% for 1.5s.
+- L96: Reaches 20% farther.
+- L97: Every hit also strikes enemies within 14 of its target.
+- L99: Each kill pays 3 more gold.
+- L100: Hits 30% harder on held enemies.
+- L101: Enemies it holds take 80% more thorn damage.
+- L106: Hits 25% harder and attacks 10% faster.
+- L107: Reaches 50% farther, and every shot pierces 1 extra enemy.
+- L111: Kills enemies under 15% health outright; +10% crit chance, +10% damage.
+- L113: Holds 2 more enemies, in a wider circle.
+- L118: Holds 1 more enemy, slows what it hits 30% for 1.4s, and thorns ×3.
+- L121: Every hit has an 18% chance to stun for 0.7s, and hits 10% harder.
+- L122: Lays a snare on the path that burns 14/s and slows 30%; its hits slow 20%.
+- L123: Every hit burns 12/s for 3s and splashes 15 wider.
+- L138: Heroes near it hit 40% harder.
+- L139: Hits 50% harder; every 100 damage wins back 2% cargo.
+- L140: Each kill makes it attack 45% faster for 2s.
+- L141: Hits 25% harder on slowed enemies.
+- L142: Its thorns burn what it holds 12/s for 3s.
+- L143: Its attacks pass through 1 more enemy.
+- L144: Every 4th attack crits; +25% crit damage.
+- L152: Every hit burns 10/s for 3s, and it attacks 15% faster.
+- L153: Reaches 25% farther; +15% crit chance, +25% crit damage.
+- L154: Holds 1 more enemy, and hits 20% harder.
+- L155: Each kill pays 4 more gold, and its hits slow 25% for 1.5s.
+- L156: Every hit jumps to 1 more enemy for 50% and slows 25% for 1.5s.
+- L161: Hits 20% harder, and every hit splashes 20 wider.
+- L162: Heroes near it attack 20% faster.
+- L163: Every 3rd attack poisons the 3 nearest enemies 12/s for 3s.
+- L164: Grows roots on the path beside it that slow 40% and sting 8/s.
+- L169: Hits 40% harder and attacks 25% faster.
+- L170: Hits 20% harder; +20% crit chance, +60% crit damage.
+- L171: Every 2nd attack pierces its whole path; reaches 15% farther.
+- L173: Holds 3 more enemies and slows what it hits 45% for 2s.
+- L174: Kills enemies under 28% health outright, and hits 20% harder.
+- L178: Heroes near it hit 50% harder.
+- L179: Attacks 15% faster per enemy it holds.
+- L180: Every 5th kill wins back 5% cargo.
+- L182: Holds 2 more enemies, thorns ×3, and its hits and thorns burn 26/s.
+- L183: Every hit has a 20% chance to stun for 0.7s, and slows 45% for 1.6s.
+- L191: Every hit jumps to 2 more enemies for 45%, and hits 35% harder.
+- L193: Every 5th attack jumps to 3 more enemies in full; hits 25% harder.
+- L227: Level {level}
+- L255: STR
+- L255: DEX
+- L255: INT
+- L258: physical damage
+- L259: attack speed and crit
+- L260: magic damage
+- L366: +{Math.round((mult - 1) * }%
+- L369: Execute
+- L370: Trap
+- L371: Stun
+- L372: Shock
+- L373: Hold
+- L374: Hold
+- L375: Hold
+- L376: Volley
+- L377: Burn
+- L378: Bounty
+- L379: Dmg
+- L380: Speed
+- L381: Reach
+- L382: Crit
+- L383: Crit
+- L384: Crit
+- L385: Chill
+- L386: Drain
+- L387: Splash
+- L388: Pierce
+- L389: Shots
+- L390: Thorns
+- L391: Thorns
+- L392: Aura
+- L393: Rush
+- L394: Rush
+- L395: Ward
+- L396: Vs held
+- L397: Vs slowed
+- L398: Thorns
+- L399: Rush
+- L400: Mend
+- L402: Aura
+- L403: Shock
+- L404: Poison
+- L405: Roots
+- L406: Burn
+- L407: Twice
+- L408: Ready
+- L409: Vs plated
+- L410: Vs warded
+- L415: Skill
 
 ### `src/ui/shell/LevelUpPanel.tsx`
 
@@ -276,6 +290,7 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 - L77: {m.critChanceAdd >= 0 ? '}{pct(m.critChanceAdd)} crit chance
 - L78: {m.critMultAdd >= 0 ? '+'}{pct(m.critMultAdd)} crit damage
 - L79: {m.splashAdd >= 0 ? '+' :}{m.splashAdd} splash radius
+- L80: pierces its whole path
 - L80: pierces {m.pierce} extra {m.pierce === 1 ? 'enemy'}
 - L81: executes below {pct(m.execute)} HP
 - L82: burns {Math.round(m.burn.dps)}/s for {m.burn.dur}s
@@ -301,149 +316,248 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 - L122: first {m.openingRush.dur}s of a wave: {pct(m.openingRush.rate)} faster attacks
 - L123: the first {m.leakWard} raiders to reach your wagons each wave steal nothing
 - L124: a burning enemy that dies spreads its fire to its neighbours
-- L131: +{e.stats.str} STR
-- L132: +{e.stats.dex} DEX
-- L133: +{e.stats.int} INT
-- L134: +{e.thorns} Thorns
-- L135: +{e.patience} Patience
-- L147: +{grant.stats.str} STR
-- L148: +{grant.stats.dex} DEX
-- L149: +{grant.stats.int} INT
-- L150: +{grant.thorns} Thorns
-- L151: +{grant.patience} Patience
+- L126: holds {m.holdAdd} more {m.holdAdd === 1 ? 'enemy}
+- L127: heroes near it attack {pct(m.rateAura.rateMult } faster
+- L128: {pct(m.vsPlated)} more to plated enemies
+- L129: {pct(m.vsWarded)} more to warded enemies
+- L130: crits burn {Math.round(m.critBurn.dp}/s for {m.critBurn.dur}s
+- L131: every {ordinal(m.doubleEvery)} attack hits twice
+- L132: each kill readies its next attack
+- L133: every {ordinal(m.chainEvery.eve} attack jumps to {m.chainEvery.chains} more for {pct(m.chainEvery.dmgFrac}
+- L134: every {ordinal(m.spitEvery.ever} attack poisons the {m.spitEvery.count} nearest {Math.round(m.spitEvery.d}/s
+- L135: roots what it hits for {m.root.dur}s
+- L135: roots {m.root.count} it hits for {m.root.dur}s
+- L142: +{e.stats.str} STR
+- L143: +{e.stats.dex} DEX
+- L144: +{e.stats.int} INT
+- L145: +{e.thorns} Thorns
+- L146: +{e.patience} Patience
+- L158: +{grant.stats.str} STR
+- L159: +{grant.stats.dex} DEX
+- L160: +{grant.stats.int} INT
+- L161: +{grant.thorns} Thorns
+- L162: +{grant.patience} Patience
 
 ### `src/game/data/gear.ts`
 
-- L52: {/^[aeiou]/i.test(noun) ?} {noun}
-- L62: Throws stones
-- L64: Swings {article(n)} up close
-- L65: Shoots a bow from far away
-- L65: Throws daggers from far away
-- L66: Casts magic from {article(n)} at a group
-- L84: {weaponDoes(hero)} · {hold}
-- L93: Gear
-- L94: Unarmed
-- L100: Weapon
-- L100: Unarmed
+- L53: {/^[aeiou]/i.test(noun) ?} {noun}
+- L63: Throws stones
+- L65: Swings {article(n)} up close
+- L67: Shoots a bow from far away
+- L68: Throws daggers from far away
+- L69: Shoots {article(n)} from far away
+- L69: Throws {article(n)} from far away
+- L71: Casts magic from {article(n)} at a group
+- L89: {weaponDoes(hero)} · {hold}
+- L98: Gear
+- L99: Unarmed
+- L105: Weapon
+- L105: Unarmed
 
 ### `src/game/data/itemKinds.ts`
 
-- L52: One hand. Swings up close; a little attack speed.
-- L53: Both hands. Shoots from far away.
-- L54: One hand, or the off hand. Casts a burst at a group; a little attack speed.
-- L55: One hand. Swings up close; every hit also strikes the enemies beside.
-- L56: One hand, or the off hand. Throws quick strikes from afar; the most attack speed.
-- L57: One hand. Casts a burst at a group; reaches farther.
-- L58: One hand. Casts a burst at a group; crits more often.
-- L59: Both hands. Swings up close, much harder and farther, a little slower.
-- L60: Both hands. Swings up close, hardest of all, but slower.
-- L61: Both hands. Casts a much harder, wider burst.
-- L62: Both hands. Casts a much harder burst at a group, quicker.
-- L64: Off hand. Holds 2 enemies; attack speed and crit.
-- L65: Off hand. Holds 1 enemy; a lot of attack speed and crit.
-- L66: Off hand. Holds 3 enemies, but attacks slower.
-- L67: Off hand. Every hit harder.
-- L68: Off hand. Attack speed.
-- L69: Off hand. Crit chance.
-- L71: Body. Reach and a wider blast.
-- L72: Body. Every hit harder.
-- L73: Body. A much wider blast.
-- L74: Body. Much more reach.
-- L75: Body. Attack speed.
-- L77: One hand. Swings up close; every hit burns 20/s for 3s.
-- L78: Off hand. Holds 4 enemies; attack speed and crit.
-- L79: Body. Reach, a wider blast, +15% damage.
-- L80: Body. Reach, a wider blast, +15% attack speed.
-- L81: Both hands. Casts a much harder burst at a group that jumps to 2 more.
-- L94: Either hand
+- L66: One hand. Swings up close; a little attack speed.
+- L67: Both hands. Shoots from far away.
+- L68: One hand, or the off hand. Casts a burst at a group; a little attack speed.
+- L69: One hand. Swings up close; every hit also strikes the enemies beside.
+- L70: One hand, or the off hand. Throws quick strikes from afar; the most attack speed.
+- L71: One hand. Casts a burst at a group; reaches farther.
+- L72: One hand. Casts a burst at a group; crits more often.
+- L73: Both hands. Swings up close, much harder and farther, a little slower.
+- L74: Both hands. Swings up close, hardest of all, but slower.
+- L75: Both hands. Casts a much harder, wider burst.
+- L76: Both hands. Casts a much harder burst at a group, quicker.
+- L78: Off hand. Holds 2 enemies; attack speed and crit.
+- L79: Off hand. Holds 1 enemy; a lot of attack speed and crit.
+- L80: Off hand. Holds 3 enemies, but attacks slower.
+- L81: Off hand. Every hit harder.
+- L82: Off hand. Attack speed.
+- L83: Off hand. Crit chance.
+- L85: Body. Reach and a wider blast.
+- L86: Body. Every hit harder.
+- L87: Body. A much wider blast.
+- L88: Body. Much more reach.
+- L89: Body. Attack speed.
+- L91: One hand. Swings up close; every hit burns 20/s for 3s.
+- L93: Off hand. Holds 4 enemies; attack speed and crit.
+- L94: Body. Reach, a wider blast, +15% damage.
+- L95: Body. Reach, a wider blast, +15% attack speed.
+- L97: Both hands. Casts a much harder burst at a group that jumps to 2 more.
+- L120: Either hand
 
 ### `src/game/data/items.ts`
 
-- L10: Main Hand
-- L11: Off Hand
-- L12: Body
-- L94: Saffron Brand
-- L95: Moonquill Codex
-- L96: Gilded Easel
-- L97: Ironheart Plate
-- L98: Silkwind Cloak
-- L265: Common
-- L266: Rare
-- L267: Epic
-- L268: Legendary
-- L269: Mythic
-- L294: Saffron Brand
-- L294: Moonquill Codex
-- L294: Gilded Easel
-- L294: Ironheart Plate
-- L294: Silkwind Cloak
-- L302: Saffron Brand
-- L302: Sovereign
-- L303: Moonquill Codex
-- L303: Sovereign
-- L304: Ironheart Plate
-- L304: Sovereign
-- L305: Silkwind Cloak
-- L305: Sovereign
-- L368: Shield
-- L368: Buckler
-- L368: Tome
-- L368: Quiver
-- L368: Focus
-- L368: Pavise
-- L368: Gilded Easel
-- L369: Plate
-- L369: Mail
-- L369: Robe
-- L369: Cloak
-- L369: Aegis
-- L369: Ironheart Plate
-- L369: Silkwind Cloak
-- L370: Banner
-- L370: Standard
-- L370: Relic
-- L370: Beacon
-- L370: Oath
-- L394: of Might
-- L395: of Precision
-- L396: of Insight
-- L423: of Reach
-- L424: of Patience
-- L425: Cruel
-- L426: Ruinous
-- L427: Bursting
-- L428: Heavy
-- L429: Swift
-- L433: Flaming
-- L489: Frost
-- L490: Shocking
-- L491: Piercing
-- L492: Vampiric
-- L498: Executioner
-- L533: Reckless
-- L557: Frenzied
-- L561: Wild
-- L566: Erratic
-- L574: Vengeful
-- L580: of Rallying
-- L581: of Haste
-- L582: of Focus
-- L583: of the Hunt
-- L584: of Ruin
-- L1002: {noun} {ench[0]?.label ?? ''}
-- L1079: Mythic Onslaught
-- L1080: Mythic Tempo
-- L1081: Mythic Precision
-- L1177: {prefix ? prefix.label + }{noun}{suffix ? ' ' + suffix.la}
-- L1182: Relic
-- L1183: {noun} {ench[0]?.label ?? ''}
-- L1192: +{b.physDamage} Physical Damage
-- L1193: +{b.magDamage} Magic Damage
-- L1194: +{Math.round(b.damagePct *}% Damage
-- L1195: {signed(Math.round(b.atta}% Attack Speed
-- L1196: +{Math.round(b.critChance }% Crit Chance
-- L1197: +{Math.round(b.rangeMult *}% Range
-- L1198: +{b.splashAdd} Splash Radius
+- L11: Main Hand
+- L12: Off Hand
+- L13: Body
+- L97: Saffron Brand
+- L98: Moonquill Codex
+- L99: Gilded Easel
+- L100: Ironheart Plate
+- L101: Silkwind Cloak
+- L104: Kingscale Shield
+- L105: Greenvial Herbal
+- L195: Saffron Brand\|Moonquill Codex\|Gilded Easel\|Ironheart Plate\|Silkwind Cloak\|Greatsword\|Sword\|Axe\|Dagger\|Wand\|Rod\|Scepter\|Sceptre\|Warhammer\|Bow\|Staff\|Grimoire\|Shield\|Buckler\|Pavise\|Tome\|Quiver\|Focus\|P
+- L201: Kingscale Shield
+- L201: Greenvial Herbal
+- L204: ({[...NEW_NOUNS, CLASSIC_N})
+- L315: Common
+- L316: Rare
+- L317: Epic
+- L318: Legendary
+- L319: Mythic
+- L347: Saffron Brand
+- L348: Greenvial Herbal
+- L349: Kingscale Shield
+- L350: Ironheart Plate
+- L351: Silkwind Cloak
+- L368: Saffron Brand
+- L368: Sovereign
+- L369: Greenvial Herbal
+- L369: Sovereign
+- L370: Ironheart Plate
+- L370: Sovereign
+- L371: Silkwind Cloak
+- L371: Sovereign
+- L441: Shield
+- L441: Buckler
+- L441: Tome
+- L441: Quiver
+- L441: Focus
+- L441: Pavise
+- L441: Kingscale Shield
+- L442: Plate
+- L442: Mail
+- L442: Robe
+- L442: Cloak
+- L442: Aegis
+- L442: Ironheart Plate
+- L442: Silkwind Cloak
+- L443: Banner
+- L443: Standard
+- L443: Relic
+- L443: Beacon
+- L443: Oath
+- L467: of Might
+- L468: of Precision
+- L469: of Insight
+- L496: of Reach
+- L497: of Patience
+- L498: Cruel
+- L499: Ruinous
+- L500: Bursting
+- L501: Heavy
+- L502: Swift
+- L506: Flaming
+- L562: Frost
+- L563: Shocking
+- L564: Piercing
+- L565: Vampiric
+- L571: Executioner
+- L606: Reckless
+- L630: Frenzied
+- L634: Wild
+- L639: Erratic
+- L647: Vengeful
+- L653: of Rallying
+- L654: of Haste
+- L655: of Focus
+- L656: of the Hunt
+- L657: of Ruin
+- L1108: {noun} {ench[0]?.label ?? ''}
+- L1188: Mythic Onslaught
+- L1189: Mythic Tempo
+- L1190: Mythic Precision
+- L1289: {prefix ? prefix.label + }{noun}{suffix ? ' ' + suffix.la}
+- L1294: Relic
+- L1295: {noun} {ench[0]?.label ?? ''}
+- L1304: +{b.physDamage} Physical Damage
+- L1305: +{b.magDamage} Magic Damage
+- L1306: +{Math.round(b.damagePct *}% Damage
+- L1307: {signed(Math.round(b.atta}% Attack Speed
+- L1308: +{Math.round(b.critChance }% Crit Chance
+- L1309: {signed(Math.round(b.rang}% Range
+- L1310: +{b.splashAdd} Splash Radius
+
+### `src/game/data/peopleKinds.ts`
+
+- L102: One hand. Swings up close; hits a little harder.
+- L103: Off hand. Holds 2 enemies; its hits slow 15%.
+- L104: Body. Holds 1 more enemy; a little attack speed.
+- L105: One hand. A wide swing that strikes enemies beside.
+- L106: One hand. Swings up close; every hit burns 8/s for 2s.
+- L107: Both hands. Reaches farther; every hit strikes 2 in a line.
+- L108: Both hands. Swings up close; heroes near it hit 10% harder.
+- L109: Off hand. Holds 3 enemies; attacks a little slower.
+- L110: Body. Every hit harder; a little attack speed.
+- L111: One hand. Swings much faster; its crits burn 12/s for 3s.
+- L112: Off hand. Holds 3 enemies; heroes near it attack 10% faster.
+- L113: Body. Reach; every hit harder.
+- L114: Both hands. Heroes near it hit 20% harder; its hits burn 10/s.
+- L115: Body. Holds 1 more enemy; every hit harder; thorns burn 12/s.
+- L118: Both hands. Shoots faster, not as far.
+- L119: Body. Crit chance.
+- L120: Both hands. Shoots farthest; a little slower.
+- L121: One hand, or the off hand. Every 3rd strike hits twice.
+- L122: Off hand. Shots pierce 1 more enemy; a little attack speed.
+- L123: Body. Reach and crit chance.
+- L124: Body. Hits slow 15%; a little reach.
+- L125: Both hands. Shoots from far away; every 4th shot crits.
+- L126: Both hands. Every shot splits to a 2nd enemy for 50%.
+- L127: One hand, or the off hand. Crits hit 50% harder.
+- L128: Off hand. Attack speed and reach.
+- L129: Body. Reach and attack speed.
+- L130: Both hands. Every shot pierces its whole path; +10% crit.
+- L131: One hand, or the off hand. Each kill readies its next strike.
+- L134: One hand. Swings up close, hard; 8% stun chance.
+- L135: One hand. Swings up close; hits plated enemies 25% harder.
+- L136: Off hand. Holds 2 enemies; more thorns; a little crit.
+- L137: Body. Holds 1 more enemy; a little wider blast.
+- L138: Body. +8 thorns; every hit a little harder.
+- L139: One hand. Cleaves a wider circle; a little slower.
+- L140: Both hands. Slow, very hard hits that splash.
+- L141: Off hand. Holds 2 enemies; hits warded enemies 25% harder.
+- L142: Body. Holds 1 more enemy; +6 thorns.
+- L143: Both hands. Cleaves everything around it.
+- L144: Both hands. Hits armoured enemies 30% harder and slow 20%.
+- L145: Off hand. Holds 4 enemies; 12% stun chance; attacks slower.
+- L146: Body. Every hit harder; a wider blast.
+- L147: Both hands. Every hit splashes; 25% stun chance.
+- L148: Off hand. Holds 5 enemies; thorns ×2.
+- L151: Both hands. Strikes up close; pierces the enemy behind.
+- L152: One hand, or the off hand. Every hit poisons 6/s for 3s.
+- L153: One hand. Swings up close, hard; 10% stun chance.
+- L154: Body. Attack speed; a little reach.
+- L155: Body. +6 thorns; a little reach.
+- L156: One hand. Swings up close; every hit bleeds 10/s for 3s.
+- L157: One hand. Swings up close; hits held enemies 30% harder.
+- L158: Both hands. Throws from mid range; hits slow 30%.
+- L159: Off hand. Holds 2 enemies; more thorns; attack speed.
+- L160: Off hand. Every 4th attack throws a javelin that pierces 3.
+- L161: Body. +6 thorns; holds 1 more enemy.
+- L162: Both hands. A wide sweep; every hit bleeds 10/s for 3s.
+- L163: Both hands. The hardest swing; kills enemies under 15% outright.
+- L164: One hand, or the off hand. Every hit poisons 14/s; crits more.
+- L165: Body. Crit chance; each kill: +30% attack speed for 2s.
+- L166: Body. Each kill pays 2 more gold; every hit a little harder.
+- L167: Both hands. Every strike pierces its whole path and poisons 12/s.
+- L168: One hand. Each kill: +40% attack speed for 3s.
+- L171: One hand. Casts a burst at a group that slows 15%.
+- L172: Off hand. Every 10th kill wins back 1% cargo; hits a little harder.
+- L173: One hand. Casts a burst that poisons 8/s for 3s; reaches farther.
+- L174: One hand, or the off hand. Bursts jump to 1 more enemy for 45%.
+- L175: Off hand. Hits splash a brew that slows 20%.
+- L176: Body. A wider blast that slows 20%.
+- L177: Body. Heroes near it attack 10% faster.
+- L178: Both hands. Bursts sprout roots that hold 2 enemies for 0.8s.
+- L179: Off hand. Heroes near it hit 15% harder.
+- L180: Body. Blasts burn 8/s and slow 15%.
+- L181: Both hands. Every burst roots what it hits for 1s.
+- L182: Off hand. Every 5th kill wins back 2% cargo; heroes near it attack 15% faster.
+- L191: Gilded Easel
+- L191: Kingscale Shield
+- L192: Moonquill Codex
+- L192: Greenvial Herbal
 
 ### `src/game/run/inventory.ts`
 
@@ -1384,15 +1498,15 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 - L112: Freemark
 - L112: Crownwater
 - L112: Highcharter
-- L159: Fire covers part of every field.
-- L160: Lakes cover some of the best ground.
-- L161: 4 more boulders a field. They can’t be cleared.
-- L162: Every merchant price is twice as much.
-- L163: 2 more cursed patches on every field.
-- L168: Deals every item and skill you own, for no company.
-- L169: Every goblin clan marches from the first fight, {MUSTER_PCT}% stronger, and steals {MUSTER_PCT}% more.
-- L170: No crates, no city pay, no cashing out. The cities are waypoints.
-- L195: Every good
+- L162: Fire covers part of every field.
+- L163: Lakes cover some of the best ground.
+- L164: 4 more boulders a field. They can’t be cleared.
+- L165: Every merchant price is twice as much.
+- L166: 2 more cursed patches on every field.
+- L171: Deals every item and skill you own, for no company.
+- L172: Every goblin clan marches from the first fight, {MUSTER_PCT}% stronger, and steals {MUSTER_PCT}% more.
+- L173: No crates, no city pay, no cashing out. The cities are waypoints.
+- L198: Every good
 
 ### `src/game/run/militia.ts`
 
@@ -2224,182 +2338,182 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 - L304: Taking it doesn’t raise enemy strength.
 - L307: Hiring doesn’t raise enemy strength.
 - L354: Keepsake: works for the whole team, whoever wears it.
-- L390: Curse · {e.label} — {t}
-- L390: {e.label} — {t}
-- L398: {SOVEREIGN_TIER} tier
-- L423: STR
-- L424: DEX
-- L425: INT
-- L462: Holds
-- L463: Targets
-- L463: a group
-- L476: Skill · {k.name} — {k.desc}
-- L601: Walk on
-- L601: Nothing here to take.
-- L602: March on
-- L602: Leave the city.
-- L603: Walk on
-- L603: Leave this stop.
-- L606: Back to the menu
-- L606: End the charter and head home. Its fee is lost.
-- L606: End the contract and head home.
-- L644: Choose {c.name}
-- L649: Back
-- L649: Back
-- L672: Buy
-- L674: {itemName(e.item)} added to your pack
-- L691: −{cargoShare(-fx.baseHpDel}% cargo now
-- L702: Bargain
-- L709: Boon — {s.boon}
-- L710: Curse — {shrineCurse(st, s)}
-- L711: Accept the terms
-- L712: Walk away
-- L735: to pack
-- L741: Downside — {c.downside}
-- L754: How effects stack
-- L759: Take {c.item ? itemName(c.item}
-- L808: {cr.revealed.heroName} · Mythic
-- L811: Downside — {m.downside}
-- L813: How effects stack
-- L814: March on
-- L831: Mythic
-- L834: Downside — {m.downside}
-- L850: {aimed.name} already carries this one.
-- L853: Already carried
-- L853: Give {aimed.name} {name}
-- L857: Yes — mutate {aimed.name}
-- L858: {name} is permanent and can't be rerolled.{m.downside ? ` It costs }
-- L870: Aim at {h.name} instead
-- L873: The same {mutations.length} mutations, for {h.name}
-- L874: Aim at {h.name}
-- L879: Back to the hires
-- L879: Pick someone else
-- L880: Aiming at {aimed.name}
-- L883: Nothing spent. The same mutations will wait.
-- L884: Back to the hires
-- L884: Pick someone else
-- L902: A mutation instead
-- L903: {mutations.length} Mythics
-- L906: Hire nobody; change how one hero attacks, for good.
-- L907: A mutation instead
-- L920: You have {MAX_ROSTER} heroes, the most you can lead.
-- L924: No room for more heroes
-- L924: Hire {s.name}
-- L925: {s.name} joins your heroes
-- L932: Hire nobody
-- L932: Hire nobody
-- L943: Mutate
-- L949: Change how {h.name} attacks, for good: pick 1 of {mutations.length} Mythic mutations.
-- L950: Carries {mutationName(m.key, m.na} — {m.desc}
-- L951: The same mutations whoever you aim at. Aiming is free.
-- L953: Aim at {h.name}
-- L956: March on
-- L956: March on
-- L961: March on
-- L961: March on
-- L973: Standard
-- L974: Deuteranopia
-- L975: Protanopia
-- L976: Tritanopia
-- L993: Music
-- L994: Effects
-- L995: Interface
-- L1000: On
-- L1000: Off
-- L1004: Sound
-- L1005: Muted
-- L1005: Music {Math.round(s.audio.music} · Effects {Math.round(s.audio.game }
-- L1016: Effects tell you what hit, died or got through; music is safe to lower first.
-- L1018: Unmute
-- L1018: Mute
-- L1022: Calm audio
-- L1025: No drums, a softer mix, effects ahead of the music. Every warning still plays.
-- L1026: Turn off
-- L1026: Turn on
-- L1030: Mono audio
-- L1033: One channel, so one earbud hears everything.
-- L1034: Turn off
-- L1034: Turn on
-- L1038: Reduced motion
-- L1041: Cuts animation and screen shake.
-- L1042: Turn off
-- L1042: Turn on
-- L1047: Effects
-- L1048: Off (reduced motion)
-- L1048: Light
-- L1048: Full
-- L1051: Each company’s world round the panels and the field’s edges: embers, sparks, petals, paint, stars.
-- L1052: Light: half the particles, no glows, still frames. Full drops to Light by itself on a slow device.
-- L1055: Set to Full
-- L1055: Set to Light
-- L1062: High contrast
-- L1065: Stronger borders and text.
-- L1066: Turn off
-- L1066: Turn on
-- L1070: Large UI
-- L1073: All text about 15% larger; touch targets 48px.
-- L1075: Normal size
-- L1075: Make it large
-- L1082: Colour vision
-- L1085: Re-tints rarity, hero and good/bad colours. Rarity also shows pips, so colour is never the only signal.
-- L1087: Switch to {VISION_LABEL[nextVision(}
-- L1094: Assist
-- L1117: Waves, loot and pay stay the same.
-- L1119: A run with assist on, even for one wave, is marked Assisted: it keeps every reward but skips leaderboards.
-- L1122: Set to {assistProfile(nextAssist}
-- L1130: Held waves continue
-- L1133: On: a held sub-wave sends the next after 4 seconds, unless you touch the field. Off: it waits for Next.
-- L1134: Turn off
-- L1134: Turn on
-- L1138: Show everything from the start
-- L1141: Off: features arrive one at a time as you play. On: every screen shows everything now.
-- L1143: Introduce things as they come
-- L1143: Show everything
-- L1150: Tips
-- L1151: Some seen
-- L1151: All waiting
-- L1153: The one-line hints shown the first time something matters. Bring them back for another pass.
-- L1154: Show the tips again
-- L1158: Reset progress
-- L1159: Destructive
-- L1162: Wipes your bank, HQ, standing, unlocks and records. There is no undo.
-- L1164: Erase everything
-- L1169: Yes — erase it all
-- L1170: Everything you have earned will be gone.
-- L1180: Sovereign Route · every kind of goblin from the first fight, {MUSTER_PCT}% stronger.
-- L1182: Escort · standard raiders.
-- L1186: Opens after your first contract
-- L1188: Opens when your bank first holds {HQ_OPENS_AT.toLocaleStri} gold
-- L1189: Opens after your first delivered contract
-- L1200: Back
-- L1204: Back
-- L1212: Your militia
-- L1216: Its name and flag. The flag flies over your wagons and HQ.
-- L1217: Change
-- L1234: Start a Run
-- L1235: Your first contract
-- L1235: The focused road’s terms
-- L1240: Peppercorn Co. needs its spice escorted. It’s free, and every city pays you.
-- L1241: Pick a road, then read its terms: escort free, or stake cargo for more pay.
-- L1242: Begin
-- L1252: Headquarters
-- L1253: HQ
-- L1254: {moneyText(meta.bank, 'go} banked
-- L1257: Two offices, HR and Operations: bank gold buys upgrades that last.
-- L1258: Open
-- L1263: Sealed crates
-- L1264: Crates
-- L1265: {moneyText(PULL_PRICE, 'g} a crate
-- L1268: A side bet: one random item, yours for good.
-- L1269: Open
-- L1275: Codex
-- L1276: Glossary
-- L1276: Standing {best}
-- L1279: Every item, skill, goblin, relic and feat, found and unfound, plus the glossary.
-- L1280: Open
-- L1284: Settings
-- L1287: Sound, motion, contrast, size, colour, assist and tips.
-- L1288: Open
+- L393: Curse · {e.label} — {t}
+- L393: {e.label} — {t}
+- L401: {SOVEREIGN_TIER} tier
+- L426: STR
+- L427: DEX
+- L428: INT
+- L465: Holds
+- L466: Targets
+- L466: a group
+- L479: Skill · {k.name} — {k.desc}
+- L604: Walk on
+- L604: Nothing here to take.
+- L605: March on
+- L605: Leave the city.
+- L606: Walk on
+- L606: Leave this stop.
+- L609: Back to the menu
+- L609: End the charter and head home. Its fee is lost.
+- L609: End the contract and head home.
+- L647: Choose {c.name}
+- L652: Back
+- L652: Back
+- L675: Buy
+- L677: {itemName(e.item)} added to your pack
+- L694: −{cargoShare(-fx.baseHpDel}% cargo now
+- L705: Bargain
+- L712: Boon — {s.boon}
+- L713: Curse — {shrineCurse(st, s)}
+- L714: Accept the terms
+- L715: Walk away
+- L738: to pack
+- L744: Downside — {c.downside}
+- L757: How effects stack
+- L762: Take {c.item ? itemName(c.item}
+- L811: {cr.revealed.heroName} · Mythic
+- L814: Downside — {m.downside}
+- L816: How effects stack
+- L817: March on
+- L834: Mythic
+- L837: Downside — {m.downside}
+- L853: {aimed.name} already carries this one.
+- L856: Already carried
+- L856: Give {aimed.name} {name}
+- L860: Yes — mutate {aimed.name}
+- L861: {name} is permanent and can't be rerolled.{m.downside ? ` It costs }
+- L873: Aim at {h.name} instead
+- L876: The same {mutations.length} mutations, for {h.name}
+- L877: Aim at {h.name}
+- L882: Back to the hires
+- L882: Pick someone else
+- L883: Aiming at {aimed.name}
+- L886: Nothing spent. The same mutations will wait.
+- L887: Back to the hires
+- L887: Pick someone else
+- L905: A mutation instead
+- L906: {mutations.length} Mythics
+- L909: Hire nobody; change how one hero attacks, for good.
+- L910: A mutation instead
+- L923: You have {MAX_ROSTER} heroes, the most you can lead.
+- L927: No room for more heroes
+- L927: Hire {s.name}
+- L928: {s.name} joins your heroes
+- L935: Hire nobody
+- L935: Hire nobody
+- L946: Mutate
+- L952: Change how {h.name} attacks, for good: pick 1 of {mutations.length} Mythic mutations.
+- L953: Carries {mutationName(m.key, m.na} — {m.desc}
+- L954: The same mutations whoever you aim at. Aiming is free.
+- L956: Aim at {h.name}
+- L959: March on
+- L959: March on
+- L964: March on
+- L964: March on
+- L976: Standard
+- L977: Deuteranopia
+- L978: Protanopia
+- L979: Tritanopia
+- L996: Music
+- L997: Effects
+- L998: Interface
+- L1003: On
+- L1003: Off
+- L1007: Sound
+- L1008: Muted
+- L1008: Music {Math.round(s.audio.music} · Effects {Math.round(s.audio.game }
+- L1019: Effects tell you what hit, died or got through; music is safe to lower first.
+- L1021: Unmute
+- L1021: Mute
+- L1025: Calm audio
+- L1028: No drums, a softer mix, effects ahead of the music. Every warning still plays.
+- L1029: Turn off
+- L1029: Turn on
+- L1033: Mono audio
+- L1036: One channel, so one earbud hears everything.
+- L1037: Turn off
+- L1037: Turn on
+- L1041: Reduced motion
+- L1044: Cuts animation and screen shake.
+- L1045: Turn off
+- L1045: Turn on
+- L1050: Effects
+- L1051: Off (reduced motion)
+- L1051: Light
+- L1051: Full
+- L1054: Each company’s world round the panels and the field’s edges: embers, sparks, petals, paint, stars.
+- L1055: Light: half the particles, no glows, still frames. Full drops to Light by itself on a slow device.
+- L1058: Set to Full
+- L1058: Set to Light
+- L1065: High contrast
+- L1068: Stronger borders and text.
+- L1069: Turn off
+- L1069: Turn on
+- L1073: Large UI
+- L1076: All text about 15% larger; touch targets 48px.
+- L1078: Normal size
+- L1078: Make it large
+- L1085: Colour vision
+- L1088: Re-tints rarity, hero and good/bad colours. Rarity also shows pips, so colour is never the only signal.
+- L1090: Switch to {VISION_LABEL[nextVision(}
+- L1097: Assist
+- L1120: Waves, loot and pay stay the same.
+- L1122: A run with assist on, even for one wave, is marked Assisted: it keeps every reward but skips leaderboards.
+- L1125: Set to {assistProfile(nextAssist}
+- L1133: Held waves continue
+- L1136: On: a held sub-wave sends the next after 4 seconds, unless you touch the field. Off: it waits for Next.
+- L1137: Turn off
+- L1137: Turn on
+- L1141: Show everything from the start
+- L1144: Off: features arrive one at a time as you play. On: every screen shows everything now.
+- L1146: Introduce things as they come
+- L1146: Show everything
+- L1153: Tips
+- L1154: Some seen
+- L1154: All waiting
+- L1156: The one-line hints shown the first time something matters. Bring them back for another pass.
+- L1157: Show the tips again
+- L1161: Reset progress
+- L1162: Destructive
+- L1165: Wipes your bank, HQ, standing, unlocks and records. There is no undo.
+- L1167: Erase everything
+- L1172: Yes — erase it all
+- L1173: Everything you have earned will be gone.
+- L1183: Sovereign Route · every kind of goblin from the first fight, {MUSTER_PCT}% stronger.
+- L1185: Escort · standard raiders.
+- L1189: Opens after your first contract
+- L1191: Opens when your bank first holds {HQ_OPENS_AT.toLocaleStri} gold
+- L1192: Opens after your first delivered contract
+- L1203: Back
+- L1207: Back
+- L1215: Your militia
+- L1219: Its name and flag. The flag flies over your wagons and HQ.
+- L1220: Change
+- L1237: Start a Run
+- L1238: Your first contract
+- L1238: The focused road’s terms
+- L1243: Peppercorn Co. needs its spice escorted. It’s free, and every city pays you.
+- L1244: Pick a road, then read its terms: escort free, or stake cargo for more pay.
+- L1245: Begin
+- L1255: Headquarters
+- L1256: HQ
+- L1257: {moneyText(meta.bank, 'go} banked
+- L1260: Two offices, HR and Operations: bank gold buys upgrades that last.
+- L1261: Open
+- L1266: Sealed crates
+- L1267: Crates
+- L1268: {moneyText(PULL_PRICE, 'g} a crate
+- L1271: A side bet: one random item, yours for good.
+- L1272: Open
+- L1278: Codex
+- L1279: Glossary
+- L1279: Standing {best}
+- L1282: Every item, skill, goblin, relic and feat, found and unfound, plus the glossary.
+- L1283: Open
+- L1287: Settings
+- L1290: Sound, motion, contrast, size, colour, assist and tips.
+- L1291: Open
 
 ### `src/ui/shell/oneTap.tsx`
 

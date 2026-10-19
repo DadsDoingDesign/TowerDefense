@@ -473,7 +473,7 @@ button:disabled {
   --fw-i-size: 16px;
   /* The sheet's grid. Checked against the atlas by `npm run fw-icons:check`. */
   --fw-i-cols: 8;
-  --fw-i-rows: 14;
+  --fw-i-rows: 23;
   display: inline-block;
   flex: 0 0 auto;
   width: var(--fw-i-size);
