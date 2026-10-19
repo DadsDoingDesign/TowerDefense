@@ -175,9 +175,18 @@ smooth formula-filled domes and cones) were all rejected.
   is mechanical: a tool rings each part in 2 px of `#161c2e`. Shapes drawn
   by formula read as vector art. If a drafting helper roughs in a big mass,
   hand-place every texture mark, dash and edge after it.
-- **One body, many heads.** Use one bell tunic re-coloured per design, the
-  way the pack reuses its body. The character lives in the head mass (hair,
-  hat, hood, beard) and in one prop.
+- **Give every character its own body.** The designer, Oct 2026: "Body
+  doesn't need to be shared, it should be unique." A shared, re-coloured
+  tunic made every design read alike below the neck. Each figure gets a body
+  drawn for who it is, inside the pack's mass bands (§ 4a):
+  - its people's build: a squat, square dwarf; a taller, tapering elf; a
+    reptile with a heavy tail and a forward lean; a tiny round gnome;
+  - its costume's cut and material: an apron, a smock, a cloak, a coat, a
+    sash, a belt and pouch;
+  - its posture: brisk, planted, coiled or hunched.
+
+  The head mass still leads (hair, hat, hood, beard), and the body answers
+  it.
 - **Lead with the hat or head.** The designer's pick was the hat-led Field
   Burner. **No prop may overlap the head or hat silhouette**: hold it low,
   at the side, or clear of the head mass. Check this per frame in code.
