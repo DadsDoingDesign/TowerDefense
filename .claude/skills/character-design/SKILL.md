@@ -164,6 +164,94 @@ bar is still the line-up: put the figure among the pack's people at 1× and
 Pixel Frog. (The rejected 72 × 72 post faces pass every band except the
 outline depth, which is about 2.1.)
 
+## 4b. How to draw one the designer will pick (the Oct 2026 method)
+
+The only figures the designer picked (Saffra's ten, then the five others)
+were made like this. Earlier ones (reskins of the pack's pixels, skeletons,
+smooth formula-filled domes and cones) were all rejected.
+
+- **Hand-author every sprite as a pixel map.** Use string rows and a palette
+  key, placed like a pixel artist works, and iterate at 8×. Only the outline
+  is mechanical: a tool rings each part in 2 px of `#161c2e`. Shapes drawn
+  by formula read as vector art. If a drafting helper roughs in a big mass,
+  hand-place every texture mark, dash and edge after it.
+- **One body, many heads.** Use one bell tunic re-coloured per design, the
+  way the pack reuses its body. The character lives in the head mass (hair,
+  hat, hood, beard) and in one prop.
+- **Lead with the hat or head.** The designer's pick was the hat-led Field
+  Burner. **No prop may overlap the head or hat silhouette**: hold it low,
+  at the side, or clear of the head mass. Check this per frame in code.
+- **Shade by hand, row by row.** Use about half light, a third mid and a
+  little dark, curved to the form, plus the pack's crisp white dashes.
+- **Hide the face.** At most a nose, a cheek or an eye glint under a brim.
+  Never a mouth object.
+- **Put a texture you can name on every material:** stitching, a dent, a
+  rolled and lit brim edge, kerchief folds, scales in paired light and dark
+  dashes. Avoid noise and evenly spaced streaks, which read as staves or
+  corduroy.
+- **Make props big enough to read at 1×,** and give each one its own tic.
+
+## 4c. Lessons from Stardew Valley (what transfers, what doesn't)
+
+The designer shared a reverse-engineered Stardew Valley sprite spec (Oct
+2026). We learn its methods. We never copy its art, and Tiny Swords stays
+our look, so a Stardew rule that contradicts the pack's measured bands loses.
+I measured the pack against it: `public/assets/sprites/tinyswords/` mystic,
+fighter, rogue and torch1.
+
+**Adopt: the pack already does it, or it fits it:**
+
+- **Hue-shifted ramps.** Stardew turns hue 40–60° from shadow to light. The
+  pack does the same:
+  - cream: H22 → H37 → H48, warming toward yellow;
+  - teal: H224 navy → H192 → H175;
+  - goblin skin: H132 → H93;
+  - goblin red: its shadow drops to magenta, H319.
+
+  So never make a ramp by darkening one hue. Take the pack's own ramps, or
+  shift a new one about 25–50°: shadows cool or magenta, lights warm.
+- **Light from above, hard silhouettes.** There are no soft pixels on a
+  silhouette. Soften inside it with in-between colours. Partial alpha is only
+  for the ground shadow (about 30%) and effects like smoke.
+- **Small motion that carries life, staggered.** Stardew's idle redraws an
+  8×8 chest patch 6% larger for half of a ~3.8 s cycle, offset per
+  character so a crowd never breathes in sync. That's our desynced dock
+  clock and the pack's squash-and-bob; keep both. Strides drop the body
+  exactly 1 px and swing the arms 1–2 px, and nothing else moves.
+- **Land impacts early.** A short wind-up, the hit on the third frame (about
+  190 ms), then a longer hold. Apply it to hero attacks and to any tic with
+  a "hit": a slap, a stamp, a chalk mark.
+- **Layers with one offset table.** The farmer is a stack of layers (body,
+  pants, eyes, shirt, accessory, hair, hat). One per-frame offset table moves
+  each layer with the body's bob, so one hair drawing serves every frame.
+  That is the right model for our hero rig (`src/game/render/hero/`): parts
+  ride the body by a per-frame offset table, never redrawn per frame.
+- **Key-colour palette swaps and greyscale tints for variants.** Paint a
+  swappable part (skin, a company's colour, a clan's cloth) in fixed key
+  colours or greys, then swap or multiply at runtime. That is how one drawing
+  gives every company livery, clan and skin tone. Keep near-black outline
+  pixels out of the tint so the ink stays `#161c2e`.
+- **Seasonal or company outfits on the same grid.** Keep the head and redraw
+  only the clothes. That suits liveries and Sovereign Route outfits.
+- **Portraits as one bust with small edits.** A 64×64 shoulders-up bust in
+  3/4 view, with expressions as 100–300 changed pixels on the same base:
+  neutral, happy, sad, angry, blush, plus a unique one. That's the model for
+  liaison and keeper portraits (the speech-bubble scenes and the receipt),
+  instead of one fixed face: the line's mood picks the expression. Add a
+  1 px jiggle for about 250 ms when the expression changes, and a fast-snap
+  emote bubble (open in 4 × 20 ms, play 4 × 250 ms, close fast).
+
+**Don't adopt: it contradicts the pack:**
+
+- **Coloured outlines per material.** Stardew outlines each material in a
+  dark version of its own hue and uses no black. Tiny Swords uses ONE navy
+  ink, `#161c2e`, on 85–100% of every edge. Keep the pack's ink.
+- **Proportions.** Stardew heads are 38–48% of a 26–29 px body, about 2.4
+  heads tall. The pack's heads are 62–74%. Keep the pack's bands (§ 4a).
+- **Its grid, colour budget and four facings.** Stardew uses a 16×32 cell at
+  4×, about 19 colours, and down/right/up/left rows. Our people face right
+  in a 3/4 view, at 7–13 colours per figure, at the pack's density.
+
 ## 5. Critique loop: required, at least 3 rounds
 
 "It renders" is not "it's good", and the designer has rejected first passes
