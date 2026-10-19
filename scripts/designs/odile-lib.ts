@@ -105,8 +105,8 @@ function dropRows(rows: readonly string[], drop: readonly number[]): string[] {
   return rows.filter((_, i) => !s.has(i))
 }
 
-/** Compose one frame (only the listed groups, when `groups` is given). */
-export function render(d: Design, f: Frame = {}, groups?: readonly Group[]): Rgba {
+/** Compose one frame (only the listed groups, or only the listed part ids, when given). */
+export function render(d: Design, f: Frame = {}, groups?: readonly Group[], ids?: readonly string[]): Rgba {
   const data = new Uint8ClampedArray(W * H * 4)
   const put = (x: number, y: number, hex: string, a = 255) => {
     if (x < 0 || y < 0 || x >= W || y >= H) return
@@ -121,6 +121,7 @@ export function render(d: Design, f: Frame = {}, groups?: readonly Group[]): Rgb
   for (const p of d.parts) {
     if (!shown(p)) continue
     if (groups && !groups.includes(p.group)) continue
+    if (ids && !ids.includes(p.id)) continue
     let rows = f.swap?.[p.id] ?? p.rows
     if (p.spread && f.spread && !f.swap?.[p.id]) rows = splay(rows, p.spread, f.spread)
     const mv = f.move?.[p.group] ?? [0, 0]
