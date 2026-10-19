@@ -8,7 +8,7 @@
  * sprig. Tic: he taps the trowel and the seedling on his head grows a leaf.
  */
 import type { Design } from './wren-lib'
-import { PAL, SHADOW, FEET, FIST_L, FIST_R } from './wren-common'
+import { PAL, SHADOW } from './wren-common'
 
 const POT = [
   '...................ffffff',
@@ -44,23 +44,25 @@ const POT = [
 ]
 
 const SPROUT = [
-  'VWW..WWV',
-  'VWiWWiWV',
-  '.vVWWVv',
-  '...VV',
-  '...vV',
-  '...vV',
+  'VWW.....WWV',
+  'VWiWW..WWiWV',
+  '.vVWWVVWWVv',
+  '...vVWWVv',
+  '.....VW',
+  '.....vV',
+  '.....vV',
 ]
 
 const SPROUT_UP = [
-  '.VWW..WWV',
-  'VWiWWWiWVv',
-  '.vVWWWVv',
-  '...VWV',
-  '..VWiWV',
-  '...vVv',
-  '....vV',
-  '....vV',
+  '.....WiW',
+  'VWW..VWV..WWV',
+  'VWiWW.VV.WWiWV',
+  '.vVWWVVVVWWVv',
+  '...vVWWWWVv',
+  '......VW',
+  '......vV',
+  '......vV',
+  '......vV',
 ]
 
 const FACE = [
@@ -73,40 +75,70 @@ const FACE = [
   'wwwwwIwIIXkknnnnkkIXX',
   'wwIwIwIIXIIkkkkkkXIXX',
   'wwIwIIIIXIIIIXIIIXXXX',
-  '.wwIwIIXIIIIXIIIXIXX',
-  '.wwIwIIIIXIIIIIXIXX',
-  '..wwIIXIIIIXIIIXXX',
-  '...XIIIXX.XIIIXX',
-  '.....XXX...XXX',
+  '.wwIIXIIIIXIIIXX',
+  '..XIIXX.XIIIXX',
+  '....XXX...XXX',
 ]
 
-const BODY = [
-  '......vvVVVVVVVVWWW',
-  '.....vvVVVVVVVVVVWW',
-  '....vvvVVVVVVVVVVWWW',
-  '...vvvVVVVvVVVVVVVWW',
-  '...vvvVVVVvVVVVVVVWWW',
-  '..ddddHdddddddddddddd',
-  '..vvvVVVVVvVVVVVvVVWWW',
-  '.vvvvVVVVVvVVVVVvVVVWW',
-  'vDDDDDDDDDDDDDDDDDDDDv',
-  'vvvvvvvvvvvvvvvvvvvvvv',
-  '..vvvvvvvvvvvvvvvvvv',
+const BELLY = [
+  '.......VVVVVVVWWWWWWWWW',
+  '.....VVVVVVVVVVWWWWWWWWWW',
+  '...VVVVVVhhhhhhhhHHHHHHHWWW',
+  '..vVVVVVhhhhhhhhhhHHHHHwHWWW',
+  '.vvvVVVhhhhhdDhhhhhHHHHHwwWWW',
+  'xXxxXxVDhhhDDDDhhhhhHHHHHHWWWXx',
+  '.vvvvvDDDhhDhhdhhhhhLHLHLHHWW',
+  '.vvvvvDDDDhDDDDhhhhhLLLLHHHWW',
+  '.vvvvvDDDDDDhhhhhhhhlLLLfHHWW',
+  '.vvvvvDDDDlLDhhhhhhhhlLlHHHWW',
+  '..vvvvvDDDDlLLhhhhhhhhhhfLVV',
+  '...vvvvDDDDDDDLhhhhhhhhhhlV',
+  '.....vvvDDDDDDlDhhhhhhhhh',
+  '.......vvvDDDDDDDDDDDDD',
+  '.........DhhhhhhhHHD',
+  '..........DDhhhhhhD',
+]
+
+const BOOTS = [
+  '.SSt.....SStT',
+  '.SxtT....SxtT',
+  'ddDDhd..ddDDhh',
+  'dLDDDd..dDLDDhh',
+  '.dddd....ddddd',
+]
+
+const FIST_CLAY_B = [
+  '.eeE',
+  'elEEE',
+  'eLlEE',
+  'eeLEE',
+  '.eeE',
+]
+
+const FIST_CLAY_F = [
+  '.EEF',
+  'eELFF',
+  'eLlEF',
+  'eEEEE',
+  '.eeE',
 ]
 
 const TROWEL = [
-  '.DD',
-  'DhD',
-  'DhD',
-  'DhD',
-  '.dd',
-  '.QQQ',
-  'QqUqQ',
-  'QqUUqQ',
-  'QqUUqQ',
-  'QqUqqQ',
-  '.QqxqQ',
-  '..Qx',
+  '..dD',
+  '..Dh',
+  '..Dh',
+  '..Dh',
+  '..dd',
+  '.xHHx',
+  '.QuUUq',
+  'QuUwwUUq',
+  'QuUUUUUqQ',
+  'QuUUUUUqQ',
+  '.QuUUUUqQ',
+  '..QuUUUqQ',
+  '...QuUUqQ',
+  '....QuuqQ',
+  '.....QQQ',
 ]
 
 const SOIL = [
@@ -122,16 +154,16 @@ export const D09: Design = {
   pal: PAL,
   headBottom: 62,
   parts: [
-    { id: 'shadow', group: 'feet', x: 34, y: 73, rows: SHADOW, ring: 0 },
-    { id: 'feet', group: 'feet', x: 43, y: 72, rows: FEET, ring: 0 },
-    { id: 'body', group: 'body', x: 39, y: 62, rows: BODY },
-    { id: 'handB', group: 'hands', x: 35, y: 65, rows: FIST_L },
+    { id: 'shadow', group: 'feet', x: 35, y: 76, rows: SHADOW, ring: 0 },
+    { id: 'boots', group: 'feet', x: 38, y: 75, rows: BOOTS },
+    { id: 'body', group: 'body', x: 37, y: 61, rows: BELLY },
+    { id: 'handB', group: 'hands', x: 32, y: 66, rows: FIST_CLAY_B },
     { id: 'pot', group: 'head', x: 28, y: 28, rows: POT, squash: [10, 13, 16] },
-    { id: 'sprout', group: 'head', x: 46, y: 24, rows: SPROUT, ring: 1, ride: true },
+    { id: 'sprout', group: 'head', x: 45, y: 24, rows: SPROUT, ring: 1, ride: true },
     { id: 'face', group: 'head', x: 43, y: 56, rows: FACE },
-    { id: 'trowel', group: 'prop', x: 68, y: 63, rows: TROWEL },
-    { id: 'handF', group: 'hands', x: 67, y: 62, rows: FIST_R },
-    { id: 'soil', group: 'fx', x: 67, y: 76, rows: SOIL, ring: 0, hidden: true },
+    { id: 'trowel', group: 'prop', x: 67, y: 63, rows: TROWEL },
+    { id: 'handF', group: 'hands', x: 68, y: 64, rows: FIST_CLAY_F },
+    { id: 'soil', group: 'fx', x: 70, y: 78, rows: SOIL, ring: 0, hidden: true },
   ],
   idle: [
     {},
@@ -146,9 +178,9 @@ export const D09: Design = {
   tic: [
     { nudge: { trowel: [0, 1], handF: [0, 1] }, show: ['soil'] },
     {},
-    { nudge: { trowel: [0, 1], handF: [0, 1] }, show: ['soil'], swap: { sprout: SPROUT_UP }, at: { sprout: [45, 22] } },
-    { swap: { sprout: SPROUT_UP }, at: { sprout: [45, 22] } },
-    { swap: { sprout: SPROUT_UP }, at: { sprout: [45, 22] }, squash: 1 },
+    { nudge: { trowel: [0, 1], handF: [0, 1] }, show: ['soil'], swap: { sprout: SPROUT_UP }, at: { sprout: [44, 22] } },
+    { swap: { sprout: SPROUT_UP }, at: { sprout: [44, 22] } },
+    { swap: { sprout: SPROUT_UP }, at: { sprout: [44, 22] }, squash: 1 },
     {},
   ],
   ticMs: [120, 120, 140, 300, 260, 200],

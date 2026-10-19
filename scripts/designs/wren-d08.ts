@@ -8,7 +8,7 @@
  * branching horns. Tic: a new leaf opens on a twig as the sickle catches light.
  */
 import type { Design } from './wren-lib'
-import { PAL, SHADOW, FEET, FIST_L, FIST_R } from './wren-common'
+import { PAL, SHADOW } from './wren-common'
 
 const HOOD = [
   '.................tttttttt',
@@ -99,27 +99,56 @@ const FACE = [
   'FFFFFEFEEekknnnnkkeee',
   '.FFEFEFVWeEkkkkkkEee',
   '..FFEFEEiVEEeEEEeee',
-  '...FEFEEeEEEeEEeEe',
-  '...FEFEeEEVWeEEee',
-  '....FEFeE...EEEe',
-  '....FEEe....EEee',
-  '.....FEe.....EEe',
-  '.....Fe......EEe',
-  '......e.......e',
+  '...FEFEEeE.EeEEeEe',
+  '....FEFe....EEEe',
+  '....FEe......EEe',
+  '.....e........e',
 ]
 
-const BODY = [
-  '......ddDDDDDDDDhhh',
-  '.....ddDDDDDDDDDDhh',
-  '....dddDDDDDDDDDDhhh',
-  '...dddDDDDdDDDDDDDhh',
-  '...dddDDDDdDDDDDDDhhh',
-  '..vvvvPvvvvvvvvvvvvvv',
-  '..dddDDDDDdDDDDDdDDhhh',
-  '.ddddDDDDDdDDDDDdDDDhh',
-  'dVVVVVVVVVVVVVVVVVVVVd',
-  'dddddddddddddddddddddd',
-  '..dddddddddddddddddd',
+const ROBE = [
+  '.........vvVVVVVVVVVVWWWW',
+  '........vvvVVWVVVVVVVVWWWW',
+  '........vvvVWiWVVVVVVVWiWW',
+  '.......vvvvVVWVvWVVVVVVWWWW',
+  '.......vvvVVVVVvWVVVViVVWWiW',
+  '......vvvVVViVVvWVVVWiWVvWVWWW',
+  '......vvPVVWVVVvWVVVVWVVvWVWWW',
+  '.....vvvVVWiWVVvWVVVVVVVvWVVWWW',
+  '.....ggjgjjgjjgjjgjjgjjgJjJJiJ',
+  '....vvvVVVVVVvWVVViWVVVvWVVViWW',
+  '....vvvVViVVVvWVVVWVVVVvWVVWWWW',
+  '...vvvvVVWVVVvWVVVVVVPVVvWVVWWWW',
+  '...vvvvvVVVVVvVVVVVVVVVVvVVVVWWV',
+  '...dDhdDhDDdDhhDdDhhDDdDhDhhDDhD',
+  '.DhdD.dhh..dh..Dh...dh..hD.dhhDDd',
+  'Dd......d...D...d....d...D.....dD',
+]
+
+const KNOT = [
+  '.WiW',
+  'WWiV',
+  '.VV',
+]
+
+const SLEEVE_B = [
+  '.vVV',
+  'vvVVV',
+  'vVVVW',
+  'vVViW',
+  'dDDDhD',
+  '.eEEE',
+  '..eE',
+]
+
+const SLEEVE_F = [
+  'VVW.',
+  'VWWW',
+  'VWiWW',
+  'VVWWW',
+  'dDDhDh',
+  '.eEEFF',
+  '.eEEEF',
+  '..eeE',
 ]
 
 const SICKLE = [
@@ -150,16 +179,16 @@ export const D08: Design = {
   pal: PAL,
   headBottom: 62,
   parts: [
-    { id: 'shadow', group: 'feet', x: 34, y: 73, rows: SHADOW, ring: 0 },
-    { id: 'feet', group: 'feet', x: 43, y: 72, rows: FEET, ring: 0 },
-    { id: 'body', group: 'body', x: 39, y: 62, rows: BODY },
-    { id: 'handB', group: 'hands', x: 34, y: 65, rows: FIST_L },
+    { id: 'shadow', group: 'feet', x: 33, y: 73, rows: SHADOW, ring: 0 },
+    { id: 'robe', group: 'body', x: 33, y: 61, rows: ROBE },
+    { id: 'knot', group: 'body', x: 40, y: 68, rows: KNOT, ring: 1 },
+    { id: 'sleeveB', group: 'hands', x: 31, y: 64, rows: SLEEVE_B },
     { id: 'hood', group: 'head', x: 28, y: 30, rows: HOOD, squash: [10, 13, 16] },
     { id: 'twigB', group: 'head', x: 31, y: 23, rows: TWIG_B, ring: 1, ride: true },
     { id: 'twigF', group: 'head', x: 55, y: 23, rows: TWIG_F, ring: 1, ride: true },
     { id: 'face', group: 'head', x: 44, y: 55, rows: FACE },
     { id: 'sickle', group: 'prop', x: 67, y: 64, rows: SICKLE },
-    { id: 'handF', group: 'hands', x: 66, y: 70, rows: FIST_R },
+    { id: 'sleeveF', group: 'hands', x: 65, y: 63, rows: SLEEVE_F },
     { id: 'glint', group: 'fx', x: 71, y: 64, rows: GLINT, ring: 0, hidden: true },
   ],
   idle: [
@@ -174,8 +203,8 @@ export const D08: Design = {
   // he turns the sickle so it catches the light while a new leaf opens on the front twig
   tic: [
     { squash: 1 },
-    { nudge: { sickle: [1, 0], handF: [1, 0] }, show: ['glint'] },
-    { nudge: { sickle: [1, 0], handF: [1, 0], glint: [1, 1] }, show: ['glint'], swap: { twigF: TWIG_F_LEAF } },
+    { nudge: { sickle: [1, 0], sleeveF: [1, 0] }, show: ['glint'] },
+    { nudge: { sickle: [1, 0], sleeveF: [1, 0], glint: [1, 1] }, show: ['glint'], swap: { twigF: TWIG_F_LEAF } },
     { swap: { twigF: TWIG_F_LEAF } },
     { swap: { twigF: TWIG_F_LEAF }, squash: 1 },
     {},

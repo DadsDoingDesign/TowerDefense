@@ -7,7 +7,7 @@
  * on the roots of whatever grows at his feet.
  */
 import type { Design } from './wren-lib'
-import { PAL, SHADOW, FEET, FIST_L, FIST_R } from './wren-common'
+import { PAL, SHADOW } from './wren-common'
 
 const JAR = [
   '...................wwUU',
@@ -63,18 +63,57 @@ const FACE = [
   '......IXX',
 ]
 
-const BODY = [
-  '......vvVVVVVVVVWWW',
-  '.....vvVVVVVVVVVVWW',
-  '....vvvVVVVVVVVVVWWW',
-  '...vvvVVVVvVVVVVVVWW',
-  '...vvvVVVVvVVVVVVVWWW',
-  '..ddddHdddddddddddddd',
-  '..vvvVVVVVvVVVVVvVVWWW',
-  '.vvvvVVVVVvVVVVVvVVVWW',
-  'voooooooooooooooooooov',
-  'vvvvvvvvvvvvvvvvvvvvvv',
-  '..vvvvvvvvvvvvvvvvvv',
+const WAISTCOAT = [
+  '...ddDDDDDDDDhhhh',
+  '..dddDDDDDDDDDhhhh',
+  '.ddddDDDDDDDDDDhhhh',
+  '.dddDDDDDDDDDDDDhhH',
+  'ddddDDDDDDDHDDDDhhhH',
+  'ddddDxDDDDDDDDDDhhhh',
+  'ddddDxDDDDDHDDDDhhhH',
+  '.dddDDDDDDDDDDDDhhh',
+  '..dddDDDDeFFDDDDhh',
+  '...ddDDDDeFFeDDhh',
+  '...SSStt..SSSttT',
+  '...SxoxS..SoxotT',
+  '...SSStt..SSSttT',
+  '..ddDDDd.ddDDDDh',
+  '..ddDDDDd.ddDDDDhh',
+  '...ddddd..dddddddd',
+]
+
+const LOOP = [
+  '.Dh',
+  '.Dh',
+  'xxxx',
+  '.QqU',
+  '.QqU',
+  '.Qq',
+  '..Q',
+]
+
+const ARM_B = [
+  '.EFF',
+  'eEEFF',
+  'eEEFF',
+  'eFwwF',
+  '.eee',
+  '.nNN',
+  'nnNNm',
+  'nNNNN',
+  '.nnN',
+]
+
+const ARM_F = [
+  'FFw.',
+  'EFFw',
+  'EEFww',
+  'wwwwF',
+  '.eee',
+  '.nNNm',
+  'nNNmm',
+  'nNNNm',
+  '.nnN',
 ]
 
 const HANDLE = [
@@ -113,15 +152,15 @@ export const D02: Design = {
   headBottom: 62,
   parts: [
     { id: 'shadow', group: 'feet', x: 34, y: 73, rows: SHADOW, ring: 0 },
-    { id: 'feet', group: 'feet', x: 43, y: 72, rows: FEET, ring: 0 },
-    { id: 'body', group: 'body', x: 39, y: 62, rows: BODY },
-    { id: 'handB', group: 'hands', x: 35, y: 65, rows: FIST_L },
+    { id: 'body', group: 'body', x: 40, y: 61, rows: WAISTCOAT },
+    { id: 'armB', group: 'hands', x: 34, y: 62, rows: ARM_B },
+    { id: 'loop', group: 'body', x: 38, y: 69, rows: LOOP, ring: 1 },
     { id: 'jar', group: 'head', x: 28, y: 24, rows: JAR, squash: [9, 16, 23] },
     { id: 'face', group: 'head', x: 43, y: 56, rows: FACE },
-    { id: 'handle', group: 'prop', x: 63, y: 63, rows: HANDLE, ring: 1 },
-    { id: 'can', group: 'prop', x: 62, y: 66, rows: CAN },
-    { id: 'handF', group: 'hands', x: 64, y: 61, rows: FIST_R },
-    { id: 'drips', group: 'fx', x: 77, y: 70, rows: DRIPS, ring: 0, hidden: true },
+    { id: 'handle', group: 'prop', x: 62, y: 66, rows: HANDLE, ring: 1 },
+    { id: 'can', group: 'prop', x: 61, y: 68, rows: CAN },
+    { id: 'armF', group: 'hands', x: 60, y: 61, rows: ARM_F },
+    { id: 'drips', group: 'fx', x: 76, y: 72, rows: DRIPS, ring: 0, hidden: true },
   ],
   idle: [
     {},
@@ -135,8 +174,8 @@ export const D02: Design = {
   // he tips the can (the spout dips), and it drips
   tic: [
     { nudge: { can: [1, 1] } },
-    { nudge: { can: [1, 2], handF: [0, 1] }, show: ['drips'] },
-    { nudge: { can: [1, 2], handF: [0, 1], drips: [0, 2] }, show: ['drips'] },
+    { nudge: { can: [1, 2], armF: [0, 1] }, show: ['drips'] },
+    { nudge: { can: [1, 2], armF: [0, 1], drips: [0, 2] }, show: ['drips'] },
     { nudge: { can: [1, 1] } },
     {},
   ],

@@ -174,5 +174,37 @@
     "title": "10. Hollow Warden · motion",
     "caption": "The idle (the pack's squash and bob) and the tic, looped: does the tic say quiet, a little ominous?",
     "file": "d10.webp"
+  },
+  {
+    "id": "wren-bodies",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "Wren · bodies of their own",
+    "caption": "The top three before (shared bell) and after (own body) at 4× and 1×. Judge: does each body say who they are, and do the three differ below the neck?",
+    "file": "bodies.png"
+  },
+  {
+    "id": "wren-d08-body",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "8. Twig-crown Druid · own body, motion",
+    "caption": "A mossy robe to the ground, root-hemmed, a vine belt, hands in its sleeves, with the idle and tic. Judge: still a tiny round gnome, hat leading?",
+    "file": "d08-body.webp"
+  },
+  {
+    "id": "wren-d02-body",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "2. Bell-jar Keeper · own body, motion",
+    "caption": "A gardener's waistcoat, rolled sleeves, a trowel loop, soil on the knees, with the idle and tic. Judge: still a tiny round gnome, hat leading?",
+    "file": "d02-body.webp"
+  },
+  {
+    "id": "wren-d09-body",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "9. Flowerpot Potter · own body, motion",
+    "caption": "A clay-smeared potter's apron over a round belly, with the idle and tic. Judge: still a tiny round gnome, hat leading?",
+    "file": "d09-body.webp"
   }
 ]

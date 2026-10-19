@@ -14,7 +14,7 @@
  * pack figures shown beside them are the old-CC0 stills already shipped in
  * public/assets/sprites/tinyswords/ (see sprites/CREDITS.md).
  */
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import sharp from 'sharp'
@@ -278,11 +278,68 @@ async function motion(d: Design, path: string, box: { x: number; y: number; w: n
     .toFile(path)
 }
 
+// ── the bodies pass: each of the top three in a body of its own ───────────────
+
+const BODY_IDS = ['d08', 'd02', 'd09']
+
+/** bodies.png (each before vs after at 4×, from 1× stills of the shared-body version saved in `beforeDir`) and dXX-body.webp. */
+async function bodies(beforeDir: string) {
+  mkdirSync(OUT, { recursive: true })
+  const grass = b64(await sharp(join(PACK, 'grass.png')).png().toBuffer())
+  const pawn = await readPack('mystic')
+  const cell = async (img: Rgba, s: number) => b64(await png(img, s))
+  const rows: string[] = []
+  for (const id of BODY_IDS) {
+    const d = DESIGNS.find((x) => x.id === id)!
+    const { data, info } = await sharp(join(beforeDir, `${id}.png`)).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
+    const before: Rgba = { w: info.width, h: info.height, data: new Uint8ClampedArray(data) }
+    const after = render(d)
+    const b = frameBox([before, after, ...idleFrames(d), ...ticFrames(d)])
+    const x = Math.max(0, b.x0 - 2), y = Math.max(0, b.y0 - 2), w = Math.min(W, b.x1 + 3) - x, h = Math.min(H, b.y1 + 3) - y
+    rows.push(`<div class="r"><h2>${d.title}</h2><div class="top grass"><img src="${await cell(crop(before, x, y, w, h), 4)}"><img src="${await cell(crop(after, x, y, w, h), 4)}"></div>
+      <div class="lab"><span>Before: the shared bell</span><span>After: ${BODY_NOTE[id]}</span></div>
+      <div class="one grass">${(await Promise.all([pawn, crop(before, x, y, w, h), crop(after, x, y, w, h)].map((im) => cell(im, 1)))).map((u) => `<img src="${u}">`).join('')}</div></div>`)
+    await motion(d, join(OUT, `${id}-body.webp`), { x, y, w, h })
+  }
+  const html = `<!doctype html><meta charset="utf-8"><style>${CSS(grass)}
+    .wrap{padding:12px;width:576px} h1{font-size:20px;margin:0} p{margin:2px 0 8px;color:#c9cbbf;font-size:13.5px}
+    h2{font-size:16px;margin:12px 0 4px;color:#ffe46b}
+    .top{display:flex;align-items:flex-end;justify-content:space-around;padding:10px 6px 4px;border-radius:8px}
+    .lab{display:flex;justify-content:space-around;font-size:12px;color:#c9cbbf;margin:4px 0 4px}
+    .one{display:flex;align-items:flex-end;gap:10px;padding:6px 10px;border-radius:6px;width:max-content}
+    </style><div class="wrap"><h1>Wren · bodies of their own</h1><p>The top three, each before (the shared bell and fists) and after (a body drawn for who they are) at 4×; below each, the CC0 pawn, before and after at 1×.</p>
+    ${rows.join('')}</div>`
+  await shoot(html, join(OUT, 'bodies.png'), 600)
+  const mpath = join(OUT, 'manifest.json')
+  const manifest: { id: string; group: string; people: string; title: string; caption: string; file: string }[] = existsSync(mpath) ? JSON.parse(readFileSync(mpath, 'utf8')) : []
+  const keep = manifest.filter((m) => !m.id.endsWith('-body') && m.id !== 'wren-bodies')
+  keep.push({ id: 'wren-bodies', group: 'Wren designs', people: 'Wren', title: 'Wren · bodies of their own', caption: 'The top three before (shared bell) and after (own body) at 4× and 1×. Judge: does each body say who they are, and do the three differ below the neck?', file: 'bodies.png' })
+  for (const id of BODY_IDS) {
+    const d = DESIGNS.find((x) => x.id === id)!
+    keep.push({ id: `wren-${id}-body`, group: 'Wren designs', people: 'Wren', title: `${Number(id.slice(1))}. ${d.title} · own body, motion`, caption: `${BODY_NOTE[id][0].toUpperCase()}${BODY_NOTE[id].slice(1)}, with the idle and tic. Judge: still a tiny round gnome, hat leading?`, file: `${id}-body.webp` })
+  }
+  writeFileSync(mpath, JSON.stringify(keep, null, 2) + '\n')
+}
+
+const BODY_NOTE: Record<string, string> = {
+  d08: 'a mossy robe to the ground, root-hemmed, a vine belt, hands in its sleeves',
+  d02: "a gardener's waistcoat, rolled sleeves, a trowel loop, soil on the knees",
+  d09: "a clay-smeared potter's apron over a round belly",
+}
+
 async function main() {
   const args = process.argv.slice(2)
   const results = DESIGNS.map(report)
   const pi = args.indexOf('--preview')
   if (pi >= 0) await preview(args[pi + 1] ?? join(tmpdir(), 'wren-preview'), args[pi + 2])
+  const si = args.indexOf('--stills')
+  if (si >= 0) {
+    const dir = args[si + 1]
+    mkdirSync(dir, { recursive: true })
+    for (const d of DESIGNS) await sharp(await png(render(d), 1)).toFile(join(dir, `${d.id}.png`))
+  }
+  const bi = args.indexOf('--bodies')
+  if (bi >= 0) await bodies(args[bi + 1])
   if (args.includes('--cards')) {
     if (results.some((r) => r.miss.length || r.clear.length)) throw new Error('a design is out of band or a prop touches the head: no cards')
     await cards()
