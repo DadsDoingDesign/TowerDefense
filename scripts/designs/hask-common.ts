@@ -29,6 +29,8 @@ export const PAL: Readonly<Record<string, string>> = {
   l: '#9e8776', b: '#c9aa8e', L: '#e1d4bd', m: '#fffce7',
   // dried reed / straw
   o: '#a38250', O: '#cea554', u: '#f1da84',
+  // green reed (woven cloaks): olive mid, pale tip; shaded with the hide browns
+  T: '#b3a645', U: '#dcdf71',
   // iron
   n: '#545962', N: '#737f8e', x: '#bac1c8',
   // dusk cloth (plum-grey)

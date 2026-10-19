@@ -8,7 +8,7 @@
  * cape. Tic: he gives the trap a shake and it snaps shut.
  */
 import type { Design } from './hask-lib'
-import { PAL, FEET, SHADOW_W, FIST_B, FIST_F, SNOUT, TAIL, TAIL_UP, bell } from './hask-common'
+import { PAL, FEET, SHADOW_W, SNOUT, TAIL, TAIL_UP } from './hask-common'
 
 const HOOD = [
   '.............iiiiiiiiiiii',
@@ -24,6 +24,8 @@ const HOOD = [
   '....iiiiHiiiiiiiiiiiiiiiakkkkkkkkk',
   '....iiiiHiiiiiiiHiiiiiiiakkkkkkkkk',
   '....iiiiHiiiiiiiHiiiiiiiakkkkkkkkk',
+  '....iiiiHiiiiiiiHiiiiiiiakkkkkkkkk',
+  '....iiiiiHiiiiiiHiiiiiiiakkkkkkkkk',
   '....iiiiiHiiiiiiHiiiiiiiakkkkkkkkk',
   '....iiiiiHiiiiiiHiiiiiiHakkkkkkkkk',
   '....iiiiiHiiiiiiiHiiiiiHakkkkkkkkk',
@@ -41,22 +43,70 @@ const HOOD = [
 
 const EYE = ['yw']
 
-const BODY = bell({ d: 'a', m: 'A', l: 'j', t: 'h' }, {
-  2: '.....aaaAAAAAAAAhAAAAAAAjj',
-  3: '....aaaAAAAAAAAhIhAAAAAAAjj',
-  4: '....aaaAAAAAAAAAhAAAAAAAAjj',
-})
-
-/** A belt with a bone toggle and a pouch of salt. */
-const BELT = [
-  'hhhhhhhhhhhhhhhhhhhhhhhhhhh',
-  'HHHHHHHHHHHCdCHHHHHHHHHHHHH',
-  'hhhhhhhhhhhcCchhhhhhhhhhhhh',
+/** His torso in one piece: a patched hide vest laced over his pale belly scales, a belt with a bone buckle. */
+const TORSO = [
+  '......iiiiiiiiiHH',
+  '....iiiiiiiiiiiIddC',
+  '...iiiiiiiiiiiiIhchch',
+  '..iihIhIhhiiiiiIddCCCC',
+  '.iiihddCChiiiiHIccccccH',
+  '.iiiIddCCIiiiHHIdhChChHH',
+  '.iiihCCCChiiHHHiccccccHH',
+  'HHHHhhIhIhHHHHHiddCCCCHHa',
+  'HHHHHHHHHHHHHHHihchchchHa',
+  'HHHhHhHhHHHHHHHiddCCCCHHa',
+  'HHHHhhIhIhHHHHHiddCCCCHHa',
+  'HHHHHHHHHHHHHHHihchchchHa',
+  'HHHhHhHhHHHHHHHiddCCCCHHa',
+  'HHHHhHhHHHHHHHHiccccccHHa',
+  'aaaHaaaHaaaHaaaadCdaaaaaa',
+  'hhhhhhhhhhhhhhhhckchhhhhh',
+  '.HHHHHHHHHHHHHHHHHHHaaaa',
+  '..aaaaaaaaaaaaaaaaaaaaa',
+  '...aaaaaaaaaaaaaaaaaaa',
 ]
-const POUCH = ['.HiiH', 'HiiIiH', 'HiiiiH', 'hHHHHh', '.hhhh']
 
-/** The jaw-trap, open, on its chain. */
-const CHAIN = ['N', 'x', 'N', 'x', 'N', 'x']
+/** Patched hide leggings, cross-strapped at knee and shin, tapering to the ankle, planted wide. */
+const LEGS = [
+  'aAjjjA...aAjjjA',
+  'aAjjAA...aAjjAA',
+  'aAjAAa...aAjAAa',
+  'hIhIhh...hhIhIh',
+  'aCdCAa...aAjAAa',
+  'aCCcAa...aAAAAa',
+  '.hIhIh...hIhIh',
+  '.aAjA.....aAja',
+  '.aAAa.....aAAa',
+  '..aa.......aa',
+]
+
+/** The far fist, resting on his belt at the back hip. */
+const FIST_HIP = ['.gGG', 'gGGvv', 'gGvvV', 'gGGvv', '.zgg']
+/** The near arm, scaled, one piece down to the fist that holds the trap. */
+const ARM = [
+  'gGG',
+  'gGvG',
+  'gGGv',
+  '.gGvVv',
+  '.gGvVVv',
+  '.gGGvvV',
+  '.zgGGGg',
+  '..zggg',
+]
+
+/** The trap's chain, from his belt down to the trap in his fist. */
+const CHAIN = [
+  'xN',
+  '..N',
+  '..xN',
+  '....N',
+  '....xN',
+  '......N',
+  '......xN',
+  '........N',
+]
+
+/** The jaw-trap, open. */
 const TRAP = [
   'x.x.x...x.x.x',
   'NxNxN...NxNxN',
@@ -78,22 +128,21 @@ export const D02: Design = {
   title: 'Marsh Trapper',
   concept: 'Runs the trap lines past the last smokehouse: a cowl and cape stitched from patched hides, his eye in the dark of it, an iron jaw-trap swung low on its chain.',
   pal: PAL,
-  headBottom: 56,
+  headBottom: 46,
   parts: [
-    { id: 'shadow', group: 'feet', x: 22, y: 72, rows: SHADOW_W, ring: 0 },
-    { id: 'tail', group: 'back', x: 13, y: 57, rows: TAIL },
-    { id: 'feet', group: 'feet', x: 41, y: 69, rows: FEET, ring: 0 },
-    { id: 'body', group: 'body', x: 35, y: 56, rows: BODY },
-    { id: 'belt', group: 'body', x: 36, y: 62, rows: BELT, ring: 0 },
-    { id: 'pouch', group: 'body', x: 40, y: 63, rows: POUCH, ring: 1 },
-    { id: 'hood', group: 'head', x: 25, y: 27, rows: HOOD, squash: [6, 12, 16] },
-    { id: 'snout', group: 'head', x: 54, y: 43, rows: SNOUT },
-    { id: 'eye', group: 'head', x: 55, y: 40, rows: EYE, ring: 0 },
-    { id: 'handB', group: 'hands', x: 31, y: 59, rows: FIST_B },
-    { id: 'chain', group: 'prop', x: 69, y: 63, rows: CHAIN, ring: 1 },
-    { id: 'trap', group: 'prop', x: 63, y: 68, rows: TRAP },
-    { id: 'trapShut', group: 'prop', x: 63, y: 69, rows: TRAP_SHUT, hidden: true },
-    { id: 'handF', group: 'hands', x: 66, y: 59, rows: FIST_F },
+    { id: 'shadow', group: 'feet', x: 21, y: 67, rows: SHADOW_W, ring: 0 },
+    { id: 'tail', group: 'back', x: 12, y: 56, rows: TAIL },
+    { id: 'feet', group: 'feet', x: 39, y: 64, rows: FEET, ring: 0 },
+    { id: 'legs', group: 'feet', x: 40, y: 55, rows: LEGS },
+    { id: 'torso', group: 'body', x: 34, y: 38, rows: TORSO },
+    { id: 'hood', group: 'head', x: 25, y: 15, rows: HOOD, squash: [6, 12, 18] },
+    { id: 'snout', group: 'head', x: 54, y: 33, rows: SNOUT },
+    { id: 'eye', group: 'head', x: 55, y: 29, rows: EYE, ring: 0 },
+    { id: 'handB', group: 'hands', x: 31, y: 49, rows: FIST_HIP },
+    { id: 'chain', group: 'prop', x: 53, y: 53, rows: CHAIN, ring: 1 },
+    { id: 'trap', group: 'prop', x: 60, y: 60, rows: TRAP },
+    { id: 'trapShut', group: 'prop', x: 60, y: 61, rows: TRAP_SHUT, hidden: true },
+    { id: 'arm', group: 'hands', x: 58, y: 49, rows: ARM },
   ],
   idle: [
     {},

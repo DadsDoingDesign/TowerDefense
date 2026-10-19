@@ -21,27 +21,28 @@
 import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import sharp from 'sharp'
 import { H, INK, W, idleFrames, measure, misses, orphans, render, ticFrames, type Design, type Frame, type Rgba } from './hask-lib'
 import { DESIGNS } from './hask-all'
 
 const ROOT = resolve(import.meta.dirname, '..', '..')
-const PACK = join(ROOT, 'public', 'assets', 'sprites', 'tinyswords')
+export const PACK = join(ROOT, 'public', 'assets', 'sprites', 'tinyswords')
 const CC0_CACHE = join(ROOT, 'node_modules', '.cache', 'cc0-pack')
 const OUT = join(ROOT, 'docs', 'characters', 'cards', 'designs', 'hask')
 
-const png = (img: Rgba, scale = 1) =>
+export const png = (img: Rgba, scale = 1) =>
   sharp(Buffer.from(img.data), { raw: { width: img.w, height: img.h, channels: 4 } })
     .resize(img.w * scale, img.h * scale, { kernel: 'nearest' })
     .png()
     .toBuffer()
 
-async function readPack(file: string): Promise<Rgba> {
+export async function readPack(file: string): Promise<Rgba> {
   const { data, info } = await sharp(join(PACK, `${file}.png`)).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
   return { w: info.width, h: info.height, data: new Uint8ClampedArray(data) }
 }
 
-const PACK_PEOPLE = [
+export const PACK_PEOPLE = [
   { file: 'mystic', name: 'Pawn' },
   { file: 'fighter', name: 'Knight' },
   { file: 'rogue', name: 'Archer' },
@@ -49,7 +50,7 @@ const PACK_PEOPLE = [
 ]
 
 /** Every opaque colour of the old-CC0 pack (the harvest cache), or null when the cache is absent. */
-async function cc0Palette(): Promise<Set<string> | null> {
+export async function cc0Palette(): Promise<Set<string> | null> {
   if (!existsSync(CC0_CACHE)) return null
   const files: string[] = []
   const walk = (d: string) => {
@@ -94,7 +95,7 @@ function clearance(d: Design): string[] {
   return bad
 }
 
-function report(d: Design, cc0: Set<string> | null) {
+export function report(d: Design, cc0: Set<string> | null) {
   const still = render(d)
   const m = measure(still, d.headBottom)
   const miss = misses(m)
@@ -117,9 +118,9 @@ async function browser() {
   return chromium.launch(existsSync(EXEC) ? { executablePath: EXEC } : {})
 }
 
-const b64 = (buf: Buffer) => `data:image/png;base64,${buf.toString('base64')}`
+export const b64 = (buf: Buffer) => `data:image/png;base64,${buf.toString('base64')}`
 
-async function shoot(html: string, path: string, width: number) {
+export async function shoot(html: string, path: string, width: number) {
   const b = await browser()
   const page = await b.newPage({ viewport: { width, height: 200 } })
   await page.setContent(html)
@@ -128,7 +129,7 @@ async function shoot(html: string, path: string, width: number) {
   await b.close()
 }
 
-const CSS = (grass: string) => `body{margin:0;background:#1b2130;font:14px/1.35 system-ui,sans-serif;color:#eef0e6}
+export const CSS = (grass: string) => `body{margin:0;background:#1b2130;font:14px/1.35 system-ui,sans-serif;color:#eef0e6}
 img{image-rendering:pixelated;display:block}
 .grass{background:url(${grass}) repeat;image-rendering:pixelated}`
 
@@ -163,7 +164,7 @@ async function preview(dir: string, pick?: string) {
 // ── the cards ─────────────────────────────────────────────────────────────────
 
 /** Crop a frame to a box so the cards don't waste space. */
-function crop(img: Rgba, x: number, y: number, w: number, h: number): Rgba {
+export function crop(img: Rgba, x: number, y: number, w: number, h: number): Rgba {
   const out = new Uint8ClampedArray(w * h * 4)
   for (let r = 0; r < h; r++)
     for (let c = 0; c < w; c++) {
@@ -176,7 +177,7 @@ function crop(img: Rgba, x: number, y: number, w: number, h: number): Rgba {
 }
 
 /** The union box of every frame of a design (opaque or shadow). */
-function frameBox(frames: Rgba[]) {
+export function frameBox(frames: Rgba[]) {
   let x0 = W, y0 = H, x1 = 0, y1 = 0
   for (const f of frames)
     for (let y = 0; y < H; y++)
@@ -281,7 +282,7 @@ async function cards() {
 }
 
 /** A 3 s+ loop at 4× on grass: the idle twice, the tic, then the idle to fill 3 s. Animated WebP (lossless) via sharp. */
-async function motion(d: Design, path: string, box: { x: number; y: number; w: number; h: number }) {
+export async function motion(d: Design, path: string, box: { x: number; y: number; w: number; h: number }) {
   const S = 4
   const pad = 8
   const grass = await sharp(join(PACK, 'grass.png')).resize(128, 128, { kernel: 'nearest' }).png().toBuffer()
@@ -327,7 +328,9 @@ async function main() {
   }
 }
 
-main().catch((e) => {
-  console.error(e)
-  process.exit(1)
-})
+// run only as a script (hask-bodies.ts imports the card helpers above)
+if (import.meta.url === pathToFileURL(process.argv[1]).href)
+  main().catch((e) => {
+    console.error(e)
+    process.exit(1)
+  })

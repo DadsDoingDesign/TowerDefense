@@ -174,5 +174,37 @@
     "title": "10. Weighmaster · motion",
     "caption": "The idle (the pack's squash and bob) and the tic, looped: does the tic say who he is?",
     "file": "d10.webp"
+  },
+  {
+    "id": "hask-bodies",
+    "group": "Hask designs",
+    "people": "Hask",
+    "title": "Hask · his own bodies",
+    "caption": "The top three before (shared tunic) and after (a body each), at 4×. Judge: does each body say who he is, and does it still fit beside the pack?",
+    "file": "bodies.png"
+  },
+  {
+    "id": "hask-d03-body-motion",
+    "group": "Hask designs",
+    "people": "Hask",
+    "title": "Salt-Barge Poleman · new body, motion",
+    "caption": "A short oilcloth smock, a rope belt, a salt-crusted hem, bare scaled arm and legs; the pole set from behind his back into the water ahead. The idle and the tic, looped. Judge: does the body move with weight?",
+    "file": "d03-body.webp"
+  },
+  {
+    "id": "hask-d06-body-motion",
+    "group": "Hask designs",
+    "people": "Hask",
+    "title": "Reed Smuggler · new body, motion",
+    "caption": "A low-slung cloak of hanging reed over a hunched back, two hidden pockets (salt peeks from one), a fringe at the ground; the far arm hidden. The idle and the tic, looped. Judge: does the body move with weight?",
+    "file": "d06-body.webp"
+  },
+  {
+    "id": "hask-d02-body-motion",
+    "group": "Hask designs",
+    "people": "Hask",
+    "title": "Marsh Trapper · new body, motion",
+    "caption": "A patched hide vest laced over his belly scales, strapped hide leggings planted wide, the trap’s chain from his belt; his far fist on his hip. The idle and the tic, looped. Judge: does the body move with weight?",
+    "file": "d02-body.webp"
   }
 ]

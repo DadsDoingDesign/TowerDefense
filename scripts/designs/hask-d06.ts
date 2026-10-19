@@ -8,7 +8,7 @@
  * shutters the lantern, the eye in the slit glances back, the light comes on.
  */
 import type { Design } from './hask-lib'
-import { PAL, FEET, SHADOW_W, FIST_B, FIST_F, SNOUT, TAIL, TAIL_UP, bell } from './hask-common'
+import { PAL, FEET, SHADOW_W, SNOUT, TAIL, TAIL_UP } from './hask-common'
 
 const BASKET = [
   '..........ooHoooHooo',
@@ -41,20 +41,60 @@ const BASKET = [
 /** The glint in the slit (the eye), and where it looks back to. */
 const EYE = ['yw']
 
-/** A short cloak cape over his shoulders under the basket. */
-const CAPE = [
-  '....3333333322222221',
-  '..333333332222222222211',
-  '.33333332222222222222211',
-  '3333332222222222222222211',
-  '3333222222222222222222211',
-  '2332222222222222222222111',
-  '1222222222222222222221111',
-  '.11111111111111111111111',
-  '..1.111.1111.11111.11.1',
+/** The low-slung reed cloak over his hunched back: layers of hanging reed, two hidden pockets, a fringe at the ground. */
+const CLOAK = [
+  '.........TTTTTTT',
+  '......TTTTuuuTTTTTT',
+  '....TTTuuTTTTTUTTHHHh',
+  '...TTHTTTTTTTTUTHHHHHHh',
+  '..TTUuTTTTTTTTTHHHHHHHHHh',
+  '.TTTuTTTTTTTTHHHHHHHHHHHHHh',
+  '.THTUUTTTTTTHHHHHHHHHHHHHHHHh',
+  'UUTUTUTTTTHHHHHHHHHHHHHHHHHhHhh',
+  'UhUUTUUUTTTHHTTHHHHHHHHTTHhhTHhh',
+  'TTTThhTThTThhTTHTTHHTTHTThhTThTTh',
+  'TTTHhhHHhHHhhHHhTThhTThHHhhHHhHhhh',
+  'HHHTHHHHHHHHHHHhHHhhHHhHHHhHHHHhhhh',
+  'HHHTHHHHHHHHHHHHHHHHHHHHHHHHHhThhhh',
+  'HHHTHHHHHHHHHHHHHHHHHHHHHhHHHhThhhh',
+  'HHHHHHHHHHHHHHHHHHHHHHHHHhHHHHThhhh',
+  'TTUTHHHHHmmHHHhHHHhHHHHHHhHHHHThhhh',
+  'TTUTHHTTLmLlHThHHHhHHHHTTHHTTTUhhhT',
+  'HHHHhhhUhUhUhUhhTThHTTTTThhTTTUhhhh',
+  '.HHHhhhHHhHhhHhTTThhTTTHHhhHHHThhhh',
+  '.HHHHHhHHHHHHHhhHHhhHHHHHHHHHHThhHh',
+  '.HHHHHhHHHHHHHhHHHHHHHHHHHHHHHThhHh',
+  '.HHHHHhHHHHHHHhHHHHHHHHHHHHHHHThhHh',
+  '.HHHHHhHHHHHHHhHHhHHHHHHHHHHHHThhhh',
+  '.hHTHHhhhhhhhhhHHhTHHHHHHHHHHHThhhh',
+  '.ThTHHTHTHTHHTHHHhTHHHHHTHHTHTThhhT',
+  '.HhHhhThThThhThTHThUhUhUhUhThThhhhh',
+  '.HHHhhHhHhHhhhhThThhThThHhhThHhhhhh',
+  '..HHHHHHHHHHHhHHhHhhHhHHHHHTHHThhhhh',
+  '..HHHHHHHHHHHHHHHhhHHHHHHHHTHHThhhhh',
+  '..HHHHHHHHHHHHHHHhhHHHHHHHHTHHThhhhh',
+  '..HHHHHTHHHHHhHHHhHHHHHHHHHHHHThhhhh',
+  '..THhHHTHHHHHhHHHhHHHHHHHHHHHHThHhhh',
+  '..hhhHHHThHHHhHHHHHHHHHHHHHHHTThHhhh',
+  '...hhhhhThhhhhhTHHHHHHThhhhhhThhhhhhh',
+  '...HhhhhHhhhHhhThhhhhhThhhhhhhhhhhhhh',
+  '...HHHHHHHHHTHHHhhhHhhHHHHHHHhThHhhhh',
+  '...HHHHHHHHHTHHHHHHTHHHHHHHHHhThHHhhh',
+  '...HHHHHHHHHHHHHHHHHHHHHHHHhHhThHHhhh',
+  '..hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh',
+  '...H.HH.HH.HH.HH.HH.HH.HH.HH.HH.HH.HH',
 ]
 
-const BODY = bell({ d: '1', m: '2', l: '3', t: '1' })
+/** His near arm, scaled, out of the cloak's front, one piece to the fist that holds the lantern (the far arm stays hidden). */
+const ARM = [
+  'gGG',
+  'gGvG',
+  '.gGvVv',
+  '.gGvVVv',
+  '.gGGvvV',
+  '.zgGGGg',
+  '..zggg',
+]
 
 /** The shuttered lantern: an iron bail and cap, the glowing pane, a base. */
 const LANTERN = [
@@ -91,20 +131,18 @@ export const D06: Design = {
   title: 'Reed Smuggler',
   concept: 'Runs untaxed salt through the reed channels by night: a deep woven basket hat over his whole head, one eye glinting through its slit, a dusk-plum cloak, a shuttered lantern held low.',
   pal: PAL,
-  headBottom: 58,
+  headBottom: 48,
   parts: [
-    { id: 'shadow', group: 'feet', x: 22, y: 72, rows: SHADOW_W, ring: 0 },
-    { id: 'tail', group: 'back', x: 13, y: 57, rows: TAIL },
-    { id: 'feet', group: 'feet', x: 41, y: 69, rows: FEET, ring: 0 },
-    { id: 'body', group: 'body', x: 35, y: 56, rows: BODY },
-    { id: 'cape', group: 'body', x: 33, y: 50, rows: CAPE },
-    { id: 'basket', group: 'head', x: 33, y: 24, rows: BASKET, squash: [7, 12, 18] },
-    { id: 'snout', group: 'head', x: 51, y: 48, rows: SNOUT },
-    { id: 'eye', group: 'head', x: 59, y: 39, rows: EYE, ring: 0 },
-    { id: 'handB', group: 'hands', x: 30, y: 61, rows: FIST_B },
-    { id: 'lantern', group: 'prop', x: 64, y: 64, rows: LANTERN },
-    { id: 'lanternShut', group: 'prop', x: 64, y: 64, rows: LANTERN_SHUT, hidden: true },
-    { id: 'handF', group: 'hands', x: 65, y: 62, rows: FIST_F },
+    { id: 'shadow', group: 'feet', x: 18, y: 69, rows: SHADOW_W, ring: 0 },
+    { id: 'tail', group: 'back', x: 6, y: 58, rows: TAIL },
+    { id: 'feet', group: 'feet', x: 40, y: 66, rows: FEET, ring: 0 },
+    { id: 'cloak', group: 'body', x: 26, y: 27, rows: CLOAK },
+    { id: 'basket', group: 'head', x: 36, y: 12, rows: BASKET, squash: [7, 12, 18] },
+    { id: 'snout', group: 'head', x: 54, y: 36, rows: SNOUT },
+    { id: 'eye', group: 'head', x: 62, y: 27, rows: EYE, ring: 0 },
+    { id: 'lantern', group: 'prop', x: 63, y: 59, rows: LANTERN },
+    { id: 'lanternShut', group: 'prop', x: 63, y: 59, rows: LANTERN_SHUT, hidden: true },
+    { id: 'arm', group: 'hands', x: 59, y: 52, rows: ARM },
   ],
   idle: [
     {},
