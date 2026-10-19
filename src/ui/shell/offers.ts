@@ -1,3 +1,4 @@
+import { crateBadge } from './hq/crateShelf'
 import { flyingMilitia } from '../../game/run/militia'
 import { describeBase, itemNoun, RARITY } from '../../game/data/items'
 import { isSovereignKind } from '../../game/data/itemKinds'
@@ -128,6 +129,8 @@ export interface Offer {
   title: string
   /** A short name where room is tight: under a home place's mark on a phone ("HQ", "Crates"). */
   short?: string
+  /** A count on a home place's mark (the crates the bank buys, `hq/crateShelf.crateBadge`). */
+  badge?: string
   sub?: string
   /** Accent for the card rail and the panel title. */
   color?: string
@@ -1273,6 +1276,7 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
             body: ['A side bet: one random item, yours for good.'],
             action: { label: 'Open', run: () => setView('crates') },
             ...(reveal.crates ? {} : { locked: CRATES_OPEN_LINE }),
+            ...(crateBadge(meta.bank, reveal.crates) ? { badge: crateBadge(meta.bank, reveal.crates)! } : {}),
           } satisfies Offer,
         ]),
     {

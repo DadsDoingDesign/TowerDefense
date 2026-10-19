@@ -292,6 +292,22 @@ result. Append a short note to the review log when you're done.
   tested in `tests/skills.test.ts`), drawn by `CodexScreen.tsx` with
   `src/styles/codex.css`. A tile's card is a sheet on a phone and a side panel
   on a desk; NEW badges are a UI note in `codexSeen.ts`, not the save.
+- Sealed crates (the crates pass, Oct 2026): the rule is `run/hq.ts`
+  (`PULL_PRICE`, `pullOdds`, `rollPull`: a hash of the save's crate seed and
+  the crate's number), opened by `metaStore.openCrate` — bought with bank
+  gold and opened at once, never held. The screen is
+  `ui/shell/hq/CratesScreen.tsx` (one column, no tabs; styles
+  `src/styles/crates.css`, out of `hq.css`; `.cr-panel` is in `worlds.css`'
+  frame lists), the art `hq/crateArt.ts` (original pixels: the old CC0 pack
+  has no chest), how many the bank buys `hq/crateShelf.ts` (also the home
+  Crates plate's `.mn-place-badge`). Opening several opens each in turn,
+  exactly as one at a time. The OPENING (`hq/CrateOpening.tsx`) only READS
+  the results: its beats and timings are the pure `hq/crateSequence.ts`
+  (`tests/crateSequence.test.ts`), the canvas `hq/crateStage.ts` (the pack's
+  explosion strip, the coin, procedural rays/dust/cracks/ring; Light halves
+  the particles, reduced motion goes straight to the summary), the cues
+  `audio.sfxCrate` + `sfxRarity`. Cards and fps: `scripts/crate-cards.mjs` →
+  `docs/ui-audit-2026-10/crates/`.
 - The loyalty track (Draft 4 · B): what each standing level pays is named
   ahead of time — `src/game/run/track.ts` (`trackPlan` for the page,
   `payTrack` for the settle: the same function, never a roll; the second

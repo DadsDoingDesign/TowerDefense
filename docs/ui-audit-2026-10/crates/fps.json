@@ -1,0 +1,34 @@
+{
+ "throttle4x": {
+  "full": {
+   "frames": 503,
+   "fps": 58,
+   "p95": 23,
+   "over50": 2,
+   "drawMs": 1.72
+  },
+  "light": {
+   "frames": 509,
+   "fps": 59,
+   "p95": 22,
+   "over50": 1,
+   "drawMs": 1.47
+  }
+ },
+ "throttle1x": {
+  "full": {
+   "frames": 518,
+   "fps": 60,
+   "p95": 19,
+   "over50": 0,
+   "drawMs": 0.44
+  },
+  "light": {
+   "frames": 515,
+   "fps": 60,
+   "p95": 19,
+   "over50": 0,
+   "drawMs": 0.5
+  }
+ }
+}

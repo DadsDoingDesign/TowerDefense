@@ -441,8 +441,29 @@
   border: 1px dashed var(--line-strong);
   box-shadow: none;
 }
-.mn-place.is-locked .fw-i {
+.mn-place.is-locked :is(.fw-i, .mn-crate) {
   filter: saturate(0.2) brightness(0.55);
+}
+/* The crates the bank buys, on the Crates plate's mark (the crates pass,
+   Oct 2026): a small count in a gold-rimmed pip, the bar's badge. */
+.mn-place-badge {
+  position: absolute;
+  top: -5px;
+  right: -9px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--bad);
+  border: 1.5px solid var(--gold);
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 1px 0 var(--shade);
 }
 .mn-place-lock {
   position: absolute;
