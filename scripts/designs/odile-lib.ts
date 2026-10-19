@@ -103,8 +103,8 @@ function dropRows(rows: readonly string[], drop: readonly number[]): string[] {
   return rows.filter((_, i) => !s.has(i))
 }
 
-/** Compose one frame. */
-export function render(d: Design, f: Frame = {}): Rgba {
+/** Compose one frame (only the listed groups, when `groups` is given). */
+export function render(d: Design, f: Frame = {}, groups?: readonly Group[]): Rgba {
   const data = new Uint8ClampedArray(W * H * 4)
   const put = (x: number, y: number, hex: string, a = 255) => {
     if (x < 0 || y < 0 || x >= W || y >= H) return
@@ -118,6 +118,7 @@ export function render(d: Design, f: Frame = {}): Rgba {
   const shown = (p: Part) => (p.hidden ? f.show?.includes(p.id) : !f.hide?.includes(p.id))
   for (const p of d.parts) {
     if (!shown(p)) continue
+    if (groups && !groups.includes(p.group)) continue
     let rows = f.swap?.[p.id] ?? p.rows
     if (p.spread && f.spread && !f.swap?.[p.id]) rows = splay(rows, p.spread, f.spread)
     const mv = f.move?.[p.group] ?? [0, 0]
@@ -156,6 +157,23 @@ export function render(d: Design, f: Frame = {}): Rgba {
     )
   }
   return { w: W, h: H, data }
+}
+
+/**
+ * The prop-clearance audit: in every frame (the still, the idle, the tic), how
+ * many pixels of a held thing (props and effects, their ink included) land on
+ * the head mass (hair, hat, hood, ears, their ink included). It must be 0.
+ */
+export function overlap(d: Design): number {
+  let worst = 0
+  for (const f of [{}, ...d.idle, ...d.tic]) {
+    const head = render(d, f, ['head'])
+    const prop = render(d, f, ['prop', 'fx'])
+    let n = 0
+    for (let i = 3; i < head.data.length; i += 4) if (head.data[i] >= 200 && prop.data[i] >= 200) n++
+    worst = Math.max(worst, n)
+  }
+  return worst
 }
 
 /** Every frame of the idle, then the tic. */

@@ -15,7 +15,7 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import sharp from 'sharp'
-import { H, W, idleFrames, measure, misses, orphans, render, strangers, ticFrames, type Design, type Rgba } from './odile-lib'
+import { H, W, idleFrames, measure, misses, orphans, overlap, render, strangers, ticFrames, type Design, type Rgba } from './odile-lib'
 import { PACK_INKS } from './odile-common'
 import { DESIGNS } from './odile-all'
 
@@ -49,6 +49,8 @@ function report(d: Design) {
   const orph = orphans(still, ['#ffffff', '#ffcfb4', '#ffed44', '#efe1ab', '#d0deb5', '#bdd763'])
   const alien = [...new Set([still, ...idleFrames(d), ...ticFrames(d)].flatMap((f) => strangers(f, PACK_INKS)))]
   if (alien.length) miss.push(`not pack inks: ${alien.join(' ')}`)
+  const clash = overlap(d)
+  if (clash) miss.push(`a prop touches the head mass (${clash} px)`)
   const f2 = (v: number) => v.toFixed(2)
   console.log(
     `${d.id} ${d.title.padEnd(18)} ${m.box.w}x${m.box.h} fill ${f2(m.fill)} aspect ${f2(m.aspect)} head ${f2(m.headShare)} top ${f2(m.topMass)} legs ${f2(m.legShare)} line ${f2(m.outlinePx)} inked ${f2(m.inkedEdge)} colours ${m.colours} orphans ${orph}  ${miss.length ? 'MISS ' + miss.join('; ') : 'ok'}`,
