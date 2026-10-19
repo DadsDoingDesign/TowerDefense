@@ -5,18 +5,21 @@
  *   npx tsx scripts/designs/saffra.ts                 # measure all ten against the pack's bands
  *   npx tsx scripts/designs/saffra.ts --preview DIR   # 8× stills + 1×/3× line-ups for the critique rounds
  *   npx tsx scripts/designs/saffra.ts --cards         # the cards in docs/characters/cards/designs/saffra/
+ *   npx tsx scripts/designs/saffra.ts --props [DIR]   # design 03 refined, five props: preview to DIR, or the props cards
  *
  * Every figure is a hand-authored pixel map (saffra-d01.ts … saffra-d10.ts);
  * saffra-lib.ts only stamps the pack's outline and composes the frames. The
  * pack figures shown beside them are the old-CC0 stills already shipped in
  * public/assets/sprites/tinyswords/ (see sprites/CREDITS.md).
  */
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import sharp from 'sharp'
 import { H, W, idleFrames, measure, misses, orphans, render, ticFrames, type Design, type Rgba } from './saffra-lib'
 import { DESIGNS } from './saffra-all'
+import { D03 } from './saffra-d03'
+import { PROPS } from './saffra-d03-props'
 
 const ROOT = resolve(import.meta.dirname, '..', '..')
 const PACK = join(ROOT, 'public', 'assets', 'sprites', 'tinyswords')
@@ -254,12 +257,129 @@ async function motion(d: Design, path: string, box: { x: number; y: number; w: n
     .toFile(path)
 }
 
+// ── design 03, refined, with five props in place of the torch ─────────────────
+
+/** Every pixel of every prop / effect, in every frame, must sit below the brim (row ≥ 53) or right of it (column ≥ 83). */
+function clearance(d: Design): string[] {
+  const only = { ...d, parts: d.parts.filter((p) => p.group === 'prop' || p.group === 'fx') }
+  const bad: string[] = []
+  ;[...d.idle, ...d.tic].forEach((f, i) => {
+    const img = render(only, f)
+    for (let y = 0; y < H; y++)
+      for (let x = 0; x < W; x++)
+        if (img.data[(y * W + x) * 4 + 3] && y < 53 && x < 83) {
+          bad.push(`frame ${i} (${x},${y})`)
+          return
+        }
+  })
+  return bad
+}
+
+async function propsPreview(dir: string) {
+  mkdirSync(dir, { recursive: true })
+  const grass = b64(await sharp(join(PACK, 'grass.png')).png().toBuffer())
+  const pack = await Promise.all(PACK_PEOPLE.map(async (p) => ({ ...p, img: await readPack(p.file) })))
+  const tag = process.env.TAG ?? 0
+  for (const d of [D03, ...PROPS]) {
+    await sharp(await png(render(d), 8)).flatten({ background: '#79a863' }).toFile(join(dir, `${d.id}-8x-${tag}.png`))
+    const strip = await Promise.all([...idleFrames(d), ...ticFrames(d)].map((f) => png(f, 2)))
+    const html = `<!doctype html><style>${CSS(grass)} .row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:2px;padding:6px}</style>
+      <div class="grass row">${strip.map((s) => `<img src="${b64(s)}">`).join('')}</div>`
+    await shoot(html, join(dir, `${d.id}-frames-${tag}.png`), 1100)
+  }
+  const three = await Promise.all([pack[0], pack[1]].map(async (p) => `<img src="${b64(await png(p.img, 3))}">`))
+  const html = `<!doctype html><style>${CSS(grass)} .row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:4px;padding:6px}</style>
+    <div class="grass row">${three.join('')}${(await Promise.all([D03, ...PROPS].map(async (d) => `<img src="${b64(await png(render(d), 3))}">`))).join('')}</div>
+    <div class="grass row">${(await Promise.all(pack.map(async (p) => `<img src="${b64(await png(p.img, 1))}">`))).join('')}${(await Promise.all([D03, ...PROPS].map(async (d) => `<img src="${b64(await png(render(d), 1))}">`))).join('')}</div>`
+  await shoot(html, join(dir, `props-lineup-${tag}.png`), 1500)
+}
+
+async function propsCards() {
+  mkdirSync(OUT, { recursive: true })
+  const grass = b64(await sharp(join(PACK, 'grass.png')).png().toBuffer())
+  const pack = await Promise.all(PACK_PEOPLE.map(async (p) => ({ ...p, img: await readPack(p.file) })))
+  const cell = async (img: Rgba, s: number) => b64(await png(img, s))
+  const all = frameBox(PROPS.flatMap((d) => [...idleFrames(d), ...ticFrames(d)]))
+  const bx = Math.max(0, all.x0 - 1), by = Math.max(0, all.y0 - 1)
+  const bw = Math.min(W, all.x1 + 2) - bx, bh = Math.min(H, all.y1 + 2) - by
+  const cut = (img: Rgba) => crop(img, bx, by, bw, bh)
+  const opts = await Promise.all(PROPS.map(async (d, i) => `<div class="c"><div class="n">${i + 1}</div><img src="${await cell(cut(render(d)), 3)}"><b>${d.title}</b></div>`))
+  const ones = await Promise.all(PROPS.map(async (d) => `<img src="${await cell(cut(render(d)), 1)}">`))
+  const packOnes = await Promise.all([pack[0], pack[1], pack[3]].map(async (p) => `<img src="${await cell(p.img, 1)}">`))
+  const twos = await Promise.all(PROPS.map(async (d) => `<img src="${await cell(cut(render(d)), 2)}">`))
+  const packTwos = await Promise.all([pack[0], pack[1], pack[3]].map(async (p) => `<img src="${await cell(p.img, 2)}">`))
+  const sheet = `<!doctype html><meta charset="utf-8"><style>${CSS(grass)}
+    .wrap{padding:14px} h1{font-size:22px;margin:0 0 2px} p{margin:0 0 10px;color:#c9cbbf;font-size:14px}
+    .g{display:flex;justify-content:space-between;border-radius:8px;padding:8px 6px 4px}
+    .c{position:relative;display:flex;flex-direction:column;align-items:center}
+    .c b{font-size:17px;color:#fff;text-shadow:0 2px 0 #161c2e,0 0 4px #161c2e;margin:2px 0 6px}
+    .n{position:absolute;left:6px;top:0;width:30px;height:30px;border-radius:15px;background:#161c2e;color:#ffe46b;font-weight:700;font-size:17px;display:flex;align-items:center;justify-content:center}
+    .row{display:flex;align-items:flex-end;gap:6px;padding:10px 8px 6px;border-radius:8px;margin-top:10px;flex-wrap:wrap}
+    .k{font-size:13px;color:#c9cbbf;margin:10px 0 0}
+    </style><div class="wrap"><h1>Field Burner · five props</h1><p>The refined Field Burner at 3× with five props in place of the torch, each held low and clear of the brim. Below: at 1× (game size) and 2× beside the CC0 pawn, knight and torch goblin.</p>
+    <div class="g grass">${opts.join('')}</div>
+    <div class="k">At 1× (game size)</div><div class="row grass">${packOnes.join('')}${ones.join('')}</div>
+    <div class="k">The same row at 2×</div><div class="row grass">${packTwos.join('')}${twos.join('')}</div></div>`
+  await shoot(sheet, join(OUT, 'd03-props.png'), 1240)
+
+  // before / after at 4×: the approved Field Burner beside the refined one (with the recommended prop), the pawn for scale
+  const before = frameBox([render(D03)]), after = frameBox([render(PROPS[0])])
+  const u = { x0: Math.min(before.x0, after.x0) - 1, y0: Math.min(before.y0, after.y0) - 1, x1: Math.max(before.x1, after.x1) + 2, y1: Math.max(before.y1, after.y1) + 2 }
+  const ba = (d: Design) => crop(render(d), u.x0, u.y0, u.x1 - u.x0, u.y1 - u.y0)
+  const html = `<!doctype html><meta charset="utf-8"><style>${CSS(grass)}
+    .wrap{padding:12px;width:876px} h1{font-size:20px;margin:0} p{margin:2px 0 8px;color:#c9cbbf;font-size:13.5px}
+    .top{display:flex;align-items:flex-end;justify-content:center;gap:18px;padding:10px 6px 4px;border-radius:8px}
+    .lab{display:flex;justify-content:space-around;font-size:13px;color:#c9cbbf;margin:4px 0 0}
+    </style><div class="wrap"><h1>Field Burner · before and after</h1><p>Approved (left) and refined (right) at 4×: the same silhouette; a dented, stitched crown with a highlight streak, a buckled band, a rolled and singed brim lit along its lip, kerchief folds and tails, hair strands, a belt, and the ember pot in place of the torch.</p>
+    <div class="top grass"><img src="${await cell(ba(D03), 4)}"><img src="${await cell(ba(PROPS[0]), 4)}"></div>
+    <div class="lab"><span>Approved</span><span>Refined, with the ember pot</span></div></div>`
+  await shoot(html, join(OUT, 'd03-before-after.png'), 900)
+
+  for (const [i, d] of PROPS.entries()) {
+    const fr = [...idleFrames(d), ...ticFrames(d)]
+    const b = frameBox(fr)
+    const x = Math.max(0, b.x0 - 2), y = Math.max(0, b.y0 - 2)
+    await motion(d, join(OUT, `d03-props-${String(i + 1).padStart(2, '0')}.webp`), { x, y, w: Math.min(W, b.x1 + 3) - x, h: Math.min(H, b.y1 + 3) - y })
+  }
+
+  // add (or refresh) the props cards in the manifest
+  const mpath = join(OUT, 'manifest.json')
+  const manifest: { id: string; group: string; people: string; title: string; caption: string; file: string }[] = existsSync(mpath) ? JSON.parse(readFileSync(mpath, 'utf8')) : []
+  const keep = manifest.filter((m) => !m.id.startsWith('saffra-d03-props') && m.id !== 'saffra-d03-before-after')
+  keep.push(
+    { id: 'saffra-d03-before-after', group: 'Saffra designs', people: 'Saffra', title: '3. Field Burner · before / after', caption: 'The approved Field Burner beside the refined one at 4×. Judge: is the refinement Pixel Frog’s level, and is the silhouette unchanged?', file: 'd03-before-after.png' },
+    { id: 'saffra-d03-props', group: 'Saffra designs', people: 'Saffra', title: '3. Field Burner · five props', caption: 'Five props in place of the torch, all clear of the brim. Judge: which one says field-burning spice broker?', file: 'd03-props.png' },
+    ...PROPS.map((d, i) => ({
+      id: `saffra-d03-props-${String(i + 1).padStart(2, '0')}`,
+      group: 'Saffra designs',
+      people: 'Saffra',
+      title: `3.${i + 1} Field Burner · ${d.title}`,
+      caption: `${d.concept} The idle and the prop’s tic, looped. Judge: does the tic say who she is?`,
+      file: `d03-props-${String(i + 1).padStart(2, '0')}.webp`,
+    })),
+  )
+  writeFileSync(mpath, JSON.stringify(keep, null, 2) + '\n')
+}
+
 async function main() {
   const args = process.argv.slice(2)
   for (const d of DESIGNS) report(d)
   const pi = args.indexOf('--preview')
   if (pi >= 0) await preview(args[pi + 1] ?? join(tmpdir(), 'saffra-preview'), args[pi + 2])
-  if (args.includes('--cards')) await cards()
+  if (args.includes('--cards')) {
+    await cards()
+    await propsCards()
+  }
+  const pp = args.indexOf('--props')
+  if (pp >= 0) {
+    for (const d of [D03, ...PROPS]) report(d)
+    for (const d of PROPS) {
+      const bad = clearance(d)
+      console.log(`${d.id} clearance ${bad.length ? 'OVERLAPS THE BRIM: ' + bad.join(', ') : 'clear of the brim in every frame'}`)
+    }
+    if (args[pp + 1] && !args[pp + 1].startsWith('--')) await propsPreview(args[pp + 1])
+    else await propsCards()
+  }
 }
 
 main().catch((e) => {
