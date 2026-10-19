@@ -299,10 +299,14 @@ result. Append a short note to the review log when you're done.
   `ui/shell/hq/CratesScreen.tsx` (one column, no tabs; styles
   `src/styles/crates.css`, out of `hq.css`; `.cr-panel` is in `worlds.css`'
   frame lists), the art `hq/crateArt.ts` (original pixels: the old CC0 pack
-  has no chest), how many the bank buys `hq/crateShelf.ts` (also the home
-  Crates plate's `.mn-place-badge`). Opening several opens each in turn,
+  has no chest; the chest pass's three LOOKS — 1–2 wood, 3–4 iron, 5 gold,
+  `lookFor` — and the plinth), how many the bank buys `hq/crateShelf.ts`
+  (also the home Crates plate's `.mn-place-badge`). The hero chest on the
+  screen is `hq/CrateHero.tsx` (its idle timing the pure `hq/crateIdle.ts`);
+  the odds are abstract (a "?" card per level, its chance, how many are new —
+  never a picture of a kind). Opening several opens each in turn,
   exactly as one at a time. The OPENING (`hq/CrateOpening.tsx`) only READS
-  the results: its beats and timings are the pure `hq/crateSequence.ts`
+  the results and starts from the chest's look: its beats and timings are the pure `hq/crateSequence.ts`
   (`tests/crateSequence.test.ts`), the canvas `hq/crateStage.ts` (the pack's
   explosion strip, the coin, procedural rays/dust/cracks/ring; Light halves
   the particles, reduced motion goes straight to the summary), the cues

@@ -11,7 +11,7 @@ import { tapWord } from '../../pointer'
 import { LEVEL_HUE } from '../codex/codexModel'
 import { fx } from '../../theme/fxEngine'
 import { useMenuMotion } from '../MenuScreen'
-import { CRATE_MARK, CRATE_PALETTE } from './crateArt'
+import { CRATE_LOOKS, CRATE_MARK, type CrateLook } from './crateArt'
 import { CrateStage } from './crateStage'
 import {
   advance,
@@ -54,7 +54,7 @@ const HUE: Record<CrateTier, string> = { 1: LEVEL_HUE[1], 2: LEVEL_HUE[2], 3: LE
  * Skip goes straight to the summary; under reduced motion the summary just
  * fades in; on Light the beats keep and the particles halve.
  */
-export function CrateOpening({ results, onDone }: { results: readonly PullResult[]; onDone: () => void }) {
+export function CrateOpening({ results, look = 'iron', onDone }: { results: readonly PullResult[]; look?: CrateLook; onDone: () => void }) {
   const plan = useMemo(() => cratePlan(results), [results])
   const motion = useMenuMotion()
   const fxRef = useRef<CrateFx>(motion ? fxLevel() : 'off')
@@ -102,7 +102,7 @@ export function CrateOpening({ results, onDone }: { results: readonly PullResult
     const canvas = canvasRef.current
     const wrap = wrapRef.current
     if (!canvas || !wrap || fxRef.current === 'off') return
-    const st = new CrateStage(canvas, HUE, () => fxRef.current)
+    const st = new CrateStage(canvas, HUE, () => fxRef.current, CRATE_LOOKS[look])
     stageRef.current = st
     const fit = () => st.resize(wrap.clientWidth, wrap.clientHeight)
     fit()
@@ -222,7 +222,7 @@ export function CrateOpening({ results, onDone }: { results: readonly PullResult
     >
       <div className="cr-open-stage" ref={wrapRef}>
         <canvas ref={canvasRef} className="cr-open-canvas" aria-hidden="true" />
-        {card && phase.at === 'card' && <Reveal key={phase.i} card={card} step={phase.step} />}
+        {card && phase.at === 'card' && <Reveal key={phase.i} card={card} step={phase.step} look={look} />}
       </div>
       {phase.at !== 'summary' && (
         <div className="cr-open-top">
@@ -250,7 +250,7 @@ export function CrateOpening({ results, onDone }: { results: readonly PullResult
 }
 
 /** One reward: face down while it flies and builds up, then flipped to its item. */
-function Reveal({ card, step }: { card: RewardCard; step: 'fly' | 'build' | 'flip' | 'shown' }) {
+function Reveal({ card, step, look }: { card: RewardCard; step: 'fly' | 'build' | 'flip' | 'shown'; look: CrateLook }) {
   const up = step === 'flip' || step === 'shown'
   const hold = BUILD_MS[card.tier] - HIT_STOP_MS[card.tier]
   // The held breath: the last moment of a build-up, the card dead still before it flips.
@@ -268,7 +268,7 @@ function Reveal({ card, step }: { card: RewardCard; step: 'fly' | 'build' | 'fli
     >
       <div className={`cr-card-in${up ? ' up' : ''}`}>
         <div className="cr-face cr-back" aria-hidden="true">
-          <Pixel rows={CRATE_MARK} palette={CRATE_PALETTE} scale={5} />
+          <Pixel rows={CRATE_MARK} palette={CRATE_LOOKS[look]} scale={5} />
         </div>
         <div className="cr-face cr-front" aria-hidden={!up}>
           <div className="cr-front-in">

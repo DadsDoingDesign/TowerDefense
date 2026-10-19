@@ -5114,3 +5114,30 @@ picture, so the page scrolls.
   4× (canvas 1.7 ms a frame), 60 / 60 unthrottled. Weakest still: the crate
   is drawn once for every crate (no kinds), and the summary is a quiet
   panel after a loud minute.
+
+- **2026-10-19 — the chest pass (crates, round two).** The designer: "The
+  chance preview seems like I'm guna win those exact items consider an
+  abstract way to show and iterate on the chest it's really sad for what
+  should be highly engaging interaction". The odds lost every item picture:
+  each level is a mystery card (its hue, a "?", its chance, how many of its
+  kinds are new to you) — `odds-before-after.png`. Four chest directions were
+  rendered in the real screen (`chest-directions.png`): A one chest on stage,
+  B Clash Royale's slots, C Supercell's shop bundles, D the chest that grows
+  with how many you open. D won: one hero, and the count is something you
+  SEE (B and C spread the eye over several small chests, A says nothing about
+  the count). The chest sits lit on a stone plinth with a living idle
+  (`hq/CrateHero.tsx`, `crateIdle.ts`) and grows wood → iron → gold at 1 / 3 / 5
+  (`chest-sizes.png`); ×N rides a gold ribbon that steps it; coins stream from
+  the price into the chest, it hops, and the opening starts from that chest.
+  Presentation only: rolls, odds, prices and RNG order are as they were.
+  Rounds: (1) the ribbon hid the plinth, the mystery cards were taller than
+  the room (the panel fell under the CTA) and the iron chest's rays read grey
+  — chests a pixel smaller (4 / 5 / 6 px), the ribbon under the plinth,
+  squatter cards, a warm pale light for iron; (2) the idle was too still for a
+  hero (one hop in 4 s, the sparkles slow) — hops every 3.2–4.6 s by look, a
+  rattle between, a breathing halo, motes that drift up; (3) the coin payment
+  was one coin in one frame — 8–16 coins in a spread arc, all inside the
+  460 ms, and the chest hops as they land. The idle holds 58–60 fps at a 4×
+  CPU throttle (Light: 30 by design). Weakest still: the three looks share
+  one silhouette — the gold chest is a palette and a size, not a new shape.
+

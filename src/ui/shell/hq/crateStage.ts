@@ -206,11 +206,13 @@ export class CrateStage {
     private canvas: HTMLCanvasElement,
     private hue: Readonly<Record<CrateTier, string>>,
     private fx: () => CrateFx,
+    /** The chest's look (`crateArt.CRATE_LOOKS`): the opening starts from the chest on the screen. */
+    palette: Palette = CRATE_PALETTE,
   ) {
     this.ctx = canvas.getContext('2d')!
-    this.body = bake(CRATE_BODY, CRATE_PALETTE, CRATE_SCALE)
-    this.bodyOpen = bake(openBody(), CRATE_PALETTE, CRATE_SCALE)
-    this.lid = bake(CRATE_LID, CRATE_PALETTE, CRATE_SCALE)
+    this.body = bake(CRATE_BODY, palette, CRATE_SCALE)
+    this.bodyOpen = bake(openBody(), palette, CRATE_SCALE)
+    this.lid = bake(CRATE_LID, palette, CRATE_SCALE)
     this.coin = bake(COIN, COIN_PALETTE, 1)
     // Every glow baked up front: a bake mid-sequence is a dropped frame.
     for (const t of [1, 2, 3] as const) this.glows[hue[t]] = silhouette(hue[t])

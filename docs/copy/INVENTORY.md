@@ -20,7 +20,7 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 | Trade war | Say who leads the season, who pays you at its end, and what desperate terms mean. | 62 | 28 |
 | Home (map, dock, card) | Say what the focused road is like and what its next level pays; the CTA opens its terms. | 77 | 25 |
 | Militia and the Sovereign Route | Found and dress your militia; say what the Sovereign Route costs and opens. | 256 | 15 |
-| HQ and crates | Say what a building does and costs, and what a crate holds. | 105 | 23 |
+| HQ and crates | Say what a building does and costs, and what a crate holds. | 109 | 24 |
 | Codex | Name every entry and say what it does; a locked one says how it opens. | 72 | 19 |
 | Stops (merchant, campfire, shrine) | Say what each offer gives and costs; the keeper says one line. | 56 | 28 |
 | Liaisons (spoken) | Character voice: one spoken line, 40 characters at most. | 81 | 32 |
@@ -1716,31 +1716,32 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 
 ### `src/ui/shell/hq/CratesScreen.tsx`
 
-- L65: Sealed crates
-- L68: Back to the menu
-- L71: Your bank
-- L79: Open {k} crates
-- L79: Open a crate
-- L89: Sealed crates
-- L97: Your bank buys {shelf.buys}
-- L101: Bought with bank gold. Contracts fill the bank.
-- L101: Your bank is {moneyText(PULL_PRICE - b} short. Contracts fill it.
-- L104: A gamble: a delivered contract always unlocks an item.
-- L106: What one crate holds
-- L107: One item, by chance
-- L114: Level {lvl}: {p} percent
-- L123: Level
-- L131: New to you
-- L132: None left
-- L135: Already yours
-- L136: A Rare one, next contract
-- L140: Waiting
-- L145: Your standing lifts Levels 2 and 3.
-- L145: Standing with any company lifts Levels 2 and 3.
-- L149: How many crates to open
-- L150: Open
-- L151: One crate less
-- L157: One crate more
+- L62: Open {k} crates
+- L62: Open a crate
+- L95: Sealed crates
+- L98: Back to the menu
+- L101: Your bank
+- L119: Sealed crates
+- L127: {LOOK_NAME[look]}: your bank is short
+- L132: How many crates to open
+- L134: One crate less
+- L142: One crate more
+- L157: Bank gold buys them · yours buys {shelf.buys}
+- L157: Your bank is {moneyText(PULL_PRICE - b} short · contracts fill it
+- L159: A gamble: a delivered contract always unlocks an item.
+- L161: What one crate holds
+- L162: One item, by chance
+- L168: Level {lvl}: {p} percent; {unseen} of its kinds new to you
+- L177: Level
+- L180: {unseen} new
+- L180: All yours
+- L188: New to you
+- L189: None left
+- L192: Already yours
+- L193: A Rare one, next contract
+- L197: Waiting
+- L202: Your standing lifts Levels 2 and 3.
+- L202: Standing with any company lifts Levels 2 and 3.
 
 ### `src/ui/shell/hq/HqScreen.tsx`
 
@@ -1771,6 +1772,12 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 - L308: Bank interest
 - L310: next finished contract
 - L313: of the bank, up to
+
+### `src/ui/shell/hq/crateArt.ts`
+
+- L107: a wooden crate
+- L107: an iron-banded crate
+- L107: a gold-trimmed chest
 
 ### `src/ui/shell/hq/crateSequence.ts`
 

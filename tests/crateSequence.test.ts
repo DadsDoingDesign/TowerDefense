@@ -29,7 +29,8 @@ import {
   type Phase,
 } from '../src/ui/shell/hq/crateSequence'
 import { BADGE_MAX, crateBadge, crateShelf, OPEN_MAX } from '../src/ui/shell/hq/crateShelf'
-import { CRATE_BODY, CRATE_LID, CRATE_MARK, CRATE_PALETTE } from '../src/ui/shell/hq/crateArt'
+import { CRATE_BODY, CRATE_LID, CRATE_LOOKS, CRATE_MARK, CRATE_PALETTE, LOOK_SCALE, lookFor, PLINTH, PLINTH_PALETTE } from '../src/ui/shell/hq/crateArt'
+import { breathAt, HOP_EVERY_MS, HOP_MS, hopAt, idleFps, idleSparks, RATTLE_MS, rattleAt } from '../src/ui/shell/hq/crateIdle'
 import { PULL_PRICE } from '../src/game/run/hq'
 
 const r = (kind: string, level: 1 | 2 | 3, duplicate = false): PullResult => ({ kind, level, duplicate })
@@ -188,5 +189,42 @@ describe('crate art', () => {
       }
     }
     expect(CRATE_LID[0].length).toBe(CRATE_BODY[0].length)
+  })
+})
+
+describe('the chest pass: looks and the idle (presentation only)', () => {
+  it('the plinth and every look are whole, and every letter has a colour', () => {
+    for (const row of PLINTH) {
+      expect(row.length).toBe(PLINTH[0].length)
+      for (const ch of row) if (ch !== '.') expect(PLINTH_PALETTE[ch], `'${ch}'`).toBeDefined()
+    }
+    for (const pal of Object.values(CRATE_LOOKS)) for (const ch of Object.keys(CRATE_PALETTE)) expect(pal[ch]).toMatch(/^#[0-9a-f]{6}$/i)
+  })
+  it('the chest grows with how many open at once: 1–2 wood, 3–4 iron, 5 gold', () => {
+    expect([1, 2, 3, 4, 5].map(lookFor)).toEqual(['wood', 'wood', 'iron', 'iron', 'gold'])
+    expect(LOOK_SCALE.wood).toBeLessThan(LOOK_SCALE.iron)
+    expect(LOOK_SCALE.iron).toBeLessThan(LOOK_SCALE.gold)
+    expect(HOP_EVERY_MS.gold).toBeLessThan(HOP_EVERY_MS.wood)
+    expect(idleSparks('gold', 'full')).toBeGreaterThan(idleSparks('wood', 'full'))
+  })
+  it('Light halves the idle (sparkles and frame rate); reduced motion holds it still', () => {
+    for (const l of ['wood', 'iron', 'gold'] as const) {
+      expect(idleSparks(l, 'light')).toBe(Math.ceil(idleSparks(l, 'full') / 2))
+      expect(idleSparks(l, 'off')).toBe(0)
+    }
+    expect(idleFps('light')).toBe(idleFps('full') / 2)
+    expect(idleFps('off')).toBe(0)
+  })
+  it('a hop goes up and comes down; a rattle dies away; the breath stays in 0–1', () => {
+    expect(hopAt(-1)).toEqual({ lift: 0, squash: 1 })
+    expect(hopAt(HOP_MS)).toEqual({ lift: 0, squash: 1 })
+    expect(hopAt(HOP_MS * 0.42).lift).toBeGreaterThan(3)
+    expect(hopAt(HOP_MS * 0.85).squash).toBeLessThan(1)
+    expect(rattleAt(RATTLE_MS)).toBe(0)
+    expect(Math.abs(rattleAt(RATTLE_MS * 0.12))).toBeGreaterThan(0)
+    for (let t = 0; t < 10_000; t += 97) {
+      expect(breathAt(t)).toBeGreaterThanOrEqual(0)
+      expect(breathAt(t)).toBeLessThanOrEqual(1)
+    }
   })
 })

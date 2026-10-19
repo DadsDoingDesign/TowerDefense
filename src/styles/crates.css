@@ -31,71 +31,121 @@
   text-shadow: 0 2px 0 var(--shade);
   outline: none;
 }
-.cr-hero {
+/* The stage: the hero chest on its plinth, in the world's own light. The
+   backdrop is a wash of the world's accent (tokens only); the canvas
+   (CrateHero) draws the rays, the glow, the chest and its sparkles. */
+.cr-stage {
   position: relative;
   display: grid;
   justify-items: center;
-  gap: 8px;
-  padding: 6px 0 2px;
+  margin: 0 calc(-1 * var(--gutter, 16px));
+  padding-bottom: 6px;
+  background:
+    radial-gradient(60% 70% at 50% 58%, color-mix(in srgb, var(--accent) 16%, transparent) 0, transparent 70%),
+    radial-gradient(40% 30% at 50% 82%, color-mix(in srgb, var(--gold) 14%, transparent) 0, transparent 80%);
 }
-/* The lantern light the crate sits in. */
-.cr-hero::before {
-  content: '';
+.cr-hero-btn {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cr-hero-btn[aria-disabled='true'] {
+  cursor: default;
+}
+.cr-hero-btn:focus-visible {
+  outline: var(--focus-width) solid var(--focus-ring);
+  outline-offset: -4px;
+  border-radius: 12px;
+}
+.cr-hero-canvas {
+  display: block;
+  width: 100%;
+  height: 236px;
+  image-rendering: pixelated;
+}
+/* The ribbon under the chest: how many, and its steps. */
+.cr-ribbon {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: -2px;
+  padding: 4px 22px 6px;
+  color: var(--ink-on-fill);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--text) 18%, transparent) 0 2px, transparent 2px calc(100% - 3px), color-mix(in srgb, var(--shade) 40%, transparent) calc(100% - 3px)),
+    var(--gold);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 50%, 100% 100%, 0 100%, 12px 50%);
+  filter: drop-shadow(0 3px 0 var(--shade));
+}
+.cr-rib-n {
+  min-width: 2.6ch;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.cr-rib-step {
+  width: 44px;
+  height: 40px;
+  border: 0;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--shade) 22%, transparent);
+  color: var(--ink-on-fill);
+  font: inherit;
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+}
+.cr-rib-step:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.cr-rib-step:focus-visible {
+  outline: var(--focus-width) solid var(--focus-ring);
+  outline-offset: 1px;
+}
+/* The coins paying: from the CTA's price up into the chest. */
+.cr-pay {
   position: absolute;
-  left: 50%;
-  top: 4px;
-  width: 260px;
-  height: 170px;
-  transform: translateX(-50%);
-  background: radial-gradient(closest-side, color-mix(in srgb, var(--gold) 26%, transparent), transparent);
+  inset: 0;
   pointer-events: none;
 }
-.cr-hero-art {
-  position: relative;
-  display: block;
-  filter: drop-shadow(0 5px 0 color-mix(in srgb, var(--shade) 75%, transparent));
-}
-.cr-hero-art svg {
-  display: block;
-}
-/* Ready to open: a rare wiggle, the crate asking to be opened. */
-.cr-hero.is-ready .cr-hero-art {
-  animation: cr-wiggle 6.5s ease-in-out infinite;
-  transform-origin: 50% 100%;
-}
-@keyframes cr-wiggle {
-  0%,
-  88%,
-  100% {
-    transform: none;
-  }
-  90% {
-    transform: rotate(-3deg) translateY(-2px);
-  }
-  93% {
-    transform: rotate(3deg) translateY(-2px);
-  }
-  96% {
-    transform: rotate(-1.5deg);
-  }
-}
-.cr-count {
+.cr-pay-coin {
   position: absolute;
-  top: 2px;
-  left: calc(50% + 62px);
-  min-width: 44px;
-  padding: 2px 9px 3px;
-  border-radius: 999px;
-  background: var(--shade);
-  border: 2px solid var(--gold);
-  color: var(--gold-text);
-  font-family: var(--font-display);
-  font-size: 22px;
-  font-weight: 700;
-  line-height: 1.1;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-  box-shadow: 0 2px 0 var(--shade);
+  left: 50%;
+  top: 46%;
+  animation: cr-pay 300ms cubic-bezier(0.3, 0, 0.6, 1) both;
+  animation-delay: calc(var(--i) * 10ms);
+}
+/* Each coin leaves the price a little apart from the last and arcs up into
+   the chest (its own spread, from its index). */
+@keyframes cr-pay {
+  from {
+    transform: translate(calc(var(--fx) - 50% + (var(--i) - 5) * 7px), calc(var(--fy) - 50%));
+    opacity: 1;
+  }
+  45% {
+    transform: translate(calc(var(--fx) * 0.4 - 50% + (var(--i) - 5) * 10px), calc(var(--fy) * 0.35 - 50% - 40px)) scale(1.15);
+  }
+  80% {
+    opacity: 1;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 0;
+  }
+}
+/* A satisfying press. */
+.crates .pg-cta:active:not(:disabled) {
+  transform: translateY(2px) scale(0.985);
 }
 .cr-from {
   position: relative;
@@ -134,7 +184,7 @@
   gap: 2px;
 }
 /* A level as the Codex draws it: its hue's frame round a lit well. */
-.cr-band-in,
+.cr-myst,
 .cr-tile-in,
 .cr-front-in {
   position: relative;
@@ -148,11 +198,25 @@
     0 0 0 4px color-mix(in srgb, var(--lv) 50%, var(--shade)),
     0 4px 0 3px var(--shade);
 }
-.cr-band-in {
-  aspect-ratio: 1.3;
+.cr-myst {
+  aspect-ratio: 1.25;
   margin-top: 4px;
+  overflow: hidden;
+  background:
+    repeating-linear-gradient(180deg, transparent 0 14px, color-mix(in srgb, var(--shade) 35%, transparent) 14px 16px),
+    radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--lv) 45%, var(--wood)) 0, color-mix(in srgb, var(--wood) 70%, var(--shade)) 75%);
 }
-.cr-band-in .fw-i,
+/* A question, not a promise: the level's "?" where an item would be. */
+.cr-q {
+  font-family: var(--font-display);
+  font-size: 38px;
+  font-weight: 700;
+  line-height: 1;
+  color: color-mix(in srgb, var(--lv) 40%, var(--text));
+  text-shadow:
+    0 3px 0 var(--shade),
+    0 0 14px color-mix(in srgb, var(--lv) 70%, transparent);
+}
 .cr-tile-in .fw-i {
   transform: scale(1.4);
 }
@@ -206,24 +270,20 @@
   color: var(--muted);
   line-height: 1.4;
 }
-.cr-many {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-}
-.cr-many-n {
-  min-width: 2ch;
-  text-align: center;
-  font-size: var(--fs-lg);
-  font-variant-numeric: tabular-nums;
-}
-.cr-many-max {
-  font-size: var(--fs-sm);
-  color: var(--muted);
+.cr-band-new {
+  font-size: var(--fs-micro);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--good);
 }
 
 /* ------------------------------------------------------------ the opening */
+/* Under the opening the page is covered: once the overlay has faded in, the
+   page stops painting at all (one big effect at a time; it holds 60 fps). */
+.crates.is-under > * {
+  visibility: hidden;
+  transition: visibility 0s 260ms;
+}
 .cr-open {
   position: fixed;
   inset: 0;
@@ -611,12 +671,12 @@
 .cr-open.is-still .cr-tile {
   animation: none;
 }
-:root[data-reduced-motion='true'] .cr-hero-art {
-  animation: none !important;
+:root[data-reduced-motion='true'] .cr-pay {
+  display: none;
 }
 @media (prefers-reduced-motion: reduce) {
-  .cr-hero-art {
-    animation: none !important;
+  .cr-pay {
+    display: none;
   }
   .cr-open .cr-sum,
   .cr-open .cr-tile {
@@ -626,11 +686,11 @@
 
 /* A desk: the screen stays a column; the opening's card grows with the screen. */
 @media (min-width: 900px) and (min-height: 540px) {
-  .cr-band-in {
-    aspect-ratio: 2;
+  .cr-myst {
+    aspect-ratio: 1.5;
   }
-  .cr-band-in .fw-i {
-    transform: scale(2);
+  .cr-hero-canvas {
+    height: 300px;
   }
   .cr-name {
     font-size: 28px;

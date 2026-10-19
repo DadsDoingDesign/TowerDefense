@@ -5,7 +5,8 @@
  *   npx vite --port 5291 --strictPort &
  *   node scripts/crate-cards.mjs <outDir> [what]
  *
- * what: comma list of screen (the screen, phone + desk), open (the opening as
+ * what: comma list of screen (the screen, phone + desk), chest (the chest at
+ *       1 / 3 / 5, the idle WebP and its fps), open (the opening as
  *       frames → animated WebP: `full`, `common`, `legendary`, plus the
  *       summary PNG), fps (the opening at a 4× CPU throttle, real time, phone)
  *       (default all).
@@ -25,7 +26,7 @@ import { createRequire } from 'node:module'
 const require = createRequire(import.meta.url)
 const sharp = require('sharp')
 const OUT = path.resolve(process.argv[2] ?? 'crate-cards-out')
-const WHAT = new Set((process.argv[3] ?? 'screen,open,fps').split(','))
+const WHAT = new Set((process.argv[3] ?? 'screen,open,chest,fps').split(','))
 const BASE = process.env.BASE ?? 'http://localhost:5291/'
 const EXEC = process.env.PW_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'
 const { chromium } = await import('/opt/node22/lib/node_modules/playwright/index.mjs').catch(() => import('playwright'))
@@ -41,11 +42,11 @@ const VIEWS = {
   desk: { viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1, isMobile: false, hasTouch: false },
 }
 
-async function open(view, { seed = 1, bank = 2480, fx = 'full', motion = true } = {}) {
+async function open(view, { seed = 1, bank = 2480, fx = 'full', motion = true, query = '' } = {}) {
   const ctx = await browser.newContext({ ...VIEWS[view], reducedMotion: motion ? 'no-preference' : 'reduce' })
   const page = await ctx.newPage()
   page.on('pageerror', (e) => console.log('pageerror', String(e)))
-  await page.goto(BASE)
+  await page.goto(BASE + query)
   await page.waitForFunction(() => !!window.__meta, null, { timeout: 20000 })
   await page.evaluate(
     async ({ seed, bank }) => {
@@ -82,7 +83,7 @@ async function open(view, { seed = 1, bank = 2480, fx = 'full', motion = true } 
 
 async function toCrates(page) {
   await page.locator('.mn-place', { hasText: /Crates|Sealed/ }).first().click()
-  await page.waitForSelector('.cr-hero')
+  await page.waitForSelector('.cr-stage', { state: 'attached' })
   await page.waitForTimeout(900)
 }
 
@@ -140,7 +141,7 @@ const player = ({ tapGap, read }) => {
 async function captureOpening(name, { seed, many = 1, view = 'phone15', ms, read = 1100, tapGap = 320, fx = 'full' }) {
   const p = await open(view, { seed, fx })
   await toCrates(p.page)
-  for (let i = 1; i < many; i++) await p.page.locator('.cr-many .ct-step').last().click()
+  for (let i = 1; i < many; i++) await p.page.locator('.cr-rib-step').last().click()
   await slow(p, SLOW)
   await p.page.evaluate(player, { tapGap, read })
   const dir = path.join(OUT, 'frames', name)
@@ -208,12 +209,65 @@ if (WHAT.has('open')) {
   }
 }
 
+// The chest pass: the screen at 1 / 3 / 5 crates, the idle as a WebP and its
+// frame rate. (The directions card's alternatives — slots, bundles, one fixed
+// chest — were temporary `?crateLook=` variants, rendered once and removed.)
+if (WHAT.has('chest')) {
+  const bank = 2600
+  for (const n of [1, 3, 5]) {
+    const p = await open('phone', { bank })
+    await toCrates(p.page)
+    for (let i = 1; i < n; i++) await p.page.locator('.cr-rib-step').last().click()
+    await p.page.waitForTimeout(700)
+    await p.page.screenshot({ path: path.join(OUT, `chest-${n}.png`) })
+    await p.page.locator('.cr-stage').screenshot({ path: path.join(OUT, `stage-${n}.png`) })
+    await p.ctx.close()
+  }
+  // The idle: 3 s of the stage at 3 crates, in slow motion.
+  const p = await open('phone15', { bank })
+  await toCrates(p.page)
+  for (let i = 1; i < 3; i++) await p.page.locator('.cr-rib-step').last().click()
+  await slow(p, SLOW)
+  const dir = path.join(OUT, 'frames', 'idle')
+  fs.rmSync(dir, { recursive: true, force: true })
+  fs.mkdirSync(dir, { recursive: true })
+  const stage = p.page.locator('.cr-stage')
+  const t0 = Date.now()
+  const times = []
+  for (let i = 0; ; i++) {
+    const wait = t0 + (i * STEP) / SLOW - Date.now()
+    if (wait > 0) await sleep(wait)
+    const t = (Date.now() - t0) * SLOW
+    if (t > 4400) break
+    times.push(t)
+    await stage.screenshot({ path: path.join(dir, `f${String(i).padStart(3, '0')}.png`) })
+  }
+  fs.writeFileSync(path.join(dir, 'times.json'), JSON.stringify(times))
+  await p.ctx.close()
+  await webp(dir, path.join(OUT, 'idle.webp'), { width: 600, quality: 70 })
+  // The idle's frame rate at a 4× throttle, Full and Light.
+  const out = {}
+  for (const fx of ['full', 'light']) {
+    const q = await open('phone', { bank, fx })
+    await toCrates(q.page)
+    await q.cdp.send('Emulation.setCPUThrottlingRate', { rate: Number(process.env.THROTTLE ?? 4) })
+    await q.page.evaluate(() => (window.__crateIdleFrames.length = 0))
+    await q.page.waitForTimeout(5000)
+    const f = await q.page.evaluate(() => [...window.__crateIdleFrames])
+    const s = [...f].sort((a, b) => a - b)
+    out[fx] = { frames: f.length, fps: Math.round(1000 / (f.reduce((a, b) => a + b, 0) / Math.max(1, f.length))), p95: Math.round(s[Math.floor(s.length * 0.95)] ?? 0) }
+    await q.ctx.close()
+  }
+  console.log(`idle fps (${process.env.THROTTLE ?? 4}× throttle):`, JSON.stringify(out))
+  fs.writeFileSync(path.join(OUT, 'idle-fps.json'), JSON.stringify(out, null, 1))
+}
+
 if (WHAT.has('fps')) {
   const out = {}
   for (const fx of ['full', 'light']) {
     const p = await open('phone', { seed: 9, fx })
     await toCrates(p.page)
-    await p.page.locator('.cr-many .ct-step').last().click()
+    await p.page.locator('.cr-rib-step').last().click()
     await p.cdp.send('Emulation.setCPUThrottlingRate', { rate: Number(process.env.THROTTLE ?? 4) })
     await p.page.evaluate(player, { tapGap: 320, read: 1100 })
     await p.page.locator('.pg-cta').first().click()

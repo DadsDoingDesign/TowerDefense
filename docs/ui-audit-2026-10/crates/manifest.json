@@ -19,7 +19,7 @@
   "id": "crates-screen-after",
   "group": "Crates",
   "people": "",
-  "title": "Crates screen — after",
+  "title": "Crates screen — v1 (superseded)",
   "caption": "After: one column, no tabs. The big pixel crate with how many your bank buys (×4) and where crates come from; one framed panel — the three levels as Codex tiles with their chance, New to you, what a duplicate becomes; how many to open; Open a crate · 500.",
   "file": "screen-after-phone.png"
  },
@@ -110,5 +110,53 @@
   "title": "Desk — the opening",
   "caption": "The opening on a desk: bigger stage pixels (4 px), the card grows with the screen.",
   "file": "opening-desk.png"
+ },
+ {
+  "id": "crates-odds-v2",
+  "group": "Crates",
+  "people": "",
+  "title": "Odds — before / after",
+  "caption": "The designer: the preview read as winning those exact items. Now each level is a mystery card — its frame, a \"?\", its chance and how many of its kinds are new to you. No item is pictured.",
+  "file": "odds-before-after.png"
+ },
+ {
+  "id": "crates-directions",
+  "group": "Crates",
+  "people": "",
+  "title": "Chest directions",
+  "caption": "Four directions in the real screen: A one chest on stage, B Clash Royale slots, C Supercell shop bundles, D the chest grows with how many you open. D chosen: one hero, and the count is something you see.",
+  "file": "chest-directions.png"
+ },
+ {
+  "id": "crates-screen-v2",
+  "group": "Crates",
+  "people": "",
+  "title": "Crates screen — v2",
+  "caption": "The hero chest on its plinth, lit and alive, ×3 on a gold ribbon that steps it, one quiet line on where crates come from, the abstract odds, Open 3 crates.",
+  "file": "screen-after-v2.png"
+ },
+ {
+  "id": "crates-sizes",
+  "group": "Crates",
+  "people": "",
+  "title": "Chest sizes · 1 / 3 / 5",
+  "caption": "The chest grows with the count: a rope-lashed wooden crate, the iron-banded crate, a gold-trimmed chest. Presentation only — still one openCrate per crate.",
+  "file": "chest-sizes.png"
+ },
+ {
+  "id": "crates-idle",
+  "group": "Crates",
+  "people": "",
+  "title": "The chest idle (WebP, 3 s)",
+  "caption": "Breathing glow and halo, light at the lid seam, the seal pulsing, motes drifting, a rattle between hops, slow rays. Light halves it; reduced motion holds it still.",
+  "file": "idle.webp"
+ },
+ {
+  "id": "crates-opening-v2",
+  "group": "Crates",
+  "people": "",
+  "title": "The opening — v2 (WebP)",
+  "caption": "Coins stream from the price into the chest, it hops, and the opening starts from that chest (here two crates: the wooden one).",
+  "file": "opening-v2.webp"
  }
 ]

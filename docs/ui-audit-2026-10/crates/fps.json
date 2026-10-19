@@ -30,5 +30,83 @@
    "over50": 0,
    "drawMs": 0.5
   }
+ },
+ "idle4x": {
+  "full": {
+   "frames": 293,
+   "fps": 58,
+   "p95": 17
+  },
+  "light": {
+   "frames": 150,
+   "fps": 30,
+   "p95": 33
+  }
+ },
+ "opening_v2_4x_runs": [
+  {
+   "full": {
+    "frames": 489,
+    "fps": 57,
+    "p95": 25,
+    "over50": 4,
+    "drawMs": 1.76
+   },
+   "light": {
+    "frames": 463,
+    "fps": 54,
+    "p95": 33,
+    "over50": 3,
+    "drawMs": 1.56
+   }
+  },
+  {
+   "full": {
+    "frames": 464,
+    "fps": 54,
+    "p95": 31,
+    "over50": 6,
+    "drawMs": 1.58
+   },
+   "light": {
+    "frames": 485,
+    "fps": 56,
+    "p95": 30,
+    "over50": 4,
+    "drawMs": 1.43
+   }
+  },
+  {
+   "full": {
+    "frames": 476,
+    "fps": 55,
+    "p95": 32,
+    "over50": 8,
+    "drawMs": 1.68
+   },
+   "light": {
+    "frames": 502,
+    "fps": 59,
+    "p95": 23,
+    "over50": 2,
+    "drawMs": 1.38
+   }
+  }
+ ],
+ "opening_v2_1x": {
+  "full": {
+   "frames": 516,
+   "fps": 60,
+   "p95": 18,
+   "over50": 1,
+   "drawMs": 0.35
+  },
+  "light": {
+   "frames": 517,
+   "fps": 60,
+   "p95": 17,
+   "over50": 0,
+   "drawMs": 0.33
+  }
  }
 }
