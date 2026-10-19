@@ -2534,89 +2534,89 @@ for (const people of PEOPLES) {
 
 /*
  * ---------------------------------------------------------------------------
- * The HQ's castle stages (Oct 2026) — row 22 (cont.) to 23
+ * The HQ castle's quality tiers (Oct 2026) — row 22 (cont.) to 23
  * ---------------------------------------------------------------------------
- * The home bar's HQ plate shows the HQ as it stands (`run/hq.hqStage`), the
- * way a Town Hall grows as it levels: a thatched lodge, a watchtower, a
- * castle, a castle flying its banners. Each is the pack's own building
- * (`Factions/Knights/Buildings/House|Tower|Castle`, the Blue set) redrawn
- * for 16 × 16 — never the 320 px sprite shrunk — so the four read apart by
- * SILHOUETTE at the plate's 32 px: a pointed roof, one tall shaft, a wide
- * wall between two towers, then the same wall with two red pennants above it.
+ * The home bar's HQ plate shows the castle's material (`run/hq.castleTier`),
+ * the way a Town Hall shows its level: timber, stone, fortified, grand. The
+ * pack's castle (`Factions/Knights/Buildings/Castle`) redrawn for 16 × 16 —
+ * never the 320 px sprite shrunk — so the four read apart at the plate's
+ * 32 px by material AND by outline: a log palisade with stake tips, plain
+ * grey stone, slate with gold banners on an iron-banded base, and white
+ * stone with gold caps, red banners and two red pennants above it.
  */
-icon('hqLodge', [
+icon('hqTimber', [
   '................',
   '................',
-  '.......pp.......',
-  '......pPPq......',
-  '.....pPPpPq.....',
-  '....pPPpPPPq....',
-  '....PPpPPpPq....',
-  '...pPpPPpPPPq...',
-  '...PPPpPPPpPq...',
-  '..qqqqqqqqqqqq..',
-  '...TtTLLLLTtT...',
-  '...TtTLooLTtT...',
-  '...ttTLooLTtt...',
-  '..llllllllllll..',
   '................',
+  '.L.L.L....L.L.L.',
+  '.LLLLL....LLLLL.',
+  '.LlLlLL..LLlLlL.',
+  '.LlLlLLLLLLlLlL.',
+  '.LlLlLlLlLLlLlL.',
+  '.LlLlLooooLlLlL.',
+  '.LlLlLooooLlLlL.',
+  '.LlLlLooooLlLlL.',
+  '.llllllllllllll.',
+  '.oooooooooooooo.',
   '................',
-])
-
-icon('hqTower', [
-  '................',
-  '...TT..TT..TT...',
-  '...TT..TT..TT...',
-  '...TTTTTTTTTT...',
-  '...uttttttttu...',
-  '....TTTTTTTT....',
-  '....TtTTTTtT....',
-  '....TTTTTTTT....',
-  '....tTTLLTTt....',
-  '....TTLooLTT....',
-  '....tTLooLTt....',
-  '....TTLooLTT....',
-  '...llllllllll...',
-  '...lololololo...',
   '................',
   '................',
 ])
 
-icon('hqCastle', [
+icon('hqStone', [
+  '................',
+  '................',
+  '................',
+  '.SS.SS....SS.SS.',
+  '.SSSSS....SSSSS.',
+  '.dsssdS.S.dsssd.',
+  '.SSSSSdSSdSSSSS.',
+  '.SsSSSdssdSSSsS.',
+  '.SSSSdLLLLdSSSS.',
+  '.SSsSLooooLSsSS.',
+  '.SSSSLooooLSSSS.',
+  '.sSSSLooooLSSSs.',
+  '.llllllllllllll.',
+  '.lololololololo.',
+  '................',
+  '................',
+])
+
+icon('hqFortified', [
   '................',
   '................',
   '................',
   '.TT.TT....TT.TT.',
   '.TTTTT....TTTTT.',
   '.utttuT.T.utttu.',
-  '.TTTTTuTTuTTTTT.',
-  '.TtTTTuttuTTTtT.',
-  '.TTTTuLLLLuTTTT.',
-  '.TTtTLooooLTtTT.',
+  '.TGGTTuTTuTTGGT.',
+  '.TGGTTuttuTTGGT.',
+  '.TggTuLLLLuTggT.',
+  '.TTTTLooooLTTTT.',
   '.TTTTLooooLTTTT.',
   '.tTTTLooooLTTTt.',
-  '.llllllllllllll.',
-  '.lololololololo.',
+  '.dddddddddddddd.',
+  '.dsdsdsdsdsdsds.',
   '................',
   '................',
 ])
 
-icon('hqStronghold', [
+icon('hqGrand', [
   '................',
   '..lRRR....RRRl..',
   '..lRR......RRl..',
   '..l..........l..',
-  '.Tl.TT....TT.lT.',
-  '.TTTTT....TTTTT.',
-  '.utttuT.T.utttu.',
-  '.TRRTTuTTuTTRRT.',
-  '.TRRTTuttuTTRRT.',
-  '.TrrTuLLLLuTrrT.',
-  '.TTTTLooooLTTTT.',
-  '.TTTTLooooLTTTT.',
-  '.tTTTLooooLTTTt.',
-  '.llllllllllllll.',
-  '.lololololololo.',
+  '.Gl.GG....GG.lG.',
+  '.PPPPP....PPPPP.',
+  '.qpppqP.P.qpppq.',
+  '.PRRPPqPPqPPRRP.',
+  '.PRRPPqppqPPRRP.',
+  '.PrrPqGGGGqPrrP.',
+  '.PPPPGooooGPPPP.',
+  '.PPPPGooooGPPPP.',
+  '.pPPPGooooGPPPp.',
+  '.qqqqqqqqqqqqqq.',
+  '.qhqhqhqhqhqhqh.',
   '................',
 ])
 

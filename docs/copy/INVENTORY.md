@@ -20,7 +20,7 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 | Trade war | Say who leads the season, who pays you at its end, and what desperate terms mean. | 62 | 28 |
 | Home (map, dock, card) | Say what the focused road is like and what its next level pays; the CTA opens its terms. | 77 | 25 |
 | Militia and the Sovereign Route | Found and dress your militia; say what the Sovereign Route costs and opens. | 256 | 15 |
-| HQ and crates | Say what a building does and costs, and what a crate holds. | 109 | 24 |
+| HQ and crates | Say what a building does and costs, and what a crate holds. | 115 | 25 |
 | Codex | Name every entry and say what it does; a locked one says how it opens. | 72 | 19 |
 | Stops (merchant, campfire, shrine) | Say what each offer gives and costs; the keeper says one line. | 56 | 28 |
 | Liaisons (spoken) | Character voice: one spoken line, 40 characters at most. | 81 | 32 |
@@ -1686,18 +1686,18 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 
 ### `src/game/run/hq.ts`
 
-- L255: Body armour and an off-hand on every hero
-- L256: Body armour arrives Rare
-- L257: Pick 1 of 4 heroes
-- L258: One hero starts with a Level 2 skill
-- L259: A second hero marches with yours
-- L271: Pick 1 of {r.pick}
-- L272: Rare armour
-- L272: Armour
-- L273: Level 2 skill
-- L274: +1 hero
-- L296: {+(rate * 100).toFixed(1)}%
-- L310: {ratePct(BASE_INTEREST.ra} of the bank per finished contract, up to {BASE_INTEREST.cap} gold. A lost contract earns none.
+- L309: Body armour and an off-hand on every hero
+- L310: Body armour arrives Rare
+- L311: Pick 1 of 4 heroes
+- L312: One hero starts with a Level 2 skill
+- L313: A second hero marches with yours
+- L325: Pick 1 of {r.pick}
+- L326: Rare armour
+- L326: Armour
+- L327: Level 2 skill
+- L328: +1 hero
+- L350: {+(rate * 100).toFixed(1)}%
+- L364: {ratePct(BASE_INTEREST.ra} of the bank per finished contract, up to {BASE_INTEREST.cap} gold. A lost contract earns none.
 
 ### `src/ui/shell/hq/CrateOpening.tsx`
 
@@ -1745,33 +1745,35 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 
 ### `src/ui/shell/hq/HqScreen.tsx`
 
-- L61: Headquarters
-- L64: Back to the menu
-- L70: Headquarters
-- L74: Your bank
-- L83: Need
-- L103: Paid from your bank, kept for good. Tap an upgrade to read it.
-- L109: HQ upgrades
-- L133: Your HQ: {s.stage.name}. {line}.
-- L184: level {c.level} of {c.max}
-- L187: {Math.min(runs, FOCUS_FRO}/{FOCUS_FROM_RUN}
-- L188: Max
-- L201: Locked
-- L201: Level {card.level} of {card.max}
-- L216: Opens
-- L217: So far
-- L217: {Math.min(runs, FOCUS_FRO} of {FOCUS_FROM_RUN}
-- L221: Now
-- L222: Next
-- L256: Company in focus
-- L266: {c.name} in focus
-- L266: {c.name}: opens at Standing {c.opensAt} with any company
-- L273: {c.name} opens at Standing {c.opensAt} with any company
-- L282: % more next contract
-- L292: % next contract only
-- L308: Bank interest
-- L310: next finished contract
-- L313: of the bank, up to
+- L78: Headquarters
+- L81: Back to the menu
+- L87: Headquarters
+- L91: Your bank
+- L100: Need
+- L120: Paid from your bank, kept for good. Tap an upgrade to read it.
+- L126: HQ upgrades
+- L155: -{sx}px -{sy}px
+- L156: {CASTLE_SCENE.w}px {sheetH}px
+- L204: (prefers-reduced-motion: reduce)
+- L232: Your HQ: {t.tier.name}. {line}.
+- L284: level {c.level} of {c.max}
+- L287: {Math.min(runs, FOCUS_FRO}/{FOCUS_FROM_RUN}
+- L288: Max
+- L302: {card.partName} · {card.state === 'locked' }
+- L317: Opens
+- L318: So far
+- L318: {Math.min(runs, FOCUS_FRO} of {FOCUS_FROM_RUN}
+- L322: Now
+- L323: Next
+- L357: Company in focus
+- L367: {c.name} in focus
+- L367: {c.name}: opens at Standing {c.opensAt} with any company
+- L374: {c.name} opens at Standing {c.opensAt} with any company
+- L383: % more next contract
+- L393: % next contract only
+- L409: Bank interest
+- L411: next finished contract
+- L414: of the bank, up to
 
 ### `src/ui/shell/hq/crateArt.ts`
 
@@ -1788,31 +1790,35 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 
 ### `src/ui/shell/hq/hqModel.ts`
 
-- L94: Every upgrade bought
-- L94: {s.bought} of {HQ_LEVELS_MAX} upgrades
-- L107: {n}{n % 10 === 1 && n !== 11}
-- L117: 4 candidates per city, trained
-- L117: 3 candidates per city
-- L117: 4 per city, trained to your heroes’ level
-- L119: {packSlots(level)} slots
-- L119: {packSlots(level + 1)} slots
-- L121: one company
-- L122: +{FOCUS_STEP * level}% {who}
-- L122: None
-- L122: +{FOCUS_STEP * (level + 1)}% {who}
-- L126: Ways round ambushes · 3–4 roads a layer
-- L126: A way round every ambush
-- L126: None
-- L127: A way round every ambush
-- L127: 3 or 4 roads every layer
-- L133: Every contract starts with this deal.
-- L134: A full pack sells its cheapest piece.
-- L147: Opens after your {ordinal(FOCUS_FROM_RUN)} finished contract
-- L163: Fully upgraded
-- L164: Opens after {FOCUS_FROM_RUN} contracts
-- L165: Need
-- L166: Open the {c.name}
-- L166: Upgrade {c.name}
+- L95: {names.slice(0, -1).join(} and {names[names.length - 1]}
+- L106: Every upgrade bought
+- L109: {t.next.name}: max the last {t.missing.length} upgrades
+- L115: {more ? `${shown.map((n) } to level {named[0].need}
+- L117: {shown.map((n) => `${n.na} and {more} more
+- L118: {n.name} to {n.need}
+- L130: {n}{n % 10 === 1 && n !== 11}
+- L140: 4 candidates per city, trained
+- L140: 3 candidates per city
+- L140: 4 per city, trained to your heroes’ level
+- L142: {packSlots(level)} slots
+- L142: {packSlots(level + 1)} slots
+- L144: one company
+- L145: +{FOCUS_STEP * level}% {who}
+- L145: None
+- L145: +{FOCUS_STEP * (level + 1)}% {who}
+- L149: Ways round ambushes · 3–4 roads a layer
+- L149: A way round every ambush
+- L149: None
+- L150: A way round every ambush
+- L150: 3 or 4 roads every layer
+- L156: Every contract starts with this deal.
+- L157: A full pack sells its cheapest piece.
+- L171: Opens after your {ordinal(FOCUS_FROM_RUN)} finished contract
+- L187: Fully upgraded
+- L188: Opens after {FOCUS_FROM_RUN} contracts
+- L189: Need
+- L190: Open the {c.name}
+- L190: Upgrade {c.name}
 
 ## Codex
 

@@ -1,7 +1,7 @@
 /**
  * hq-shots — the HQ, captured from the RUNNING app (the HQ pass, Oct 2026,
  * `docs/ui-audit-2026-10/hq/`): the home bar's HQ plate and the HQ page at
- * each castle stage, on a phone and a desk.
+ * each castle tier (and its rise), on a phone and a desk.
  *
  *   npx vite --port 5231 --strictPort &
  *   node scripts/hq-shots.mjs <outDir> [p390,d1280] [only,saves]
@@ -46,31 +46,33 @@ const VIEWS = {
 
 /** Saves by HQ progress: levels bought per upgrade, the bank, finished contracts. */
 const SAVES = {
-  // Stage 1: nothing bought yet, a bank that just opened the HQ.
-  s1: { runs: 2, bank: 620, upgrades: {} },
-  // Stage 2: three levels; focus not shown yet (4 runs).
-  s2: { runs: 4, bank: 240, upgrades: { deal: 1, pack: 1, scouting: 1 } },
-  // Stage 3: eight levels; focus open.
-  s3: { runs: 9, bank: 1240, upgrades: { deal: 2, hiring: 1, pack: 2, focus: 1, scouting: 2 }, focus: 'spice' },
-  // Stage 4: twelve levels.
-  s4: { runs: 22, bank: 3400, upgrades: { deal: 4, hiring: 1, pack: 4, focus: 1, scouting: 2 }, focus: 'metals' },
-  // Everything bought.
-  max: { runs: 40, bank: 5200, upgrades: { deal: 5, hiring: 1, pack: 4, focus: 3, scouting: 2 }, focus: 'silk' },
+  // Timber, nothing bought: every part an empty plot.
+  t0: { runs: 2, bank: 620, upgrades: {} },
+  // Timber, mixed: one upgrade (Scouts) keeps the castle back.
+  t1: { runs: 3, bank: 620, upgrades: { deal: 2, hiring: 1, pack: 1 } },
+  // Stone: every open upgrade at 1; focus still locked.
+  t2: { runs: 4, bank: 240, upgrades: { deal: 1, hiring: 1, pack: 1, scouting: 1 } },
+  // Fortified, mixed.
+  t3: { runs: 12, bank: 1240, upgrades: { deal: 3, hiring: 1, pack: 3, focus: 2, scouting: 1 }, focus: 'spice' },
+  // Grand: everything bought.
+  t4: { runs: 40, bank: 5200, upgrades: { deal: 5, hiring: 1, pack: 4, focus: 3, scouting: 2 }, focus: 'silk' },
+  // The rise: a stone castle opened for the first time since it was timber (motion on).
+  rise: { runs: 4, bank: 240, upgrades: { deal: 1, hiring: 1, pack: 1, scouting: 1 }, seen: 0, motion: true },
 }
-
 fs.mkdirSync(OUT, { recursive: true })
 const chromium = await loadChromium()
 const browser = await chromium.launch(fs.existsSync(EXEC) ? { executablePath: EXEC } : {})
 const want = (s) => !ONLY || ONLY.has(s)
 
 async function open(view, save, log) {
-  const ctx = await browser.newContext({ ...VIEWS[view], reducedMotion: 'reduce' })
+  const ctx = await browser.newContext({ ...VIEWS[view], reducedMotion: save.motion ? 'no-preference' : 'reduce' })
   const page = await ctx.newPage()
   page.on('pageerror', (e) => log.push(`pageerror: ${e.message}`))
   await page.goto(BASE)
   await page.waitForFunction(() => !!window.__meta, null, { timeout: 20000 })
   await page.evaluate(async (save) => {
     localStorage.clear()
+    if (save.seen != null) localStorage.setItem('mm.hq.tierSeen', String(save.seen))
     const st = await import('/src/game/run/standing.ts')
     const sk = await import('/src/game/data/skills.ts')
     const ik = await import('/src/game/data/itemKinds.ts')
@@ -110,6 +112,18 @@ async function run(view) {
       await plate.screenshot({ path: path.join(OUT, `plate-${name}-${view}.png`) })
       await page.locator('.mn-bar').first().screenshot({ path: path.join(OUT, `bar-${name}-${view}.png`) }).catch(() => {})
       await plate.click()
+      if (save.motion) {
+        // The rise, mid-fade and with its name up.
+        await page.waitForTimeout(900)
+        await page.locator('.hq-keep').screenshot({ path: path.join(OUT, `rise-a-${view}.png`) })
+        await page.waitForTimeout(500)
+        await page.locator('.hq-keep').screenshot({ path: path.join(OUT, `rise-b-${view}.png`) })
+        await page.waitForTimeout(2000)
+        await page.locator('.hq-keep').screenshot({ path: path.join(OUT, `rise-c-${view}.png`) })
+        log.push(`shot ${name}`)
+        await ctx.close()
+        continue
+      }
       await page.waitForTimeout(1200)
       await page.screenshot({ path: path.join(OUT, `hq-${name}-${view}.png`) })
       await page.screenshot({ path: path.join(OUT, `hq-${name}-${view}-full.png`), fullPage: true })
@@ -120,6 +134,7 @@ async function run(view) {
         await toks.nth(i).click()
         await page.waitForTimeout(300)
         await page.screenshot({ path: path.join(OUT, `hq-${name}-${view}-tok${i}.png`) })
+        await page.locator('.hq-keep').screenshot({ path: path.join(OUT, `keep-${name}-${view}-tok${i}.png`) })
         const card = page.locator('.hq-up').first()
         if (await card.count()) await card.screenshot({ path: path.join(OUT, `card-${name}-${view}-tok${i}.png`) }).catch(() => {})
       }

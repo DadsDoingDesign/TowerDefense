@@ -276,17 +276,26 @@ result. Append a short note to the review log when you're done.
 - The HQ (the HQ pass, Oct 2026): the page `src/ui/shell/hq/HqScreen.tsx`
   (styles: the HQ section of `src/styles/hq.css`, which also holds the
   crates'), its words and states as pure data in `hq/hqModel.ts` (now →
-  next, buy / short / max / locked, the CTA's words), rules and prices in
-  `src/game/run/hq.ts`, the save in `metaStore`. No tabs: the castle as it
-  stands, then the five upgrades as one `PickStrip` + `PickCard`, the page's
-  CTA buying the focused one. The castle GROWS with the levels bought
-  (`hq.hqStage`: Lodge 0, Watchtower 3, Castle 7, Stronghold 12 of 15 — a
-  picture only, it pays and gates nothing): the home plate's mark is the
-  stage's atlas cell (`hqLodge`… in `scripts/fw-icons.ts`, `hqModel.hqMark`),
-  the page's picture `public/assets/scenes/hq-<stage>.png`, baked from the
-  pack's buildings by `npx tsx scripts/hq-keep.ts` (`--check`). Shots
-  `scripts/hq-shots.mjs`, cards `scripts/hq-cards.mjs` →
-  `docs/ui-audit-2026-10/hq/`; tests `tests/hqStage.test.ts`.
+  next, buy / short / max / locked, the CTA's words, the milestone line),
+  rules and prices in `src/game/run/hq.ts`, the save in `metaStore`. No
+  tabs: the castle, then the five upgrades as one `PickStrip` + `PickCard`,
+  the page's CTA buying the focused one. The castle is a picture only (it
+  pays and gates nothing): each upgrade BUILDS A PART (`hq.castlePart`,
+  `CASTLE_PARTS`: Opening deal → barracks yard, Hiring Hall → great hall,
+  Pack slots → storehouse, Company focus → pennants, Scouts → lookout; level
+  0 is the empty plot), lit in gold on the picture while its token is in
+  focus; and the whole castle's MATERIAL is a milestone across all of them
+  (`hq.castleTier`: Timber; Stone at every upgrade but focus at 1; Fortified
+  at every upgrade halfway; Grand at everything maxed — a castle never loses
+  a tier). The home plate's mark is the tier (`hqTimber`… in
+  `scripts/fw-icons.ts`, `hqModel.hqMark`). The art is one sheet per tier,
+  `public/assets/scenes/hq-castle-<tier>.png` (scene + every part at every
+  level), laid out by `hq/castleScene.generated.ts`, baked from the pack's
+  castle and troops by `npx tsx scripts/hq-keep.ts` (`--check`, `--compose`).
+  A tier's rise plays once on this device (a `localStorage` note, not the
+  save; never under reduced motion). Shots `scripts/hq-shots.mjs`, cards
+  `scripts/hq-cards.mjs` → `docs/ui-audit-2026-10/hq/`; tests
+  `tests/hqStage.test.ts`.
 - The Codex (`src/ui/shell/codex/`): a Supercell-style collection — the pure
   `codexModel.ts` (five tabs of tiles: items, skills, goblins, relics, feats;
   tested in `tests/skills.test.ts`), drawn by `CodexScreen.tsx` with

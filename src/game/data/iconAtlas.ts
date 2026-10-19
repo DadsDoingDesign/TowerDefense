@@ -104,9 +104,9 @@ export const ICON_ORDER = [
   'sproutWand', 'herbPouch', 'thornrod', 'sparkCoil', 'flask', 'mossweaveRobe',
   'brewBelt', 'bloomstaff', 'philterRack', 'alchemistsCoat', 'greenvialHerbal', 'worldrootStaff',
   'elixirOfPlenty',
-  // rows 22 (cont.) – 23 — the HQ's castle stages (Oct 2026, `run/hq.hqStage`):
-  // the home bar's HQ plate grows with the upgrades bought
-  'hqLodge', 'hqTower', 'hqCastle', 'hqStronghold',
+  // rows 22 (cont.) – 23 — the HQ castle's quality tiers (Oct 2026, `run/hq.castleTier`):
+  // the home bar's HQ plate shows the castle's material
+  'hqTimber', 'hqStone', 'hqFortified', 'hqGrand',
 ] as const
 
 export type IconKey = (typeof ICON_ORDER)[number]
