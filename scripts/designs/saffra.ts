@@ -239,8 +239,9 @@ async function motion(d: Design, path: string, box: { x: number; y: number; w: n
   const idle = idleFrames(d)
   const tic = ticFrames(d)
   const seq: { img: Rgba; ms: number }[] = []
-  idle.forEach((img, i) => seq.push({ img, ms: d.idleMs[i] }))
-  idle.forEach((img, i) => seq.push({ img, ms: d.idleMs[i] }))
+  const sum = (a: readonly number[]) => a.reduce((x, y) => x + y, 0)
+  const passes = 2 * sum(d.idleMs) + sum(d.ticMs) <= 3000 ? 2 : 1
+  for (let k = 0; k < passes; k++) idle.forEach((img, i) => seq.push({ img, ms: d.idleMs[i] }))
   tic.forEach((img, i) => seq.push({ img, ms: d.ticMs[i] }))
   for (let k = 0, t = seq.reduce((a, s) => a + s.ms, 0); t < 3000; k++) {
     const ms = Math.min(d.idleMs[k % idle.length], 3000 - t)
