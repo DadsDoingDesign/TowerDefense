@@ -1,0 +1,114 @@
+[
+ {
+  "id": "crates-screen-before",
+  "group": "Crates",
+  "people": "",
+  "title": "Crates screen — before",
+  "caption": "Before: a small crate by the title, a Base/Yours odds table with L1/L2/L3 jargon and \"kinds\", a sample shelf, a torn duplicate slip, nothing saying where crates come from, a dead gap above the CTA.",
+  "file": "screen-before-phone.png"
+ },
+ {
+  "id": "crates-opened-before",
+  "group": "Crates",
+  "people": "",
+  "title": "Opening — before",
+  "caption": "Before: Open was a card that popped in above the odds — no moment at all.",
+  "file": "opened-before-phone.png"
+ },
+ {
+  "id": "crates-screen-after",
+  "group": "Crates",
+  "people": "",
+  "title": "Crates screen — after",
+  "caption": "After: one column, no tabs. The big pixel crate with how many your bank buys (×4) and where crates come from; one framed panel — the three levels as Codex tiles with their chance, New to you, what a duplicate becomes; how many to open; Open a crate · 500.",
+  "file": "screen-after-phone.png"
+ },
+ {
+  "id": "crates-screen-short",
+  "group": "Crates",
+  "people": "",
+  "title": "Crates screen — bank short",
+  "caption": "A short bank: no count, the refusal in red (\"180 gold short\"), the CTA off.",
+  "file": "screen-short-phone.png"
+ },
+ {
+  "id": "crates-plate",
+  "group": "Crates",
+  "people": "",
+  "title": "Home Crates plate — after (3×)",
+  "caption": "The Crates plate wears the sealed crate itself (16 × 12, at the sheet's double like every mark) and a count badge: how many the bank buys. Before: the generic loot chest.",
+  "file": "plate-after-3x.png"
+ },
+ {
+  "id": "crates-plate-before",
+  "group": "Crates",
+  "people": "",
+  "title": "Home Crates plate — before (3×)",
+  "caption": "Before: the atlas loot chest, no count.",
+  "file": "plate-before-3x.png"
+ },
+ {
+  "id": "crates-opening-full",
+  "group": "Crates",
+  "people": "",
+  "title": "The opening — two crates (WebP)",
+  "caption": "Drop and thud, three taps (the glow climbs to teal at the second), burst: lid off, flash, the pack's explosion, rays, coins. A Level 2 card flips, then the Level 3 builds up longer and flips with a hit-stop, shake and a gold ring. Summary, Collect.",
+  "file": "opening-full.webp"
+ },
+ {
+  "id": "crates-opening-common",
+  "group": "Crates",
+  "people": "",
+  "title": "The opening — a Level 1 (WebP)",
+  "caption": "A common reward: a short build-up, a small burst, no shake — the ladder has room to climb.",
+  "file": "opening-common.webp"
+ },
+ {
+  "id": "crates-opening-legendary",
+  "group": "Crates",
+  "people": "",
+  "title": "The opening — a Level 3 (WebP)",
+  "caption": "The big beat: the longest build-up, the card trembling, a held breath, then a gold flash, a screen shake and two gold rings.",
+  "file": "opening-legendary.webp"
+ },
+ {
+  "id": "crates-burst",
+  "group": "Crates",
+  "people": "",
+  "title": "Burst frame",
+  "caption": "The lid flies off sideways, the seal breaks, the explosion strip and coins over a purple ray burst (the best reward's level).",
+  "file": "opening-burst.png"
+ },
+ {
+  "id": "crates-legendary-flip",
+  "group": "Crates",
+  "people": "",
+  "title": "Level 3 flip, at 3×",
+  "caption": "Whole pixels at 3×: the gold ring, the flash, the plum frame with its gold rim.",
+  "file": "opening-legendary-flip-3x.png"
+ },
+ {
+  "id": "crates-summary",
+  "group": "Crates",
+  "people": "",
+  "title": "Summary",
+  "caption": "Everything won as Codex tiles (level plate, NEW) and the one CTA, Collect.",
+  "file": "opening-summary.png"
+ },
+ {
+  "id": "crates-desk",
+  "group": "Crates",
+  "people": "",
+  "title": "Desk",
+  "caption": "The screen on a desk: the same column; level tiles go wide.",
+  "file": "screen-after-desk.png"
+ },
+ {
+  "id": "crates-desk-opening",
+  "group": "Crates",
+  "people": "",
+  "title": "Desk — the opening",
+  "caption": "The opening on a desk: bigger stage pixels (4 px), the card grows with the screen.",
+  "file": "opening-desk.png"
+ }
+]

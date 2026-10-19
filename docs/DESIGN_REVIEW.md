@@ -5030,3 +5030,40 @@ the zero-meta escort reads 16 → 15% (band 12–20%).
 - New kinds are unlocked one at a time like every kind. An existing save
   sees them as "???" in the Codex until it plays. The charter's door
   counts only the old catalogue, so a door that was open stays open.
+
+- **2026-10-19 — the sealed crates pass.** The designer: "make the tabs and
+  upgrade options more simple and clear and up to the ui aesthetic of the
+  rest of the app. This goes for the crate as well. On opening a crate I want
+  a full on loot crate animation like supercell or any big name dev".
+  Before (`docs/ui-audit-2026-10/crates/screen-before-phone.png`): a small
+  crate beside the title, a Base/Yours odds table in L1/L2/L3 jargon, a
+  sample shelf, a torn duplicate slip, nothing on where crates come from,
+  and Open popped a card in above the table — no moment. After: one column,
+  no tabs — the big pixel crate (original art: the old CC0 pack has no
+  chest) with how many the bank buys, one line on where crates come from,
+  one framed panel (the three levels as Codex tiles with their chance, New
+  to you, what a duplicate becomes), how many to open, one CTA; the home
+  plate wears the crate and a count. The opening (`hq/CrateOpening.tsx`)
+  reads the crates already opened — no roll, no draw moved: drop and thud
+  (squash, dust), a glowing wobble, three taps that shake harder and crack
+  light (the glow climbing toward the best level), the burst (lid off
+  sideways, the seal breaks, a flash, the pack's explosion strip, rays,
+  coins), then each reward face down, building up by level, flipping to its
+  card, rarest last; Level 3 gets a held breath, a screen shake and a gold
+  ring; then the summary and Collect. Skip anywhere; reduced motion shows
+  only the summary's fade; Light halves the particles. Four render rounds
+  against Clash Royale's chest and Brawl Stars' box: (1) the lid fell back
+  through the crate, the seal stayed whole after the burst and the card sat
+  on the crate's lid — the lid flies off sideways, the body bakes without
+  hasp or seal, the floor moved to 84%; (2) the open crate was dead under
+  the cards and the light column stopped in a hard edge — a stepped beam
+  that thins as it rises, a bigger single tile in the summary; (3) the
+  captures were faster than real (screenshots overran their slot) — the
+  script now keeps each frame's true time, and the desk band tiles were
+  138 px tall round a 32 px icon (wide on a desk); (4) fps at a 4× CPU
+  throttle was 54 — the worlds' ambient loop now holds under the opening
+  (`fx.hold`), the card's charge glow is opacity (no repaint), the glows and
+  the explosion are baked before they are needed: 58 fps Full / 59 Light at
+  4× (canvas 1.7 ms a frame), 60 / 60 unthrottled. Weakest still: the crate
+  is drawn once for every crate (no kinds), and the summary is a quiet
+  panel after a loud minute.
