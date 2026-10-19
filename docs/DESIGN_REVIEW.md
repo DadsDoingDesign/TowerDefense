@@ -5030,3 +5030,169 @@ the zero-meta escort reads 16 → 15% (band 12–20%).
 - New kinds are unlocked one at a time like every kind. An existing save
   sees them as "???" in the Codex until it plays. The charter's door
   counts only the old catalogue, so a door that was open stays open.
+
+### 2026-10-19 — the HQ: a castle that grows, and one pick instead of two tabs
+
+The designer: "I need the castle icon to be like castle upgrades, and reflect
+that in the icon and make the tabs and upgrade options more simple and clear
+and up to the ui aesthetic of the rest of the app." Shot in the running app
+at 390 × 844 and 1280 × 800 (`node scripts/hq-shots.mjs`); cards in
+`docs/ui-audit-2026-10/hq/` (`node scripts/hq-cards.mjs`).
+
+**Before.** Two tabs (HR, Operations) hid three of the five upgrades, and the
+filled pink tab was the loudest thing on the page. The bank's interest sat
+above every upgrade. Each card had its own button (Operations had four), so
+a buy and a can't-buy looked alike. Levels read five ways (a bar, slot
+squares, % chips, ✓ rows, nothing), and "maxed" was five different
+sentences. Nothing on the page or the plate said how far the HQ had come.
+
+**After.** The castle grows (`hq.hqStage`: Lodge 0, Watchtower 3, Castle 7,
+Stronghold 12 of 15 levels). The plate's mark is redrawn for 16 px for each
+stage. The page's picture is the pack's own buildings at 1×, with the next
+stage's footing beside it. Then the five upgrades sit in one `PickStrip`
+(mark, level pips, price) over one `PickCard` (Now, Next, one note), and one
+CTA ("Upgrade Pack slots 350", "Need 60 more", "Fully upgraded"). No gameplay
+change: prices, effects and rolls come from `hq.ts` as before
+(`tests/hqStage.test.ts`).
+
+**Round 1.** The stage track sat over the scene and covered a pennant: it
+moved under the picture, beside the stage's name, and the duplicate "next"
+silhouette went. The maxed deal's Now line was cut off, so values now wrap.
+The red castle's banner cloth came out pale rose, so it is dyed in the pack's
+red ramp. The lodge stood on bare grass, so a grove went behind it. "Max"
+labels are now gold.
+
+**Round 2.** The focus card's note was below the fold, so it now comes before
+the crests. The crests went up to 2×. The locked token's "Locked" was cut to
+"Lock…" at 320, so its foot now counts towards opening ("4/5"). Prices of a
+thousand or more now print with a comma ("1,200", `Money`).
+
+**Round 3.** Maxed was said three times on one card (kicker, Next, CTA): now
+the kicker is "Level 5 of 5" in gold, Next is "—", and only the CTA says
+"Fully upgraded". The last stage's bar fills gold once everything is bought.
+The summary's "armour" is now "Armour".
+
+**Benchmark (Clash of Clans / Clash Royale upgrade screens).** The pattern
+matches: a big picture of the building at its level, a ladder of what it
+becomes, current → next in two rows, one big gold-price button. It falls
+short in two ways: there is no moment when the castle levels up (no
+animation or reveal), and on a 375 × 667 phone the card starts below the
+picture, so the page scrolls.
+- **2026-10-19 — the sealed crates pass.** The designer: "make the tabs and
+  upgrade options more simple and clear and up to the ui aesthetic of the
+  rest of the app. This goes for the crate as well. On opening a crate I want
+  a full on loot crate animation like supercell or any big name dev".
+  Before (`docs/ui-audit-2026-10/crates/screen-before-phone.png`): a small
+  crate beside the title, a Base/Yours odds table in L1/L2/L3 jargon, a
+  sample shelf, a torn duplicate slip, nothing on where crates come from,
+  and Open popped a card in above the table — no moment. After: one column,
+  no tabs — the big pixel crate (original art: the old CC0 pack has no
+  chest) with how many the bank buys, one line on where crates come from,
+  one framed panel (the three levels as Codex tiles with their chance, New
+  to you, what a duplicate becomes), how many to open, one CTA; the home
+  plate wears the crate and a count. The opening (`hq/CrateOpening.tsx`)
+  reads the crates already opened — no roll, no draw moved: drop and thud
+  (squash, dust), a glowing wobble, three taps that shake harder and crack
+  light (the glow climbing toward the best level), the burst (lid off
+  sideways, the seal breaks, a flash, the pack's explosion strip, rays,
+  coins), then each reward face down, building up by level, flipping to its
+  card, rarest last; Level 3 gets a held breath, a screen shake and a gold
+  ring; then the summary and Collect. Skip anywhere; reduced motion shows
+  only the summary's fade; Light halves the particles. Four render rounds
+  against Clash Royale's chest and Brawl Stars' box: (1) the lid fell back
+  through the crate, the seal stayed whole after the burst and the card sat
+  on the crate's lid — the lid flies off sideways, the body bakes without
+  hasp or seal, the floor moved to 84%; (2) the open crate was dead under
+  the cards and the light column stopped in a hard edge — a stepped beam
+  that thins as it rises, a bigger single tile in the summary; (3) the
+  captures were faster than real (screenshots overran their slot) — the
+  script now keeps each frame's true time, and the desk band tiles were
+  138 px tall round a 32 px icon (wide on a desk); (4) fps at a 4× CPU
+  throttle was 54 — the worlds' ambient loop now holds under the opening
+  (`fx.hold`), the card's charge glow is opacity (no repaint), the glows and
+  the explosion are baked before they are needed: 58 fps Full / 59 Light at
+  4× (canvas 1.7 ms a frame), 60 / 60 unthrottled. Weakest still: the crate
+  is drawn once for every crate (no kinds), and the summary is a quiet
+  panel after a loud minute.
+
+- **2026-10-19 — the chest pass (crates, round two).** The designer: "The
+  chance preview seems like I'm guna win those exact items consider an
+  abstract way to show and iterate on the chest it's really sad for what
+  should be highly engaging interaction". The odds lost every item picture:
+  each level is a mystery card (its hue, a "?", its chance, how many of its
+  kinds are new to you) — `odds-before-after.png`. Four chest directions were
+  rendered in the real screen (`chest-directions.png`): A one chest on stage,
+  B Clash Royale's slots, C Supercell's shop bundles, D the chest that grows
+  with how many you open. D won: one hero, and the count is something you
+  SEE (B and C spread the eye over several small chests, A says nothing about
+  the count). The chest sits lit on a stone plinth with a living idle
+  (`hq/CrateHero.tsx`, `crateIdle.ts`) and grows wood → iron → gold at 1 / 3 / 5
+  (`chest-sizes.png`); ×N rides a gold ribbon that steps it; coins stream from
+  the price into the chest, it hops, and the opening starts from that chest.
+  Presentation only: rolls, odds, prices and RNG order are as they were.
+  Rounds: (1) the ribbon hid the plinth, the mystery cards were taller than
+  the room (the panel fell under the CTA) and the iron chest's rays read grey
+  — chests a pixel smaller (4 / 5 / 6 px), the ribbon under the plinth,
+  squatter cards, a warm pale light for iron; (2) the idle was too still for a
+  hero (one hop in 4 s, the sparkles slow) — hops every 3.2–4.6 s by look, a
+  rattle between, a breathing halo, motes that drift up; (3) the coin payment
+  was one coin in one frame — 8–16 coins in a spread arc, all inside the
+  460 ms, and the chest hops as they land. The idle holds 58–60 fps at a 4×
+  CPU throttle (Light: 30 by design). Weakest still: the three looks share
+  one silhouette — the gold chest is a palette and a size, not a new shape.
+
+
+### 2026-10-19 — the HQ castle, round two: a part per upgrade, a material per milestone
+
+The designer, on the stage castle above: "the castle the upgrades should
+correlate to parts of the castle but when certain milestone across all the
+options are met then the entire castle upgrades in quality". The total-levels
+stages are gone. Each upgrade now builds one part in a fixed spot
+(`hq.castlePart`):
+
+- Opening deal: the barracks yard (fence, tents, an arms rack, a recruit, an
+  archer);
+- Hiring Hall: the great hall in the courtyard;
+- Pack slots: the storehouse (pallets, crates, barrels);
+- Company focus: three company pennants on the front wall;
+- Scouts: the lookout on the east tower.
+
+Level 0 is the part's empty plot. The castle's material is a milestone
+across every upgrade (`hq.castleTier`):
+
+- Timber at the start;
+- Stone at every upgrade but focus at level 1;
+- Fortified at every upgrade halfway;
+- Grand at everything maxed.
+
+Focus opens late, so it joins at Fortified; that way the castle never falls
+back a tier. One sheet per tier is baked by `scripts/hq-keep.ts`. The page
+lays the parts as layers and rings the focused one in gold. A rise plays
+once per new tier. Shot at 390, 320 and 1280; cards are in
+`docs/ui-audit-2026-10/hq/`.
+
+**Round 1.** The yard's pack pawns covered its tents, so the yard was re-laid
+back to front (fence and tents, then the rack, then the recruits at the
+sides), and its pawn and warrior gave way to a rack, one pawn and the archer.
+The pennants were drawn off their poles and the lime one sat on the deck
+unseen: the offset is fixed and they are bigger. The tall lookout's flag
+left the scene (`tests/hqStage.test.ts` caught it), so it is shorter and the
+castle sits 6 px lower. A two-line kicker ("Barracks yard · Level 3 of 5")
+became "Barracks yard · 3/5".
+
+**Round 2.** At 320 the castle was wider than the column, so it runs edge to
+edge there and the yard moved inward. The milestone line said "raise A,
+B and 2 more to level 1": it names up to four now, and before Grand it says
+"max the last 4 upgrades". The storehouse's diagonal log read as a mistake,
+so crates replaced it.
+
+**Round 3.** The kicker wrapped at 320, so it now stays on one line. The
+milestone line reads in one line on a phone at every tier checked. The lit
+part is clear on all five tokens (`highlight-on-tap.png`).
+
+**Benchmark.** It is closer to Clash of Clans than the stage version: each
+upgrade is a building you can see, and the Town Hall gate is the tier. It
+still falls short in three ways. The parts are small next to the castle
+(the pack's 296 px castle at 1× leaves them about 40 px). The yard's pack
+units are large for its plot. And on a 320 × 568 phone the card is a scroll
+below the castle.

@@ -100,8 +100,15 @@ class FxEngine {
   private overKeep: [number, number, number, number][] = []
   private overKeptAt = -1e9
 
+  /** Held by a full-screen moment that draws its own effects (the crate opening): one big effect at a time. */
+  private held = false
+  hold(on: boolean): void {
+    this.held = on
+    if (on) this.clear()
+    else this.wake()
+  }
   private get still(): boolean {
-    if (typeof document === 'undefined') return true
+    if (typeof document === 'undefined' || this.held) return true
     if (fxLevel() === 'off') return true
     if (document.documentElement.dataset.reducedMotion === 'true') return true
     return typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches

@@ -273,11 +273,54 @@ result. Append a short note to the review log when you're done.
   (`data/runmap.ts`), the only road out of the start, which the map draws AS
   its Start (`openingNodeOf`). The first fork is the layer after it, and the
   map shades the ground at and below your row as cleared, above as not.
+- The HQ (the HQ pass, Oct 2026): the page `src/ui/shell/hq/HqScreen.tsx`
+  (styles: the HQ section of `src/styles/hq.css`, which also holds the
+  crates'), its words and states as pure data in `hq/hqModel.ts` (now →
+  next, buy / short / max / locked, the CTA's words, the milestone line),
+  rules and prices in `src/game/run/hq.ts`, the save in `metaStore`. No
+  tabs: the castle, then the five upgrades as one `PickStrip` + `PickCard`,
+  the page's CTA buying the focused one. The castle is a picture only (it
+  pays and gates nothing): each upgrade BUILDS A PART (`hq.castlePart`,
+  `CASTLE_PARTS`: Opening deal → barracks yard, Hiring Hall → great hall,
+  Pack slots → storehouse, Company focus → pennants, Scouts → lookout; level
+  0 is the empty plot), lit in gold on the picture while its token is in
+  focus; and the whole castle's MATERIAL is a milestone across all of them
+  (`hq.castleTier`: Timber; Stone at every upgrade but focus at 1; Fortified
+  at every upgrade halfway; Grand at everything maxed — a castle never loses
+  a tier). The home plate's mark is the tier (`hqTimber`… in
+  `scripts/fw-icons.ts`, `hqModel.hqMark`). The art is one sheet per tier,
+  `public/assets/scenes/hq-castle-<tier>.png` (scene + every part at every
+  level), laid out by `hq/castleScene.generated.ts`, baked from the pack's
+  castle and troops by `npx tsx scripts/hq-keep.ts` (`--check`, `--compose`).
+  A tier's rise plays once on this device (a `localStorage` note, not the
+  save; never under reduced motion). Shots `scripts/hq-shots.mjs`, cards
+  `scripts/hq-cards.mjs` → `docs/ui-audit-2026-10/hq/`; tests
+  `tests/hqStage.test.ts`.
 - The Codex (`src/ui/shell/codex/`): a Supercell-style collection — the pure
   `codexModel.ts` (five tabs of tiles: items, skills, goblins, relics, feats;
   tested in `tests/skills.test.ts`), drawn by `CodexScreen.tsx` with
   `src/styles/codex.css`. A tile's card is a sheet on a phone and a side panel
   on a desk; NEW badges are a UI note in `codexSeen.ts`, not the save.
+- Sealed crates (the crates pass, Oct 2026): the rule is `run/hq.ts`
+  (`PULL_PRICE`, `pullOdds`, `rollPull`: a hash of the save's crate seed and
+  the crate's number), opened by `metaStore.openCrate` — bought with bank
+  gold and opened at once, never held. The screen is
+  `ui/shell/hq/CratesScreen.tsx` (one column, no tabs; styles
+  `src/styles/crates.css`, out of `hq.css`; `.cr-panel` is in `worlds.css`'
+  frame lists), the art `hq/crateArt.ts` (original pixels: the old CC0 pack
+  has no chest; the chest pass's three LOOKS — 1–2 wood, 3–4 iron, 5 gold,
+  `lookFor` — and the plinth), how many the bank buys `hq/crateShelf.ts`
+  (also the home Crates plate's `.mn-place-badge`). The hero chest on the
+  screen is `hq/CrateHero.tsx` (its idle timing the pure `hq/crateIdle.ts`);
+  the odds are abstract (a "?" card per level, its chance, how many are new —
+  never a picture of a kind). Opening several opens each in turn,
+  exactly as one at a time. The OPENING (`hq/CrateOpening.tsx`) only READS
+  the results and starts from the chest's look: its beats and timings are the pure `hq/crateSequence.ts`
+  (`tests/crateSequence.test.ts`), the canvas `hq/crateStage.ts` (the pack's
+  explosion strip, the coin, procedural rays/dust/cracks/ring; Light halves
+  the particles, reduced motion goes straight to the summary), the cues
+  `audio.sfxCrate` + `sfxRarity`. Cards and fps: `scripts/crate-cards.mjs` →
+  `docs/ui-audit-2026-10/crates/`.
 - The loyalty track (Draft 4 · B): what each standing level pays is named
   ahead of time — `src/game/run/track.ts` (`trackPlan` for the page,
   `payTrack` for the settle: the same function, never a roll; the second

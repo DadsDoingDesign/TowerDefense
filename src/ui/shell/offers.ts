@@ -1,3 +1,4 @@
+import { crateBadge } from './hq/crateShelf'
 import { flyingMilitia } from '../../game/run/militia'
 import { describeBase, itemNoun, RARITY } from '../../game/data/items'
 import { isSovereignKind } from '../../game/data/itemKinds'
@@ -17,6 +18,7 @@ import { useMetaStore } from '../../state/metaStore'
 import { assistProfile, useSettingsStore, type AssistLevel, type VisionMode } from '../../state/settingsStore'
 import { menuStaged, revealOf } from '../../state/staging'
 import { revealFacts } from './staging'
+import { hqMark } from './hq/hqModel'
 import { useShallow } from 'zustand/react/shallow'
 import { archetypeVar, ARCHETYPE_GLYPH, damageMark, handLine, itemIcon, itemName, moneyText, rarityVar, type IconKey } from '../channels'
 import { useShellContext } from './context'
@@ -127,6 +129,8 @@ export interface Offer {
   title: string
   /** A short name where room is tight: under a home place's mark on a phone ("HQ", "Crates"). */
   short?: string
+  /** A count on a home place's mark (the crates the bank buys, `hq/crateShelf.crateBadge`). */
+  badge?: string
   sub?: string
   /** Accent for the card rail and the panel title. */
   color?: string
@@ -1255,9 +1259,10 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
             title: 'Headquarters',
             short: 'HQ',
             sub: `${moneyText(meta.bank, 'gold')} banked`,
-            icon: 'base',
+            // The castle as it stands: it grows with the upgrades bought (`run/hq.hqStage`).
+            icon: hqMark(meta.upgrades),
             immediate: true,
-            body: ['Two offices, HR and Operations: bank gold buys upgrades that last.'],
+            body: ['Bank gold buys upgrades that last; the castle grows with them.'],
             action: { label: 'Open', run: () => setView('hq') },
             ...(reveal.hq ? {} : { locked: HQ_OPENS_LINE }),
           } satisfies Offer,
@@ -1271,6 +1276,7 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
             body: ['A side bet: one random item, yours for good.'],
             action: { label: 'Open', run: () => setView('crates') },
             ...(reveal.crates ? {} : { locked: CRATES_OPEN_LINE }),
+            ...(crateBadge(meta.bank, reveal.crates) ? { badge: crateBadge(meta.bank, reveal.crates)! } : {}),
           } satisfies Offer,
         ]),
     {

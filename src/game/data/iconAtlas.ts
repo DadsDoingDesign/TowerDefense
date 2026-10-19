@@ -14,10 +14,10 @@ import { PEOPLE_KINDS, peopleIconKey } from './peopleKinds'
 import type { Item } from '../types'
 
 /**
- * The 183 cells of `public/assets/ui/fw-icons.png`, IN CELL ORDER.
+ * The 187 cells of `public/assets/ui/fw-icons.png`, IN CELL ORDER.
  *
  * The list is authored twice on purpose — here and in `scripts/fw-icons.ts` —
- * because a PNG cannot carry its own index and a silently-shifted atlas is 183
+ * because a PNG cannot carry its own index and a silently-shifted atlas is 187
  * wrong pictures rather than one visible error. The generator refuses to write
  * the file unless this array matches it exactly, and `npm run build` runs the
  * same check without writing, so the duplication is checked rather than
@@ -104,6 +104,9 @@ export const ICON_ORDER = [
   'sproutWand', 'herbPouch', 'thornrod', 'sparkCoil', 'flask', 'mossweaveRobe',
   'brewBelt', 'bloomstaff', 'philterRack', 'alchemistsCoat', 'greenvialHerbal', 'worldrootStaff',
   'elixirOfPlenty',
+  // rows 22 (cont.) – 23 — the HQ castle's quality tiers (Oct 2026, `run/hq.castleTier`):
+  // the home bar's HQ plate shows the castle's material
+  'hqTimber', 'hqStone', 'hqFortified', 'hqGrand',
 ] as const
 
 export type IconKey = (typeof ICON_ORDER)[number]
@@ -117,7 +120,7 @@ export type IconKey = (typeof ICON_ORDER)[number]
  * every cell in the atlas with nothing anywhere to notice (M13).
  */
 export const ICON_COLS = 8
-export const ICON_ROWS = 23
+export const ICON_ROWS = 24
 
 /**
  * Where an icon sits in the sheet, as (column, row).

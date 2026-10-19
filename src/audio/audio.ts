@@ -1577,6 +1577,36 @@ function resumeCtx(c: AudioContext): Promise<void> {
 }
 
 /**
+ * The sealed crate's opening (Oct 2026, `ui/shell/hq/CrateOpening.tsx`): the
+ * thud of its landing, a knock per tap (`strength` 1–3, higher each time) and
+ * the burst as the lid flies. Synthesised from the same voices as the rest —
+ * no sample, no new asset. Each reward's flip is the rarity sting
+ * ({@link sfxRarity}), one step up the ladder per level.
+ */
+export function sfxCrate(cue: 'thud' | 'shake' | 'burst', strength = 1): void {
+  const c = ensureCtx()
+  if (!c || vol.muted) return
+  const play = () => {
+    if (vol.muted) return
+    if (cue === 'thud') {
+      osc(74, 0.24, 0.3, { type: 'sine', to: 40, bus: 'ui' })
+      noise(0.16, 0.16, { lp: 900, lpTo: 180, bus: 'ui' })
+    } else if (cue === 'shake') {
+      const s = Math.max(1, Math.min(3, strength))
+      noise(0.08, 0.06 + 0.03 * s, { bp: 1100 + 350 * s, q: 3, bus: 'ui' })
+      osc(150 + 45 * s, 0.08, 0.07, { type: 'triangle', to: 110 + 30 * s, bus: 'ui' })
+    } else {
+      noise(0.55, 0.26, { lp: 5200, lpTo: 260, bus: 'ui', send: 0.3 })
+      osc(96, 0.38, 0.3, { type: 'sine', to: 44, bus: 'ui' })
+      osc(660, 0.28, 0.05, { type: 'triangle', to: 1320, at: 0.03, bus: 'ui', send: 0.35 })
+      duckMusic(DUCK.sting, 0.6)
+    }
+  }
+  if (asleep(c)) void resumeCtx(c).then(play)
+  else play()
+}
+
+/**
  * Wake an EXISTING context back up — for the app's shared visibility handler
  * (see src/state/lifecycle.ts). Deliberately does not create a context: with no
  * gesture behind it that would only produce a suspended one.

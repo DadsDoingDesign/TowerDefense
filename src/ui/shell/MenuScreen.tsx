@@ -17,6 +17,7 @@ import { ArmourMark } from '../ArmourMark'
 import { GroundMarks } from '../GroundMark'
 import { Banner, Crown, Lock, Pixel, SovereignCrest } from '../pixel'
 import { DockFace } from './DockFace'
+import { CRATE_MARK, CRATE_PALETTE } from './hq/crateArt'
 import { Tap, useMedia } from '../pointer'
 import { UpdateNotice } from '../UpdateNotice'
 import markUrl from '../../assets/brand/mark.svg'
@@ -302,12 +303,13 @@ export function MenuScreen({
               type="button"
               className={`mn-place${o.locked ? ' is-locked' : ''}`}
               aria-disabled={o.locked ? 'true' : undefined}
-              aria-label={o.locked ? `${o.title}: locked. ${o.locked}` : o.title}
+              aria-label={o.locked ? `${o.title}: locked. ${o.locked}` : o.badge ? `${o.title}, ${o.badge} in reach` : o.title}
               title={o.locked ? `${o.title} — ${o.locked}` : o.title}
               onClick={() => (o.locked ? undefined : o.action?.run())}
             >
               <span className="mn-place-mark" aria-hidden="true">
-                {o.icon && <Icon name={o.icon} lg />}
+                {o.id === 'crates' ? <Pixel rows={CRATE_MARK} palette={CRATE_PALETTE} scale={2} className="mn-crate" /> : o.icon && <Icon name={o.icon} lg />}
+                {o.badge && !o.locked && <span className="mn-place-badge">{o.badge}</span>}
                 {o.locked && (
                   <span className="mn-place-lock">
                     <Lock scale={1} />

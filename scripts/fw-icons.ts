@@ -2532,6 +2532,94 @@ for (const people of PEOPLES) {
   }
 }
 
+/*
+ * ---------------------------------------------------------------------------
+ * The HQ castle's quality tiers (Oct 2026) — row 22 (cont.) to 23
+ * ---------------------------------------------------------------------------
+ * The home bar's HQ plate shows the castle's material (`run/hq.castleTier`),
+ * the way a Town Hall shows its level: timber, stone, fortified, grand. The
+ * pack's castle (`Factions/Knights/Buildings/Castle`) redrawn for 16 × 16 —
+ * never the 320 px sprite shrunk — so the four read apart at the plate's
+ * 32 px by material AND by outline: a log palisade with stake tips, plain
+ * grey stone, slate with gold banners on an iron-banded base, and white
+ * stone with gold caps, red banners and two red pennants above it.
+ */
+icon('hqTimber', [
+  '................',
+  '................',
+  '................',
+  '.L.L.L....L.L.L.',
+  '.LLLLL....LLLLL.',
+  '.LlLlLL..LLlLlL.',
+  '.LlLlLLLLLLlLlL.',
+  '.LlLlLlLlLLlLlL.',
+  '.LlLlLooooLlLlL.',
+  '.LlLlLooooLlLlL.',
+  '.LlLlLooooLlLlL.',
+  '.llllllllllllll.',
+  '.oooooooooooooo.',
+  '................',
+  '................',
+  '................',
+])
+
+icon('hqStone', [
+  '................',
+  '................',
+  '................',
+  '.SS.SS....SS.SS.',
+  '.SSSSS....SSSSS.',
+  '.dsssdS.S.dsssd.',
+  '.SSSSSdSSdSSSSS.',
+  '.SsSSSdssdSSSsS.',
+  '.SSSSdLLLLdSSSS.',
+  '.SSsSLooooLSsSS.',
+  '.SSSSLooooLSSSS.',
+  '.sSSSLooooLSSSs.',
+  '.llllllllllllll.',
+  '.lololololololo.',
+  '................',
+  '................',
+])
+
+icon('hqFortified', [
+  '................',
+  '................',
+  '................',
+  '.TT.TT....TT.TT.',
+  '.TTTTT....TTTTT.',
+  '.utttuT.T.utttu.',
+  '.TGGTTuTTuTTGGT.',
+  '.TGGTTuttuTTGGT.',
+  '.TggTuLLLLuTggT.',
+  '.TTTTLooooLTTTT.',
+  '.TTTTLooooLTTTT.',
+  '.tTTTLooooLTTTt.',
+  '.dddddddddddddd.',
+  '.dsdsdsdsdsdsds.',
+  '................',
+  '................',
+])
+
+icon('hqGrand', [
+  '................',
+  '..lRRR....RRRl..',
+  '..lRR......RRl..',
+  '..l..........l..',
+  '.Gl.GG....GG.lG.',
+  '.PPPPP....PPPPP.',
+  '.qpppqP.P.qpppq.',
+  '.PRRPPqPPqPPRRP.',
+  '.PRRPPqppqPPRRP.',
+  '.PrrPqGGGGqPrrP.',
+  '.PPPPGooooGPPPP.',
+  '.PPPPGooooGPPPP.',
+  '.pPPPGooooGPPPp.',
+  '.qqqqqqqqqqqqqq.',
+  '.qhqhqhqhqhqhqh.',
+  '................',
+])
+
 /* ========================================================================= */
 
 const assert = () => {

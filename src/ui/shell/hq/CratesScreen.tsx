@@ -1,28 +1,41 @@
-import { useState } from 'react'
-import { itemKindById, kindEffect, kindSlot } from '../../../game/data/itemKinds'
-import { ITEM_BASES } from '../../../game/data/items'
-import { crateKinds, PULL_BASE, PULL_PRICE, pullLift, pullNewChance, pullOdds, type PullResult } from '../../../game/run/hq'
+import { useRef, useState, type CSSProperties } from 'react'
+import { crateKinds, PULL_PRICE, pullLift, pullNewChance, pullOdds, type PullResult } from '../../../game/run/hq'
 import { useMetaStore } from '../../../state/metaStore'
 import { useSettingsStore } from '../../../state/settingsStore'
-import { itemIcon, moneyText } from '../../channels'
+import { moneyText } from '../../channels'
 import { Icon } from '../../Icon'
-import { Crate } from '../../pixel'
-import { ContractPage, Gold, PageTip, Slip } from '../contracts/parts'
-
-
-/** An item kind's icon, by its noun. */
-const kindIcon = (kind: string) => itemIcon({ name: kind, slot: ITEM_BASES[kind]?.slot ?? 'oneHand' })
+import { Coin } from '../../pixel'
+import { LEVEL_HUE } from '../codex/codexModel'
+import { ContractPage, Gold, PageTip } from '../contracts/parts'
+import { useMenuMotion } from '../MenuScreen'
+import { LOOK_NAME, lookFor, type CrateLook } from './crateArt'
+import { CrateHero } from './CrateHero'
+import { PAY_MS } from './crateIdle'
+import { CrateOpening } from './CrateOpening'
+import { crateShelf } from './crateShelf'
+import '../../../styles/crates.css'
 
 /**
- * Sealed crates — the item pull (build step 3; mockup `trade/r3/8-pull.png`).
+ * Sealed crates — the item pull (Oct 2026: the crates pass, then the chest
+ * pass; the designer: "The chance preview seems like I'm guna win those exact
+ * items … it's really sad for what should be highly engaging interaction").
  *
- * The framing leads (a side bet; contracts are the surer way), then the odds
- * in plain whole percent — the base and yours, with what your standing moved —
- * then some of what is inside, the duplicate rule on its own slip, and the
- * crate's price on the button. No "Take a contract instead" row (the job
- * critique, Oct 2026): it did Back's job — the home IS the contract board —
- * in a framed row that competed with the one CTA. A crate is a hash of the save's crate seed and
- * its number (`hq.rollPull`), never a run stream.
+ * One column, no tabs:
+ *  - **the stage** — the hero chest (`CrateHero`) on its plinth, alive, in
+ *    the look of how many you open at once (1–2 a wooden crate, 3–4 iron-banded,
+ *    5 a gold-trimmed chest: `crateArt.lookFor` — presentation only, each is
+ *    still one `openCrate`); the ribbon under it says how many (×3) and
+ *    steps it; touching the chest opens them, like the CTA;
+ *  - **where they come from** — one quiet line;
+ *  - **what one holds** — abstract: a mystery card per level (its frame, a
+ *    "?", its chance and how many of its kinds are new to you), never a
+ *    picture of a kind, so nothing reads as a promise; New to you and what a
+ *    duplicate becomes, as label/value rows;
+ *  - **the CTA** — Open, with its price. Coins fly from it to the chest, and
+ *    the opening (`CrateOpening`) starts from that chest.
+ *
+ * A crate is a hash of the save's crate seed and its number (`hq.rollPull`),
+ * never a run stream; opening several opens each in turn.
  */
 export function CratesScreen({ onBack }: { onBack: () => void }) {
   const bank = useMetaStore((s) => s.bank)
@@ -31,24 +44,54 @@ export function CratesScreen({ onBack }: { onBack: () => void }) {
   const bonus = useMetaStore((s) => s.bonusItems)
   const openCrate = useMetaStore((s) => s.openCrate)
   const taught = useSettingsStore((s) => s.taught.crates)
-  const [last, setLast] = useState<PullResult | null>(null)
+  const motion = useMenuMotion()
+  const [many, setMany] = useState(1)
+  const [poke, setPoke] = useState(0)
+  const [paying, setPaying] = useState<{ results: PullResult[]; look: CrateLook; from: { x: number; y: number } } | null>(null)
+  const [opening, setOpening] = useState<{ results: PullResult[]; look: CrateLook } | null>(null)
+  const stageRef = useRef<HTMLDivElement>(null)
+  const have = items ?? []
   const lift = pullLift(standing)
   const odds = pullOdds(lift)
-  const have = items ?? []
   const fresh = Math.round(100 * pullNewChance(have, lift))
-  const all = [1, 2, 3].flatMap((l) => crateKinds(l as 1 | 2 | 3))
-  const sample = [...all.filter((k) => !have.includes(k)), ...all.filter((k) => have.includes(k))].slice(0, 5)
-  const can = bank >= PULL_PRICE
-  const open = () => {
-    const got = openCrate()
-    if (got) setLast(got)
+  const shelf = crateShelf(bank)
+  const k = Math.max(1, Math.min(many, Math.max(1, shelf.max)))
+  const look = lookFor(k)
+  const can = shelf.buys > 0
+  const busy = !!paying || !!opening
+  const name = k > 1 ? `Open ${k} crates` : 'Open a crate'
+
+  const open = (fromEl?: Element | null) => {
+    if (busy) return
+    setPoke((n) => n + 1)
+    if (!can) return
+    const got: PullResult[] = []
+    for (let i = 0; i < k; i++) {
+      const r = openCrate()
+      if (!r) break
+      got.push(r)
+    }
     useSettingsStore.getState().markTaught('crates')
+    if (!got.length) return
+    // The coins pay first (from the CTA to the chest), then the chest opens.
+    const stage = stageRef.current?.getBoundingClientRect()
+    const src = (fromEl ?? document.querySelector('.crates .pg-cta'))?.getBoundingClientRect()
+    if (!motion || !stage || !src) {
+      setOpening({ results: got, look })
+      return
+    }
+    setPaying({ results: got, look, from: { x: src.left + src.width / 2 - (stage.left + stage.width / 2), y: src.top + src.height / 2 - (stage.top + stage.height * 0.46) } })
+    // The chest hops as the coins land in it.
+    window.setTimeout(() => setPoke((n) => n + 1), PAY_MS * 0.6)
+    window.setTimeout(() => {
+      setPaying(null)
+      setOpening({ results: got, look })
+    }, PAY_MS)
   }
-  const k = last ? itemKindById(last.kind) : undefined
 
   return (
     <ContractPage
-      className="hq crates"
+      className={`hq crates${opening ? " is-under" : ""}`}
       label="Sealed crates"
       head={
         <div className="ct-hdr">
@@ -63,94 +106,112 @@ export function CratesScreen({ onBack }: { onBack: () => void }) {
       cta={{
         label: (
           <>
-            Open a crate <small className="ct-cta-cost"><Gold n={PULL_PRICE} /></small>
+            {name} <small className="ct-cta-cost"><Gold n={k * PULL_PRICE} /></small>
           </>
         ),
-        name: `Open a crate, ${moneyText(PULL_PRICE)}${can ? '' : ' — your bank is short'}`,
-        run: open,
-        disabled: !can,
+        name: `${name}, ${moneyText(k * PULL_PRICE)}${can ? '' : ' — your bank is short'}`,
+        run: () => open(document.querySelector('.crates .pg-cta .ct-cta-cost')),
+        disabled: !can || busy,
         heavy: true,
       }}
     >
-      <div className="hq-crate-title">
-        <span className={`hq-crate-art${last ? ' opened' : ''}`} aria-hidden="true">
-          <Crate color="#e0ac4c" scale={4} />
-        </span>
-        <span>
-          <h1 className="ct-title" tabIndex={-1}>
-            Sealed crates
-          </h1>
-          <p>One random item kind, yours for good.</p>
-        </span>
+      <h1 className="cr-title" tabIndex={-1}>
+        Sealed crates
+      </h1>
+
+      <div className={`cr-stage look-${look}${can ? ' is-ready' : ''}`} ref={stageRef}>
+        <button
+          type="button"
+          className="cr-hero-btn"
+          onClick={(e) => open(can ? document.querySelector('.crates .pg-cta .ct-cta-cost') : e.currentTarget)}
+          aria-label={can ? `${name}, ${moneyText(k * PULL_PRICE)}: ${LOOK_NAME[look]}` : `${LOOK_NAME[look]}: your bank is short`}
+          aria-disabled={!can || busy ? 'true' : undefined}
+        >
+          <CrateHero look={look} poke={poke} paused={!!opening} />
+        </button>
+        <div className="cr-ribbon" role="group" aria-label="How many crates to open">
+          {shelf.max > 1 && (
+            <button type="button" className="cr-rib-step" onClick={() => setMany(k - 1)} disabled={k <= 1 || busy} aria-label="One crate less">
+              −
+            </button>
+          )}
+          <b className="cr-rib-n" aria-live="polite">
+            ×{k}
+          </b>
+          {shelf.max > 1 && (
+            <button type="button" className="cr-rib-step" onClick={() => setMany(k + 1)} disabled={k >= shelf.max || busy} aria-label="One crate more">
+              +
+            </button>
+          )}
+        </div>
+        {paying && (
+          <span className="cr-pay" aria-hidden="true" style={{ '--fx': `${paying.from.x}px`, '--fy': `${paying.from.y}px` } as CSSProperties}>
+            {Array.from({ length: 6 + 2 * paying.results.length }, (_, i) => (
+              <span key={i} className="cr-pay-coin" style={{ '--i': i } as CSSProperties}>
+                <Coin scale={3} />
+              </span>
+            ))}
+          </span>
+        )}
       </div>
+      <p className={`cr-from${can ? '' : ' short'}`}>{can ? `Bank gold buys them · yours buys ${shelf.buys}` : `Your bank is ${moneyText(PULL_PRICE - bank)} short · contracts fill it`}</p>
 
       {!taught && <PageTip>A gamble: a delivered contract always unlocks an item.</PageTip>}
 
-      {last && k && (
-        <div className={`hq-pulled${last.duplicate ? ' dup' : ''}`} role="status" aria-live="polite">
-          <span className="hq-pulled-icon" aria-hidden="true">
-            <Icon name={kindIcon(last.kind)} lg />
-          </span>
-          <span className="hq-pulled-text">
-            <span className="hq-pulled-k">{last.duplicate ? 'Already yours — a bonus item next contract' : 'New item unlocked'}</span>
-            <b>{last.kind}</b>
-            <small>
-              {kindSlot(k)} · Level {k.level}
-            </small>
-            <span className="hq-pulled-does">{last.duplicate ? `A Rare ${last.kind} lands in your pack when you sign your next contract.` : kindEffect(k)}</span>
-          </span>
+      <section className="cr-panel cr-inside" aria-label="What one crate holds">
+        <h2 className="cr-h">One item, by chance</h2>
+        <div className="cr-bands">
+          {odds.map((p, i) => {
+            const lvl = (i + 1) as 1 | 2 | 3
+            const unseen = crateKinds(lvl).filter((x) => !have.includes(x)).length
+            return (
+              <div key={lvl} className="cr-band" style={{ '--lv': LEVEL_HUE[lvl] } as CSSProperties} aria-label={`Level ${lvl}: ${p} percent; ${unseen} of its kinds new to you`}>
+                <span className="cr-myst" aria-hidden="true">
+                  <span className="cr-lv">{lvl}</span>
+                  <span className="cr-q">?</span>
+                </span>
+                <b className="cr-pct" aria-hidden="true">
+                  {p}%
+                </b>
+                <span className="cr-band-k" aria-hidden="true">
+                  Level {lvl}
+                </span>
+                <span className="cr-band-new" aria-hidden="true">
+                  {unseen > 0 ? `${unseen} new` : 'All yours'}
+                </span>
+              </div>
+            )
+          })}
         </div>
-      )}
-
-      <section className="hq-odds" aria-label="The odds, per crate">
-        <div className="hq-odds-h" aria-hidden="true">
-          <span>Inside each crate</span>
-          <span>Base</span>
-          <span>Yours</span>
-        </div>
-        {odds.map((p, i) => (
-          <div className="hq-odds-r" key={i} aria-label={`Level ${i + 1}: ${p} percent (base ${PULL_BASE[i]})`}>
-            <span className="hq-odds-n">
-              <i>L{i + 1}</i> Level {i + 1} <small>· {crateKinds((i + 1) as 1 | 2 | 3).length} kinds</small>
-            </span>
-            <span className="hq-odds-b">{PULL_BASE[i]}%</span>
-            <span className="hq-odds-y">
-              {p}%{p > PULL_BASE[i] && <em>+{p - PULL_BASE[i]}</em>}
-            </span>
+        <div className="cr-rows">
+          <div className="cr-row">
+            <span className="field-k">New to you</span>
+            <span className="field-v">{fresh > 0 ? `${fresh}%` : 'None left'}</span>
           </div>
-        ))}
-        <p className="hq-note">
-          {lift > 0
-            ? `Your standing moves ${lift} point${lift === 1 ? '' : 's'} from Level 1 to Levels 2 and 3.`
-            : 'Standing with any company moves the odds toward Levels 2 and 3.'}{' '}
-          {fresh > 0 ? (
-            <>
-              A kind you don’t have yet: <b>{fresh}%</b>.
-            </>
-          ) : (
-            <b>You own every kind: each crate is a bonus item.</b>
+          <div className="cr-row">
+            <span className="field-k">Already yours</span>
+            <span className="field-v">A Rare one, next contract</span>
+          </div>
+          {bonus.length > 0 && (
+            <div className="cr-row">
+              <span className="field-k">Waiting</span>
+              <span className="field-v">{bonus.join(', ')}</span>
+            </div>
           )}
-        </p>
-        {!can && <p className="hq-note">Your bank holds {bank.toLocaleString('en')} gold; a crate is {PULL_PRICE}.</p>}
-      </section>
-
-      <section className="hq-pool" aria-label="Some of what is in the crates">
-        <p className="ct-eyebrow left">Some of what’s inside</p>
-        <div className="hq-pool-row">
-          {sample.map((kind) => (
-            <span key={kind} className={`hq-pool-it${have.includes(kind) ? ' have' : ''}`} title={`${kind} · Level ${itemKindById(kind)?.level}${have.includes(kind) ? ' · yours' : ''}`}>
-              <Icon name={kindIcon(kind)} lg />
-              <small>{kind}</small>
-            </span>
-          ))}
         </div>
+        <p className="cr-note">{lift > 0 ? 'Your standing lifts Levels 2 and 3.' : 'Standing with any company lifts Levels 2 and 3.'}</p>
       </section>
 
-      <Slip className="hq-dup">
-        <p className="hq-dup-k">Already own it?</p>
-        <p className="hq-dup-t">It comes as a Rare item in your pack next contract.</p>
-        {bonus.length > 0 && <p className="hq-dup-t">Waiting for your next contract: {bonus.join(', ')}.</p>}
-      </Slip>
+      {opening && (
+        <CrateOpening
+          results={opening.results}
+          look={opening.look}
+          onDone={() => {
+            setOpening(null)
+            setMany(1)
+          }}
+        />
+      )}
     </ContractPage>
   )
 }

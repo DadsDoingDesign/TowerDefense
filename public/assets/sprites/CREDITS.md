@@ -51,6 +51,17 @@ and firelight are its own. The scenes live outside the `*tinyswords` folders on
 purpose: their drawn props and lighting carry colours the palette check would
 (rightly) not find in the pack.
 
+The HQ's castle, `public/assets/scenes/hq-castle-{timber,stone,fortified,grand}.png`
+(the HQ pass, Oct 2026: one sheet per quality tier, the scene and every part
+at every level), is composed by `scripts/hq-keep.ts` from the same old CC0
+build and upstream: the Knights' castle (Blue), re-inked pixel for pixel by
+light in each tier's material; the Knights' pawn and archer; the flat
+ground's grass and sand (re-inked as earth), pines and deco. The great hall,
+lookout, tents, rack of arms, crates, barrels, pallets, stakes and pennant
+poles are drawn by the script in the pack's palette and ink. Nothing comes
+from `BuildingsCustom/` (unverified provenance, never harvested) or the
+current, non-CC0 download.
+
 ## `tinyswords` — the default theme (Tiny Swords by Pixel Frog)
 
 **Tiny Swords**, created by **Pixel Frog**, *old CC0 1.0 build only*.
