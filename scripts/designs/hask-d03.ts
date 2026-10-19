@@ -17,27 +17,27 @@ import type { Design } from './hask-lib'
 import { PAL, SHADOW_W, TAIL, TAIL_DOWN, TAIL_UP } from './hask-common'
 
 const HAT = [
-  '..........................vVv',
-  '.........................gvVvg',
-  '..........................pRp',
+  '...........................vVv',
+  '..........................gvVvg',
+  '...........................pRp',
   '..........................uOOoh',
   '.........................uOOOohh',
-  '.......................uOuOOOoohhh',
-  '.....................uOoOooOOOHHohhh',
+  '.......................uuuOOOoohhh',
+  '.....................uuoOooOOOHHohhh',
   '....................uuoOoOoOOOHoHHhhh',
-  '..................uOOooHooooOohHHHhhhhh',
-  '................uOOoOOoOOoOOOOoHooHoHhhhh',
-  '...............uOuoOOoOOOoOOOOOHoooHHHhhhh',
-  '.............uOOOoOOOoOOoOOOOOOoHooHoHHhHhhh',
-  '............uouoooooHOoOHoooOoOHhHHohohhhhhhh',
+  '..................uuOooHooooOohHHHhhhhh',
+  '................uuOoOOoOOoOOOOoHooHoHhhhh',
+  '...............uuuoOOoOOOoOOOOOHoooHHHhhhh',
+  '.............uuOOoOOOoOOoOOOOOOoHooHoHHhHhhh',
+  '............uuuoooooHOoOHoooOoOHhHHohohhhhhhh',
   '..........uuOOoOOOOoOOOoOOOOOOOooHoooHoHHHhHhhh',
   '........uuOuOoOOOOoOOOOoOOOOOOOOoHooooHoHHHhHHhhh',
-  '.......uOOOOoOOOOoOOOOOoOOOOOOOOoHoooooHoHHHhHHhhh',
+  '.......uuOOOoOOOOoOOOOOoOOOOOOOOoHoooooHoHHHhHHhhh',
   '.....uuOOOooooooooOoooHOoOooooOooHhHHoHohHhhHhHhhhhh',
   '...uuOOOOoOOOOOOoOOOOOoOOOOOOOOOooHoooooHooHHHHhHHhhhh',
-  '..uOuOOOoOOOOOOoOOOOOoOOOOOOOOOOOooHoooooHooHHHHhHHhhhh',
+  '..uuuOOOoOOOOOOoOOOOOoOOOOOOOOOOOooHoooooHooHHHHhHHhhhh',
   'uuOOOOOoOOOOOOoOOOOOOoOOOOOOOOOOOooHooooooHooHHHHhHHHhhhh',
-  'uuOOuOOOuOOOuOOOuOOOuOOOuOOOuOooooooooooooooHHHHHHHHHhhhh',
+  'uuuuuuuuuuuuuuuuuuuuuuuuuuOOOOOOooooooooooooHHHHHHHHHhhhh',
   '.hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh',
 ]
 
@@ -94,13 +94,15 @@ const ARM_F = [
   '.zgGGGg',
   '..zggg',
 ]
-/** The far fist, high on the pole behind his back (its arm is behind the body). */
+/** The far fist, high on the pole behind his back (its arm is behind the body): a full fist, its fingers marked, so it reads at 1×. */
 const GRIP_FAR = [
-  '.gGG',
-  'gGGvv',
-  'gGgvG',
-  'zgGGg',
-  '.zgg',
+  '..gGGv',
+  '.gGGvvV',
+  'gGgvgvV',
+  'gGGvGvv',
+  'gGGGGvv',
+  'zgGGGgg',
+  '.zgggg',
 ]
 
 /** Bare legs in a stride: the far leg planted under him, the near one stepping into the push; scales in paired dashes, the tops in the hem's shadow. */
@@ -163,7 +165,7 @@ const POLE = [
 
 /** Brine thrown up where the pole bites: small, then flung. */
 const SPLASH = ['..w...', '.w..6.', '6.w6.6', '.6666.']
-const SPLASH2 = ['w...w..6', '..w...6.', '.6..w6..', '6.w..6.w', '.66666.', '..666']
+const SPLASH2 = ['...w.....w', '.w.6w..w6.', 'w6.66.w66.', '.6w6656w6.', '6665555666', '.66655666.']
 
 export const D03: Design = {
   id: 'd03',
@@ -178,13 +180,13 @@ export const D03: Design = {
     { id: 'legs', group: 'feet', x: 40, y: 56, rows: LEGS },
     { id: 'pole', group: 'prop', x: 22, y: 40, rows: POLE },
     { id: 'smock', group: 'body', x: 31, y: 41, rows: SMOCK },
-    { id: 'snout', group: 'head', x: 52, y: 36, rows: SNOUT_SHADED },
-    { id: 'hat', group: 'head', x: 21, y: 14, rows: HAT, squash: [10, 15] },
-    { id: 'eye', group: 'head', x: 67, y: 38, rows: EYE, ring: 0 },
-    { id: 'gripFar', group: 'hands', x: 25, y: 41, rows: GRIP_FAR },
+    { id: 'snout', group: 'head', x: 50, y: 36, rows: SNOUT_SHADED },
+    { id: 'hat', group: 'head', x: 30, y: 14, rows: HAT, squash: [10, 15] },
+    { id: 'eye', group: 'head', x: 65, y: 38, rows: EYE, ring: 0 },
+    { id: 'gripFar', group: 'hands', x: 21, y: 39, rows: GRIP_FAR },
     { id: 'armF', group: 'hands', x: 57, y: 49, rows: ARM_F },
     { id: 'splash', group: 'fx', x: 77, y: 64, rows: SPLASH, ring: 0, hidden: true },
-    { id: 'splash2', group: 'fx', x: 75, y: 60, rows: SPLASH2, ring: 0, hidden: true },
+    { id: 'splash2', group: 'fx', x: 73, y: 60, rows: SPLASH2, ring: 0, hidden: true },
   ],
   // the poling breath: he leans in and settles onto his legs, the pole follows a frame late
   idle: [
@@ -201,7 +203,7 @@ export const D03: Design = {
     { move: { head: [-1, 0], body: [-1, 0], hands: [-1, 0], prop: [-2, 0] }, swap: { tail: TAIL_UP } },
     { move: { hands: [0, 0] }, show: ['splash'] },
     { squash: 1, move: { head: [2, 1], body: [2, 1], hands: [2, 1], prop: [-2, 1] }, swap: { tail: TAIL_DOWN }, show: ['splash2'] },
-    { squash: 2, nudge: { snout: [0, 1], eye: [0, 1] }, move: { head: [2, 1], body: [2, 1], hands: [2, 1], prop: [-2, 1] }, swap: { tail: TAIL_DOWN }, show: ['splash2'], at: { splash2: [72, 58] } },
+    { squash: 2, nudge: { snout: [0, 1], eye: [0, 1] }, move: { head: [2, 1], body: [2, 1], hands: [2, 1], prop: [-2, 1] }, swap: { tail: TAIL_DOWN }, show: ['splash2'], at: { splash2: [71, 58] } },
     { squash: 1, move: { head: [1, 0], body: [1, 0], hands: [1, 0], prop: [-1, 0] } },
     {},
   ],
