@@ -386,8 +386,11 @@ export function itemBody(item: Item): Body {
     // a hardcoded list of labels here — a copy of that list is the same defect
     // one level down.
     const curse = e.id.startsWith('cx_')
+    // A peoples' kind's edge is the item's own trait (`items.KIND_EDGE`): the
+    // card's title already names it, so the line is the effect alone.
+    const own = e.id.startsWith('kind_')
     out.push({
-      text: curse ? `Curse · ${e.label} — ${t}` : `${e.label} — ${t}`,
+      text: curse ? `Curse · ${e.label} — ${t}` : own ? t.charAt(0).toUpperCase() + t.slice(1) : `${e.label} — ${t}`,
       mark: curse ? 'curse' : undefined,
       tone: 'accent',
     })

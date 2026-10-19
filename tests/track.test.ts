@@ -102,16 +102,18 @@ describe('the track: every level names its reward', () => {
   it('pays a fresh militia exactly, company by company (the plan IS the settle)', () => {
     const rows = trackPlan('metals', { xp: 0, term: 1, ...none })
     expect(rows.map((r) => r.pay.card ?? r.pay.item ?? r.pay.signature ?? (r.pay.stakes ? 'stakes' : r.pay.secondTerm ? 'term' : r.pay.bonus))).toEqual([
-      'hold_fast',
-      'stakes',
-      'Pavise',
-      'shield_wall',
-      'ore_sense',
-      'Plate',
-      'bulwark',
-      'Greatsword',
-      // Level 9's floor is 3 and Ironvein's one Level 3 card went at 7: its next card at any level.
+      // Ironvein is the dwarves' company (the peoples' rosters, Oct 2026):
+      // its own cards and kinds, the lightest first.
       'cleave',
+      'stakes',
+      'Axe',
+      'anchor',
+      'bolder_bash',
+      'Hand Hammer',
+      'bulwark',
+      "Miner's Pick",
+      // Level 9's floor is 3: Ironvein's next Level 3 card.
+      'momentum',
       'term',
     ])
     expect(rows[8].pay.named).toBe('Ironheart Plate')
@@ -127,14 +129,19 @@ describe('the track: every level names its reward', () => {
       const first = nextTrackCard([], c, 1)!
       expect(skillById(first)!.company).toBe(c)
       expect(RANDOM_UNLOCK_SKILLS.filter((id) => skillById(id)!.company === c)[0]).toBe(first)
-      expect(skillById(nextTrackCard([], c, 7)!)!.level).toBe(3)
+      // Level 7's floor is 3: a Level 3 card of its own when it has one, else its own at any level.
+      const hasL3 = RANDOM_UNLOCK_SKILLS.some((id) => skillById(id)!.company === c && skillById(id)!.level === 3)
+      const l7 = skillById(nextTrackCard([], c, 7)!)!
+      if (hasL3) expect(l7.level).toBe(3)
+      else expect(l7.company).toBe(c)
     }
     const own = RANDOM_UNLOCK_SKILLS.filter((id) => skillById(id)!.company === 'art')
     expect(skillById(nextTrackCard(own, 'art', 1)!)!.company).not.toBe('art')
     expect(nextTrackCard([...RANDOM_UNLOCK_SKILLS], 'art', 1)).toBeNull()
     // A kind: the company's lowest level first, then anyone's.
-    expect(nextTrackItem([], 'metals')).toBe('Pavise')
-    expect(itemKindById(nextTrackItem(['Pavise', 'Plate', 'Greatsword', 'Warhammer'], 'metals')!)!.company).not.toBe('metals')
+    expect(nextTrackItem([], 'metals')).toBe('Axe')
+    const ironvein = UNLOCK_ITEM_KINDS.filter((k) => itemKindById(k)!.company === 'metals')
+    expect(itemKindById(nextTrackItem(ironvein, 'metals')!)!.company).not.toBe('metals')
     expect(nextTrackItem([...UNLOCK_ITEM_KINDS], 'metals')).toBeNull()
   })
 
@@ -316,10 +323,11 @@ describe('a second term', () => {
       expect(r.pay.item).toBeNull()
       expect(r.pay.flag).toBeNull()
       expect(r.pay.secondTerm).toBe(false)
-      if (r.pay.level === SIGNATURE_LEVEL) expect(r.pay.signature).toBe('velvet_toll')
+      // Rosethread (the elves) signs Starweave since the peoples' rosters.
+      if (r.pay.level === SIGNATURE_LEVEL) expect(r.pay.signature).toBe('gilt_frame')
       else expect(r.pay.bonus).not.toBeNull()
     }
-    expect(trackPay('silk', 2, SIGNATURE_LEVEL, { skills: ['velvet_toll'], items: [] }).bonus).not.toBeNull()
+    expect(trackPay('silk', 2, SIGNATURE_LEVEL, { skills: ['gilt_frame'], items: [] }).bonus).not.toBeNull()
     expect(termCap(2)).toBe(TERM_XP * 2)
   })
 

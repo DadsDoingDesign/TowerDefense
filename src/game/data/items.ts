@@ -1,6 +1,7 @@
 import { nextId, RNG } from '../core/rng'
 import { actOf, ACTS } from '../run/threat'
 import type { Enchantment, HeroSlot, Item, ItemRarity, ItemSlot, Sentinel } from '../types'
+import { PEOPLE_KINDS } from './peopleKinds'
 
 export const RARITY_ORDER: ItemRarity[] = ['common', 'rare', 'epic', 'legendary', 'mythic']
 
@@ -56,6 +57,8 @@ interface BaseInfo {
   slot: ItemSlot
   grip: Grip
   swings?: true
+  /** A bow: its holder looses arrows (`attackLook.deliveryOf`), not thrown knives. */
+  bow?: true
   /** The style a weapon gives its holder (weapons only). */
   style?: HeroStyle
   /** Enemies a shield holds on the road (off-hand shields only). */
@@ -65,7 +68,7 @@ interface BaseInfo {
 }
 
 /** Every item base the game generates (or once did), with its kind and grip. */
-export const ITEM_BASES: Readonly<Record<string, BaseInfo>> = {
+const CLASSIC_BASES: Readonly<Record<string, BaseInfo>> = {
   Sword: { slot: 'oneHand', grip: 'main', swings: true, style: 'swing' },
   Axe: { slot: 'oneHand', grip: 'main', swings: true, style: 'swing' },
   Rod: { slot: 'oneHand', grip: 'main', style: 'cast' },
@@ -75,7 +78,7 @@ export const ITEM_BASES: Readonly<Record<string, BaseInfo>> = {
   Wand: { slot: 'oneHand', grip: 'either', style: 'cast' },
   Greatsword: { slot: 'twoHand', grip: 'twoHand', swings: true, style: 'swing' },
   Warhammer: { slot: 'twoHand', grip: 'twoHand', swings: true, style: 'swing' },
-  Bow: { slot: 'twoHand', grip: 'twoHand', style: 'shoot' },
+  Bow: { slot: 'twoHand', grip: 'twoHand', style: 'shoot', bow: true },
   Staff: { slot: 'twoHand', grip: 'twoHand', style: 'cast' },
   Grimoire: { slot: 'twoHand', grip: 'twoHand', style: 'cast' },
   // A shield in the off hand holds enemies on the road; a bigger one holds more.
@@ -96,11 +99,37 @@ export const ITEM_BASES: Readonly<Record<string, BaseInfo>> = {
   'Gilded Easel': { slot: 'offHand', grip: 'off', hold: 4, thorns: 12 },
   'Ironheart Plate': { slot: 'body', grip: 'body' },
   'Silkwind Cloak': { slot: 'body', grip: 'body' },
+  // The roster's two renames (Oct 2026, `peopleKinds.KIND_RENAMES`): the new
+  // names deal; the old ones stay classified so an unmigrated name still reads.
+  'Kingscale Shield': { slot: 'offHand', grip: 'off', hold: 4, thorns: 12 },
+  'Greenvial Herbal': { slot: 'twoHand', grip: 'twoHand', style: 'cast' },
   Banner: { slot: 'body', grip: 'body' },
   Standard: { slot: 'body', grip: 'body' },
   Relic: { slot: 'body', grip: 'body' },
   Beacon: { slot: 'body', grip: 'body' },
   Oath: { slot: 'body', grip: 'body' },
+}
+
+/**
+ * The classic bases, then the peoples' kinds (`peopleKinds.PEOPLE_KINDS`),
+ * each classified by its own row there.
+ */
+export const ITEM_BASES: Readonly<Record<string, BaseInfo>> = {
+  ...CLASSIC_BASES,
+  ...Object.fromEntries(
+    PEOPLE_KINDS.map((k): [string, BaseInfo] => [
+      k.id,
+      {
+        slot: k.slot,
+        grip: k.grip,
+        ...(k.swings ? { swings: true as const } : {}),
+        ...(k.bow ? { bow: true as const } : {}),
+        ...(k.style ? { style: k.style } : {}),
+        ...(k.hold ? { hold: k.hold } : {}),
+        ...(k.thorns ? { thorns: k.thorns } : {}),
+      },
+    ]),
+  ),
 }
 
 /** The base an item is, when its noun is known AND matches its kind. */
@@ -128,6 +157,9 @@ export const styleDamageType = (style: HeroStyle | null): DamageType => (style =
 
 /** The damage type a hero deals, read off what it holds. */
 export const heroDamageType = (hero: Pick<Sentinel, 'equipment'>): DamageType => styleDamageType(heroStyle(hero))
+
+/** Is this item a bow (its holder looses arrows)? */
+export const isBow = (item: Pick<Item, 'name' | 'slot'> | null | undefined): boolean => !!baseOf(item)?.bow
 
 /** How many enemies a shield holds (0 for anything else). */
 export const shieldHold = (item: Pick<Item, 'name' | 'slot'> | null | undefined): number => baseOf(item)?.hold ?? 0
@@ -160,11 +192,29 @@ const KIND_GRIP: Record<ItemSlot, Grip> = { oneHand: 'main', twoHand: 'twoHand',
  * noun EARLIEST in the name wins (`Banner of Focus` is a Banner), and branch
  * order only breaks ties at one position (`Greatsword` before `Sword`).
  */
-export const ITEM_NOUN_RE =
-  /(Saffron Brand|Moonquill Codex|Gilded Easel|Ironheart Plate|Silkwind Cloak|Greatsword|Sword|Axe|Dagger|Wand|Rod|Scepter|Sceptre|Warhammer|Bow|Staff|Grimoire|Shield|Buckler|Pavise|Tome|Quiver|Focus|Plate|Mail|Robe|Cloak|Aegis|Banner|Standard|Relic|Beacon|Oath)/
+const CLASSIC_NOUNS = 'Saffron Brand|Moonquill Codex|Gilded Easel|Ironheart Plate|Silkwind Cloak|Greatsword|Sword|Axe|Dagger|Wand|Rod|Scepter|Sceptre|Warhammer|Bow|Staff|Grimoire|Shield|Buckler|Pavise|Tome|Quiver|Focus|Plate|Mail|Robe|Cloak|Aegis|Banner|Standard|Relic|Beacon|Oath'
+/**
+ * The peoples' nouns and the two renamed ones go FIRST, longest first: a
+ * branch only matters against another at the same position, and the one such
+ * pair is a noun that starts with another (`Banner Pole` before `Banner`).
+ */
+const NEW_NOUNS = [...PEOPLE_KINDS.map((k) => k.id), 'Kingscale Shield', 'Greenvial Herbal']
+  .sort((a, b) => b.length - a.length)
+  .map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+export const ITEM_NOUN_RE = new RegExp(`(${[...NEW_NOUNS, CLASSIC_NOUNS].join('|')})`)
 
 /** The base noun an item is named by, if the name carries one. */
-export const itemNoun = (item: Pick<Item, 'name'>): string | undefined => ITEM_NOUN_RE.exec(item.name)?.[0]
+export const itemNoun = (item: Pick<Item, 'name'>): string | undefined => {
+  // Memoised by name: the alternation is ~110 branches since the peoples'
+  // rosters, and combat asks it several times per profile.
+  const hit = NOUN_MEMO.get(item.name)
+  if (hit !== undefined || NOUN_MEMO.has(item.name)) return hit
+  if (NOUN_MEMO.size > 20000) NOUN_MEMO.clear()
+  const noun = ITEM_NOUN_RE.exec(item.name)?.[0]
+  NOUN_MEMO.set(item.name, noun)
+  return noun
+}
+const NOUN_MEMO = new Map<string, string | undefined>()
 
 /** Which hands an item's base fits (see the table above). */
 export function gripOf(item: Pick<Item, 'name' | 'slot'>): Grip {
@@ -283,6 +333,8 @@ interface WeaponType {
   dmg?: readonly [number, number]
   /** The kind's identity beyond damage and speed, per budget point, low–high. */
   edge?: Partial<Record<'splashAdd' | 'rangeMult' | 'critChance', readonly [number, number]>>
+  /** A fixed reach cost (a shortbow, a harpoon), like a negative speed bias: never scaled, never deepened. */
+  rangeBias?: number
 }
 
 /**
@@ -291,7 +343,21 @@ interface WeaponType {
  * before the tier existed, draw for draw — and a roll with a pool deals one
  * only when the pool names it (an owned kind, `run/charter.sovereignPool`).
  */
-export const SOVEREIGN_NOUNS: ReadonlySet<string> = new Set(['Saffron Brand', 'Moonquill Codex', 'Gilded Easel', 'Ironheart Plate', 'Silkwind Cloak'])
+export const SOVEREIGN_NOUNS: ReadonlySet<string> = new Set([
+  'Saffron Brand',
+  'Greenvial Herbal',
+  'Kingscale Shield',
+  'Ironheart Plate',
+  'Silkwind Cloak',
+  ...PEOPLE_KINDS.filter((k) => k.level === 4).map((k) => k.id),
+])
+/**
+ * Nouns a roll deals ONLY when its pool names them: the Sovereign tier, and
+ * every kind the peoples' rosters added (Oct 2026). A roll with no `kinds`
+ * pool (a bench, a tool, an old caller) deals exactly what it dealt before
+ * either existed, draw for draw.
+ */
+const POOL_ONLY: ReadonlySet<string> = new Set([...SOVEREIGN_NOUNS, ...PEOPLE_KINDS.map((k) => k.id)])
 
 /**
  * What a Sovereign kind does beyond its slot's base: one fixed edge, added
@@ -300,7 +366,7 @@ export const SOVEREIGN_NOUNS: ReadonlySet<string> = new Set(['Saffron Brand', 'M
  */
 export const SOVEREIGN_EDGE: Readonly<Record<string, Enchantment>> = {
   'Saffron Brand': { id: 'sov_brand', label: 'Sovereign', mods: { burn: { dps: 20, dur: 3 } } },
-  'Moonquill Codex': { id: 'sov_codex', label: 'Sovereign', mods: { shock: { chains: 2, dmgFrac: 0.5 } } },
+  'Greenvial Herbal': { id: 'sov_codex', label: 'Sovereign', mods: { shock: { chains: 2, dmgFrac: 0.5 } } },
   'Ironheart Plate': { id: 'sov_plate', label: 'Sovereign', mods: { damageMult: 1.15 } },
   'Silkwind Cloak': { id: 'sov_cloak', label: 'Sovereign', mods: { rateMult: 1.15 } },
 }
@@ -363,10 +429,17 @@ const WEAPONS: WeaponType[] = [
   { name: 'Grimoire', damageType: 'magic', hands: 'twoHand', speedBias: 0.12 },
   // The Sovereign tier: a sword's handling, a grimoire's.
   { name: 'Saffron Brand', damageType: 'physical', hands: 'oneHand', speedBias: 0.05 },
-  { name: 'Moonquill Codex', damageType: 'magic', hands: 'twoHand', speedBias: 0.02 },
+  // Renamed in place (Oct 2026, was the Moonquill Codex): the same list
+  // position, so a pool that held the old name deals the new one draw for draw.
+  { name: 'Greenvial Herbal', damageType: 'magic', hands: 'twoHand', speedBias: 0.02 },
+  // The peoples' weapons (`peopleKinds.ts`), appended: never dealt without a pool.
+  ...PEOPLE_KINDS.filter((k) => k.weapon).map(
+    (k): WeaponType => ({ name: k.id, hands: k.slot as 'oneHand' | 'twoHand', ...k.weapon!, dmg: k.weapon!.dmg, edge: k.weapon!.edge }),
+  ),
 ]
-const OFFHANDS = ['Shield', 'Buckler', 'Tome', 'Quiver', 'Focus', 'Pavise', 'Gilded Easel']
-const BODIES = ['Plate', 'Mail', 'Robe', 'Cloak', 'Aegis', 'Ironheart Plate', 'Silkwind Cloak']
+// The Kingscale Shield was the Gilded Easel, renamed in place.
+const OFFHANDS = ['Shield', 'Buckler', 'Tome', 'Quiver', 'Focus', 'Pavise', 'Kingscale Shield', ...PEOPLE_KINDS.filter((k) => k.slot === 'offHand').map((k) => k.id)]
+const BODIES = ['Plate', 'Mail', 'Robe', 'Cloak', 'Aegis', 'Ironheart Plate', 'Silkwind Cloak', ...PEOPLE_KINDS.filter((k) => k.slot === 'body').map((k) => k.id)]
 const KEEPSAKES = ['Banner', 'Standard', 'Relic', 'Beacon', 'Oath']
 
 /**
@@ -620,18 +693,49 @@ const lerp = (lo: number, hi: number, t: number) => lo + t * (hi - lo)
 type ArmourRoll = (a: number, b: number, budget: number) => Item['base']
 /** A Pavise's handling cost: a fixed −20% attack speed that rarity never deepens (L9c's rule). */
 const PAVISE_DRAG = -0.2
+/** The peoples' off-hand and body rolls (`peopleKinds.PEOPLE_KINDS`), by noun. */
+const peopleRolls = (slot: ItemSlot): Record<string, ArmourRoll> =>
+  Object.fromEntries(PEOPLE_KINDS.filter((k) => k.slot === slot && k.roll).map((k) => [k.id, k.roll!]))
 const OFFHAND_ROLL: Readonly<Record<string, ArmourRoll>> = {
   Buckler: (a, b, k) => ({ attackSpeed: lerp(0.14, 0.22, a) * k, critChance: lerp(0.08, 0.12, b) * k }),
   Pavise: () => ({ attackSpeed: PAVISE_DRAG }),
   Tome: (a, _b, k) => ({ damagePct: lerp(0.08, 0.16, a) * k }),
   Quiver: (a, _b, k) => ({ attackSpeed: lerp(0.1, 0.2, a) * k }),
   Focus: (_a, b, k) => ({ critChance: lerp(0.08, 0.16, b) * k }),
+  ...peopleRolls('offHand'),
 }
 const BODY_ROLL: Readonly<Record<string, ArmourRoll>> = {
   Cloak: (a, _b, k) => ({ rangeMult: lerp(0.2, 0.36, a) * k }),
   Robe: (_a, b, k) => ({ splashAdd: round(lerp(12, 24, b) * k) }),
   Plate: (a, _b, k) => ({ damagePct: lerp(0.05, 0.1, a) * k }),
   Aegis: (a, _b, k) => ({ attackSpeed: lerp(0.07, 0.14, a) * k }),
+  ...peopleRolls('body'),
+}
+
+/**
+ * What a peoples' kind IS beyond its rolled base (`peopleKinds.PeopleKind.edge`):
+ * one fixed enchantment, labelled with the kind's own name, added after the
+ * name is composed exactly as a Sovereign edge is — no draw, never scaled by
+ * rarity, kept through a reforge, and never counted as one of the rarity's
+ * enchantment slots.
+ */
+export const KIND_EDGE: Readonly<Record<string, Enchantment>> = Object.fromEntries(
+  PEOPLE_KINDS.filter((k) => k.edge).map((k) => [
+    k.id,
+    {
+      id: `kind_${k.id.toLowerCase().replace(/[^a-z]+/g, '_')}`,
+      label: k.id,
+      ...(k.edge!.mods ? { mods: k.edge!.mods } : {}),
+      ...(k.edge!.thorns ? { thorns: k.edge!.thorns } : {}),
+    } satisfies Enchantment,
+  ]),
+)
+/** Is this enchantment a peoples' kind's fixed edge (`KIND_EDGE`), not a roll? */
+const isKindEdge = (e: Pick<Enchantment, 'id'>): boolean => e.id.startsWith('kind_')
+/** A fresh copy of a kind's edge (its mods are never shared between items). */
+const kindEdgeFor = (noun: string): Enchantment | null => {
+  const e = KIND_EDGE[noun]
+  return e ? { ...e, ...(e.mods ? { mods: structuredClone(e.mods) } : {}) } : null
 }
 
 function baseFor(slot: ItemSlot, budget: number, rng: RNG, weapon?: WeaponType, noun?: string): Item['base'] {
@@ -655,6 +759,8 @@ function baseFor(slot: ItemSlot, budget: number, rng: RNG, weapon?: WeaponType, 
     if (e?.splashAdd) base.splashAdd = round(lerp(e.splashAdd[0], e.splashAdd[1], t) * budget)
     if (e?.rangeMult) base.rangeMult = lerp(e.rangeMult[0], e.rangeMult[1], t) * budget
     if (e?.critChance) base.critChance = lerp(e.critChance[0], e.critChance[1], t) * budget
+    // A fixed reach cost, never scaled (a shortbow, a harpoon).
+    if (w.rangeBias) base.rangeMult = (base.rangeMult ?? 0) + w.rangeBias
     return base
   }
   // Two draws, in this order, for every off-hand and body kind.
@@ -1014,15 +1120,15 @@ export function generateItem(rng: RNG, opts: GenerateOpts = {}): Item {
   const rosterAware = !!opts.roster && opts.roster.length > 0
   // With no pool, the Sovereign tier is never dealt: every kind it lists
   // existed before the tier, so the draws are the ones they always were.
-  const allowed = (noun: string) => (kindSet ? kindSet.has(noun) : !SOVEREIGN_NOUNS.has(noun))
+  const allowed = (noun: string) => (kindSet ? kindSet.has(noun) : !POOL_ONLY.has(noun))
   // A kind the pool holds more than once (a company's piece on its own route,
   // `run/contracts.weightPool`) is listed that many times, so the one pick
   // below deals it by weight. An unweighted pool lists each kind once.
   const kindCount = new Map<string, number>()
   for (const k of opts.kinds ?? []) kindCount.set(k, (kindCount.get(k) ?? 0) + 1)
-  const times = (noun: string): number => (kindSet ? (kindCount.get(noun) ?? 0) : SOVEREIGN_NOUNS.has(noun) ? 0 : 1)
+  const times = (noun: string): number => (kindSet ? (kindCount.get(noun) ?? 0) : POOL_ONLY.has(noun) ? 0 : 1)
   const byWeight = <T,>(list: readonly T[], nameOf: (x: T) => string): T[] => list.flatMap((x) => Array<T>(times(nameOf(x))).fill(x))
-  const typed = WEAPONS.filter((w) => w.hands === slot && (!opts.damageType || w.damageType === opts.damageType) && (kindSet || !SOVEREIGN_NOUNS.has(w.name)))
+  const typed = WEAPONS.filter((w) => w.hands === slot && (!opts.damageType || w.damageType === opts.damageType) && (kindSet || !POOL_ONLY.has(w.name)))
   const inPool = byWeight(typed, (w) => w.name)
   // A forced damage type the pool cannot meet falls back to any unlocked weapon.
   const handed = inPool.length ? inPool : WEAPONS.filter((w) => w.hands === slot && allowed(w.name))
@@ -1059,6 +1165,9 @@ export function generateItem(rng: RNG, opts: GenerateOpts = {}): Item {
   if (rarity === 'mythic') ench.push(mythicEdge(slot))
   // A Sovereign kind carries its own edge, whatever its rarity.
   if (SOVEREIGN_EDGE[noun]) ench.push({ ...SOVEREIGN_EDGE[noun], mods: { ...SOVEREIGN_EDGE[noun].mods } })
+  // A peoples' kind carries its own edge too (`KIND_EDGE`): no draw.
+  const kindEdge = kindEdgeFor(noun)
+  if (kindEdge) ench.push(kindEdge)
   return {
     id: nextId('itm'),
     name: name.trim(),
@@ -1101,8 +1210,8 @@ export function reforgeItem(item: Item, rng: RNG): Item {
   const pool = item.keepsake ? KEEPSAKE_ENCHANTS : ENCHANTS
   const count = item.keepsake ? Math.max(1, cfg.enchants) : cfg.enchants
   const ench = rollEnchantments(pool, count, cfg.budget, rng)
-  // A Sovereign kind's edge is the kind's, not a roll: it survives a reforge.
-  const edge = item.enchantments.filter((e) => e.id.startsWith('sov_'))
+  // A kind's edge (a Sovereign's, a peoples' kind's) is the kind's, not a roll: it survives a reforge.
+  const edge = item.enchantments.filter((e) => e.id.startsWith('sov_') || isKindEdge(e))
   return { ...item, enchantments: [...ench, ...edge], name: renameFor(item, ench) }
 }
 
@@ -1135,7 +1244,7 @@ export function raiseAdds(item: Item): number {
   if (!canUpgrade(item)) return 0
   const cfg = RARITY[RARITY_ORDER[RARITY_ORDER.indexOf(item.rarity) + 1]]
   const target = item.keepsake ? Math.max(1, cfg.enchants) : cfg.enchants
-  return Math.max(0, target - item.enchantments.length)
+  return Math.max(0, target - item.enchantments.filter((e) => !isKindEdge(e)).length)
 }
 
 /** Upgrade an item's rarity one tier: more base budget + an extra enchant slot. */
@@ -1149,7 +1258,9 @@ export function upgradeRarity(item: Item, rng: RNG): Item {
   const used = new Set(item.enchantments.map((e) => e.id))
   const extra: Enchantment[] = []
   let guard = 0
-  while (item.enchantments.length + extra.length < target && guard++ < 40) {
+  // A peoples' kind's edge is not one of the rarity's slots (`KIND_EDGE`).
+  const rolled = item.enchantments.filter((e) => !isKindEdge(e)).length
+  while (rolled + extra.length < target && guard++ < 40) {
     const t = rng.pick(pool)
     if (used.has(t.id)) continue
     used.add(t.id)
@@ -1171,9 +1282,10 @@ export function upgradeRarity(item: Item, rng: RNG): Item {
  * reading as they did.
  */
 function nameItem(_rarityLabel: string, noun: string, ench: Enchantment[]): string {
-  const suffix = ench.find((e) => e.label.startsWith('of'))
+  const named = ench.filter((e) => !isKindEdge(e))
+  const suffix = named.find((e) => e.label.startsWith('of'))
   const prefix =
-    ench.find((e) => e.id.startsWith('cx_')) ?? ench.find((e) => !e.label.startsWith('of'))
+    named.find((e) => e.id.startsWith('cx_')) ?? named.find((e) => !e.label.startsWith('of'))
   return `${prefix ? prefix.label + ' ' : ''}${noun}${suffix ? ' ' + suffix.label : ''}`.trim()
 }
 
@@ -1194,7 +1306,7 @@ export function describeBase(item: Item): string[] {
   if (b.damagePct) out.push(`+${Math.round(b.damagePct * 100)}% Damage`)
   if (b.attackSpeed) out.push(`${signed(Math.round(b.attackSpeed * 100))}% Attack Speed`)
   if (b.critChance) out.push(`+${Math.round(b.critChance * 100)}% Crit Chance`)
-  if (b.rangeMult) out.push(`+${Math.round(b.rangeMult * 100)}% Range`)
+  if (b.rangeMult) out.push(`${signed(Math.round(b.rangeMult * 100))}% Range`)
   if (b.splashAdd) out.push(`+${b.splashAdd} Splash Radius`)
   return out
 }

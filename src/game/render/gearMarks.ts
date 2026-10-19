@@ -57,6 +57,7 @@
  * static art, not battle state.
  */
 import { iconCell, itemIcon, type IconKey } from '../data/iconAtlas'
+import { PEOPLE_KINDS, peopleIconKey } from '../data/peopleKinds'
 import type { Archetype, Equipment, Sentinel } from '../types'
 import { EFFECT_INK, leadEffect, type HitEffect } from './attackLook'
 import { mergeMods } from '../data/archetypeTree'
@@ -191,6 +192,15 @@ interface Rig {
   offCut: boolean
 }
 
+/**
+ * The peoples' weapons the painted ones stand in for (Oct 2026): every
+ * swinging one is the knight's painted sword, every bow the archer's bow —
+ * the rule above, kept for the new kinds (their own cell shows where the
+ * figure draws it: the robed look's fists, and every tile in the UI).
+ */
+const PEOPLE_SWINGS = PEOPLE_KINDS.filter((k) => k.swings).map((k) => peopleIconKey(k.id) as IconKey)
+const PEOPLE_BOWS = PEOPLE_KINDS.filter((k) => k.bow).map((k) => peopleIconKey(k.id) as IconKey)
+
 const TINY_SWORDS: Readonly<Record<Archetype, Rig>> = {
   // fighter_idle: 6 × 84×95 — sword up in the right fist, shield on the left arm.
   fighter: {
@@ -199,7 +209,7 @@ const TINY_SWORDS: Readonly<Record<Archetype, Rig>> = {
     fistL: { x: -26, y: -24 },
     paintedMain: 'blade',
     // every melee weapon: the sword, an axe, a greatsword, a warhammer, the Saffron Brand
-    paintedFor: ['blade', 'axe', 'greatblade', 'hammer', 'brand'],
+    paintedFor: ['blade', 'axe', 'greatblade', 'hammer', 'brand', ...PEOPLE_SWINGS],
     paintedBare: true,
     markMain: false,
     paintedOff: 'shield',
@@ -216,7 +226,7 @@ const TINY_SWORDS: Readonly<Record<Archetype, Rig>> = {
     fistR: { x: 25, y: -13 },
     fistL: { x: -24, y: -11 },
     paintedMain: 'bow',
-    paintedFor: ['bow'],
+    paintedFor: ['bow', ...PEOPLE_BOWS],
     paintedBare: false,
     markMain: false,
     paintedOff: null,
@@ -267,6 +277,46 @@ const GRIP: Partial<Record<IconKey, Pt>> = {
   hammer: { x: 7, y: 12 },
   bow: { x: 3, y: 8 },
   staff: { x: 3, y: 12 },
+  // The peoples' weapons (Oct 2026): each draft's own grip (`scripts/peoples-art/`).
+  armingSword: { x: 7, y: 11 },
+  falchion: { x: 2, y: 11 },
+  spicedBlade: { x: 3, y: 12 },
+  halberd: { x: 4, y: 10 },
+  bannerPole: { x: 3, y: 11 },
+  pepperportSabre: { x: 5, y: 12 },
+  pepperportStandard: { x: 7, y: 13 },
+  shortbow: { x: 4, y: 8 },
+  longbow: { x: 4, y: 8 },
+  twinKnives: { x: 9, y: 10 },
+  recurveBow: { x: 7, y: 8 },
+  loomwardenBow: { x: 2, y: 8 },
+  rangersDirk: { x: 4, y: 10 },
+  starstringLongbow: { x: 4, y: 7 },
+  whisperfang: { x: 3, y: 10 },
+  handHammer: { x: 6, y: 11 },
+  minersPick: { x: 6, y: 12 },
+  beardedAxe: { x: 6, y: 12 },
+  maul: { x: 4, y: 11 },
+  greataxe: { x: 7, y: 12 },
+  quarryBreaker: { x: 6, y: 12 },
+  mountainbreaker: { x: 7, y: 11 },
+  spear: { x: 4, y: 10 },
+  fangKnife: { x: 4, y: 10 },
+  boneClub: { x: 3, y: 12 },
+  cleaver: { x: 4, y: 10 },
+  meatHook: { x: 7, y: 2 },
+  harpoon: { x: 7, y: 11 },
+  glaive: { x: 4, y: 12 },
+  bonecrusher: { x: 3, y: 12 },
+  venomFang: { x: 4, y: 11 },
+  wyrmtoothSpear: { x: 4, y: 10 },
+  butcherKingsCleaver: { x: 3, y: 11 },
+  sproutWand: { x: 3, y: 10 },
+  thornrod: { x: 3, y: 11 },
+  sparkCoil: { x: 7, y: 12 },
+  bloomstaff: { x: 4, y: 11 },
+  greenvialHerbal: { x: 7, y: 12 },
+  worldrootStaff: { x: 7, y: 10 },
 }
 const gripOf = (k: IconKey): Pt => GRIP[k] ?? { x: 8, y: 11 }
 

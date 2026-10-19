@@ -51,7 +51,7 @@ import {
 } from '../src/state/runSnapshot'
 import { relicTeamMods } from '../src/game/data/relics'
 import { skillById, STARTER_SKILLS } from '../src/game/data/skills'
-import { ALL_ITEM_KINDS, BASIC_ITEM_KINDS, isItemKind, isSovereignKind, SOVEREIGN_ITEM_KINDS } from '../src/game/data/itemKinds'
+import { ALL_ITEM_KINDS, BASIC_ITEM_KINDS, CLASSIC_ITEM_KINDS, isItemKind, isSovereignKind, SOVEREIGN_ITEM_KINDS } from '../src/game/data/itemKinds'
 import { MAX_SKILLS, skillOffer } from '../src/game/run/skills'
 import { CITY_COUNT, MARKET_MULT, MAX_CRATES, runItemPool } from '../src/game/run/contracts'
 import { askById, judgeAsks } from '../src/game/run/asks'
@@ -127,7 +127,15 @@ function buildBase(): Record<string, unknown> {
     roster: [hero, extra],
     // Item identities (October audit): a Tome rolls `damagePct`, a base stat the
     // validators must hold too. Its own stream, so no draw above moves.
-    inventory: [...s.inventory, epic('twoHand'), generateItem(new RNG(77), { kind: 'Tome', rarity: 'epic' })],
+    inventory: [
+      ...s.inventory,
+      epic('twoHand'),
+      generateItem(new RNG(77), { kind: 'Tome', rarity: 'epic' }),
+      // The peoples' kinds (Oct 2026): edges carrying the new mods — a speed
+      // aura and a mend, roots, a crit burn and a boolean — so the validators
+      // and every mutation reach them. Their own streams.
+      ...['Elixir of Plenty', 'Bloomstaff', 'Pepperport Sabre', 'Whisperfang'].map((kind, i) => generateItem(new RNG(90 + i), { kind, rarity: 'rare' })),
+    ],
     runKills: 25,
     runMods,
     reward: [
@@ -595,8 +603,8 @@ describe('v13 → v14: heroes lose their class (the classless rework)', () => {
     expect(computeCombat({ ...f, skills: [] }).mods.block?.count).toBe(2)
     expect(f.skills).toEqual(h.skills)
     for (const k of ['archetype', 'branchPath', 'color', 'accent']) expect(k in f).toBe(false)
-    // A run saved before item unlocks keeps dealing every kind.
-    expect([...new Set(snap!.itemPool)]).toEqual([...ALL_ITEM_KINDS])
+    // A run saved before item unlocks keeps dealing every kind it was dealing then (the classic catalogue).
+    expect([...new Set(snap!.itemPool)]).toEqual([...CLASSIC_ITEM_KINDS])
     assertPlayable(snap!, 'v13')
   })
 

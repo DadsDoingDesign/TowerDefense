@@ -442,11 +442,15 @@ failed. The solved gate stays per point: a choice is made for one hero, holding 
 | L2 · Sword & Shield | Firebrand | +45.7pt | +13.8pt | +19.9pt | **+26.5pt** | +1.5pt | +49.2pt | 91.3 |
 | L2 · Sword & Shield | Split Shot | +41.4pt | +27.6pt | +22.9pt | **+30.7pt** | +8.5pt | +54.1pt | 91.3 |
 | L2 · Sword & Shield | Deadeye | +0.0pt | +13.4pt | +4.0pt | **+5.8pt** | +0.5pt | +11.9pt | 94.0 |
-| L2 · Sword & Shield | Pepperfire | +8.6pt | +13.4pt | +6.5pt | **+9.5pt** | +1.0pt | +20.1pt | 105.0 |
-| L2 · Sword & Shield | Gilt Frame | +11.4pt | +0.0pt | +5.0pt | **+5.5pt** | +1.0pt | +11.7pt | 103.7 |
+| L2 · Sword & Shield | Spicy Peps | +8.6pt | +13.4pt | +6.5pt | **+9.5pt** | +1.0pt | +20.1pt | 105.0 |
+| L2 · Sword & Shield | Starweave | +11.4pt | +0.0pt | +5.0pt | **+5.5pt** | +1.0pt | +11.7pt | 103.7 |
 | L2 · Sword & Shield | Ore Sense | +7.1pt | +20.7pt | +20.9pt | **+16.3pt** | +5.5pt | +56.0pt | 109.6 |
-| L2 · Sword & Shield | Velvet Toll | +0.0pt | +9.8pt | +5.5pt | **+5.1pt** | +0.0pt | +65.3pt | 91.3 |
-| L2 · Sword & Shield | Moonwake | +41.4pt | +14.2pt | +19.4pt | **+25.0pt** | +2.5pt | +47.5pt | 91.3 |
+| L2 · Sword & Shield | Blood Price | +0.0pt | +9.8pt | +5.5pt | **+5.1pt** | +0.0pt | +65.3pt | 91.3 |
+| L2 · Sword & Shield | Thornbloom | +41.4pt | +14.2pt | +19.4pt | **+25.0pt** | +2.5pt | +47.5pt | 91.3 |
+| L2 · Sword & Shield | Bolder Bash | +51.4pt | +59.8pt | +49.3pt | **+53.5pt** | +27.4pt | +117.1pt | 109.6 |
+| L2 · Sword & Shield | Banner Bearer | +10.0pt | +4.9pt | +6.5pt | **+7.1pt** | +6.0pt | +16.6pt | 91.3 |
+| L2 · Sword & Shield | Venom Spit | +32.9pt | +13.4pt | +17.9pt | **+21.4pt** | +1.0pt | +45.0pt | 91.3 |
+| L2 · Sword & Shield | Overgrowth | +11.4pt | +11.0pt | +6.0pt | **+9.5pt** | −5.0pt | +13.8pt | 91.3 |
 | L2 · Dagger | Heavy Blows | +3.3pt | +6.5pt | +1.0pt | **+3.6pt** | +3.5pt | +0.9pt | 179.3 |
 | L2 · Dagger | Long Shot | +34.8pt | +48.8pt | +45.8pt | **+43.1pt** | +18.4pt | +107.0pt | 130.4 |
 | L2 · Dagger | Finisher | +14.3pt | +7.3pt | +5.5pt | **+9.0pt** | +2.5pt | +10.7pt | 153.5 |
@@ -462,11 +466,15 @@ failed. The solved gate stays per point: a choice is made for one hero, holding 
 | L2 · Dagger | Firebrand | +0.0pt | +0.0pt | +0.0pt | **+0.0pt** | +0.0pt | +0.0pt | 130.4 |
 | L2 · Dagger | Split Shot | +34.8pt | +43.9pt | +25.4pt | **+34.7pt** | +12.9pt | +58.7pt | 130.4 |
 | L2 · Dagger | Deadeye | +17.1pt | +7.3pt | +10.4pt | **+11.6pt** | +2.5pt | +21.5pt | 140.2 |
-| L2 · Dagger | Pepperfire | +34.8pt | +11.4pt | +16.9pt | **+21.0pt** | +7.5pt | +38.8pt | 150.0 |
-| L2 · Dagger | Gilt Frame | +22.9pt | +21.5pt | +13.9pt | **+19.4pt** | +6.0pt | +32.9pt | 157.3 |
+| L2 · Dagger | Spicy Peps | +34.8pt | +11.4pt | +16.9pt | **+21.0pt** | +7.5pt | +38.8pt | 150.0 |
+| L2 · Dagger | Starweave | +22.9pt | +21.5pt | +13.9pt | **+19.4pt** | +6.0pt | +32.9pt | 157.3 |
 | L2 · Dagger | Ore Sense | +5.2pt | +9.3pt | +7.0pt | **+7.2pt** | +5.0pt | +15.6pt | 156.5 |
-| L2 · Dagger | Velvet Toll | +0.0pt | +0.8pt | +1.5pt | **+0.8pt** | +1.5pt | +56.9pt | 130.4 |
-| L2 · Dagger | Moonwake | +32.9pt | +19.5pt | +20.4pt | **+24.3pt** | +8.5pt | +47.8pt | 130.4 |
+| L2 · Dagger | Blood Price | +0.0pt | +0.8pt | +1.5pt | **+0.8pt** | +1.5pt | +56.9pt | 130.4 |
+| L2 · Dagger | Thornbloom | +32.9pt | +19.5pt | +20.4pt | **+24.3pt** | +8.5pt | +47.8pt | 130.4 |
+| L2 · Dagger | Bolder Bash | +3.3pt | +14.6pt | +17.9pt | **+12.0pt** | +28.4pt | +39.5pt | 156.5 |
+| L2 · Dagger | Banner Bearer | +14.3pt | +6.1pt | +5.0pt | **+8.5pt** | +7.0pt | +11.3pt | 130.4 |
+| L2 · Dagger | Venom Spit | +31.4pt | +13.0pt | +22.9pt | **+22.4pt** | +8.5pt | +51.7pt | 130.4 |
+| L2 · Dagger | Overgrowth | +5.2pt | +3.7pt | +2.0pt | **+3.6pt** | −2.5pt | +4.1pt | 130.4 |
 | L2 · Wand | Heavy Blows | +0.0pt | +55.3pt | +43.8pt | **+33.0pt** | +2.0pt | +160.4pt | 65.0 |
 | L2 · Wand | Long Shot | +1.4pt | +45.5pt | +0.5pt | **+15.8pt** | −1.0pt | +7.0pt | 47.3 |
 | L2 · Wand | Finisher | +0.0pt | +28.5pt | +33.3pt | **+20.6pt** | +0.0pt | +130.5pt | 54.5 |
@@ -482,11 +490,15 @@ failed. The solved gate stays per point: a choice is made for one hero, holding 
 | L2 · Wand | Firebrand | +0.0pt | +0.0pt | +0.0pt | **+0.0pt** | +0.0pt | +0.0pt | 47.3 |
 | L2 · Wand | Split Shot | +1.4pt | +1.2pt | +1.5pt | **+1.4pt** | +0.0pt | +4.3pt | 47.3 |
 | L2 · Wand | Deadeye | +0.0pt | +50.4pt | +9.0pt | **+19.8pt** | +2.0pt | +33.8pt | 48.6 |
-| L2 · Wand | Pepperfire | +0.0pt | +56.5pt | +50.2pt | **+35.6pt** | +0.0pt | +176.2pt | 54.4 |
-| L2 · Wand | Gilt Frame | +1.4pt | +37.0pt | +15.9pt | **+18.1pt** | +0.0pt | +54.0pt | 53.7 |
+| L2 · Wand | Spicy Peps | +0.0pt | +56.5pt | +50.2pt | **+35.6pt** | +0.0pt | +176.2pt | 54.4 |
+| L2 · Wand | Starweave | +1.4pt | +37.0pt | +15.9pt | **+18.1pt** | +0.0pt | +54.0pt | 53.7 |
 | L2 · Wand | Ore Sense | +1.4pt | +61.4pt | +51.7pt | **+38.2pt** | +9.5pt | +182.6pt | 56.7 |
-| L2 · Wand | Velvet Toll | +0.0pt | +27.6pt | +16.4pt | **+14.7pt** | −4.0pt | +132.0pt | 47.3 |
-| L2 · Wand | Moonwake | +1.4pt | +58.1pt | +48.8pt | **+36.1pt** | +3.5pt | +174.4pt | 47.3 |
+| L2 · Wand | Blood Price | +0.0pt | +27.6pt | +16.4pt | **+14.7pt** | −4.0pt | +132.0pt | 47.3 |
+| L2 · Wand | Thornbloom | +1.4pt | +58.1pt | +48.8pt | **+36.1pt** | +3.5pt | +174.4pt | 47.3 |
+| L2 · Wand | Bolder Bash | +1.4pt | +61.4pt | +48.8pt | **+37.2pt** | +4.5pt | +174.4pt | 56.7 |
+| L2 · Wand | Banner Bearer | +1.4pt | +40.2pt | +14.4pt | **+18.7pt** | +2.5pt | +48.8pt | 47.3 |
+| L2 · Wand | Venom Spit | +0.0pt | +56.5pt | +42.8pt | **+33.1pt** | +2.5pt | +150.6pt | 47.3 |
+| L2 · Wand | Overgrowth | +1.4pt | +36.2pt | +43.3pt | **+27.0pt** | −7.0pt | +156.7pt | 47.3 |
 | L3 · Sword & Shield | Berserk | +27.5pt | +16.8pt | +7.8pt | **+17.4pt** | +4.3pt | +27.8pt | 200.4 |
 | L3 · Sword & Shield | Weaponmaster | +5.0pt | +11.8pt | +7.0pt | **+7.9pt** | +3.5pt | +23.4pt | 176.8 |
 | L3 · Sword & Shield | Volley | +24.2pt | +17.5pt | +24.8pt | **+22.2pt** | +12.4pt | +79.6pt | 114.5 |
@@ -498,6 +510,7 @@ failed. The solved gate stays per point: a choice is made for one hero, holding 
 | L3 · Sword & Shield | Warden of Ash | +39.2pt | +36.0pt | +43.0pt | **+39.4pt** | +22.1pt | +127.1pt | 114.5 |
 | L3 · Sword & Shield | Hexblade | +1.2pt | +0.7pt | −0.8pt | **+0.4pt** | −1.9pt | −4.4pt | 114.5 |
 | L3 · Sword & Shield | Stormcaller | +22.5pt | +23.9pt | +25.6pt | **+24.0pt** | +10.5pt | +84.3pt | 154.6 |
+| L3 · Sword & Shield | Tinker’s Spark | +9.6pt | +12.1pt | +13.2pt | **+11.6pt** | +4.3pt | +44.7pt | 143.2 |
 | L3 · Dagger | Berserk | +63.3pt | +14.5pt | +17.1pt | **+31.6pt** | +5.4pt | +73.3pt | 290.9 |
 | L3 · Dagger | Weaponmaster | +64.2pt | +16.2pt | +19.0pt | **+33.1pt** | +6.2pt | +79.4pt | 281.3 |
 | L3 · Dagger | Volley | +60.8pt | +21.5pt | +9.3pt | **+30.6pt** | +10.9pt | +34.2pt | 166.3 |
@@ -509,6 +522,7 @@ failed. The solved gate stays per point: a choice is made for one hero, holding 
 | L3 · Dagger | Warden of Ash | +67.1pt | +25.9pt | +27.1pt | **+40.0pt** | +15.1pt | +113.9pt | 166.3 |
 | L3 · Dagger | Hexblade | +1.7pt | +2.4pt | +6.2pt | **+3.4pt** | +0.4pt | +26.4pt | 166.3 |
 | L3 · Dagger | Stormcaller | +68.3pt | +59.3pt | +41.1pt | **+56.2pt** | +18.2pt | +173.0pt | 224.4 |
+| L3 · Dagger | Tinker’s Spark | +65.8pt | +29.6pt | +27.1pt | **+40.9pt** | +12.0pt | +111.2pt | 207.8 |
 | L3 · Wand | Berserk | +25.0pt | +26.6pt | +43.0pt | **+31.5pt** | +16.7pt | +678.6pt | 103.7 |
 | L3 · Wand | Weaponmaster | +20.4pt | +19.2pt | +25.2pt | **+21.6pt** | +7.0pt | +415.5pt | 91.4 |
 | L3 · Wand | Volley | +1.2pt | −0.3pt | +6.6pt | **+2.5pt** | +0.0pt | +117.9pt | 59.2 |
@@ -520,18 +534,19 @@ failed. The solved gate stays per point: a choice is made for one hero, holding 
 | L3 · Wand | Warden of Ash | +78.8pt | +74.4pt | +80.2pt | **+77.8pt** | +36.8pt | +1317.9pt | 59.2 |
 | L3 · Wand | Hexblade | +50.0pt | +40.1pt | +57.4pt | **+49.1pt** | +19.4pt | +966.7pt | 59.2 |
 | L3 · Wand | Stormcaller | +71.7pt | +45.1pt | +67.1pt | **+61.3pt** | +15.9pt | +1129.8pt | 80.0 |
+| L3 · Wand | Tinker’s Spark | +21.7pt | +21.9pt | +31.0pt | **+24.9pt** | +8.5pt | +528.6pt | 74.1 |
 
 | Point | Options | Lead of the best over the runner-up | The greedy (heroDps) pick | The measured best |
 |---|--:|--:|---|---|
 | L1 · Sword & Shield | 14 | +19.3pt | Quick Hands | Cleave |
 | L1 · Dagger | 14 | +2.4pt | Keen Eye | Arc Spark |
 | L1 · Wand | 14 | +16.5pt | Quick Hands | Hold Fast |
-| L2 · Sword & Shield | 20 | +19.1pt | Siphon | Wildfire |
-| L2 · Dagger | 20 | +8.4pt | Siphon | Long Shot |
-| L2 · Wand | 20 | +0.0pt | Siphon | Shield Wall |
-| L3 · Sword & Shield | 11 | +15.4pt | Berserk | Warden of Ash |
-| L3 · Dagger | 11 | +16.2pt | Berserk | Stormcaller |
-| L3 · Wand | 11 | +0.0pt | Berserk | Bulwark |
+| L2 · Sword & Shield | 24 | +0.0pt | Siphon | Wildfire |
+| L2 · Dagger | 24 | +8.4pt | Siphon | Long Shot |
+| L2 · Wand | 24 | +0.0pt | Siphon | Shield Wall |
+| L3 · Sword & Shield | 12 | +15.4pt | Berserk | Warden of Ash |
+| L3 · Dagger | 12 | +15.4pt | Berserk | Stormcaller |
+| L3 · Wand | 12 | +0.0pt | Berserk | Bulwark |
 
 **Invariants.** Every skill moves at least one bench by ≥ +2.0pt on at least one kit (none is
 dead), and no point's best skill leads its runner-up by more than +20.0pt on the mean (none is
@@ -698,7 +713,7 @@ Survival curve — share of fresh runs that clear each node:
 | Depth | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 |
 |---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
 | Strict floor | 100% | 100% | 99% | 96% | 84% | 50% | 14% | 12% | 4% | 1% | 0% | 0% |
-| Strict + 2 hires | 100% | 100% | 99% | 96% | 90% | 79% | 46% | 44% | 19% | 4% | 1% | 0% |
+| Strict + 2 hires | 100% | 100% | 99% | 96% | 90% | 80% | 46% | 43% | 18% | 4% | 1% | 0% |
 | specials | 100% | 100% | 100% | 100% | 100% | 98% | 89% | 87% | 78% | 45% | 29% | 12% |
 | battles | 100% | 100% | 100% | 100% | 98% | 95% | 86% | 85% | 55% | 29% | 18% | 12% |
 | recruits | 100% | 100% | 100% | 100% | 98% | 94% | 86% | 85% | 55% | 28% | 18% | 11% |
@@ -810,8 +825,8 @@ two standard errors of that paired difference.
 | Hiring Hall | 14% (+3±5) | 10% (−3±5) | 9% (−3±5) | 14% (−3±6) | −3pt |
 | Scouts 2 | 12% (+1±6) | 10% (−2±5) | 10% (−2±5) | 18% (+1±7) | −2pt |
 | Pack slots 10 | 11% (+0±0) | 13% (+0±0) | 12% (+0±0) | 17% (+0±0) | +0pt |
-| Focus Ironvein +60% | 11% (+0±2) | 12% (−1±2) | 11% (−1±2) | 16% (−1±3) | −1pt |
-| everything the HQ sells | 36% (+25±8) | 25% (+12±7) | 23% (+11±6) | 35% (+18±8) | +11pt |
+| Focus Ironvein +60% | 11% (+0±0) | 13% (+0±0) | 12% (+0±0) | 17% (+0±0) | +0pt |
+| everything the HQ sells | 38% (+27±8) | 26% (+13±7) | 24% (+12±7) | 38% (+21±8) | +12pt |
 
 **The invariant.** No HQ state — any office alone, or everything the HQ sells — may
 measure below zero HQ by more than the paired
@@ -841,7 +856,7 @@ run. A card that promises forks has to produce forks:
 - **Scouts** (the old Scout Reports and Cartographer's Table, folded into Operations) are width, not length: same 13.0 layers, choiceless steps 40% → 5%, mixed forks 51% → 79%, and Elites with no way past 29% → 0%. Best line +1pt.
 - **The Opening deal is where the power is, and it is bounded:** five levels, 2,950 gold in all, worth +29pt at its best and then finished (levels 1–3 alone: +7pt). The old hub's ramp (wagons, purse, stats, an extra item) is retired and refunded; the extra hero lives on as the deal's last level.
 - **Pack slots and focus** are levers on the run's texture, not its odds: +0pt and +0pt at their best. "Fewer boulders" was cut in October 2026 (it measured −4pt) and refunded; boulders keep a floor of 2 a field — a balance lever the tuning pass owns.
-- **Everything the HQ sells** reads +25pt at its best.
+- **Everything the HQ sells** reads +27pt at its best.
 
 ## 13. Stake tiers (is carrying more cargo ever worth it?)
 
@@ -869,15 +884,15 @@ brings home: 25% of the road's gold (kill gold, node purses, sales). The company
 
 | Crates | Stake | What it adds | Danger | Delivered (press on) | Contract pay (press on) | Cashed out (policy) | **Contract pay (policy)** | Δ pay | Bank net (policy) |
 |--:|--:|---|--:|--:|--:|--:|--:|--:|--:|
-| 0 | 0 | escort · standard raiders | 1/5 | 16% | 123.8 | 13% | **121.7** | — | 366.0 |
-| 1 | 50 | 1 more elite an act · Past the second city, raiders 10% stronger and steal 10% more | 2/5 | 13% | 164.8 | 12% | **163.1** | +41 | 398.9 |
-| 2 | 100 | 2 more elites an act · Past the second city, raiders 14% stronger and steal 14% more | 2/5 | 14% | 180.6 | 11% | **181.3** | +18 | 427.4 |
-| 3 | 150 | 3 more elites an act · Past the second city, raiders 21% stronger and steal 21% more | 3/5 | 11% | 211.9 | 10% | **212.5** | +31 | 447.4 |
-| 4 | 200 | 4 more elites an act · Past the second city, raiders 35% stronger and steal 35% more | 3/5 | 8% | 250.6 | 11% | **249.3** | +37 | 472.9 |
-| 5 | 250 | 5 more elites an act · Past the second city, raiders 45% stronger and steal 45% more | 4/5 | 7% | 287.5 | 11% | **288.2** | +39 | 505.4 |
-| 6 | 300 | 6 more elites an act · Past the second city, raiders 58% stronger and steal 58% more | 4/5 | 5% | 329.0 | 10% | **328.5** | +40 | 533.9 |
-| 7 | 350 | 7 more elites an act · Past the second city, raiders 72% stronger and steal 72% more | 5/5 | 4% | 362.2 | 10% | **362.0** | +33 | 556.9 |
-| 8 | 400 | 8 more elites an act · Past the second city, raiders 86% stronger and steal 86% more | 5/5 | 4% | 415.5 | 10% | **414.3** | +52 | 606.2 |
+| 0 | 0 | escort · standard raiders | 1/5 | 15% | 122.9 | 13% | **121.0** | — | 363.4 |
+| 1 | 50 | 1 more elite an act · Past the second city, raiders 10% stronger and steal 10% more | 2/5 | 12% | 164.6 | 12% | **163.0** | +42 | 396.1 |
+| 2 | 100 | 2 more elites an act · Past the second city, raiders 14% stronger and steal 14% more | 2/5 | 14% | 183.1 | 11% | **184.2** | +21 | 432.9 |
+| 3 | 150 | 3 more elites an act · Past the second city, raiders 21% stronger and steal 21% more | 3/5 | 12% | 214.9 | 9% | **215.9** | +32 | 452.9 |
+| 4 | 200 | 4 more elites an act · Past the second city, raiders 35% stronger and steal 35% more | 3/5 | 8% | 253.3 | 11% | **251.9** | +36 | 476.4 |
+| 5 | 250 | 5 more elites an act · Past the second city, raiders 45% stronger and steal 45% more | 4/5 | 7% | 289.6 | 10% | **288.7** | +37 | 507.0 |
+| 6 | 300 | 6 more elites an act · Past the second city, raiders 58% stronger and steal 58% more | 4/5 | 6% | 331.6 | 10% | **331.0** | +42 | 537.6 |
+| 7 | 350 | 7 more elites an act · Past the second city, raiders 72% stronger and steal 72% more | 5/5 | 4% | 369.5 | 10% | **369.2** | +38 | 566.6 |
+| 8 | 400 | 8 more elites an act · Past the second city, raiders 86% stronger and steal 86% more | 5/5 | 4% | 417.7 | 10% | **416.4** | +47 | 609.3 |
 
 **The invariants.** The run-level gates read **contract delivery** (October audit, designer item 1):
 
@@ -921,13 +936,13 @@ against **41.0%** (n=600, paired; ±1.5–2pt): the purse at a city holds the ro
 flat tax on the next merchant, not a decision. The scarcity is the city itself (two hires a run), and the city's pay goes
 to the bank, not the purse. The hire stays free.
 
-**Zero-meta escort: 16%** (±1.5pt, 1σ) against 12%–20% — inside the band by more than 1σ.
+**Zero-meta escort: 15%** (±1.5pt, 1σ) against 12%–20% — inside the band by more than 1σ.
 
-**Zero-meta ladder: each crate costs 17% of the tier below's delivery** on the fit (±1.5pt, 1σ; floor 8%). Step by step: 1c +3.5pt ±1.4 · 2c −1.3pt ±1.3 · 3c +2.7pt ±1.1 · 4c +3.0pt ±1.0 · 5c +1.2pt ±0.8 · 6c +1.7pt ±0.7 · 7c +1.7pt ±0.6 · 8c +0.2pt ±0.2 (a cost per crate, paired 1σ).
+**Zero-meta ladder: each crate costs 16% of the tier below's delivery** on the fit (±1.5pt, 1σ; floor 8%). Step by step: 1c +3.2pt ±1.4 · 2c −2.0pt ±1.3 · 3c +2.7pt ±1.1 · 4c +3.2pt ±1.1 · 5c +1.0pt ±0.8 · 6c +1.8pt ±0.8 · 7c +1.2pt ±0.6 · 8c +0.7pt ±0.3 (a cost per crate, paired 1σ).
 
-Measured: delivery by tier is 16% → 13% → 14% → 11% → 8% → 7% → 5% → 4% → 4%; contract pay (cash-out line) 121.7 → 163.1 → 181.3 → 212.5 → 249.3 → 288.2 → 328.5 → 362.0 → 414.3; bank net 366.0 → 398.9 → 427.4 → 447.4 → 472.9 → 505.4 → 533.9 → 556.9 → 606.2.
+Measured: delivery by tier is 15% → 12% → 14% → 12% → 8% → 7% → 6% → 4% → 4%; contract pay (cash-out line) 121.0 → 163.0 → 184.2 → 215.9 → 251.9 → 288.7 → 331.0 → 369.2 → 416.4; bank net 363.4 → 396.1 → 432.9 → 452.9 → 476.4 → 507.0 → 537.6 → 566.6 → 609.3.
 
-**Bank vs. stake (reported, not gated).** The bank's free interest is capped at 20 gold a finished contract. Every stake measured adds more than that to a contract's expected pay over the escort (cash-out line): 1c +41, 2c +60, 3c +91, 4c +128, 5c +166, 6c +207, 7c +240, 8c +293 — the least is +41 gold, 21 above the cap.
+**Bank vs. stake (reported, not gated).** The bank's free interest is capped at 20 gold a finished contract. Every stake measured adds more than that to a contract's expected pay over the escort (cash-out line): 1c +42, 2c +63, 3c +95, 4c +131, 5c +168, 6c +210, 7c +248, 8c +295 — the least is +42 gold, 22 above the cap.
 
 **Not priced here: the unlocks.** A delivery also opens a skill and an item, a skill per milestone
 crate and an item per two crates, at a level floor that rises with the stake (`run/standing`).
@@ -945,19 +960,19 @@ stake elite stands where the map leaves a way round it: what a crate costs the v
 
 | Crates | Delivered (press on) | ±1σ | Contract pay (policy) | Bank net (policy) |
 |--:|--:|--:|--:|--:|
-| 0 | 41% | 2.0pt | 188.9 | 627.9 |
-| 1 | 38% | 2.0pt | 239.2 | 670.2 |
-| 2 | 40% | 2.0pt | 397.0 | 837.3 |
-| 3 | 34% | 1.9pt | 415.7 | 826.7 |
-| 4 | 25% | 1.8pt | 428.2 | 790.6 |
-| 5 | 22% | 1.7pt | 461.4 | 805.5 |
-| 6 | 20% | 1.6pt | 512.8 | 840.2 |
-| 7 | 14% | 1.4pt | 525.8 | 820.9 |
-| 8 | 12% | 1.3pt | 578.5 | 856.5 |
+| 0 | 45% | 2.0pt | 193.9 | 657.7 |
+| 1 | 39% | 2.0pt | 241.4 | 681.6 |
+| 2 | 39% | 2.0pt | 405.2 | 845.4 |
+| 3 | 35% | 1.9pt | 431.3 | 849.4 |
+| 4 | 29% | 1.9pt | 454.2 | 840.9 |
+| 5 | 26% | 1.8pt | 489.5 | 859.5 |
+| 6 | 24% | 1.7pt | 542.8 | 893.2 |
+| 7 | 19% | 1.6pt | 555.8 | 876.1 |
+| 8 | 14% | 1.4pt | 598.8 | 891.6 |
 
-**Veteran escort: 41%** against 30%–45% — inside the band by more than 1σ. **Max stake (8 crates): 12%** against 8%–16% — inside the band by more than 1σ. The veteran's escort leads the zero-meta escort by +24.7pt: what the meta layer and the player's read are worth.
+**Veteran escort: 45%** against 30%–45% — inside the band, **within 1σ of its edge**. **Max stake (8 crates): 14%** against 8%–16% — inside the band by more than 1σ. The veteran's escort leads the zero-meta escort by +29.3pt: what the meta layer and the player's read are worth.
 
-**Veteran's ladder: each crate costs 14% of the tier below's delivery** on the fit (±0.8pt, 1σ; floor 8%). Step by step: 1c +2.8pt ±2.0 · 2c −1.7pt ±1.7 · 3c +5.8pt ±1.6 · 4c +8.8pt ±1.5 · 5c +2.7pt ±1.3 · 6c +2.7pt ±1.0 · 7c +5.0pt ±1.0 · 8c +2.7pt ±0.7 (a cost per crate, paired 1σ).
+**Veteran's ladder: each crate costs 12% of the tier below's delivery** on the fit (±0.8pt, 1σ; floor 8%). Step by step: 1c +6.0pt ±2.1 · 2c −0.3pt ±1.7 · 3c +4.3pt ±1.6 · 4c +5.3pt ±1.5 · 5c +3.0pt ±1.3 · 6c +2.7pt ±1.0 · 7c +5.0pt ±1.2 · 8c +4.7pt ±1.0 (a cost per crate, paired 1σ).
 
 ### 13b. The routes — each company's ground, as an escort
 
@@ -968,10 +983,10 @@ off the others is a lever for the tuning pass.
 
 | Company | Ground | Delivered | Contract pay (policy) | Bank net (policy) |
 |---|---|--:|--:|--:|
-| Peppercorn Co. (Spice) | Wildfire | 15% | 123.7 | 371.4 |
-| Easel House (Art) | Flooded canals | 17% | 125.6 | 381.0 |
-| Ironvein (Metals & Stones) | Quarry boulders | 16% | 125.7 | 381.1 |
-| Rosethread (Silk) | Fords and fires | 17% | 126.6 | 385.8 |
+| Peppercorn Co. (Spice) | Wildfire | 14% | 122.1 | 369.9 |
+| Easel House (Art) | Flooded canals | 17% | 127.6 | 386.1 |
+| Ironvein (Metals & Stones) | Quarry boulders | 16% | 125.5 | 381.2 |
+| Rosethread (Silk) | Fords and fires | 16% | 125.3 | 379.6 |
 | Moonquill (Scrolls & Arcana) | Cursed ground | 19% | 127.9 | 395.2 |
 
 ## 14. Run variety — battlefields and wave composition
@@ -1393,27 +1408,27 @@ company sets a condition at once:
 - **Moonquill: More cursed ground.** 2 more cursed patches on every field.
 - And every goblin clan marches from the first fight, 7% stronger and stealing 7% more (the muster).
 
-**The company.** A strong late-game militia: every skill card a contract can unlock (41, feat cards aside), every Level 1–3
+**The company.** A strong late-game militia: every skill card a contract can unlock (46, feat cards aside), every Level 1–3
 item kind, and the HQ bought out (Opening deal 5, the Hiring Hall, pack slots 10, focus 3, the scouts) — the save that
 opens the door — §13c's **veteran**, who reads its skill offers (`build: 'best'`). The adaptive route, 210 runs a row on the paired seeds of §12–§13.
 
 | Road | Delivered | Bank net a run (gold) |
 |---|--:|--:|
-| Escort on Rosethread's road (for scale) | 41% | 623 |
-| 4 crates on Rosethread's road (a good run, for scale) | 20% | 720 |
-| **Sovereign Route** · no Sovereign item owned | 42% | 6113 |
-| **Sovereign Route** · all five Sovereign items owned | 43% | 6418 |
-| Sovereign Route without its ground (fire, lakes, boulders, curses) | 34% | 3644 |
-| Sovereign Route without Rosethread's double prices | 45% | 6875 |
-| Sovereign Route without the muster (the usual clan ramp, raiders at full strength ×1) | 42% | 6119 |
+| Escort on Rosethread's road (for scale) | 41% | 632 |
+| 4 crates on Rosethread's road (a good run, for scale) | 27% | 802 |
+| **Sovereign Route** · no Sovereign item owned | 44% | 6565 |
+| **Sovereign Route** · all five Sovereign items owned | 48% | 7733 |
+| Sovereign Route without its ground (fire, lakes, boulders, curses) | 40% | 5404 |
+| Sovereign Route without Rosethread's double prices | 45% | 7033 |
+| Sovereign Route without the muster (the usual clan ramp, raiders at full strength ×1) | 46% | 7300 |
 
-**The charter's delivery rate for this company: 42%** (43% once all five Sovereign items are owned). The payout is 4× the fee, so the charter breaks even at a 23% delivery rate; measured, a charter is worth **+6113 gold** to the bank on average (the fee and the road's share included; the advance is the company's).
+**The charter's delivery rate for this company: 44%** (48% once all five Sovereign items are owned). The payout is 4× the fee, so the charter breaks even at a 23% delivery rate; measured, a charter is worth **+6565 gold** to the bank on average (the fee and the road's share included; the advance is the company's).
 
-**The fee against savings.** The same company banks 623 gold net from an escort and 720 from a 4-crate contract (cash-out line), so the 7,000 fee is about **9.7 good runs** of savings.
+**The fee against savings.** The same company banks 632 gold net from an escort and 802 from a 4-crate contract (cash-out line), so the 7,000 fee is about **8.7 good runs** of savings.
 
-**Each condition, lifted one at a time** (delivery against the full charter's 42%): without the ground 34% (−8.1pt), without the double prices 45% (+2.4pt), without the muster 42% (+0.0pt). A positive delta is what that condition costs; a negative one means the charter is easier with it than without — at 210 runs a row the paired noise is several points, so read the signs, not the decimals.
+**Each condition, lifted one at a time** (delivery against the full charter's 44%): without the ground 40% (−3.8pt), without the double prices 45% (+1.4pt), without the muster 46% (+2.4pt). A positive delta is what that condition costs; a negative one means the charter is easier with it than without — at 210 runs a row the paired noise is several points, so read the signs, not the decimals.
 
-_Tuned in the tuning pass: the fee 5,000 → 7,000, the payout 20,000 → 35,000 and the muster's strength (×1.07, which the clans alone did not have); in the merged tuning pass the payout 35,000 → 30,000, so a charter nets about 1.5–3× this company's escort (+6113 against +623: 9.8×) and breaks even within a few points of its delivery rate. The five conditions are the designer's and are as built._
+_Tuned in the tuning pass: the fee 5,000 → 7,000, the payout 20,000 → 35,000 and the muster's strength (×1.07, which the clans alone did not have); in the merged tuning pass the payout 35,000 → 30,000, so a charter nets about 1.5–3× this company's escort (+6565 against +632: 10.4×) and breaks even within a few points of its delivery rate. The five conditions are the designer's and are as built._
 
 ## Verdict
 
