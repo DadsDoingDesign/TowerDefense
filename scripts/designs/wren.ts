@@ -35,27 +35,38 @@ import { D09_RE } from './wren-d09-rE'
 import { D09_E_FINAL } from './wren-d09-E-final'
 import { D09_E_APRON } from './wren-d09-E-apron'
 import { D09_E_SMOCK } from './wren-d09-E-smock'
+import { D09_E_NOSE_TAN } from './wren-d09-E-nose-tan'
+import { D09_E_NOSE_ROSY } from './wren-d09-E-nose-rosy'
 
 /** The designer's pick (option E) made final, with its two outfit variants; the first is the recommended one. */
 const E_OUTFITS: readonly { d: Design; label: string }[] = [
-  { d: D09_E_FINAL, label: 'Waistcoat over a linen shirt (recommended)' },
-  { d: D09_E_APRON, label: 'Leather apron, a pocket of cuttings' },
-  { d: D09_E_SMOCK, label: 'Jade smock, linen collar, belt' },
+  { d: D09_E_FINAL, label: 'Waistcoat: V-neck, button line, armholes (recommended)' },
+  { d: D09_E_APRON, label: 'Apron: bib, neck strap, ties, pocket on the belly' },
+  { d: D09_E_SMOCK, label: 'Smock: yoke, gathers, a belt cinching it' },
+]
+/** The nose tints, on the final's body; the first is the recommended one. */
+const E_NOSES: readonly { d: Design; label: string }[] = [
+  { d: D09_E_FINAL, label: 'Ruddy skin (recommended)' },
+  { d: D09_E_NOSE_TAN, label: 'The pawn\'s tan' },
+  { d: D09_E_NOSE_ROSY, label: 'Rosier, coral' },
 ]
 /** Callouts on the final: every part named, pointed at (canvas px). */
 const E_PARTS: readonly { name: string; at: [number, number]; side: 'l' | 'r' }[] = [
   { name: 'seedling', at: [53, 27], side: 'r' },
   { name: 'flowerpot (upside down)', at: [44, 40], side: 'l' },
-  { name: 'pot rim on the shoulders', at: [31, 57], side: 'l' },
-  { name: 'nose, hanging', at: [57, 62], side: 'r' },
-  { name: 'moustache and tuft', at: [50, 64], side: 'l' },
-  { name: 'linen shirt', at: [30, 62], side: 'l' },
-  { name: 'rounded back', at: [35, 66], side: 'l' },
-  { name: 'waistcoat', at: [45, 70], side: 'l' },
-  { name: 'brass buttons', at: [63, 71], side: 'r' },
-  { name: 'fist', at: [27, 68], side: 'l' },
-  { name: 'root stick', at: [77, 72], side: 'r' },
-  { name: 'clay boots', at: [42, 79], side: 'l' },
+  { name: 'pot rim on the shoulders', at: [34, 57], side: 'l' },
+  { name: 'moustache', at: [50, 62], side: 'l' },
+  { name: 'shirt sleeve, rolled', at: [31, 64], side: 'l' },
+  { name: 'elbow', at: [30, 68], side: 'l' },
+  { name: 'fist on the hip', at: [40, 70], side: 'l' },
+  { name: 'shirt tail over the back', at: [38, 75], side: 'l' },
+  { name: 'clay boots', at: [42, 84], side: 'l' },
+  { name: 'nose, hanging', at: [58, 63], side: 'r' },
+  { name: 'V-neck, the shirt', at: [65, 66], side: 'r' },
+  { name: 'front sleeve', at: [71, 63], side: 'r' },
+  { name: 'waistcoat', at: [55, 75], side: 'r' },
+  { name: 'button line', at: [65, 74], side: 'r' },
+  { name: 'root stick', at: [80, 77], side: 'r' },
 ]
 
 /** The five refinement options of the pick (d09), each pushing one direction; the label is what it pushes. */
@@ -483,7 +494,7 @@ async function eFinal() {
   const pack = await Promise.all(PACK_PEOPLE.map(async (p) => ({ ...p, img: await readPack(p.file) })))
   const cell = async (img: Rgba, s: number) => b64(await png(img, s))
   const fin = E_OUTFITS[0].d
-  const all = frameBox([D09_RE, ...E_OUTFITS.map((o) => o.d)].flatMap((d) => [...idleFrames(d), ...ticFrames(d)]))
+  const all = frameBox([D09_RE, ...E_OUTFITS.map((o) => o.d), ...E_NOSES.map((o) => o.d)].flatMap((d) => [...idleFrames(d), ...ticFrames(d)]))
   const x = Math.max(0, all.x0 - 1), y = Math.max(0, all.y0 - 1), w = Math.min(W, all.x1 + 2) - x, h = Math.min(H, all.y1 + 2) - y
   const cut = (img: Rgba) => crop(img, x, y, w, h)
   const S = 5
@@ -504,6 +515,9 @@ async function eFinal() {
   const callout = `<div class="call" style="width:${lw * 2 + figW}px;height:${figH}px"><img class="grass" style="position:absolute;left:${lw}px;top:0" src="${await cell(cut(render(fin)), S)}">
     <svg width="${lw * 2 + figW}" height="${figH}" style="position:absolute;left:0;top:0">${lines.join('')}</svg>${labels.join('')}</div>`
   const variants = await Promise.all(E_OUTFITS.map(async ({ d, label }, i) => `<div class="v${i === 0 ? ' rec' : ''}"><img src="${await cell(cut(render(d)), 4)}"><b>${label}</b></div>`))
+  const noseCut = (img: Rgba) => crop(img, 44, 52, 30, 20)
+  const noses = await Promise.all(E_NOSES.map(async ({ d, label }, i) => `<div class="v${i === 0 ? ' rec' : ''}"><img src="${await cell(noseCut(render(d)), 4)}"><b>${label}</b></div>`))
+  const noseOnes = await Promise.all([...pack.map((p) => p.img).slice(0, 1), ...E_NOSES.map(({ d }) => cut(render(d)))].map((im) => cell(im, 1)))
   const ones = await Promise.all([...pack.map((p) => p.img), cut(render(D09_RE)), cut(render(fin))].map((im) => cell(im, 1)))
   const twos = await Promise.all([...pack.map((p) => p.img), cut(render(fin))].map((im) => cell(im, 2)))
   const html = `<!doctype html><meta charset="utf-8"><style>${CSS(grass)}
@@ -517,11 +531,13 @@ async function eFinal() {
     .v.rec{border-color:#ffe46b} .v b{font-size:12.5px;color:#fff;text-shadow:0 2px 0 #161c2e;max-width:230px;text-align:center}
     .k{font-size:12px;color:#c9cbbf;margin:10px 0 3px}
     .row{display:flex;align-items:flex-end;gap:8px;padding:8px 10px;border-radius:6px;flex-wrap:wrap}
-    </style><div class="wrap"><h1>9. Flowerpot Potter · option E, final</h1><p>Option E as chosen, with the nose dangling down from under the rim and one clear garment. The stoop, the shoulders, the rounded back, the wide boots and the root stick are kept.</p>
+    </style><div class="wrap"><h1>9. Flowerpot Potter · option E, final</h1><p>Option E as chosen: the nose hangs down from under the rim in a ruddy skin tone, and the torso is a body first (chest, belly, the hump of the back, lit from the upper left) with arms bent at the elbow into the fists, the garment cut to wrap it. The stoop, the shoulders, the wide boots and the root stick are kept.</p>
     <div class="top grass"><img src="${await cell(cut(render(D09_RE)), 4)}"><img src="${await cell(cut(render(fin)), 4)}"></div>
     <div class="lab"><span>Option E as picked · 4×</span><span>Final · 4×</span></div>
     <h2>Every part, named (5×)</h2>${callout}
-    <h2>The outfit: three ways at 4× (the gold frame is the recommended one)</h2><div class="vs grass">${variants.join('')}</div>
+    <h2>The outfit, rebuilt on the body: three ways at 4× (the gold frame is the recommended one)</h2><div class="vs grass">${variants.join('')}</div>
+    <h2>The nose: three skin tints at 4× and 1× (the gold frame is the recommended one)</h2><div class="vs grass">${noses.join('')}</div>
+    <div class="row grass">${noseOnes.map((u) => `<img src="${u}">`).join('')}</div>
     <div class="k">At 1× (game size): the CC0 pawn, knight, archer and torch goblin, then option E and the final</div>
     <div class="row grass">${ones.map((u) => `<img src="${u}">`).join('')}</div>
     <div class="k">The same at 2×</div>

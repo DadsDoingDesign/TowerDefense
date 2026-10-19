@@ -26,7 +26,7 @@ export const PAL: Readonly<Record<string, string>> = {
   // skin (the pawn's hands)
   e: '#977b6b', E: '#d5b583', F: '#efe1ab',
   // the rosy gnome nose
-  n: '#9e7466', N: '#c5836e', m: '#ffcfb4',
+  n: '#9e7466', N: '#c5836e', m: '#ffcfb4', M: '#eb876a',
   // wood, wicker, leather (the pines' trunks)
   d: '#5a4646', D: '#866353', h: '#b48355', H: '#dab570', x: '#685757', X: '#8e7b67',
   // terracotta
