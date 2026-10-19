@@ -1,0 +1,58 @@
+[
+  {
+    "id": "motion-saffra",
+    "group": "Character motion",
+    "people": "Saffra",
+    "title": "Saffra — motion",
+    "caption": "Saffra: a quick toe-tap, she flips and catches the pepper sack, then points with a wink when picked. Is it brisk and impatient?",
+    "file": "motion-saffra.webp"
+  },
+  {
+    "id": "motion-odile",
+    "group": "Character motion",
+    "people": "Odile",
+    "title": "Odile — motion",
+    "caption": "Odile: a slow sway with a wave down her cloak, she strokes the silk, then a low half-bow when picked. Is it smooth and warm?",
+    "file": "motion-odile.webp"
+  },
+  {
+    "id": "motion-brannoch",
+    "group": "Character motion",
+    "people": "Brannoch",
+    "title": "Brannoch — motion",
+    "caption": "Brannoch: one slow breath and a long stillness, he chalks the tally, then one gruff nod when picked. Is it planted and gruff?",
+    "file": "motion-brannoch.webp"
+  },
+  {
+    "id": "motion-hask",
+    "group": "Character motion",
+    "people": "Hask",
+    "title": "Hask — motion",
+    "caption": "Hask: frozen, then a lash of the tail; the hook glints; a snap and a cocked head when picked. Is it coiled and predatory?",
+    "file": "motion-hask.webp"
+  },
+  {
+    "id": "motion-wren",
+    "group": "Character motion",
+    "people": "Wren",
+    "title": "Wren — motion",
+    "caption": "Wren: only the vial glows, a spore drifts up, then a slow look up from under the hat when picked. Is it quiet and a little ominous?",
+    "file": "motion-wren.webp"
+  },
+  {
+    "id": "motion-blobs",
+    "group": "Character motion",
+    "people": "all",
+    "title": "Motion only — the five as shapes",
+    "caption": "The five as flat shapes on the dock’s clock, Brannoch picked part-way: can you tell who is who from how they move alone?",
+    "file": "motion-blobs.webp"
+  },
+  {
+    "id": "motion-dock",
+    "group": "Character motion",
+    "people": "all",
+    "title": "The dock in motion — all five",
+    "caption": "The real home’s dock, 4 s on the game’s clock, Ironvein picked part-way: can you tell who is who by how they move, and is it calm?",
+    "file": "motion-dock.webp"
+  }
+]
