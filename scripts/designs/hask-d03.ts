@@ -3,9 +3,10 @@
  *
  * Poles the salt barges down the reed channels to the smokehouses: a broad
  * flat reed cone hat, ribbed and lashed at the peak with a reed tuft, wider
- * than he is; a linen smock with a brine-red sash; the barge pole held low
- * across him in both fists, its foot in the water ahead. Silhouette: a wide
- * low cone over a snout. Tic: he leans in and pushes, the pole slides back.
+ * than he is; his own body: a short oilcloth smock, a rope belt, a
+ * salt-crusted hem, bare scaled arm and legs; the barge pole in his near
+ * fist, set from behind his back into the water ahead. Silhouette: a wide
+ * cone over a snout, a smock on two legs. Tic: he leans in and pushes, the pole slides back.
  */
 import type { Design } from './hask-lib'
 import { PAL, FEET, SHADOW_W, SNOUT, TAIL, TAIL_DOWN } from './hask-common'
@@ -117,7 +118,7 @@ const POLE = [
 export const D03: Design = {
   id: 'd03',
   title: 'Salt-Barge Poleman',
-  concept: 'Poles the salt barges down the reed channels: a broad ribbed reed cone wider than he is, a linen smock and brine-red sash, the barge pole held low across him.',
+  concept: 'Poles the salt barges down the reed channels: a broad ribbed reed cone wider than he is, a short oilcloth smock with a rope belt and a salt-crusted hem, bare scaled legs, the pole set from behind him into the water.',
   pal: PAL,
   headBottom: 48,
   parts: [

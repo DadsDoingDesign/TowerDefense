@@ -3,9 +3,10 @@
  *
  * Runs the trap lines out past the last smokehouse: a deep hood and shoulder cape
  * stitched together from patched hides, his snout and one eye out of the
- * dark of it; an iron jaw-trap swings from his fist on its
- * chain, low at his side. Silhouette: a round patched cowl flaring to a ragged
- * cape. Tic: he gives the trap a shake and it snaps shut.
+ * dark of it; his own body: a patched hide vest laced over his belly
+ * scales, strapped hide leggings planted wide; an iron jaw-trap in his fist,
+ * its chain to his belt. Silhouette: a round patched cowl over a vest on
+ * two legs. Tic: he gives the trap a shake and it snaps shut.
  */
 import type { Design } from './hask-lib'
 import { PAL, FEET, SHADOW_W, SNOUT, TAIL, TAIL_UP } from './hask-common'
@@ -126,7 +127,7 @@ const TRAP_SHUT = [
 export const D02: Design = {
   id: 'd02',
   title: 'Marsh Trapper',
-  concept: 'Runs the trap lines past the last smokehouse: a cowl and cape stitched from patched hides, his eye in the dark of it, an iron jaw-trap swung low on its chain.',
+  concept: 'Runs the trap lines past the last smokehouse: a cowl stitched from patched hides, his eye in the dark of it; a hide vest over his belly scales, patched leggings, an iron jaw-trap chained to his belt.',
   pal: PAL,
   headBottom: 46,
   parts: [

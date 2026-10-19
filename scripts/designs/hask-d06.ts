@@ -3,8 +3,9 @@
  *
  * Runs untaxed salt through the reed channels by night: a deep woven reed
  * basket hat over his whole head, one eye glinting through its viewing slit,
- * his snout out under the rim; a dusk-plum cloak; a shuttered lantern held
- * low at his side. Silhouette: a tall round basket over a snout. Tic: he
+ * his snout out under the rim; his own body: a low-slung cloak of hanging
+ * reed over a hunched back, with hidden pockets; a shuttered lantern held
+ * low at his side. Silhouette: a tall basket over a hump of reed. Tic: he
  * shutters the lantern, the eye in the slit glances back, the light comes on.
  */
 import type { Design } from './hask-lib'
@@ -129,7 +130,7 @@ const LANTERN_SHUT = [
 export const D06: Design = {
   id: 'd06',
   title: 'Reed Smuggler',
-  concept: 'Runs untaxed salt through the reed channels by night: a deep woven basket hat over his whole head, one eye glinting through its slit, a dusk-plum cloak, a shuttered lantern held low.',
+  concept: 'Runs untaxed salt through the reed channels by night: a deep woven basket hat over his whole head, one eye glinting through its slit, a low-slung reed cloak over a hunched back, hidden pockets, a shuttered lantern held low.',
   pal: PAL,
   headBottom: 48,
   parts: [
