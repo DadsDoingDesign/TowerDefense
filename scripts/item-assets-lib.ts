@@ -151,10 +151,12 @@ export const SHIPPED_CELLS: readonly ShippedCell[] = [
   { kind: 'Saffron Brand', cell: 'brand', borrowed: 'blade', idea: 'The sword gilded saffron, flames licking up its back, a red guard.' },
   { kind: 'Rod', cell: 'rod', borrowed: 'wand', idea: 'A long steel rod corner to corner, two gold bands and a red gem: reach, not a twig.' },
   { kind: 'Tome', cell: 'tome', borrowed: 'grimoire', idea: 'A small brown book, three-quarter view, page edges showing and a red ribbon.' },
-  { kind: 'Moonquill Codex', cell: 'codex', borrowed: 'grimoire', idea: 'A night-teal codex with a cream crescent moon, a quill standing out of it.' },
+  // Renamed by the peoples' rosters (Oct 2026) and redrawn: the Moonquill Codex's 'codex' cell stays in the atlas, unread.
+  { kind: 'Greenvial Herbal', cell: 'greenvialHerbal', borrowed: 'grimoire', idea: 'A green-bound herbal, a leaf pressed on its cover and a vial at its clasp.' },
   { kind: 'Buckler', cell: 'buckler', borrowed: 'shield', idea: 'The shield, smaller and round: a wooden disc, steel rim and boss.' },
   { kind: 'Pavise', cell: 'pavise', borrowed: 'shield', idea: 'The shield, tall: a painted wall-shield, arched top, steel ridge and two feet.' },
-  { kind: 'Gilded Easel', cell: 'easel', borrowed: 'shield', idea: 'A gold frame round a painted canvas, on easel legs.' },
+  // Renamed (was the Gilded Easel, whose 'easel' cell stays in the atlas, unread) and redrawn.
+  { kind: 'Kingscale Shield', cell: 'kingscaleShield', borrowed: 'shield', idea: 'A scaled shield, gold-rimmed, its plates in rows like a crocodile’s back.' },
   { kind: 'Mail', cell: 'mail', borrowed: 'plate', idea: 'A chain shirt: a T of rings, short sleeves, a belt, a ragged hem.' },
   { kind: 'Aegis', cell: 'aegis', borrowed: 'plate', idea: 'A rounded steel cuirass, gold rim and a gold sun boss.' },
   { kind: 'Ironheart Plate', cell: 'ironheart', borrowed: 'plate', idea: 'Dark iron plate with a red heart at its centre.' },
@@ -179,7 +181,7 @@ export const LOADOUTS: readonly LoadoutSpec[] = [
   { id: 'bow-cloak', title: 'Bow · Bow + Cloak', mainHand: { kind: 'Bow', rarity: 'legendary' }, offHand: null, body: { kind: 'Cloak', rarity: 'rare' } },
   { id: 'wand-tome', title: 'Wand and tome · Wand + Tome + Robe', mainHand: { kind: 'Wand', rarity: 'rare' }, offHand: { kind: 'Tome', rarity: 'epic' }, body: { kind: 'Robe', rarity: 'common' } },
   { id: 'dagger-buckler', title: 'Mixed rarities · Dagger + Buckler + Aegis', mainHand: { kind: 'Dagger', rarity: 'mythic' }, offHand: { kind: 'Buckler', rarity: 'common' }, body: { kind: 'Aegis', rarity: 'legendary' } },
-  { id: 'sovereign', title: 'Sovereign · Saffron Brand + Gilded Easel + Ironheart Plate', mainHand: { kind: 'Saffron Brand', rarity: 'legendary' }, offHand: { kind: 'Gilded Easel', rarity: 'epic' }, body: { kind: 'Ironheart Plate', rarity: 'mythic' } },
+  { id: 'sovereign', title: 'Sovereign · Saffron Brand + Kingscale Shield + Ironheart Plate', mainHand: { kind: 'Saffron Brand', rarity: 'legendary' }, offHand: { kind: 'Kingscale Shield', rarity: 'epic' }, body: { kind: 'Ironheart Plate', rarity: 'mythic' } },
 ]
 
 /** A file-name slug for a kind ("Saffron Brand" → "saffron-brand"). */

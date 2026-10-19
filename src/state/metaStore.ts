@@ -36,6 +36,7 @@ import {
   type RunHq,
 } from '../game/run/hq'
 import { isItemKind } from '../game/data/itemKinds'
+import { canonicalKind } from '../game/data/peopleKinds'
 import { newRunSeed } from '../game/core/rng'
 import {
   charterStandingXp,
@@ -161,7 +162,8 @@ function migrateCharters(raw: unknown): CharterRecord {
 /** The Sovereign kinds owned: known ones, each once, in unlock order. */
 const migrateSovereign = (raw: unknown): string[] => {
   const known = new Set(SOVEREIGN_ITEM_KINDS)
-  return Array.isArray(raw) ? [...new Set(raw.filter((x): x is string => typeof x === 'string' && known.has(x)))] : []
+  // A renamed kind (the roster's, Oct 2026) is owned under its new name.
+  return Array.isArray(raw) ? [...new Set(raw.map((x) => (typeof x === 'string' ? canonicalKind(x) : x)).filter((x): x is string => typeof x === 'string' && known.has(x)))] : []
 }
 
 /** What the HQ grants each new run. */
@@ -595,7 +597,7 @@ export function migrateMeta(persisted: unknown, version: number): PersistedMeta 
     upgrades,
     focus: isCompanyId(o.focus) ? o.focus : null,
     orders: migrateOrders(o.orders),
-    bonusItems: Array.isArray(o.bonusItems) ? o.bonusItems.filter(isItemKind).slice(0, MAX_BONUS_ITEMS) : [],
+    bonusItems: Array.isArray(o.bonusItems) ? o.bonusItems.map((x) => (typeof x === 'string' ? canonicalKind(x) : x)).filter(isItemKind).slice(0, MAX_BONUS_ITEMS) : [],
     crates: migrateCrates(o.crates),
     lastInterest,
     standing,

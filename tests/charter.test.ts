@@ -7,6 +7,7 @@ import { roadCoverage, ROUTE_HAZARDS } from '../src/game/data/hazards'
 import {
   ALL_ITEM_KINDS,
   BASIC_ITEM_KINDS,
+  CHARTER_ITEM_KINDS,
   isSovereignKind,
   ITEM_KINDS,
   itemKindById,
@@ -16,7 +17,7 @@ import {
 import { generateItem, ITEM_BASES, itemNoun, shieldHold, SOVEREIGN_EDGE } from '../src/game/data/items'
 import { ALL_MAPS, fieldFor } from '../src/game/data/maps'
 import { generateRunMap } from '../src/game/data/runmap'
-import { RANDOM_UNLOCK_SKILLS } from '../src/game/data/skills'
+import { CHARTER_SKILLS, PEOPLES_SKILLS, RANDOM_UNLOCK_SKILLS } from '../src/game/data/skills'
 import { COMPOSITE_RULES } from '../src/game/data/terrain'
 import { nodeEncounter } from '../src/game/data/waves'
 import {
@@ -52,30 +53,43 @@ describe('the door', () => {
   it('opens when every skill card and every item kind of Levels 1–3 is unlocked — standing and the HQ do not count', () => {
     const none = charterDoor({ skills: [], items: [] })
     expect(none).toMatchObject({ progress: 0, open: false })
-    expect(none.skills.need).toBe(RANDOM_UNLOCK_SKILLS.length)
-    expect(none.items.need).toBe(UNLOCK_ITEM_KINDS.length)
-    expect(charterDoor({ skills: [...RANDOM_UNLOCK_SKILLS], items: [] }).open).toBe(false)
-    expect(charterDoor({ skills: [], items: [...UNLOCK_ITEM_KINDS] }).open).toBe(false)
-    const all = charterDoor({ skills: [...RANDOM_UNLOCK_SKILLS], items: [...UNLOCK_ITEM_KINDS] })
+    expect(none.skills.need).toBe(CHARTER_SKILLS.length)
+    expect(none.items.need).toBe(CHARTER_ITEM_KINDS.length)
+    expect(charterDoor({ skills: [...CHARTER_SKILLS], items: [] }).open).toBe(false)
+    expect(charterDoor({ skills: [], items: [...CHARTER_ITEM_KINDS] }).open).toBe(false)
+    const all = charterDoor({ skills: [...CHARTER_SKILLS], items: [...CHARTER_ITEM_KINDS] })
     expect(all).toMatchObject({ progress: 1, open: true })
     // The basic five and a Sovereign kind are not part of it.
     expect(charterDoor({ skills: [], items: [...BASIC_ITEM_KINDS, ...SOVEREIGN_ITEM_KINDS] }).items.have).toBe(0)
     // The meter counts what is held.
-    const half = charterDoor({ skills: RANDOM_UNLOCK_SKILLS.slice(0, 10), items: UNLOCK_ITEM_KINDS.slice(0, 5) })
-    expect(half.progress).toBeCloseTo(15 / (RANDOM_UNLOCK_SKILLS.length + UNLOCK_ITEM_KINDS.length))
+    const half = charterDoor({ skills: CHARTER_SKILLS.slice(0, 10), items: CHARTER_ITEM_KINDS.slice(0, 5) })
+    expect(half.progress).toBeCloseTo(15 / (CHARTER_SKILLS.length + CHARTER_ITEM_KINDS.length))
+  })
+
+  it('is the catalogue that stood before the peoples’ rosters: a door already opened stays open', () => {
+    // 27 random cards and 22 kinds of Levels 1–3, as before Oct 2026.
+    expect(CHARTER_SKILLS).toHaveLength(27)
+    expect(CHARTER_ITEM_KINDS).toHaveLength(17)
+    for (const id of PEOPLES_SKILLS) expect(CHARTER_SKILLS).not.toContain(id)
+    for (const id of UNLOCK_ITEM_KINDS) if (itemKindById(id)!.peoples) expect(CHARTER_ITEM_KINDS).not.toContain(id)
+    // The new cards and kinds are still unlocked by playing.
+    expect(RANDOM_UNLOCK_SKILLS.length).toBeGreaterThan(CHARTER_SKILLS.length)
+    expect(UNLOCK_ITEM_KINDS.length).toBeGreaterThan(CHARTER_ITEM_KINDS.length)
   })
 })
 
 describe('the Sovereign tier', () => {
-  it('is five Level 4 kinds, one per company, each saying only its own effect', () => {
-    expect(SOVEREIGN_ITEM_KINDS).toHaveLength(5)
-    expect(SOVEREIGN_ITEM_KINDS.map((k) => itemKindById(k)!.company).sort()).toEqual([...COMPANY_IDS].sort())
+  it('is three Level 4 kinds a company (each people’s roster), each saying only its own effect', () => {
+    expect(SOVEREIGN_ITEM_KINDS).toHaveLength(15)
+    // The first five are the classic tier, one per company, in their old order.
+    expect(SOVEREIGN_ITEM_KINDS.slice(0, 5).map((k) => itemKindById(k)!.company).sort()).toEqual([...COMPANY_IDS].sort())
+    for (const c of COMPANY_IDS) expect(SOVEREIGN_ITEM_KINDS.filter((k) => itemKindById(k)!.company === c)).toHaveLength(3)
     for (const k of SOVEREIGN_ITEM_KINDS) {
       const kind = itemKindById(k)!
       expect(kind.level).toBe(4)
       expect(ITEM_BASES[k].slot).toBe(kind.slot)
       // One sentence about itself: no pairing hints, no other piece named.
-      expect(kind.does).toMatch(/^(One hand|Both hands|Off hand|Body)\./)
+      expect(kind.does).toMatch(/^(One hand(, or the off hand)?|Both hands|Off hand|Body)\./)
       expect(kind.does).not.toMatch(/with|combo|pairs/i)
     }
   })
@@ -113,6 +127,7 @@ describe('the Sovereign tier', () => {
       }
     }
     expect(shieldHold({ name: 'Gilded Easel', slot: 'offHand' })).toBe(4)
+    expect(shieldHold({ name: 'Kingscale Shield', slot: 'offHand' })).toBe(4)
   })
 
   it('is dealt at a low weight once owned: a pool with none is untouched, and each owned kind is listed once per four of any other', () => {
@@ -130,19 +145,20 @@ describe('the Sovereign tier', () => {
       oneHand++
       if (itemNoun(it) === 'Saffron Brand') brand++
     }
-    expect(brand / oneHand).toBeGreaterThan(0.01)
+    // Twenty-odd one-handers since the peoples' rosters, each four times over.
+    expect(brand / oneHand).toBeGreaterThan(0.004)
     expect(brand / oneHand).toBeLessThan(0.08)
   })
 
   it('unlocks one at a time from a delivered charter, each once, then nothing', () => {
     const owned: string[] = []
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < SOVEREIGN_ITEM_KINDS.length; i++) {
       const k = rollSovereign(owned, i, 1)!
       expect(SOVEREIGN_ITEM_KINDS).toContain(k)
       expect(owned).not.toContain(k)
       owned.push(k)
     }
-    expect(rollSovereign(owned, 5, 1)).toBeNull()
+    expect(rollSovereign(owned, SOVEREIGN_ITEM_KINDS.length, 1)).toBeNull()
     expect(rollSovereign([], 3, 9)).toBe(rollSovereign([], 3, 9))
   })
 

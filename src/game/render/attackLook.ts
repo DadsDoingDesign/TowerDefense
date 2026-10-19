@@ -26,7 +26,7 @@
  * and the shot's on-hit effects ({@link hitEffects}) colour its trail and its
  * impact from ONE palette ({@link EFFECT_INK}) whether it flew or was swung.
  */
-import { itemNoun } from '../data/items'
+import { isBow } from '../data/items'
 import { heroStyle, styleWeapon } from '../data/gear'
 import { isMelee, swingWeapon } from '../engine/melee'
 import type { EffectMods, Sentinel } from '../types'
@@ -45,7 +45,7 @@ export function deliveryOf(hero: Sentinel, melee: boolean = isMelee(hero)): Deli
   if (style === 'shoot') {
     // The weapon the style comes from (main hand first): a bow, or a knife.
     const w = styleWeapon(hero)
-    return w && itemNoun(w) === 'Bow' ? 'arrow' : 'knife'
+    return w && isBow(w) ? 'arrow' : 'knife'
   }
   return 'stone'
 }

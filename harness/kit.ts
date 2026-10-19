@@ -7,7 +7,7 @@
  *       (`?scale=2` for the field's phone density, `?frames=1` for every frame,
  *       `?shield=1` for the knight's off hands over its rebuilt body,
  *       `?weapons=1` for every weapon on its look, `?shipped=1` for the
- *       knight as it ships)
+ *       knight as it ships, `?peoples=1` for the peoples' new kinds)
  */
 import '../src/styles/global.css'
 import { drawSentinel, setPresentationTime, type DrawSentinel } from '../src/game/render/renderer'
@@ -19,6 +19,7 @@ import { setActiveTheme } from '../src/game/render/themes'
 import { lookOf } from '../src/game/data/gear'
 import { lookHue } from '../src/game/data/sentinels'
 import { generateItem } from '../src/game/data/items'
+import { PEOPLE_KINDS } from '../src/game/data/peopleKinds'
 import { RNG } from '../src/game/core/rng'
 import type { Archetype, Equipment, Item } from '../src/game/types'
 
@@ -163,8 +164,36 @@ function buildShield(): void {
 const WEAPONS: { title: string; mains: (string | null)[]; off: string | null }[] = [
   { title: 'Knight', mains: ['Sword', 'Axe', 'Greatsword', 'Warhammer', 'Saffron Brand', null], off: 'Buckler' },
   { title: 'Archer', mains: ['Bow', 'Dagger', null], off: null },
-  { title: 'Caster', mains: ['Wand', 'Rod', 'Sceptre', 'Staff', 'Grimoire', 'Moonquill Codex'], off: null },
+  { title: 'Caster', mains: ['Wand', 'Rod', 'Sceptre', 'Staff', 'Grimoire', 'Greenvial Herbal'], off: null },
 ]
+
+/**
+ * `?peoples=1` — the peoples' new kinds (Oct 2026, `data/peopleKinds.ts`) on
+ * the figure, through the real draw code with their real edges (so a burn or
+ * a chill wears its glint): every weapon on the look it picks — the casters'
+ * own cells in the robed fists, the painted sword and bow standing in for the
+ * blades and bows — and every new off-hand piece on the knight.
+ */
+function buildPeoples(): void {
+  out.textContent = ''
+  for (const people of ['humans', 'elves', 'dwarves', 'reptilians', 'gnomes'] as const) {
+    const kinds = PEOPLE_KINDS.filter((k) => k.people === people)
+    const row = document.createElement('section')
+    row.innerHTML = `<h2>${people}</h2>`
+    const figs = document.createElement('div')
+    figs.className = 'row'
+    for (const k of kinds.filter((x) => x.weapon)) {
+      const e: Equipment = { mainHand: deal(k.id), offHand: null, body: null }
+      figs.append(fig(e, k.id, 0, 0.01))
+    }
+    for (const k of kinds.filter((x) => x.slot === 'offHand')) {
+      const e: Equipment = { mainHand: plain('Sword'), offHand: deal(k.id), body: null }
+      figs.append(fig(e, `Sword + ${k.id}`, 0, 0.01))
+    }
+    row.append(figs)
+    out.append(row)
+  }
+}
 
 function buildWeapons(): void {
   out.textContent = ''
@@ -220,6 +249,7 @@ function build(): void {
   if (q.get('shield')) return buildShield()
   if (q.get('shipped')) return buildShipped()
   if (q.get('weapons')) return buildWeapons()
+  if (q.get('peoples')) return buildPeoples()
   out.textContent = ''
   for (const h of HANDS) {
     const row = document.createElement('section')

@@ -267,9 +267,10 @@ describe('pool affinity', () => {
   it('weights a company’s pieces and leaves an unweighted pool as it was', () => {
     const pool = itemPoolFor([])
     expect(weightPool(pool, null, kindCompany)).toEqual(pool)
-    const w = weightPool(pool, 'metals', kindCompany)
+    // The Shield is the humans' (Peppercorn's) since the peoples' rosters.
+    const w = weightPool(pool, 'spice', kindCompany)
     expect(w.filter((k) => k === 'Shield')).toHaveLength(COMPANY_WEIGHT)
-    expect(w.filter((k) => k === 'Sword')).toHaveLength(1)
+    expect(w.filter((k) => k === 'Bow')).toHaveLength(1)
   })
 
   it('an unweighted pool deals exactly what it always dealt', () => {

@@ -30,7 +30,8 @@
  *   a restored one.
  */
 import { isSkillId, STARTER_SKILLS } from '../game/data/skills'
-import { ALL_ITEM_KINDS, BASIC_ITEM_KINDS, isItemKind } from '../game/data/itemKinds'
+import { BASIC_ITEM_KINDS, CLASSIC_ITEM_KINDS, isItemKind } from '../game/data/itemKinds'
+import { canonicalKind, renamedItemName } from '../game/data/peopleKinds'
 import { gripOf, type HeroStyle } from '../game/data/items'
 import { MAX_SKILLS, migrateGrowth, SKILL_MILESTONES } from '../game/run/skills'
 import { clampStep } from '../game/run/watch'
@@ -543,6 +544,12 @@ const MOD_STRUCT_FIELDS = {
   // The classless rework's thorn burn and Gate mend.
   thornsBurn: ['dps', 'dur'],
   killMend: ['every', 'hp'],
+  // The peoples' kit (Oct 2026).
+  rateAura: ['rateMult', 'radius'],
+  critBurn: ['dps', 'dur'],
+  chainEvery: ['every', 'chains', 'dmgFrac'],
+  spitEvery: ['every', 'count', 'dps', 'dur'],
+  root: ['count', 'dur'],
 } as const satisfies Partial<Record<keyof EffectMods, readonly string[]>>
 /**
  * Mods that are a **capability** rather than a magnitude — booleans.
@@ -556,6 +563,8 @@ const MOD_BOOL_FIELDS = {
   burnSpreadOnDeath: true,
   // Weapon clearance: the hook a skill sets to make its hero swing.
   grantsMelee: true,
+  // Whisperfang: a kill readies the next attack.
+  killReady: true,
 } as const satisfies Partial<Record<keyof EffectMods, true>>
 const MOD_KEYS: Record<keyof EffectMods, true> = {
   damageMult: true, rateMult: true, rangeMult: true, projSpeedMult: true,
@@ -567,6 +576,8 @@ const MOD_KEYS: Record<keyof EffectMods, true> = {
   burnSpreadOnDeath: true, grantsMelee: true,
   holdAdd: true, holdRadius: true, goldPerKill: true, vsHeld: true, vsSlowed: true,
   thornsBurn: true, rushPerHeld: true, killMend: true,
+  rateAura: true, vsPlated: true, vsWarded: true, critBurn: true, doubleEvery: true,
+  killReady: true, chainEvery: true, spitEvery: true, root: true,
 }
 
 /**
@@ -1023,8 +1034,10 @@ function normaliseSkills(s: Sentinel): void {
  * unlocks — keeps dealing every kind (what it was dealing).
  */
 function migrateItemPool(raw: unknown, company: CompanyId | null, hq: RunHq): string[] {
-  const ids = [...new Set(arr<unknown>(raw).filter(isItemKind))]
-  const set = ids.length ? ids.filter((k) => !BASIC_ITEM_KINDS.includes(k)) : [...ALL_ITEM_KINDS]
+  // A renamed kind (the roster's, Oct 2026) is read as its new name.
+  const ids = [...new Set(arr<unknown>(raw).map((k) => (typeof k === 'string' ? canonicalKind(k) : k)).filter(isItemKind))]
+  // A run saved before unlocks deals the catalogue it was dealing then.
+  const set = ids.length ? ids.filter((k) => !BASIC_ITEM_KINDS.includes(k)) : [...CLASSIC_ITEM_KINDS]
   // v17: an owned Sovereign kind deals at its low weight (`contracts.runItemPool`).
   return runItemPool(set, company, { company: hq.focus, boost: hq.boost })
 }
@@ -1299,6 +1312,27 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
       for (const m of crossroads.mutations) stripMods(m.mods)
     }
     for (const m of runMods) stripMods(m)
+  }
+
+  // ---- the roster's renames (Oct 2026): every version ----------------------
+  // A Gilded Easel is a Kingscale Shield now, a Moonquill Codex a Greenvial
+  // Herbal (`peopleKinds.KIND_RENAMES`): the noun in each saved item's name
+  // follows, so it reads, draws and tiers as the kind it is.
+  {
+    const rename = (item: Item | null | undefined) => {
+      if (item) item.name = renamedItemName(item.name)
+    }
+    const renameHeroes = (list: Sentinel[]) => {
+      for (const s of list) for (const slot of ['mainHand', 'offHand', 'body'] as const) rename(s.equipment[slot])
+    }
+    renameHeroes(roster)
+    for (const i of inventory) rename(i)
+    if (merchant && isObj(merchant)) {
+      for (const e of (merchant as MerchantStock).items) rename(e.item)
+      if ((merchant as SavedMerchant).recruit) renameHeroes([(merchant as SavedMerchant).recruit!.sentinel])
+    }
+    for (const c of reward ?? []) rename(c.item)
+    if (crossroads) renameHeroes(crossroads.recruits)
   }
 
   // ---- v12 → v13: perks and evolutions became skills (SK1) ----------------
