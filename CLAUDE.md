@@ -273,6 +273,20 @@ result. Append a short note to the review log when you're done.
   (`data/runmap.ts`), the only road out of the start, which the map draws AS
   its Start (`openingNodeOf`). The first fork is the layer after it, and the
   map shades the ground at and below your row as cleared, above as not.
+- The HQ (the HQ pass, Oct 2026): the page `src/ui/shell/hq/HqScreen.tsx`
+  (styles: the HQ section of `src/styles/hq.css`, which also holds the
+  crates'), its words and states as pure data in `hq/hqModel.ts` (now →
+  next, buy / short / max / locked, the CTA's words), rules and prices in
+  `src/game/run/hq.ts`, the save in `metaStore`. No tabs: the castle as it
+  stands, then the five upgrades as one `PickStrip` + `PickCard`, the page's
+  CTA buying the focused one. The castle GROWS with the levels bought
+  (`hq.hqStage`: Lodge 0, Watchtower 3, Castle 7, Stronghold 12 of 15 — a
+  picture only, it pays and gates nothing): the home plate's mark is the
+  stage's atlas cell (`hqLodge`… in `scripts/fw-icons.ts`, `hqModel.hqMark`),
+  the page's picture `public/assets/scenes/hq-<stage>.png`, baked from the
+  pack's buildings by `npx tsx scripts/hq-keep.ts` (`--check`). Shots
+  `scripts/hq-shots.mjs`, cards `scripts/hq-cards.mjs` →
+  `docs/ui-audit-2026-10/hq/`; tests `tests/hqStage.test.ts`.
 - The Codex (`src/ui/shell/codex/`): a Supercell-style collection — the pure
   `codexModel.ts` (five tabs of tiles: items, skills, goblins, relics, feats;
   tested in `tests/skills.test.ts`), drawn by `CodexScreen.tsx` with

@@ -20,7 +20,7 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 | Trade war | Say who leads the season, who pays you at its end, and what desperate terms mean. | 62 | 28 |
 | Home (map, dock, card) | Say what the focused road is like and what its next level pays; the CTA opens its terms. | 76 | 25 |
 | Militia and the Sovereign Route | Found and dress your militia; say what the Sovereign Route costs and opens. | 256 | 15 |
-| HQ and crates | Say what a building does and costs, and what a crate holds. | 98 | 30 |
+| HQ and crates | Say what a building does and costs, and what a crate holds. | 93 | 26 |
 | Codex | Name every entry and say what it does; a locked one says how it opens. | 72 | 19 |
 | Stops (merchant, campfire, shrine) | Say what each offer gives and costs; the keeper says one line. | 56 | 28 |
 | Liaisons (spoken) | Character voice: one spoken line, 40 characters at most. | 81 | 32 |
@@ -1685,18 +1685,18 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 
 ### `src/game/run/hq.ts`
 
-- L198: Every hero comes with body armour, and an off-hand piece if a hand is free.
-- L199: Body armour arrives Rare.
-- L200: Pick 1 of 4 heroes.
-- L201: One of them starts with a Level 2 skill.
-- L202: A second hero marches with the one you pick.
-- L214: Pick 1 of {r.pick}
-- L215: Rare body armour
-- L215: body armour
-- L216: one with a Level 2 skill
-- L217: a second hero
-- L239: {+(rate * 100).toFixed(1)}%
-- L253: {ratePct(BASE_INTEREST.ra} of the bank per finished contract, up to {BASE_INTEREST.cap} gold. A lost contract earns none.
+- L255: Body armour and an off-hand on every hero
+- L256: Body armour arrives Rare
+- L257: Pick 1 of 4 heroes
+- L258: One hero starts with a Level 2 skill
+- L259: A second hero marches with yours
+- L271: Pick 1 of {r.pick}
+- L272: Rare armour
+- L272: Armour
+- L273: Level 2 skill
+- L274: +1 hero
+- L296: {+(rate * 100).toFixed(1)}%
+- L310: {ratePct(BASE_INTEREST.ra} of the bank per finished contract, up to {BASE_INTEREST.cap} gold. A lost contract earns none.
 
 ### `src/ui/shell/hq/CratesScreen.tsx`
 
@@ -1732,63 +1732,61 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 
 ### `src/ui/shell/hq/HqScreen.tsx`
 
-- L51: HR
-- L52: Operations
-- L57: Headquarters
-- L60: Back to the menu
+- L61: Headquarters
+- L64: Back to the menu
 - L70: Headquarters
 - L74: Your bank
-- L80: Offices
-- L98: Paid from your bank. Upgrades are for good; an order lasts one contract.
-- L139: Level {on} of {of}
-- L174: Opening deal
-- L174: Better first heroes at the start of every contract.
-- L189: Now
-- L190: Level {deal.level + 1}
-- L191: Upgrade to level {deal.level + 1}
-- L191: The best opening deal there is.
-- L193: Hiring Hall
-- L193: One more candidate at every city, trained to your heroes’ level.
-- L194: Open the Hiring Hall
-- L194: Open. Every city offers four heroes, trained.
-- L214: Bank interest
-- L214: · next finished contract
-- L217: of the bank per finished contract, up to
-- L218: · last +{last}
-- L236: Pack slots
-- L236: Room to carry gear between fights. A full pack sells its cheapest piece.
-- L237: {slots} slots
-- L242: Add a slot · {slots + 1} of {PACK_BASE + pack.max}
-- L242: {slots} slots: the biggest pack there is.
-- L247: Scouts
-- L247: Map the road before you march.
-- L248: Level 1
-- L248: ✓ Every ambush has a way around
-- L248: Every ambush has a way around
-- L249: Level 2
-- L249: ✓ Three or four roads every layer
-- L249: Three or four roads every layer
-- L250: Train the scouts · level {scouts.level + 1}
-- L250: Fully trained.
-- L260: Company focus: opens after your {FOCUS_FROM_RUN}th finished contract
-- L262: Company focus
-- L264: One company’s skills and items come up more, on every road.
-- L265: Opens after your {FOCUS_FROM_RUN}th finished contract
-- L265: {Math.min(runs, FOCUS_FRO} of {FOCUS_FROM_RUN}
-- L292: Company focus
-- L292: One company’s skills and items come up more, on every road.
-- L293: New: pick a crest. Switching is free.
-- L294: Company in focus
-- L310: {c.name} opens at Standing {c.opensAt} with any company
-- L318: Focus +{f.level * FOCUS_STEP}% for good
-- L326: {co.goods.split(' ')[0]} in your item pool
-- L326: {before}% → {after}%
-- L328: In focus
-- L328: No company yet — pick a crest
-- L332: % more for your next contract.
-- L334: +{FOCUS_STEP}% for one contract
-- L338: Raise focus to +{(f.level + 1) * FOCUS_ST}%
-- L342: +{f.max * FOCUS_STEP}% for good.
+- L83: Need
+- L103: Paid from your bank, kept for good. Tap an upgrade to read it.
+- L109: HQ upgrades
+- L133: Your HQ: {s.stage.name}. {line}.
+- L184: level {c.level} of {c.max}
+- L187: {Math.min(runs, FOCUS_FRO}/{FOCUS_FROM_RUN}
+- L188: Max
+- L201: Locked
+- L201: Level {card.level} of {card.max}
+- L216: Opens
+- L217: So far
+- L217: {Math.min(runs, FOCUS_FRO} of {FOCUS_FROM_RUN}
+- L221: Now
+- L222: Next
+- L256: Company in focus
+- L266: {c.name} in focus
+- L266: {c.name}: opens at Standing {c.opensAt} with any company
+- L273: {c.name} opens at Standing {c.opensAt} with any company
+- L282: % more next contract
+- L292: % next contract only
+- L308: Bank interest
+- L310: next finished contract
+- L313: of the bank, up to
+
+### `src/ui/shell/hq/hqModel.ts`
+
+- L94: Every upgrade bought
+- L94: {s.bought} of {HQ_LEVELS_MAX} upgrades
+- L107: {n}{n % 10 === 1 && n !== 11}
+- L117: 4 candidates per city, trained
+- L117: 3 candidates per city
+- L117: 4 per city, trained to your heroes’ level
+- L119: {packSlots(level)} slots
+- L119: {packSlots(level + 1)} slots
+- L121: one company
+- L122: +{FOCUS_STEP * level}% {who}
+- L122: None
+- L122: +{FOCUS_STEP * (level + 1)}% {who}
+- L126: Ways round ambushes · 3–4 roads a layer
+- L126: A way round every ambush
+- L126: None
+- L127: A way round every ambush
+- L127: 3 or 4 roads every layer
+- L133: Every contract starts with this deal.
+- L134: A full pack sells its cheapest piece.
+- L147: Opens after your {ordinal(FOCUS_FROM_RUN)} finished contract
+- L163: Fully upgraded
+- L164: Opens after {FOCUS_FROM_RUN} contracts
+- L165: Need
+- L166: Open the {c.name}
+- L166: Upgrade {c.name}
 
 ## Codex
 
@@ -2335,185 +2333,185 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 
 ### `src/ui/shell/offers.ts`
 
-- L304: Taking it doesn’t raise enemy strength.
-- L307: Hiring doesn’t raise enemy strength.
-- L354: Keepsake: works for the whole team, whoever wears it.
-- L393: Curse · {e.label} — {t}
-- L393: {e.label} — {t}
-- L401: {SOVEREIGN_TIER} tier
-- L426: STR
-- L427: DEX
-- L428: INT
-- L465: Holds
-- L466: Targets
-- L466: a group
-- L479: Skill · {k.name} — {k.desc}
-- L604: Walk on
-- L604: Nothing here to take.
-- L605: March on
-- L605: Leave the city.
-- L606: Walk on
-- L606: Leave this stop.
-- L609: Back to the menu
-- L609: End the charter and head home. Its fee is lost.
-- L609: End the contract and head home.
-- L647: Choose {c.name}
-- L652: Back
-- L652: Back
-- L675: Buy
-- L677: {itemName(e.item)} added to your pack
-- L694: −{cargoShare(-fx.baseHpDel}% cargo now
-- L705: Bargain
-- L712: Boon — {s.boon}
-- L713: Curse — {shrineCurse(st, s)}
-- L714: Accept the terms
-- L715: Walk away
-- L738: to pack
-- L744: Downside — {c.downside}
-- L757: How effects stack
-- L762: Take {c.item ? itemName(c.item}
-- L811: {cr.revealed.heroName} · Mythic
-- L814: Downside — {m.downside}
-- L816: How effects stack
-- L817: March on
-- L834: Mythic
-- L837: Downside — {m.downside}
-- L853: {aimed.name} already carries this one.
-- L856: Already carried
-- L856: Give {aimed.name} {name}
-- L860: Yes — mutate {aimed.name}
-- L861: {name} is permanent and can't be rerolled.{m.downside ? ` It costs }
-- L873: Aim at {h.name} instead
-- L876: The same {mutations.length} mutations, for {h.name}
-- L877: Aim at {h.name}
-- L882: Back to the hires
-- L882: Pick someone else
-- L883: Aiming at {aimed.name}
-- L886: Nothing spent. The same mutations will wait.
-- L887: Back to the hires
-- L887: Pick someone else
-- L905: A mutation instead
-- L906: {mutations.length} Mythics
-- L909: Hire nobody; change how one hero attacks, for good.
-- L910: A mutation instead
-- L923: You have {MAX_ROSTER} heroes, the most you can lead.
-- L927: No room for more heroes
-- L927: Hire {s.name}
-- L928: {s.name} joins your heroes
-- L935: Hire nobody
-- L935: Hire nobody
-- L946: Mutate
-- L952: Change how {h.name} attacks, for good: pick 1 of {mutations.length} Mythic mutations.
-- L953: Carries {mutationName(m.key, m.na} — {m.desc}
-- L954: The same mutations whoever you aim at. Aiming is free.
-- L956: Aim at {h.name}
-- L959: March on
-- L959: March on
-- L964: March on
-- L964: March on
-- L976: Standard
-- L977: Deuteranopia
-- L978: Protanopia
-- L979: Tritanopia
-- L996: Music
-- L997: Effects
-- L998: Interface
-- L1003: On
-- L1003: Off
-- L1007: Sound
-- L1008: Muted
-- L1008: Music {Math.round(s.audio.music} · Effects {Math.round(s.audio.game }
-- L1019: Effects tell you what hit, died or got through; music is safe to lower first.
-- L1021: Unmute
-- L1021: Mute
-- L1025: Calm audio
-- L1028: No drums, a softer mix, effects ahead of the music. Every warning still plays.
-- L1029: Turn off
-- L1029: Turn on
-- L1033: Mono audio
-- L1036: One channel, so one earbud hears everything.
-- L1037: Turn off
-- L1037: Turn on
-- L1041: Reduced motion
-- L1044: Cuts animation and screen shake.
-- L1045: Turn off
-- L1045: Turn on
-- L1050: Effects
-- L1051: Off (reduced motion)
-- L1051: Light
-- L1051: Full
-- L1054: Each company’s world round the panels and the field’s edges: embers, sparks, petals, paint, stars.
-- L1055: Light: half the particles, no glows, still frames. Full drops to Light by itself on a slow device.
-- L1058: Set to Full
-- L1058: Set to Light
-- L1065: High contrast
-- L1068: Stronger borders and text.
-- L1069: Turn off
-- L1069: Turn on
-- L1073: Large UI
-- L1076: All text about 15% larger; touch targets 48px.
-- L1078: Normal size
-- L1078: Make it large
-- L1085: Colour vision
-- L1088: Re-tints rarity, hero and good/bad colours. Rarity also shows pips, so colour is never the only signal.
-- L1090: Switch to {VISION_LABEL[nextVision(}
-- L1097: Assist
-- L1120: Waves, loot and pay stay the same.
-- L1122: A run with assist on, even for one wave, is marked Assisted: it keeps every reward but skips leaderboards.
-- L1125: Set to {assistProfile(nextAssist}
-- L1133: Held waves continue
-- L1136: On: a held sub-wave sends the next after 4 seconds, unless you touch the field. Off: it waits for Next.
-- L1137: Turn off
-- L1137: Turn on
-- L1141: Show everything from the start
-- L1144: Off: features arrive one at a time as you play. On: every screen shows everything now.
-- L1146: Introduce things as they come
-- L1146: Show everything
-- L1153: Tips
-- L1154: Some seen
-- L1154: All waiting
-- L1156: The one-line hints shown the first time something matters. Bring them back for another pass.
-- L1157: Show the tips again
-- L1161: Reset progress
-- L1162: Destructive
-- L1165: Wipes your bank, HQ, standing, unlocks and records. There is no undo.
-- L1167: Erase everything
-- L1172: Yes — erase it all
-- L1173: Everything you have earned will be gone.
-- L1183: Sovereign Route · every kind of goblin from the first fight, {MUSTER_PCT}% stronger.
-- L1185: Escort · standard raiders.
-- L1189: Opens after your first contract
-- L1191: Opens when your bank first holds {HQ_OPENS_AT.toLocaleStri} gold
-- L1192: Opens after your first delivered contract
-- L1203: Back
-- L1207: Back
-- L1215: Your militia
-- L1219: Its name and flag. The flag flies over your wagons and HQ.
-- L1220: Change
-- L1237: Start a Run
-- L1238: Your first contract
-- L1238: The focused road’s terms
-- L1243: Peppercorn Co. needs its spice escorted. It’s free, and every city pays you.
-- L1244: Pick a road, then read its terms: escort free, or stake cargo for more pay.
-- L1245: Begin
-- L1255: Headquarters
-- L1256: HQ
-- L1257: {moneyText(meta.bank, 'go} banked
-- L1260: Two offices, HR and Operations: bank gold buys upgrades that last.
-- L1261: Open
-- L1266: Sealed crates
-- L1267: Crates
-- L1268: {moneyText(PULL_PRICE, 'g} a crate
-- L1271: A side bet: one random item, yours for good.
-- L1272: Open
-- L1278: Codex
-- L1279: Glossary
-- L1279: Standing {best}
-- L1282: Every item, skill, goblin, relic and feat, found and unfound, plus the glossary.
-- L1283: Open
-- L1287: Settings
-- L1290: Sound, motion, contrast, size, colour, assist and tips.
-- L1291: Open
+- L305: Taking it doesn’t raise enemy strength.
+- L308: Hiring doesn’t raise enemy strength.
+- L355: Keepsake: works for the whole team, whoever wears it.
+- L394: Curse · {e.label} — {t}
+- L394: {e.label} — {t}
+- L402: {SOVEREIGN_TIER} tier
+- L427: STR
+- L428: DEX
+- L429: INT
+- L466: Holds
+- L467: Targets
+- L467: a group
+- L480: Skill · {k.name} — {k.desc}
+- L605: Walk on
+- L605: Nothing here to take.
+- L606: March on
+- L606: Leave the city.
+- L607: Walk on
+- L607: Leave this stop.
+- L610: Back to the menu
+- L610: End the charter and head home. Its fee is lost.
+- L610: End the contract and head home.
+- L648: Choose {c.name}
+- L653: Back
+- L653: Back
+- L676: Buy
+- L678: {itemName(e.item)} added to your pack
+- L695: −{cargoShare(-fx.baseHpDel}% cargo now
+- L706: Bargain
+- L713: Boon — {s.boon}
+- L714: Curse — {shrineCurse(st, s)}
+- L715: Accept the terms
+- L716: Walk away
+- L739: to pack
+- L745: Downside — {c.downside}
+- L758: How effects stack
+- L763: Take {c.item ? itemName(c.item}
+- L812: {cr.revealed.heroName} · Mythic
+- L815: Downside — {m.downside}
+- L817: How effects stack
+- L818: March on
+- L835: Mythic
+- L838: Downside — {m.downside}
+- L854: {aimed.name} already carries this one.
+- L857: Already carried
+- L857: Give {aimed.name} {name}
+- L861: Yes — mutate {aimed.name}
+- L862: {name} is permanent and can't be rerolled.{m.downside ? ` It costs }
+- L874: Aim at {h.name} instead
+- L877: The same {mutations.length} mutations, for {h.name}
+- L878: Aim at {h.name}
+- L883: Back to the hires
+- L883: Pick someone else
+- L884: Aiming at {aimed.name}
+- L887: Nothing spent. The same mutations will wait.
+- L888: Back to the hires
+- L888: Pick someone else
+- L906: A mutation instead
+- L907: {mutations.length} Mythics
+- L910: Hire nobody; change how one hero attacks, for good.
+- L911: A mutation instead
+- L924: You have {MAX_ROSTER} heroes, the most you can lead.
+- L928: No room for more heroes
+- L928: Hire {s.name}
+- L929: {s.name} joins your heroes
+- L936: Hire nobody
+- L936: Hire nobody
+- L947: Mutate
+- L953: Change how {h.name} attacks, for good: pick 1 of {mutations.length} Mythic mutations.
+- L954: Carries {mutationName(m.key, m.na} — {m.desc}
+- L955: The same mutations whoever you aim at. Aiming is free.
+- L957: Aim at {h.name}
+- L960: March on
+- L960: March on
+- L965: March on
+- L965: March on
+- L977: Standard
+- L978: Deuteranopia
+- L979: Protanopia
+- L980: Tritanopia
+- L997: Music
+- L998: Effects
+- L999: Interface
+- L1004: On
+- L1004: Off
+- L1008: Sound
+- L1009: Muted
+- L1009: Music {Math.round(s.audio.music} · Effects {Math.round(s.audio.game }
+- L1020: Effects tell you what hit, died or got through; music is safe to lower first.
+- L1022: Unmute
+- L1022: Mute
+- L1026: Calm audio
+- L1029: No drums, a softer mix, effects ahead of the music. Every warning still plays.
+- L1030: Turn off
+- L1030: Turn on
+- L1034: Mono audio
+- L1037: One channel, so one earbud hears everything.
+- L1038: Turn off
+- L1038: Turn on
+- L1042: Reduced motion
+- L1045: Cuts animation and screen shake.
+- L1046: Turn off
+- L1046: Turn on
+- L1051: Effects
+- L1052: Off (reduced motion)
+- L1052: Light
+- L1052: Full
+- L1055: Each company’s world round the panels and the field’s edges: embers, sparks, petals, paint, stars.
+- L1056: Light: half the particles, no glows, still frames. Full drops to Light by itself on a slow device.
+- L1059: Set to Full
+- L1059: Set to Light
+- L1066: High contrast
+- L1069: Stronger borders and text.
+- L1070: Turn off
+- L1070: Turn on
+- L1074: Large UI
+- L1077: All text about 15% larger; touch targets 48px.
+- L1079: Normal size
+- L1079: Make it large
+- L1086: Colour vision
+- L1089: Re-tints rarity, hero and good/bad colours. Rarity also shows pips, so colour is never the only signal.
+- L1091: Switch to {VISION_LABEL[nextVision(}
+- L1098: Assist
+- L1121: Waves, loot and pay stay the same.
+- L1123: A run with assist on, even for one wave, is marked Assisted: it keeps every reward but skips leaderboards.
+- L1126: Set to {assistProfile(nextAssist}
+- L1134: Held waves continue
+- L1137: On: a held sub-wave sends the next after 4 seconds, unless you touch the field. Off: it waits for Next.
+- L1138: Turn off
+- L1138: Turn on
+- L1142: Show everything from the start
+- L1145: Off: features arrive one at a time as you play. On: every screen shows everything now.
+- L1147: Introduce things as they come
+- L1147: Show everything
+- L1154: Tips
+- L1155: Some seen
+- L1155: All waiting
+- L1157: The one-line hints shown the first time something matters. Bring them back for another pass.
+- L1158: Show the tips again
+- L1162: Reset progress
+- L1163: Destructive
+- L1166: Wipes your bank, HQ, standing, unlocks and records. There is no undo.
+- L1168: Erase everything
+- L1173: Yes — erase it all
+- L1174: Everything you have earned will be gone.
+- L1184: Sovereign Route · every kind of goblin from the first fight, {MUSTER_PCT}% stronger.
+- L1186: Escort · standard raiders.
+- L1190: Opens after your first contract
+- L1192: Opens when your bank first holds {HQ_OPENS_AT.toLocaleStri} gold
+- L1193: Opens after your first delivered contract
+- L1204: Back
+- L1208: Back
+- L1216: Your militia
+- L1220: Its name and flag. The flag flies over your wagons and HQ.
+- L1221: Change
+- L1238: Start a Run
+- L1239: Your first contract
+- L1239: The focused road’s terms
+- L1244: Peppercorn Co. needs its spice escorted. It’s free, and every city pays you.
+- L1245: Pick a road, then read its terms: escort free, or stake cargo for more pay.
+- L1246: Begin
+- L1256: Headquarters
+- L1257: HQ
+- L1258: {moneyText(meta.bank, 'go} banked
+- L1262: Bank gold buys upgrades that last; the castle grows with them.
+- L1263: Open
+- L1268: Sealed crates
+- L1269: Crates
+- L1270: {moneyText(PULL_PRICE, 'g} a crate
+- L1273: A side bet: one random item, yours for good.
+- L1274: Open
+- L1280: Codex
+- L1281: Glossary
+- L1281: Standing {best}
+- L1284: Every item, skill, goblin, relic and feat, found and unfound, plus the glossary.
+- L1285: Open
+- L1289: Settings
+- L1292: Sound, motion, contrast, size, colour, assist and tips.
+- L1293: Open
 
 ### `src/ui/shell/oneTap.tsx`
 

@@ -51,6 +51,15 @@ and firelight are its own. The scenes live outside the `*tinyswords` folders on
 purpose: their drawn props and lighting carry colours the palette check would
 (rightly) not find in the pack.
 
+The HQ's castle at each stage, `public/assets/scenes/hq-{lodge,watchtower,castle,stronghold}.png`
+(the HQ pass, Oct 2026), is composed by `scripts/hq-keep.ts` from the same
+old CC0 build and upstream: the Knights' house, tower and castle (Blue) and
+their construction states, the red castle's banner cloth (re-dyed in the
+pack's red ramp), the flat ground's grass, pines and deco. The flagpoles and
+pennants are drawn by the script in the pack's palette and ink. Nothing
+comes from `BuildingsCustom/` (unverified provenance, never harvested) or the
+current, non-CC0 download.
+
 ## `tinyswords` — the default theme (Tiny Swords by Pixel Frog)
 
 **Tiny Swords**, created by **Pixel Frog**, *old CC0 1.0 build only*.

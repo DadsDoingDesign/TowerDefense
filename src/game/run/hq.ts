@@ -171,6 +171,63 @@ export const hqLevel = (levels: Readonly<Record<string, number>> | undefined, id
   Math.min(hqMax(id), whole(levels?.[id]))
 
 // ---------------------------------------------------------------------------
+// The castle grows with the upgrades (Oct 2026, the HQ pass)
+// ---------------------------------------------------------------------------
+
+export type HqStageId = 'lodge' | 'watchtower' | 'castle' | 'stronghold'
+export interface HqStage {
+  id: HqStageId
+  /** The stage's name, under its picture. */
+  name: string
+  /** Levels bought, across every purchase, from which the HQ stands as this. */
+  from: number
+}
+
+/**
+ * What the HQ looks like, by how much of it you have bought — the way a Town
+ * Hall grows as it levels. A picture only: a stage pays nothing and gates
+ * nothing. The art is the pack's own buildings (`scripts/hq-keep.ts` for the
+ * page, `scripts/fw-icons.ts` for the home plate's mark): a thatched lodge,
+ * a watchtower, a castle, a castle flying its banners. Thresholds: the first
+ * three cheap levels raise the tower (about 450 gold), seven the castle,
+ * twelve of the fifteen the banners.
+ */
+export const HQ_STAGES: readonly HqStage[] = [
+  { id: 'lodge', name: 'Lodge', from: 0 },
+  { id: 'watchtower', name: 'Watchtower', from: 3 },
+  { id: 'castle', name: 'Castle', from: 7 },
+  { id: 'stronghold', name: 'Stronghold', from: 12 },
+]
+
+/** Every level of every purchase: the whole HQ (15). */
+export const HQ_LEVELS_MAX = HQ_IDS.reduce((a, id) => a + hqMax(id), 0)
+
+/** Levels bought across every purchase, each clamped to its range (unknown ids ignored). */
+export const hqLevelsBought = (levels: Readonly<Record<string, number>> | undefined): number =>
+  HQ_IDS.reduce((a, id) => a + hqLevel(levels, id), 0)
+
+/** Where the HQ stands: its stage, the next one, and how many levels raise it. */
+export interface HqStageView {
+  stage: HqStage
+  /** The stage's place in {@link HQ_STAGES}, from 0. */
+  index: number
+  /** Levels bought in all. */
+  bought: number
+  /** The next stage, or null at the last. */
+  next: HqStage | null
+  /** Levels still to buy before the next stage (0 at the last). */
+  toNext: number
+}
+
+export function hqStage(levels: Readonly<Record<string, number>> | undefined): HqStageView {
+  const bought = hqLevelsBought(levels)
+  let index = 0
+  for (let i = 0; i < HQ_STAGES.length; i++) if (bought >= HQ_STAGES[i].from) index = i
+  const next = HQ_STAGES[index + 1] ?? null
+  return { stage: HQ_STAGES[index], index, bought, next, toNext: next ? next.from - bought : 0 }
+}
+
+// ---------------------------------------------------------------------------
 // HR — the opening deal
 // ---------------------------------------------------------------------------
 
@@ -195,11 +252,11 @@ export const BASE_DEAL: DealRules = { pick: 3, dressed: false, rareBody: false, 
  * read in order, each adds to the ones before it.
  */
 export const DEAL_STEPS: readonly { line: string; rules: Partial<DealRules> }[] = [
-  { line: 'Every hero comes with body armour, and an off-hand piece if a hand is free.', rules: { dressed: true } },
-  { line: 'Body armour arrives Rare.', rules: { rareBody: true } },
-  { line: 'Pick 1 of 4 heroes.', rules: { pick: 4 } },
-  { line: 'One of them starts with a Level 2 skill.', rules: { skill2: true } },
-  { line: 'A second hero marches with the one you pick.', rules: { second: true } },
+  { line: 'Body armour and an off-hand on every hero', rules: { dressed: true } },
+  { line: 'Body armour arrives Rare', rules: { rareBody: true } },
+  { line: 'Pick 1 of 4 heroes', rules: { pick: 4 } },
+  { line: 'One hero starts with a Level 2 skill', rules: { skill2: true } },
+  { line: 'A second hero marches with yours', rules: { second: true } },
 ]
 
 /** The deal at an Opening deal level. */
@@ -208,13 +265,13 @@ export function dealRules(level: number): DealRules {
   return DEAL_STEPS.slice(0, n).reduce<DealRules>((r, s) => ({ ...r, ...s.rules }), { ...BASE_DEAL })
 }
 
-/** The deal now, as one line ("Pick 1 of 3 · dressed …"). */
+/** The deal now, as one line ("Pick 1 of 3 · Rare armour · …"). */
 export function dealSummary(level: number): string {
   const r = dealRules(level)
   const parts = [`Pick 1 of ${r.pick}`]
-  if (r.dressed) parts.push(r.rareBody ? 'Rare body armour' : 'body armour')
-  if (r.skill2) parts.push('one with a Level 2 skill')
-  if (r.second) parts.push('a second hero')
+  if (r.dressed) parts.push(r.rareBody ? 'Rare armour' : 'Armour')
+  if (r.skill2) parts.push('Level 2 skill')
+  if (r.second) parts.push('+1 hero')
   return parts.join(' · ')
 }
 

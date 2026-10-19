@@ -5030,3 +5030,51 @@ the zero-meta escort reads 16 → 15% (band 12–20%).
 - New kinds are unlocked one at a time like every kind. An existing save
   sees them as "???" in the Codex until it plays. The charter's door
   counts only the old catalogue, so a door that was open stays open.
+
+### 2026-10-19 — the HQ: a castle that grows, and one pick instead of two tabs
+
+The designer: "I need the castle icon to be like castle upgrades, and reflect
+that in the icon and make the tabs and upgrade options more simple and clear
+and up to the ui aesthetic of the rest of the app." Shot in the running app
+at 390 × 844 and 1280 × 800 (`node scripts/hq-shots.mjs`); cards in
+`docs/ui-audit-2026-10/hq/` (`node scripts/hq-cards.mjs`).
+
+**Before.** Two tabs (HR, Operations) hid three of the five upgrades, and the
+filled pink tab was the loudest thing on the page. The bank's interest sat
+above every upgrade. Each card had its own button (Operations had four), so
+a buy and a can't-buy looked alike. Levels read five ways (a bar, slot
+squares, % chips, ✓ rows, nothing), and "maxed" was five different
+sentences. Nothing on the page or the plate said how far the HQ had come.
+
+**After.** The castle grows (`hq.hqStage`: Lodge 0, Watchtower 3, Castle 7,
+Stronghold 12 of 15 levels). The plate's mark is redrawn for 16 px for each
+stage. The page's picture is the pack's own buildings at 1×, with the next
+stage's footing beside it. Then the five upgrades sit in one `PickStrip`
+(mark, level pips, price) over one `PickCard` (Now, Next, one note), and one
+CTA ("Upgrade Pack slots 350", "Need 60 more", "Fully upgraded"). No gameplay
+change: prices, effects and rolls come from `hq.ts` as before
+(`tests/hqStage.test.ts`).
+
+**Round 1.** The stage track sat over the scene and covered a pennant: it
+moved under the picture, beside the stage's name, and the duplicate "next"
+silhouette went. The maxed deal's Now line was cut off, so values now wrap.
+The red castle's banner cloth came out pale rose, so it is dyed in the pack's
+red ramp. The lodge stood on bare grass, so a grove went behind it. "Max"
+labels are now gold.
+
+**Round 2.** The focus card's note was below the fold, so it now comes before
+the crests. The crests went up to 2×. The locked token's "Locked" was cut to
+"Lock…" at 320, so its foot now counts towards opening ("4/5"). Prices of a
+thousand or more now print with a comma ("1,200", `Money`).
+
+**Round 3.** Maxed was said three times on one card (kicker, Next, CTA): now
+the kicker is "Level 5 of 5" in gold, Next is "—", and only the CTA says
+"Fully upgraded". The last stage's bar fills gold once everything is bought.
+The summary's "armour" is now "Armour".
+
+**Benchmark (Clash of Clans / Clash Royale upgrade screens).** The pattern
+matches: a big picture of the building at its level, a ladder of what it
+becomes, current → next in two rows, one big gold-price button. It falls
+short in two ways: there is no moment when the castle levels up (no
+animation or reveal), and on a 375 × 667 phone the card starts below the
+picture, so the page scrolls.

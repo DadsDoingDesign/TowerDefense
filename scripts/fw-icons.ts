@@ -2532,6 +2532,94 @@ for (const people of PEOPLES) {
   }
 }
 
+/*
+ * ---------------------------------------------------------------------------
+ * The HQ's castle stages (Oct 2026) — row 22 (cont.) to 23
+ * ---------------------------------------------------------------------------
+ * The home bar's HQ plate shows the HQ as it stands (`run/hq.hqStage`), the
+ * way a Town Hall grows as it levels: a thatched lodge, a watchtower, a
+ * castle, a castle flying its banners. Each is the pack's own building
+ * (`Factions/Knights/Buildings/House|Tower|Castle`, the Blue set) redrawn
+ * for 16 × 16 — never the 320 px sprite shrunk — so the four read apart by
+ * SILHOUETTE at the plate's 32 px: a pointed roof, one tall shaft, a wide
+ * wall between two towers, then the same wall with two red pennants above it.
+ */
+icon('hqLodge', [
+  '................',
+  '................',
+  '.......pp.......',
+  '......pPPq......',
+  '.....pPPpPq.....',
+  '....pPPpPPPq....',
+  '....PPpPPpPq....',
+  '...pPpPPpPPPq...',
+  '...PPPpPPPpPq...',
+  '..qqqqqqqqqqqq..',
+  '...TtTLLLLTtT...',
+  '...TtTLooLTtT...',
+  '...ttTLooLTtt...',
+  '..llllllllllll..',
+  '................',
+  '................',
+])
+
+icon('hqTower', [
+  '................',
+  '...TT..TT..TT...',
+  '...TT..TT..TT...',
+  '...TTTTTTTTTT...',
+  '...uttttttttu...',
+  '....TTTTTTTT....',
+  '....TtTTTTtT....',
+  '....TTTTTTTT....',
+  '....tTTLLTTt....',
+  '....TTLooLTT....',
+  '....tTLooLTt....',
+  '....TTLooLTT....',
+  '...llllllllll...',
+  '...lololololo...',
+  '................',
+  '................',
+])
+
+icon('hqCastle', [
+  '................',
+  '................',
+  '................',
+  '.TT.TT....TT.TT.',
+  '.TTTTT....TTTTT.',
+  '.utttuT.T.utttu.',
+  '.TTTTTuTTuTTTTT.',
+  '.TtTTTuttuTTTtT.',
+  '.TTTTuLLLLuTTTT.',
+  '.TTtTLooooLTtTT.',
+  '.TTTTLooooLTTTT.',
+  '.tTTTLooooLTTTt.',
+  '.llllllllllllll.',
+  '.lololololololo.',
+  '................',
+  '................',
+])
+
+icon('hqStronghold', [
+  '................',
+  '..lRRR....RRRl..',
+  '..lRR......RRl..',
+  '..l..........l..',
+  '.Tl.TT....TT.lT.',
+  '.TTTTT....TTTTT.',
+  '.utttuT.T.utttu.',
+  '.TRRTTuTTuTTRRT.',
+  '.TRRTTuttuTTRRT.',
+  '.TrrTuLLLLuTrrT.',
+  '.TTTTLooooLTTTT.',
+  '.TTTTLooooLTTTT.',
+  '.tTTTLooooLTTTt.',
+  '.llllllllllllll.',
+  '.lololololololo.',
+  '................',
+])
+
 /* ========================================================================= */
 
 const assert = () => {

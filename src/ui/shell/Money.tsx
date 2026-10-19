@@ -31,7 +31,7 @@ export function Money({
     >
       <Icon name={CURRENCY_ICON[c]} />
       <span className="money-n" aria-hidden="true">
-        {amount}
+        {amount.toLocaleString('en')}
       </span>
     </span>
   )
