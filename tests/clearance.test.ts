@@ -1,3 +1,4 @@
+import { PEOPLE_KINDS } from '../src/game/data/peopleKinds'
 import { afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { idCounterState } from '../src/game/core/rng'
 import { BASE_ARCHETYPE_NODES } from '../src/game/data/archetypeTree'
@@ -73,8 +74,11 @@ function pairOf(map: GameMap, avoid: string[] = []): [string, string] {
 describe('who is melee', () => {
   it('the swinging weapons: Sword, Axe, Greatsword, Warhammer, the Saffron Brand — and nothing else', () => {
     const swing = Object.entries(ITEM_BASES).filter(([noun, b]) => itemSwings({ name: `Rare ${noun}`, slot: b.slot })).map(([n]) => n)
-    // The Saffron Brand is the Sovereign tier's sword (the endgame charter).
-    expect(swing.sort()).toEqual(['Axe', 'Greatsword', 'Saffron Brand', 'Sword', 'Warhammer'])
+    // The Saffron Brand is the Sovereign tier's sword (the endgame charter);
+    // the peoples' rosters (Oct 2026) add their blades, hammers, axes and poles.
+    const peoples = PEOPLE_KINDS.filter((k) => k.swings).map((k) => k.id)
+    expect(swing.sort()).toEqual(['Axe', 'Greatsword', 'Saffron Brand', 'Sword', 'Warhammer', ...peoples].sort())
+    for (const n of peoples) expect(PEOPLE_KINDS.find((k) => k.id === n)!.weapon!.damageType).toBe('physical')
     // Every swinger is a physical weapon of a main-hand or two-hand grip; the
     // knife (either grip) and the bow do not swing.
     for (const n of swing) expect(['main', 'twoHand']).toContain(ITEM_BASES[n].grip)

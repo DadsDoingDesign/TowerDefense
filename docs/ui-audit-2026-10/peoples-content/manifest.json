@@ -1,0 +1,130 @@
+[
+ {
+  "id": "new-icons",
+  "group": "New items & skills",
+  "people": "all",
+  "title": "The 75 new atlas cells",
+  "caption": "Every new and renamed item of the five rosters, baked from the reviewed drafts into fw-icons.png (rows 13–22), in roster order: humans, elves, dwarves, reptilians, gnomes.",
+  "file": "new-icons.png"
+ },
+ {
+  "id": "merchant-shelf",
+  "group": "New items & skills",
+  "people": "dwarves",
+  "title": "Ironvein’s merchant: the dwarves’ gear on the shelf",
+  "caption": "An Ironvein contract leans its shelf to its people: Hand Hammer and Deepforge Plate (dwarves), Glaive (reptilians). Every piece is a new kind with its own icon.",
+  "file": "merchant-shelf.png"
+ },
+ {
+  "id": "item-card",
+  "group": "New items & skills",
+  "people": "humans",
+  "title": "A new ware’s card: Pepperport Sabre",
+  "caption": "Its rolled base (+8 damage, +12% speed) and its fixed edge, said as the effect alone: “Crits burn 12/s for 3s”.",
+  "file": "item-card.png"
+ },
+ {
+  "id": "item-card-hammer",
+  "group": "New items & skills",
+  "people": "dwarves",
+  "title": "Hand Hammer: hits hard, a small stun",
+  "caption": "The edge (8% stun 0.5s) sits under the base lines; the hand rule last.",
+  "file": "item-card-hammer.png"
+ },
+ {
+  "id": "skill-choice",
+  "group": "New items & skills",
+  "people": "reptilians",
+  "title": "A Level 2 skill choice with two new cards",
+  "caption": "Hero at level 10: Thornbloom (renamed), Venom Spit and Overgrowth (new). Venom Spit focused.",
+  "file": "skill-choice.png"
+ },
+ {
+  "id": "skill-choice-overgrowth",
+  "group": "New items & skills",
+  "people": "gnomes",
+  "title": "The same offer, Overgrowth focused",
+  "caption": "Overgrowth grows roots on the path beside its hero (the Snare’s hazard): slows 40%, stings 8/s.",
+  "file": "skill-choice-overgrowth.png"
+ },
+ {
+  "id": "codex-items",
+  "group": "New items & skills",
+  "people": "all",
+  "title": "Codex · Items: 100 kinds, each its own icon",
+  "caption": "The classic kinds first, then the five rosters in order. Badge is the level; the corner crest is the company that deals it more often.",
+  "file": "codex-items.png"
+ },
+ {
+  "id": "codex-item-card",
+  "group": "New items & skills",
+  "people": "humans",
+  "title": "Codex card: Kite Shield",
+  "caption": "Level 1 · Off hand · Peppercorn Co. “Holds 2 enemies; its hits slow 15%.”",
+  "file": "codex-item-card.png"
+ },
+ {
+  "id": "codex-skills",
+  "group": "New items & skills",
+  "people": "all",
+  "title": "Codex · Skills: the renames and the five new cards",
+  "caption": "Spicy Peps, Starweave, Blood Price, Thornbloom (renamed); Bolder Bash, Banner Bearer, Venom Spit, Overgrowth, Tinker’s Spark (new).",
+  "file": "codex-skills.png"
+ },
+ {
+  "id": "codex-skill-card",
+  "group": "New items & skills",
+  "people": "dwarves",
+  "title": "Codex card: Bolder Bash, Ironvein’s new signature",
+  "caption": "Paid at standing 5 on Ironvein’s track; Ore Sense becomes an ordinary card.",
+  "file": "codex-skill-card.png"
+ },
+ {
+  "id": "battle-live",
+  "group": "New items & skills",
+  "people": "all",
+  "title": "In battle: the dressed company",
+  "caption": "Knight with Hand Hammer + Anvil Shield (the shield is drawn on the arm), the gnome caster with a Sprout Wand in her fist, an elf with a Recurve Bow, a reptilian with a Spear.",
+  "file": "battle-live.png"
+ },
+ {
+  "id": "figures-humans",
+  "group": "New items & skills",
+  "people": "humans",
+  "title": "On the figure: the humans’ new kinds",
+  "caption": "Real draw code (harness/kit.html?peoples=1). Every blade swings the knight’s painted sword (the rule); the new shields are drawn on the arm.",
+  "file": "figures-humans.png"
+ },
+ {
+  "id": "figures-elves",
+  "group": "New items & skills",
+  "people": "elves",
+  "title": "On the figure: the elves’ new kinds",
+  "caption": "The bows are the archer’s painted bow; knives are not drawn on the hooded look; the quivers on the knight.",
+  "file": "figures-elves.png"
+ },
+ {
+  "id": "figures-dwarves",
+  "group": "New items & skills",
+  "people": "dwarves",
+  "title": "On the figure: the dwarves’ new kinds",
+  "caption": "Hammers and axes swing the painted sword with their glint; Round, Rune, Anvil Shield and Thane’s Bulwark on the arm.",
+  "file": "figures-dwarves.png"
+ },
+ {
+  "id": "figures-reptilians",
+  "group": "New items & skills",
+  "people": "reptilians",
+  "title": "On the figure: the reptilians’ new kinds",
+  "caption": "Spears, cleavers and the glaive swing the painted sword; Gator Buckler and Javelin Sling in the off hand.",
+  "file": "figures-reptilians.png"
+ },
+ {
+  "id": "figures-gnomes",
+  "group": "New items & skills",
+  "people": "gnomes",
+  "title": "On the figure: the gnomes’ new kinds",
+  "caption": "The casters hold their own cell: Sprout Wand, Thornrod, Spark Coil, Bloomstaff, Worldroot Staff. Pouch, flask, rack and elixir on the knight.",
+  "file": "figures-gnomes.png"
+ }
+]

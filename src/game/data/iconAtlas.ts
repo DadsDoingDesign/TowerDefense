@@ -9,14 +9,15 @@
  * callers keep importing from there; `scripts/fw-icons.ts` checks THIS file's
  * `ICON_ORDER` / `ICON_COLS` / `ICON_ROWS` against the sheet.
  */
-import { ITEM_NOUN_RE } from './items'
+import { itemNoun } from './items'
+import { PEOPLE_KINDS, peopleIconKey } from './peopleKinds'
 import type { Item } from '../types'
 
 /**
- * The 108 cells of `public/assets/ui/fw-icons.png`, IN CELL ORDER.
+ * The 183 cells of `public/assets/ui/fw-icons.png`, IN CELL ORDER.
  *
  * The list is authored twice on purpose — here and in `scripts/fw-icons.ts` —
- * because a PNG cannot carry its own index and a silently-shifted atlas is 108
+ * because a PNG cannot carry its own index and a silently-shifted atlas is 183
  * wrong pictures rather than one visible error. The generator refuses to write
  * the file unless this array matches it exactly, and `npm run build` runs the
  * same check without writing, so the duplication is checked rather than
@@ -78,6 +79,31 @@ export const ICON_ORDER = [
   // (Oct 2026: every item looks like itself, on the tile and in the fist)
   'brand', 'rod', 'tome', 'codex', 'buckler', 'pavise', 'easel', 'mail',
   'aegis', 'ironheart', 'cloak', 'silkwind',
+  // rows 13 (cont.) – 22 — the peoples' kinds (Oct 2026, `docs/peoples/roster.json`):
+  // every new and renamed item of the five rosters, in roster order, baked
+  // from the reviewed drafts (`scripts/peoples-art/`). Keys are
+  // `peopleKinds.peopleIconKey` of the name.
+  // Humans
+  'armingSword', 'kiteShield', 'gambeson', 'falchion', 'spicedBlade', 'halberd',
+  'bannerPole', 'heaterShield', 'brigandine', 'pepperportSabre', 'captainsShield', 'sergeantsCuirass',
+  'pepperportStandard', 'saltmarshWarplate',
+  // Elves
+  'shortbow', 'silkWrap', 'longbow', 'twinKnives', 'barbedQuiver', 'wovenVest',
+  'thornweaveHood', 'recurveBow', 'loomwardenBow', 'rangersDirk', 'starfeatherQuiver', 'moonsilkMantle',
+  'starstringLongbow', 'whisperfang',
+  // Dwarves
+  'handHammer', 'minersPick', 'roundShield', 'chainshirt', 'forgeApron', 'beardedAxe',
+  'maul', 'runeShield', 'stoneskinMail', 'greataxe', 'quarryBreaker', 'anvilShield',
+  'deepforgePlate', 'mountainbreaker', 'thanesBulwark',
+  // Reptilians
+  'spear', 'fangKnife', 'boneClub', 'leather', 'hideWrap', 'cleaver',
+  'meatHook', 'harpoon', 'gatorBuckler', 'javelinSling', 'scaleHide', 'glaive',
+  'bonecrusher', 'venomFang', 'stalkerLeathers', 'smokehouseApron', 'kingscaleShield', 'wyrmtoothSpear',
+  'butcherKingsCleaver',
+  // Gnomes
+  'sproutWand', 'herbPouch', 'thornrod', 'sparkCoil', 'flask', 'mossweaveRobe',
+  'brewBelt', 'bloomstaff', 'philterRack', 'alchemistsCoat', 'greenvialHerbal', 'worldrootStaff',
+  'elixirOfPlenty',
 ] as const
 
 export type IconKey = (typeof ICON_ORDER)[number]
@@ -91,7 +117,7 @@ export type IconKey = (typeof ICON_ORDER)[number]
  * every cell in the atlas with nothing anywhere to notice (M13).
  */
 export const ICON_COLS = 8
-export const ICON_ROWS = 14
+export const ICON_ROWS = 23
 
 /**
  * Where an icon sits in the sheet, as (column, row).
@@ -158,13 +184,15 @@ export const iconCell = (k: IconKey): { ix: number; iy: number } => {
  * rule cannot disagree about which noun a name carries. Both spellings of
  * Sceptre/Scepter are carried.
  */
-const NOUN_RE = ITEM_NOUN_RE
 
 const NOUN_ICON: Record<string, IconKey> = {
   // The Sovereign tier: each its own object (the cyan tier mark still says the tier).
   'Saffron Brand': 'brand',
-  'Moonquill Codex': 'codex',
-  'Gilded Easel': 'easel',
+  // The roster's renames are redrawn; an unmigrated old name is the same object.
+  'Greenvial Herbal': 'greenvialHerbal',
+  'Kingscale Shield': 'kingscaleShield',
+  'Moonquill Codex': 'greenvialHerbal',
+  'Gilded Easel': 'kingscaleShield',
   'Ironheart Plate': 'ironheart',
   'Silkwind Cloak': 'silkwind',
   Greatsword: 'greatblade',
@@ -195,6 +223,8 @@ const NOUN_ICON: Record<string, IconKey> = {
   Relic: 'relic',
   Oath: 'relic',
   Beacon: 'beacon',
+  // Every peoples' kind on a cell of its own (`ICON_ORDER` rows 13–22).
+  ...Object.fromEntries(PEOPLE_KINDS.map((k) => [k.id, peopleIconKey(k.id) as IconKey])),
 }
 
 /** Fallback when a name carries no noun the table knows (a hand-built item). */
@@ -207,7 +237,7 @@ const SLOT_ICON: Record<string, IconKey> = {
 
 /** The shape for an item — what it IS, before what it does. */
 export function itemIcon(item: Pick<Item, 'name' | 'slot'>): IconKey {
-  const noun = NOUN_RE.exec(item.name)?.[0]
+  const noun = itemNoun(item)
   if (noun && NOUN_ICON[noun]) return NOUN_ICON[noun]
   return SLOT_ICON[item.slot] ?? 'loot'
 }

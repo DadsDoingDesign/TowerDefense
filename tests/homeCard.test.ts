@@ -6,8 +6,8 @@ import { CURSED_DAMAGE_PCT, GROUND_EFFECTS, groundEffect, TERRAIN_RULE_IDS } fro
 import { CHARTER_FEE, charterDoor } from '../src/game/run/charter'
 import { DESPERATE_PAY } from '../src/game/run/contracts'
 import { DESPERATE_STRENGTH } from '../src/game/run/tradeWar'
-import { RANDOM_UNLOCK_SKILLS } from '../src/game/data/skills'
-import { UNLOCK_ITEM_KINDS } from '../src/game/data/itemKinds'
+import { CHARTER_SKILLS } from '../src/game/data/skills'
+import { CHARTER_ITEM_KINDS } from '../src/game/data/itemKinds'
 import { CHARTER_ROWS, charterFacts, COMPANY_ROWS, companyBadge, companyFacts } from '../src/ui/shell/homeCard'
 import { charterSlot } from '../src/ui/shell/homeDock'
 
@@ -105,7 +105,7 @@ describe('the company card: a fixed form', () => {
 })
 
 describe('the Buy Company card: the same frame', () => {
-  const door = (skills: number, items: number) => charterDoor({ skills: RANDOM_UNLOCK_SKILLS.slice(0, skills), items: UNLOCK_ITEM_KINDS.slice(0, items) })
+  const door = (skills: number, items: number) => charterDoor({ skills: CHARTER_SKILLS.slice(0, skills), items: CHARTER_ITEM_KINDS.slice(0, items) })
   it('three rows, locked, open or short of the fee', () => {
     const states = [charterSlot(door(10, 8), 340), charterSlot(door(999, 999), CHARTER_FEE + 1), charterSlot(door(999, 999), CHARTER_FEE - 1240)]
     for (const s of states) {
@@ -113,7 +113,7 @@ describe('the Buy Company card: the same frame', () => {
       expect(facts.map((f) => f.key)).toEqual([...CHARTER_ROWS])
       expect(facts.length).toBe(COMPANY_ROWS.length)
     }
-    expect(charterFacts(states[0])[1].value).toBe(`10/${RANDOM_UNLOCK_SKILLS.length} skills · 8/${UNLOCK_ITEM_KINDS.length} items`)
+    expect(charterFacts(states[0])[1].value).toBe(`10/${CHARTER_SKILLS.length} skills · 8/${CHARTER_ITEM_KINDS.length} items`)
     expect(charterFacts(states[1])[1].value).toBe('Covers the fee')
     expect(charterFacts(states[2])[1]).toMatchObject({ value: '1,240 gold short', tone: 'bad' })
   })

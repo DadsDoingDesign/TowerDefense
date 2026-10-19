@@ -4,8 +4,8 @@ import { MAX_STANDING, standingXpToReach } from '../src/game/run/standing'
 import { TERM_XP } from '../src/game/run/track'
 import { DESPERATE_PAY, freshSeason, type Season } from '../src/game/run/tradeWar'
 import { CHARTER_FEE, charterDoor } from '../src/game/run/charter'
-import { RANDOM_UNLOCK_SKILLS } from '../src/game/data/skills'
-import { UNLOCK_ITEM_KINDS } from '../src/game/data/itemKinds'
+import { CHARTER_SKILLS } from '../src/game/data/skills'
+import { CHARTER_ITEM_KINDS } from '../src/game/data/itemKinds'
 import { buildGeometry, FAN_ANGLES, litBy } from '../src/ui/attract/mapRules'
 import { charterCta, charterSlot, charterSlotName, dockSlots, markText, SLOT_MARKS, slotName } from '../src/ui/shell/homeDock'
 
@@ -99,9 +99,9 @@ describe('the company dock', () => {
 
 describe('the Buy Company plaque (the Sovereign Route), on the dock’s shoulder', () => {
   const door = (skills: number, items: number) =>
-    charterDoor({ skills: RANDOM_UNLOCK_SKILLS.slice(0, skills), items: UNLOCK_ITEM_KINDS.slice(0, items) })
-  const ALL_SKILLS = RANDOM_UNLOCK_SKILLS.length
-  const ALL_ITEMS = UNLOCK_ITEM_KINDS.length
+    charterDoor({ skills: CHARTER_SKILLS.slice(0, skills), items: CHARTER_ITEM_KINDS.slice(0, items) })
+  const ALL_SKILLS = CHARTER_SKILLS.length
+  const ALL_ITEMS = CHARTER_ITEM_KINDS.length
 
   it('locked: the progress toward the door, and the CTA says what is missing', () => {
     const s = charterSlot(door(10, 8), 50_000)
