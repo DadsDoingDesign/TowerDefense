@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { RNG } from '../src/game/core/rng'
 import { COMPANY_IDS } from '../src/game/data/companies'
 import { FIELD_SEASONS, fieldSeasonFor } from '../src/game/data/fieldSeasons'
 import { fieldFor, FIRST_MAP, KILN_MAP } from '../src/game/data/maps'
@@ -282,15 +283,30 @@ describe('the season’s weather keeps the game on top', () => {
     const map = KILN_MAP
     const view = { x0: -60, y0: -40, w: map.width + 120, h: map.height + 80 }
     const g = clearGrid(map)
-    for (const co of ['spice', 'art', 'metals', 'scrolls'] as const) {
-      const w = new WeatherLayer()
-      const { ctx, rects } = recorder()
-      for (let f = 0; f < 300; f++) w.frame(ctx, map, view, 1, FIELD_SEASONS[co], 'full', 1000 / 60)
-      // Well inside the game (nothing clear within 10 px: a particle's rects sit a few px off its anchor).
-      const deep = (x: number, y: number) => [-10, 0, 10].every((dx) => [-10, 0, 10].every((dy) => !isClear(g, x + dx, y + dy)))
-      const over = rects.filter((r) => deep(r.x, r.y))
-      expect(over.length).toBeGreaterThan(0)
-      for (const r of over) expect(r.a).toBeLessThanOrEqual(OVER_GAME + 1 / 24)
+    // Well inside the game (nothing clear within 10 px: a particle's rects sit a few px off its anchor).
+    const deep = (x: number, y: number) => [-10, 0, 10].every((dx) => [-10, 0, 10].every((dy) => !isClear(g, x + dx, y + dy)))
+    // The layer spawns with Math.random, and only 12% of throws over the game
+    // land; on a sparse season (spice) about 1 run in 300 put nothing deep in
+    // the game and the "something to judge" check failed. Fixed seeds make the
+    // run the same every time; three per season widen what is checked.
+    const SEEDS = [1, 2, 3]
+    try {
+      for (const co of ['spice', 'art', 'metals', 'scrolls'] as const) {
+        let judged = 0
+        for (const seed of SEEDS) {
+          const rng = new RNG(seed)
+          vi.spyOn(Math, 'random').mockImplementation(() => rng.next())
+          const w = new WeatherLayer()
+          const { ctx, rects } = recorder()
+          for (let f = 0; f < 300; f++) w.frame(ctx, map, view, 1, FIELD_SEASONS[co], 'full', 1000 / 60)
+          const over = rects.filter((r) => deep(r.x, r.y))
+          judged += over.length
+          for (const r of over) expect(r.a, `${co} seed ${seed}`).toBeLessThanOrEqual(OVER_GAME + 1 / 24)
+        }
+        expect(judged, co).toBeGreaterThan(0)
+      }
+    } finally {
+      vi.restoreAllMocks()
     }
   })
 })
