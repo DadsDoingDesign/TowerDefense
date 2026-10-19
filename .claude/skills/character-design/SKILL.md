@@ -199,6 +199,17 @@ smooth formula-filled domes and cones) were all rejected.
   dashes. Avoid noise and evenly spaced streaks, which read as staves or
   corduroy.
 - **Make props big enough to read at 1×,** and give each one its own tic.
+- **Every part must be nameable at 1×.** The designer, Oct 2026, on the
+  elves: "hard to distinguish the parts". Neighbouring parts (hat, hair,
+  ears, cloak, gown, satchel, fists) need a clear value step, light against
+  dark, plus one clean ink edge. A hue change alone isn't enough. Use fewer,
+  bigger shapes, and drop any detail that muddies a boundary.
+- **Show the feet and joins.** Boots or nub feet must show under a long hem.
+  A big hat or pot must sit on visible shoulders, never float over a
+  pinched gap.
+- **Give soft parts their own follow-through.** A long nose, ears, tails or
+  ribbons lag and flop a frame behind the body's bob, in 1–2 px steps. The
+  designer asked for Wren's sausage nose to "flop around".
 
 ## 4c. Lessons from Stardew Valley (what transfers, what doesn't)
 
