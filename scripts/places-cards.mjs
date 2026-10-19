@@ -6,7 +6,8 @@
  *
  *   SHOTS_DPR=1.5 node scripts/places-shots.mjs <before> p390   # on the old art
  *   SHOTS_DPR=1.5 node scripts/places-shots.mjs <after> p390    # on the new
- *   npx tsx scripts/stop-scenes.ts --proposals <proposals>
+ *   (the proposals were baked by `stop-scenes.ts --proposals`, gone since the
+ *   two posts shipped in the liaisons pass: keep the round's <proposals> dir)
  *   node scripts/places-cards.mjs <before> <after> <proposals> [outDir]
  *
  * The cameo card also reads the old posts from `<before>/scenes/` (copied out

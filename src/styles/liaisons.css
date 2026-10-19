@@ -18,9 +18,11 @@
 .stop-liaison-scrolls { background: #1d2131; }
 
 /* Who is speaking heads the bubble, in the receipt's small bold sans: a
-   liaison's bubble is a touch wider than a keeper's to hold it. */
+   liaison's bubble is a touch wider than a keeper's to hold it — and no
+   wider than 172, the box `scripts/stop-scenes.ts` keeps clear beside the
+   liaison's hat and prop (its `talk` anchor). */
 .lia-scene .ss-bubble {
-  max-width: 196px;
+  max-width: 172px;
 }
 .ss-who,
 .lia-says-who {

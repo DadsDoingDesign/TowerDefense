@@ -18,8 +18,9 @@ import { SCENE_ANCHORS, SCENE_SIZE } from './stopScenes.generated'
  * October 2026 map-first home keeps people to the road — cities and the
  * receipt.)
  *
- * The bubble always hangs beside the liaison's head: the band is shorter than
- * a stop's, and the sign takes the sky.
+ * The bubble always hangs beside the liaison's head, at the point the bake
+ * found clear of the liaison in every frame (`talk`): the band is shorter
+ * than a stop's, and the sign takes the sky.
  *
  * The art is decoration; the bubble — who, then the line — is read in place.
  */
@@ -37,12 +38,13 @@ export function LiaisonScene({ company, line, children }: { company: CompanyId; 
  */
 export function LiaisonSays({ company, line }: { company: CompanyId; line: string }) {
   const kind = liaisonScene(company)
-  const [sx, sy] = SCENE_ANCHORS[kind].speaker
-  // The cameo: the post at 1×, framed on the liaison over the counter.
+  const a = SCENE_ANCHORS[kind]
+  // The cameo: the post at 1×, framed on the liaison's head (hat to chin), as baked.
+  const [cx, cy] = 'cameo' in a ? a.cameo : [a.speaker[0] - 26, a.speaker[1] - 12]
   const face: CSSProperties = {
     backgroundImage: `url(assets/scenes/${kind}.png)`,
     backgroundSize: `${SCENE_SIZE.w}px ${SCENE_SIZE.h}px`,
-    backgroundPosition: `${-(sx - 26)}px ${-(sy - 12)}px`,
+    backgroundPosition: `${-cx}px ${-cy}px`,
     '--co': companyById(company).color,
   } as CSSProperties
   return (

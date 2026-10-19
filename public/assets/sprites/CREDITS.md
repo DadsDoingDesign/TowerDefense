@@ -42,11 +42,14 @@ the tower, pawns (idle and carrying), warriors, the archer, the fire, the wood
 pile, deco. The stall, tents, standing stones, altar, flagstones, hearth,
 spit and pot, bedroll, crates, barrels, rack of arms, helm, shield, straw man
 and candles — and, at the liaisons' posts, the spice sacks, chilies and chili
-field, brazier, easel and canvases, canal, stone counter, ore, anvil, forge,
-adit, rails and ore cart, river, hung silk and bolts, loom, reeds, scroll rack
-and ledger — are drawn by the script in the pack's palette
-and ink; each post's standard is the game's own company standard
-(`src/game/data/companyStandard.ts`); the night, dusk
+field, brazier, smokehouse, salt barge, hook rail and haunches, butcher's
+block, cleaver and salt sacks, stone counter, ore, anvil, forge, adit, rails
+and ore cart, river, hung silk and bolts, loom, reeds, glasshouse, drying
+herbs, clay pots, seed tray and tonics — are drawn by the script in the
+pack's palette and ink; each post's standard is the game's own company
+standard (`src/game/data/companyStandard.ts`); each post's liaison is the
+game's own approved character design (`scripts/designs/`, drawn in-house in
+the pack's inks, listed in `scripts/liaison-finals.ts`); the night, dusk
 and firelight are its own. The scenes live outside the `*tinyswords` folders on
 purpose: their drawn props and lighting carry colours the palette check would
 (rightly) not find in the pack.
