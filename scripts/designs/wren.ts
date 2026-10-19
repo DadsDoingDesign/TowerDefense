@@ -11,6 +11,8 @@
  *   npx tsx scripts/designs/wren.ts --stills DIR    # 1× stills of the ten (the "before" of a later pass)
  *   npx tsx scripts/designs/wren.ts --bodies DIR    # bodies.png + dXX-body.webp, before from DIR
  *   npx tsx scripts/designs/wren.ts --final DIR     # d09-final.png + d09-final.webp, before from DIR
+ *   npx tsx scripts/designs/wren.ts --opreview DIR  # the pick's five options (wren-d09-r*.ts): 8× stills + line-ups
+ *   npx tsx scripts/designs/wren.ts --options       # d09-options.png + d09-options.webp
  *
  * Every figure is a hand-placed pixel map (wren-d01.ts … wren-d10.ts);
  * wren-lib.ts only stamps the pack's outline and composes the frames. The
@@ -23,6 +25,20 @@ import { join, resolve } from 'node:path'
 import sharp from 'sharp'
 import { H, W, idleFrames, measure, misses, orphans, render, ticFrames, type Design, type Rgba } from './wren-lib'
 import { DESIGNS } from './wren-all'
+import { D09_RA } from './wren-d09-rA'
+import { D09_RB } from './wren-d09-rB'
+import { D09_RC } from './wren-d09-rC'
+import { D09_RD } from './wren-d09-rD'
+import { D09_RE } from './wren-d09-rE'
+
+/** The five refinement options of the pick (d09), each pushing one direction; the label is what it pushes. */
+const OPTIONS: readonly { d: Design; label: string }[] = [
+  { d: D09_RA, label: 'A · the nose: bigger, red, reads at 1×; sneezes' },
+  { d: D09_RB, label: 'B · the pot: jade glaze, raw clay top, a herb in flower' },
+  { d: D09_RC, label: 'C · the join: a scarf the pot nests in; shrugs' },
+  { d: D09_RD, label: 'D · the trade: herb satchel, drying bundle; sniffs' },
+  { d: D09_RE, label: 'E · the posture: stooped, wide stance, root stick; stamps' },
+]
 
 const ROOT = resolve(import.meta.dirname, '..', '..')
 const PACK = join(ROOT, 'public', 'assets', 'sprites', 'tinyswords')
@@ -99,12 +115,12 @@ const CSS = (grass: string) => `body{margin:0;background:#1b2130;font:14px/1.35 
 img{image-rendering:pixelated;display:block}
 .grass{background:url(${grass}) repeat;image-rendering:pixelated}`
 
-async function preview(dir: string, only?: string) {
+async function preview(dir: string, only?: string, list: readonly Design[] = DESIGNS) {
   mkdirSync(dir, { recursive: true })
   const grass = b64(await sharp(join(PACK, 'grass.png')).png().toBuffer())
   const pack = await Promise.all(PACK_PEOPLE.map(async (p) => ({ ...p, img: await readPack(p.file) })))
   const tag = process.env.TAG ?? 0
-  for (const d of DESIGNS) {
+  for (const d of list) {
     if (only && d.id !== only) continue
     const fb = frameBox([...idleFrames(d), ...ticFrames(d)])
     const cutp = (img: Rgba) => crop(img, fb.x0 - 1, fb.y0 - 1, fb.x1 - fb.x0 + 3, fb.y1 - fb.y0 + 3)
@@ -124,10 +140,10 @@ async function preview(dir: string, only?: string) {
     const fb = frameBox([render(d)])
     return crop(render(d), fb.x0 - 1, fb.y0 - 1, fb.x1 - fb.x0 + 3, fb.y1 - fb.y0 + 3)
   }
-  const all2 = await Promise.all(DESIGNS.map(async (d) => b64(await png(own(d), 3))))
+  const all2 = await Promise.all(list.map(async (d) => b64(await png(own(d), 3))))
   const html = `<!doctype html><style>${CSS(grass)} .row{display:flex;align-items:flex-end;gap:0;padding:6px;flex-wrap:wrap}</style>
     <div class="grass row">${(await Promise.all(pack.map(async (p) => `<img src="${b64(await png(p.img, 3))}">`))).join('')}${all2.map((s) => `<img src="${s}">`).join('')}</div>
-    <div class="grass row">${(await Promise.all(pack.map(async (p) => `<img src="${b64(await png(p.img, 1))}">`))).join('')}${(await Promise.all(DESIGNS.map(async (d) => `<img src="${b64(await png(own(d), 1))}">`))).join('')}</div>`
+    <div class="grass row">${(await Promise.all(pack.map(async (p) => `<img src="${b64(await png(p.img, 1))}">`))).join('')}${(await Promise.all(list.map(async (d) => `<img src="${b64(await png(own(d), 1))}">`))).join('')}</div>`
   await shoot(html, join(dir, `all-lineup-${tag}.png`), 1500)
 }
 
@@ -363,6 +379,75 @@ async function final(beforeDir: string) {
   writeFileSync(mpath, JSON.stringify(keep, null, 2) + '\n')
 }
 
+/** d09-options.png (the pick and A–E at 4× with what each pushes, then all at 1× and 2× beside the pack) and d09-options.webp (all six idling and doing their tic). */
+async function options() {
+  mkdirSync(OUT, { recursive: true })
+  const grass = b64(await sharp(join(PACK, 'grass.png')).png().toBuffer())
+  const pack = await Promise.all(PACK_PEOPLE.map(async (p) => ({ ...p, img: await readPack(p.file) })))
+  const cell = async (img: Rgba, s: number) => b64(await png(img, s))
+  const pick = DESIGNS.find((x) => x.id === 'd09')!
+  const six = [{ d: pick, label: 'Now · d09-final, the pick' }, ...OPTIONS]
+  const all = frameBox(six.flatMap(({ d }) => [...idleFrames(d), ...ticFrames(d)]))
+  const x = Math.max(0, all.x0 - 1), y = Math.max(0, all.y0 - 1), w = Math.min(W, all.x1 + 2) - x, h = Math.min(H, all.y1 + 2) - y
+  const cut = (img: Rgba) => crop(img, x, y, w, h)
+  const tiles = await Promise.all(six.map(async ({ d, label }) => `<div class="c"><img src="${await cell(cut(render(d)), 4)}"><b>${label}</b></div>`))
+  const ones = await Promise.all([...pack.map((p) => p.img), ...six.map(({ d }) => cut(render(d)))].map((im) => cell(im, 1)))
+  const twos = await Promise.all([...pack.map((p) => p.img), ...six.map(({ d }) => cut(render(d)))].map((im) => cell(im, 2)))
+  const html = `<!doctype html><meta charset="utf-8"><style>${CSS(grass)}
+    .wrap{padding:12px;width:1176px} h1{font-size:22px;margin:0} p{margin:2px 0 10px;color:#c9cbbf;font-size:14px}
+    .g{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-radius:8px;overflow:hidden}
+    .c{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:8px 4px 10px}
+    .c b{font-size:16px;color:#fff;text-shadow:0 2px 0 #161c2e,0 0 4px #161c2e;margin-top:2px;text-align:center}
+    .k{font-size:13px;color:#c9cbbf;margin:10px 0 3px}
+    .row{display:flex;align-items:flex-end;gap:8px;padding:8px 10px;border-radius:6px;flex-wrap:wrap}
+    </style><div class="wrap"><h1>Wren · the Flowerpot Potter, five ways further</h1><p>The pick (d09-final) and five refinements at 4×, each pushing one direction; all keep the pot, the shoulders it sits on, the floppy nose and his own body.</p>
+    <div class="g grass">${tiles.join('')}</div>
+    <div class="k">At 1× (game size): the CC0 pawn, knight, archer and torch goblin, then Now, A, B, C, D, E</div>
+    <div class="row grass">${ones.map((u) => `<img src="${u}">`).join('')}</div>
+    <div class="k">The same at 2×</div>
+    <div class="row grass">${twos.map((u) => `<img src="${u}">`).join('')}</div></div>`
+  await shoot(html, join(OUT, 'd09-options.png'), 1200)
+  await optionsMotion(six.map((o) => o.d), join(OUT, 'd09-options.webp'), { x, y, w, h })
+  const mpath = join(OUT, 'manifest.json')
+  const manifest: { id: string; group: string; people: string; title: string; caption: string; file: string }[] = existsSync(mpath) ? JSON.parse(readFileSync(mpath, 'utf8')) : []
+  const keep = manifest.filter((m) => !m.id.startsWith('wren-d09-options'))
+  keep.push(
+    { id: 'wren-d09-options', group: 'Wren designs', people: 'Wren', title: '9. Flowerpot Potter · five options', caption: 'The pick and five refinements, each pushing one thing (nose, pot, join, trade, posture), at 4× and at 1× beside the pack. Judge: which direction, or which mix?', file: 'd09-options.png' },
+    { id: 'wren-d09-options-motion', group: 'Wren designs', people: 'Wren', title: '9. Flowerpot Potter · five options, moving', caption: 'All six idling and doing their tic: sneeze, spores, shrug, sniff, stamp. Judge: which tic says him?', file: 'd09-options.webp' },
+  )
+  writeFileSync(mpath, JSON.stringify(keep, null, 2) + '\n')
+}
+
+/** All six side by side at 3× on one grass strip: each plays its idle once, then its tic, then idles out to 3 s; a frame is cut wherever any of the six changes. */
+async function optionsMotion(list: readonly Design[], path: string, box: { x: number; y: number; w: number; h: number }) {
+  const S = 3, pad = 6, gap = 4
+  const cw = list.length * (box.w * S + gap) - gap + pad * 2, ch = box.h * S + pad * 2
+  const grassTile = await sharp(join(PACK, 'grass.png')).resize(96, 96, { kernel: 'nearest' }).png().toBuffer()
+  const bg = await sharp({ create: { width: cw, height: ch, channels: 4, background: '#79a863' } }).composite([{ input: grassTile, tile: true, left: 0, top: 0 }]).png().toBuffer()
+  const TOTAL = 3000
+  // each design's timeline: [start ms, frame]
+  const lines = list.map((d) => {
+    const idle = idleFrames(d), tic = ticFrames(d)
+    const seq: { img: Rgba; ms: number }[] = []
+    idle.forEach((img, i) => seq.push({ img, ms: d.idleMs[i] }))
+    tic.forEach((img, i) => seq.push({ img, ms: d.ticMs[i] }))
+    for (let k = 0, t = seq.reduce((a, q) => a + q.ms, 0); t < TOTAL; k++) { seq.push({ img: idle[k % idle.length], ms: d.idleMs[k % idle.length] }); t += d.idleMs[k % idle.length] }
+    return seq
+  })
+  const at = (seq: { img: Rgba; ms: number }[], t: number) => { let a = 0; for (const q of seq) { if (t < a + q.ms) return q.img; a += q.ms } return seq[seq.length - 1].img }
+  const cuts = new Set<number>([0])
+  for (const seq of lines) { let a = 0; for (const q of seq) { a += q.ms; if (a < TOTAL) cuts.add(a) } }
+  const times = [...cuts].sort((p, q) => p - q)
+  const frames: Buffer[] = []
+  const delays: number[] = []
+  for (const [i, t] of times.entries()) {
+    const comp = await Promise.all(lines.map(async (seq, k) => ({ input: await png(crop(at(seq, t), box.x, box.y, box.w, box.h), S), left: pad + k * (box.w * S + gap), top: pad })))
+    frames.push(await sharp(bg).composite(comp).raw().toBuffer())
+    delays.push((times[i + 1] ?? TOTAL) - t)
+  }
+  await sharp(Buffer.concat(frames), { raw: { width: cw, height: ch * frames.length, channels: 4, pageHeight: ch } }).webp({ lossless: true, loop: 0, delay: delays }).toFile(path)
+}
+
 const BODY_NOTE: Record<string, string> = {
   d08: 'a mossy robe to the ground, root-hemmed, a vine belt, hands in its sleeves',
   d02: "a gardener's waistcoat, rolled sleeves, a trowel loop, soil on the knees",
@@ -382,6 +467,16 @@ async function main() {
   }
   const bi = args.indexOf('--bodies')
   if (bi >= 0) await bodies(args[bi + 1])
+  const oi = args.indexOf('--opreview')
+  if (oi >= 0) {
+    OPTIONS.forEach((o) => report(o.d))
+    await preview(args[oi + 1], undefined, [DESIGNS.find((x) => x.id === 'd09')!, ...OPTIONS.map((o) => o.d)])
+  }
+  if (args.includes('--options')) {
+    const bad = OPTIONS.map((o) => report(o.d)).filter((r) => r.miss.length || r.clear.length)
+    if (bad.length) throw new Error('an option is out of band or a prop touches the head: no cards')
+    await options()
+  }
   const fi = args.indexOf('--final')
   if (fi >= 0) await final(args[fi + 1])
   if (args.includes('--cards')) {
