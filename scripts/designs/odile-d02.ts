@@ -59,43 +59,18 @@ const PARASOL = [
   '.uU..UU',
   '.....UU',
   '.....UU',
-  '.....UU',
-  '.....UU',
-  '.....UU',
   '....QQRr',
   '...QjQRRr',
   '..QQQRRRrr',
   '..QQQRRRrr',
-  '..vvvGGGgg',
   '...QQRRrr',
   '...QjRRr',
   '....QRRr',
-  '....QRr',
-  '.....Rr',
   '.....UU',
 ]
 
-const PARASOL_TWIRL = [
-  '..uUUu',
-  '.uU..Uu',
-  '.uU..UU',
-  '.....UU',
-  '.....UU',
-  '.....UU',
-  '.....UU',
-  '.....UU',
-  '....RRQr',
-  '...RjRQQr',
-  '..RRRQQQrr',
-  '..RRRQQQrr',
-  '..GGGvvvgg',
-  '...RRQQrr',
-  '...RjQQr',
-  '....RQQr',
-  '....RQr',
-  '.....Qr',
-  '.....UU',
-]
+/** The parasol a quarter-turn on: its rose and green panels swapped. */
+const PARASOL_TWIRL = PARASOL.map((r) => r.replace(/[QR]/g, (c) => (c === 'Q' ? 'R' : 'Q')).replace(/[vG]/g, (c) => (c === 'v' ? 'G' : 'v')))
 
 const SHAWL = [
   'FFFFFFFFFFFFFEEe',
@@ -118,7 +93,7 @@ export const D02: Design = {
     { id: 'shadow', group: 'feet', x: 33, y: 66, rows: SHADOW_M, ring: 0 },
     { id: 'feet', group: 'feet', x: 43, y: 64, rows: FEET, ring: 0 },
     { id: 'body', group: 'body', x: 38, y: 47, rows: BODY, squash: [9] },
-    { id: 'parasol', group: 'prop', x: 61, y: 50, rows: PARASOL },
+    { id: 'parasol', group: 'prop', x: 61, y: 57, rows: PARASOL },
     { id: 'hair', group: 'head', x: 28, y: 41, rows: HAIR, spread: [9, 10, 11, 12] },
     { id: 'cheek', group: 'head', x: 57, y: 45, rows: CHEEK },
     { id: 'earL', group: 'head', x: 17, y: 38, rows: EAR_FAR },
@@ -126,7 +101,7 @@ export const D02: Design = {
     { id: 'bow', group: 'head', x: 23, y: 33, rows: BOW },
     { id: 'hat', group: 'head', x: 27, y: 17, rows: HAT, squash: [8, 13], spread: [22, 23, 24, 25] },
     { id: 'handB', group: 'hands', x: 33, y: 55, rows: FIST_L },
-    { id: 'handF', group: 'hands', x: 64, y: 54, rows: FIST_R },
+    { id: 'handF', group: 'hands', x: 64, y: 59, rows: FIST_R },
   ],
   idle: [
     {},

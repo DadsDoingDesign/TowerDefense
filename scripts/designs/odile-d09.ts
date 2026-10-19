@@ -67,7 +67,6 @@ const BRANCH = [
   '......FFFEe.Ggg',
   '......FFEEe',
   '.......Eee..FwE',
-  '............FEe',
   '............Ee',
 ]
 
@@ -97,10 +96,10 @@ export const D09: Design = {
     { id: 'hat', group: 'head', x: 27, y: 16, rows: HAT, squash: [5, 20], spread: [34, 35, 36, 37] },
     { id: 'earL', group: 'head', x: 18, y: 36, rows: EAR_FAR },
     { id: 'earR', group: 'head', x: 67, y: 34, rows: EAR_NEAR },
-    { id: 'branch', group: 'prop', x: 64, y: 55, rows: BRANCH },
+    { id: 'branch', group: 'prop', x: 67, y: 60, rows: BRANCH },
     { id: 'moth', group: 'fx', x: 74, y: 49, rows: MOTH, hidden: true },
     { id: 'handB', group: 'hands', x: 33, y: 55, rows: FIST_L },
-    { id: 'handF', group: 'hands', x: 61, y: 54, rows: FIST_R },
+    { id: 'handF', group: 'hands', x: 64, y: 57, rows: FIST_R },
   ],
   idle: [
     {},

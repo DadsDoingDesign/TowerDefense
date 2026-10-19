@@ -29,7 +29,6 @@ const PAD = [
 ]
 
 const LOTUS = [
-  '.......j',
   '......jQ',
   '..j...jQR...j',
   '..jQ.jjQRr.jR',
@@ -40,9 +39,9 @@ const LOTUS = [
   '...QQQRRRRrr',
   '....rRRRRrr',
   '......rrr',
-  '......gG',
-  '......gG',
-  '......gG',
+  '.....ggG',
+  '.....ggG',
+  '.....ggG',
   '.....ggG',
 ]
 
@@ -58,17 +57,16 @@ const LOTUS_OPEN = [
   '....QQRRRRr',
   '.....rRRrr',
   '......rrr',
-  '......gG',
-  '......gG',
-  '......gG',
+  '.....ggG',
+  '.....ggG',
+  '.....ggG',
   '.....ggG',
 ]
 
 const LANTERN = [
-  '...oO',
-  '..o..O',
-  '...oO',
-  '..uUUu',
+  '..uoOu',
+  '..uoOu',
+  '.uuUUuu',
   '.uUUUUu',
   'uoOOOOOu',
   'uOyywyOu',
@@ -78,25 +76,10 @@ const LANTERN = [
   'uoOyyOou',
   'uUUUUUUu',
   '.uuuuuu',
-  '...uu',
 ]
 
-const LANTERN_BRIGHT = [
-  '...oO',
-  '..o..O',
-  '...oO',
-  '..uUUu',
-  '.uUUUUu',
-  'uoyyyyyu',
-  'uyyywyyu',
-  'uyyyyyyu',
-  'uyyyyyyu',
-  'uOyyyyOu',
-  'uoOyyOou',
-  'uUUUUUUu',
-  '.uuuuuu',
-  '...uu',
-]
+/** The lantern burning bright: its brass glass flares to flame. */
+const LANTERN_BRIGHT = LANTERN.map((r, i) => (i >= 4 && i <= 9 ? r.replace(/O/g, 'y') : r))
 
 const BELT = [
   'ggggggggggggggggg',
@@ -123,15 +106,15 @@ export const D04: Design = {
     { id: 'shadow', group: 'feet', x: 33, y: 66, rows: SHADOW_M, ring: 0 },
     { id: 'feet', group: 'feet', x: 43, y: 64, rows: FEET, ring: 0 },
     { id: 'body', group: 'body', x: 38, y: 47, rows: BODY, squash: [9] },
-    { id: 'lantern', group: 'prop', x: 63, y: 54, rows: LANTERN },
+    { id: 'lantern', group: 'prop', x: 63, y: 58, rows: LANTERN },
     { id: 'hair', group: 'head', x: 28, y: 41, rows: HAIR, spread: [9, 10, 11, 12] },
     { id: 'cheek', group: 'head', x: 57, y: 45, rows: CHEEK },
     { id: 'earL', group: 'head', x: 17, y: 38, rows: EAR_FAR },
     { id: 'earR', group: 'head', x: 68, y: 34, rows: EAR_NEAR },
-    { id: 'lotus', group: 'head', x: 40, y: 17, rows: LOTUS, squash: [12] },
+    { id: 'lotus', group: 'head', x: 40, y: 18, rows: LOTUS, squash: [11] },
     { id: 'pad', group: 'head', x: 25, y: 32, rows: PAD, squash: [6], spread: [6, 7, 8] },
     { id: 'handB', group: 'hands', x: 33, y: 55, rows: FIST_L },
-    { id: 'handF', group: 'hands', x: 63, y: 54, rows: FIST_R },
+    { id: 'handF', group: 'hands', x: 63, y: 57, rows: FIST_R },
   ],
   idle: [
     {},
@@ -142,13 +125,13 @@ export const D04: Design = {
     {},
   ],
   idleMs: [190, 130, 150, 200, 130, 170],
-  // she lifts the lantern for the toll: it swings up, burns bright, the lotus opens a little
+  // she holds the lantern out for the toll: it swings out, burns bright, the lotus opens a little
   tic: [
-    { nudge: { handF: [0, -1], lantern: [0, -1] } },
-    { nudge: { handF: [0, -3], lantern: [0, -3] }, swap: { lantern: LANTERN_BRIGHT } },
-    { nudge: { handF: [0, -3], lantern: [0, -3] }, swap: { lantern: LANTERN_BRIGHT, lotus: LOTUS_OPEN } },
-    { nudge: { handF: [0, -3], lantern: [0, -3] }, swap: { lotus: LOTUS_OPEN } },
-    { nudge: { handF: [0, -1], lantern: [0, -1] } },
+    { nudge: { handF: [1, 0], lantern: [1, 0] } },
+    { nudge: { handF: [2, 0], lantern: [3, 0] }, swap: { lantern: LANTERN_BRIGHT } },
+    { nudge: { handF: [2, 0], lantern: [3, 0] }, swap: { lantern: LANTERN_BRIGHT, lotus: LOTUS_OPEN } },
+    { nudge: { handF: [2, 0], lantern: [3, 0] }, swap: { lotus: LOTUS_OPEN } },
+    { nudge: { handF: [1, 0], lantern: [1, 0] } },
     { squash: 1 },
   ],
   ticMs: [110, 140, 260, 220, 120, 180],

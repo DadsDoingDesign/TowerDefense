@@ -121,9 +121,9 @@ export const D06: Design = {
     { id: 'hair', group: 'head', x: 28, y: 20, rows: HAIR, squash: [8, 12], spread: [29, 30, 31, 32] },
     { id: 'earL', group: 'head', x: 17, y: 36, rows: EAR_FAR },
     { id: 'earR', group: 'head', x: 67, y: 34, rows: EAR_NEAR },
-    { id: 'ribbon', group: 'prop', x: 57, y: 52, rows: RIBBON },
+    { id: 'ribbon', group: 'prop', x: 57, y: 55, rows: RIBBON },
     { id: 'handB', group: 'hands', x: 33, y: 55, rows: FIST_L },
-    { id: 'handF', group: 'hands', x: 63, y: 54, rows: FIST_R },
+    { id: 'handF', group: 'hands', x: 63, y: 56, rows: FIST_R },
   ],
   idle: [
     {},

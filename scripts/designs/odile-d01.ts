@@ -85,10 +85,10 @@ export const D01: Design = {
     { id: 'earL', group: 'head', x: 17, y: 38, rows: EAR_FAR },
     { id: 'earR', group: 'head', x: 68, y: 34, rows: EAR_NEAR },
     { id: 'hat', group: 'head', x: 25, y: 19, rows: HAT, squash: [10, 13], spread: [20, 21, 22] },
-    { id: 'shuttle', group: 'prop', x: 55, y: 56, rows: SHUTTLE },
-    { id: 'shuttleL', group: 'prop', x: 27, y: 57, rows: SHUTTLE_L, hidden: true },
+    { id: 'shuttle', group: 'prop', x: 55, y: 59, rows: SHUTTLE },
+    { id: 'shuttleL', group: 'prop', x: 27, y: 60, rows: SHUTTLE_L, hidden: true },
     { id: 'handB', group: 'hands', x: 33, y: 55, rows: FIST_L },
-    { id: 'handF', group: 'hands', x: 63, y: 54, rows: FIST_R },
+    { id: 'handF', group: 'hands', x: 63, y: 57, rows: FIST_R },
   ],
   idle: [
     {},
@@ -102,10 +102,10 @@ export const D01: Design = {
   // a weaver's pass: the shuttle flies across under her hands to the other fist, and back
   tic: [
     { move: { hands: [0, 1], prop: [0, 1] }, squash: 1 },
-    { hide: ['shuttle'], show: ['shuttleL'], at: { shuttleL: [44, 58] }, nudge: { handF: [-2, 1] } },
+    { hide: ['shuttle'], show: ['shuttleL'], at: { shuttleL: [44, 61] }, nudge: { handF: [-2, 1] } },
     { hide: ['shuttle'], show: ['shuttleL'], nudge: { handB: [1, 0] } },
     { hide: ['shuttle'], show: ['shuttleL'], squash: 1, nudge: { handB: [1, 1] } },
-    { at: { shuttle: [45, 57] }, nudge: { handF: [-2, 1] } },
+    { at: { shuttle: [45, 60] }, nudge: { handF: [-2, 1] } },
     {},
   ],
   ticMs: [140, 90, 220, 160, 90, 180],

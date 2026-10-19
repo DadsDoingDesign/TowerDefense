@@ -131,9 +131,9 @@ export const D10: Design = {
   tic: [
     { nudge: { purse: [0, 1], handF: [0, 1] } },
     { nudge: { purse: [0, -2], handF: [0, -2] } },
-    { show: ['coin'], at: { coin: [67, 50] } },
-    { show: ['coin'], at: { coin: [68, 47] }, squash: 1 },
-    { show: ['coin'], at: { coin: [67, 52] } },
+    { show: ['coin'], at: { coin: [69, 53] } },
+    { show: ['coin'], at: { coin: [75, 50] }, squash: 1 },
+    { show: ['coin'], at: { coin: [72, 55] } },
     {},
   ],
   ticMs: [120, 100, 120, 160, 120, 200],
