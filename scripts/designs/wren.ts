@@ -13,6 +13,8 @@
  *   npx tsx scripts/designs/wren.ts --final DIR     # d09-final.png + d09-final.webp, before from DIR
  *   npx tsx scripts/designs/wren.ts --opreview DIR  # the pick's five options (wren-d09-r*.ts): 8× stills + line-ups
  *   npx tsx scripts/designs/wren.ts --options       # d09-options.png + d09-options.webp
+ *   npx tsx scripts/designs/wren.ts --epreview DIR  # option E made final and its outfit variants: 8× stills + line-ups
+ *   npx tsx scripts/designs/wren.ts --efinal        # d09-E-final.png + d09-E-final.webp
  *
  * Every figure is a hand-placed pixel map (wren-d01.ts … wren-d10.ts);
  * wren-lib.ts only stamps the pack's outline and composes the frames. The
@@ -30,6 +32,31 @@ import { D09_RB } from './wren-d09-rB'
 import { D09_RC } from './wren-d09-rC'
 import { D09_RD } from './wren-d09-rD'
 import { D09_RE } from './wren-d09-rE'
+import { D09_E_FINAL } from './wren-d09-E-final'
+import { D09_E_APRON } from './wren-d09-E-apron'
+import { D09_E_SMOCK } from './wren-d09-E-smock'
+
+/** The designer's pick (option E) made final, with its two outfit variants; the first is the recommended one. */
+const E_OUTFITS: readonly { d: Design; label: string }[] = [
+  { d: D09_E_FINAL, label: 'Waistcoat over a linen shirt (recommended)' },
+  { d: D09_E_APRON, label: 'Leather apron, a pocket of cuttings' },
+  { d: D09_E_SMOCK, label: 'Jade smock, linen collar, belt' },
+]
+/** Callouts on the final: every part named, pointed at (canvas px). */
+const E_PARTS: readonly { name: string; at: [number, number]; side: 'l' | 'r' }[] = [
+  { name: 'seedling', at: [53, 27], side: 'r' },
+  { name: 'flowerpot (upside down)', at: [44, 40], side: 'l' },
+  { name: 'pot rim on the shoulders', at: [31, 57], side: 'l' },
+  { name: 'nose, hanging', at: [57, 62], side: 'r' },
+  { name: 'moustache and tuft', at: [50, 64], side: 'l' },
+  { name: 'linen shirt', at: [30, 62], side: 'l' },
+  { name: 'rounded back', at: [35, 66], side: 'l' },
+  { name: 'waistcoat', at: [45, 70], side: 'l' },
+  { name: 'brass buttons', at: [63, 71], side: 'r' },
+  { name: 'fist', at: [27, 68], side: 'l' },
+  { name: 'root stick', at: [77, 72], side: 'r' },
+  { name: 'clay boots', at: [42, 79], side: 'l' },
+]
 
 /** The five refinement options of the pick (d09), each pushing one direction; the label is what it pushes. */
 const OPTIONS: readonly { d: Design; label: string }[] = [
@@ -449,6 +476,70 @@ async function optionsMotion(list: readonly Design[], path: string, box: { x: nu
   await sharp(Buffer.concat(frames), { raw: { width: cw, height: ch * frames.length, channels: 4, pageHeight: ch } }).webp({ lossless: true, loop: 0, delay: delays }).toFile(path)
 }
 
+/** d09-E-final.png (option E before / the final after at 4×, every part named, the outfit variants, 1× and 2× beside the pack) and d09-E-final.webp. */
+async function eFinal() {
+  mkdirSync(OUT, { recursive: true })
+  const grass = b64(await sharp(join(PACK, 'grass.png')).png().toBuffer())
+  const pack = await Promise.all(PACK_PEOPLE.map(async (p) => ({ ...p, img: await readPack(p.file) })))
+  const cell = async (img: Rgba, s: number) => b64(await png(img, s))
+  const fin = E_OUTFITS[0].d
+  const all = frameBox([D09_RE, ...E_OUTFITS.map((o) => o.d)].flatMap((d) => [...idleFrames(d), ...ticFrames(d)]))
+  const x = Math.max(0, all.x0 - 1), y = Math.max(0, all.y0 - 1), w = Math.min(W, all.x1 + 2) - x, h = Math.min(H, all.y1 + 2) - y
+  const cut = (img: Rgba) => crop(img, x, y, w, h)
+  const S = 5
+  // the callout: the final at 5×, labels to either side with leader lines (SVG over the picture)
+  const lw = 190, figW = w * S, figH = h * S
+  const lefts = E_PARTS.filter((p) => p.side === 'l'), rights = E_PARTS.filter((p) => p.side === 'r')
+  const rowY = (i: number, n: number) => 18 + (i * (figH - 36)) / Math.max(1, n - 1)
+  const lines: string[] = [], labels: string[] = []
+  const place = (list: typeof E_PARTS, left: boolean) =>
+    list.forEach((p, i) => {
+      const ly = rowY(i, list.length), lx = left ? lw - 6 : lw + figW + 6
+      const px = lw + (p.at[0] - x + 0.5) * S, py = (p.at[1] - y + 0.5) * S
+      lines.push(`<line x1="${lx}" y1="${ly}" x2="${px}" y2="${py}" stroke="#ffe46b" stroke-width="1.5"/><circle cx="${px}" cy="${py}" r="3" fill="#ffe46b" stroke="#161c2e"/>`)
+      labels.push(`<div class="cl" style="top:${ly - 9}px;${left ? `right:${lw + figW + 10}px;text-align:right` : `left:${lw + figW + 10}px`}">${p.name}</div>`)
+    })
+  place(lefts, true)
+  place(rights, false)
+  const callout = `<div class="call" style="width:${lw * 2 + figW}px;height:${figH}px"><img class="grass" style="position:absolute;left:${lw}px;top:0" src="${await cell(cut(render(fin)), S)}">
+    <svg width="${lw * 2 + figW}" height="${figH}" style="position:absolute;left:0;top:0">${lines.join('')}</svg>${labels.join('')}</div>`
+  const variants = await Promise.all(E_OUTFITS.map(async ({ d, label }, i) => `<div class="v${i === 0 ? ' rec' : ''}"><img src="${await cell(cut(render(d)), 4)}"><b>${label}</b></div>`))
+  const ones = await Promise.all([...pack.map((p) => p.img), cut(render(D09_RE)), cut(render(fin))].map((im) => cell(im, 1)))
+  const twos = await Promise.all([...pack.map((p) => p.img), cut(render(fin))].map((im) => cell(im, 2)))
+  const html = `<!doctype html><meta charset="utf-8"><style>${CSS(grass)}
+    .wrap{padding:12px;width:876px} h1{font-size:21px;margin:0} p{margin:2px 0 8px;color:#c9cbbf;font-size:13.5px}
+    h2{font-size:15px;margin:14px 0 4px;color:#ffe46b}
+    .top{display:flex;align-items:flex-end;justify-content:space-around;padding:10px 6px 4px;border-radius:8px}
+    .lab{display:flex;justify-content:space-around;font-size:12.5px;color:#c9cbbf;margin:4px 0 4px}
+    .call{position:relative;margin:4px auto} .cl{position:absolute;font-size:13px;color:#fff;white-space:nowrap}
+    .vs{display:flex;justify-content:space-between;gap:6px;padding:8px;border-radius:8px}
+    .v{display:flex;flex-direction:column;align-items:center;padding:4px;border-radius:6px;border:2px solid transparent}
+    .v.rec{border-color:#ffe46b} .v b{font-size:12.5px;color:#fff;text-shadow:0 2px 0 #161c2e;max-width:230px;text-align:center}
+    .k{font-size:12px;color:#c9cbbf;margin:10px 0 3px}
+    .row{display:flex;align-items:flex-end;gap:8px;padding:8px 10px;border-radius:6px;flex-wrap:wrap}
+    </style><div class="wrap"><h1>9. Flowerpot Potter · option E, final</h1><p>Option E as chosen, with the nose dangling down from under the rim and one clear garment. The stoop, the shoulders, the rounded back, the wide boots and the root stick are kept.</p>
+    <div class="top grass"><img src="${await cell(cut(render(D09_RE)), 4)}"><img src="${await cell(cut(render(fin)), 4)}"></div>
+    <div class="lab"><span>Option E as picked · 4×</span><span>Final · 4×</span></div>
+    <h2>Every part, named (5×)</h2>${callout}
+    <h2>The outfit: three ways at 4× (the gold frame is the recommended one)</h2><div class="vs grass">${variants.join('')}</div>
+    <div class="k">At 1× (game size): the CC0 pawn, knight, archer and torch goblin, then option E and the final</div>
+    <div class="row grass">${ones.map((u) => `<img src="${u}">`).join('')}</div>
+    <div class="k">The same at 2×</div>
+    <div class="row grass">${twos.map((u) => `<img src="${u}">`).join('')}</div></div>`
+  await shoot(html, join(OUT, 'd09-E-final.png'), 900)
+  const fb = frameBox([...idleFrames(fin), ...ticFrames(fin)])
+  const bx = Math.max(0, fb.x0 - 2), by = Math.max(0, fb.y0 - 2)
+  await motion(fin, join(OUT, 'd09-E-final.webp'), { x: bx, y: by, w: Math.min(W, fb.x1 + 3) - bx, h: Math.min(H, fb.y1 + 3) - by })
+  const mpath = join(OUT, 'manifest.json')
+  const manifest: { id: string; group: string; people: string; title: string; caption: string; file: string }[] = existsSync(mpath) ? JSON.parse(readFileSync(mpath, 'utf8')) : []
+  const keep = manifest.filter((m) => !m.id.startsWith('wren-d09-E-final'))
+  keep.push(
+    { id: 'wren-d09-E-final', group: 'Wren designs', people: 'Wren', title: '9. Flowerpot Potter · E, final', caption: 'Option E with the nose hanging down and one clear garment, every part named, three outfits side by side. Judge: is every part nameable at 1×, and which outfit?', file: 'd09-E-final.png' },
+    { id: 'wren-d09-E-final-motion', group: 'Wren designs', people: 'Wren', title: '9. Flowerpot Potter · E, final, moving', caption: 'The idle (the nose swings a frame behind the head) and the stamp (the nose bounces and wobbles still). Judge: a pendulum, not a jitter?', file: 'd09-E-final.webp' },
+  )
+  writeFileSync(mpath, JSON.stringify(keep, null, 2) + '\n')
+}
+
 const BODY_NOTE: Record<string, string> = {
   d08: 'a mossy robe to the ground, root-hemmed, a vine belt, hands in its sleeves',
   d02: "a gardener's waistcoat, rolled sleeves, a trowel loop, soil on the knees",
@@ -477,6 +568,16 @@ async function main() {
     const bad = OPTIONS.map((o) => report(o.d)).filter((r) => r.miss.length || r.clear.length)
     if (bad.length) throw new Error('an option is out of band or a prop touches the head: no cards')
     await options()
+  }
+  const ei = args.indexOf('--epreview')
+  if (ei >= 0) {
+    E_OUTFITS.forEach((o) => report(o.d))
+    await preview(args[ei + 1], undefined, [D09_RE, ...E_OUTFITS.map((o) => o.d)])
+  }
+  if (args.includes('--efinal')) {
+    const bad = E_OUTFITS.map((o) => report(o.d)).filter((r) => r.miss.length || r.clear.length)
+    if (bad.length) throw new Error('an outfit is out of band or a prop touches the head: no cards')
+    await eFinal()
   }
   const fi = args.indexOf('--final')
   if (fi >= 0) await final(args[fi + 1])
