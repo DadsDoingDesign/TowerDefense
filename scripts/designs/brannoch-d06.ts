@@ -72,7 +72,38 @@ const NOSE = [
   '.cccc.',
 ]
 
-const BODY = bell({ 1: 'N', 2: 'n', 3: 'v', 4: 'U', 5: 'V' })
+/** The shared bell this design wore before it got its own body (for the before/after card). */
+export const BODY_SHARED = bell({ 1: 'N', 2: 'n', 3: 'v', 4: 'U', 5: 'V' })
+
+/**
+ * His own body: a long overcast-blue drover's coat, square in the shoulder with a
+ * turned collar, brass buttons down the front, a wide leather belt with a big buckle,
+ * and skirts that split at the back vent and kick out behind him.
+ */
+const COAT = [
+  '.......NNNNNNNNNNNNNNNNNNNNnnnnnnnnnn',
+  '......NNNNNNNNNNNNNNNNNNNNNNNnnnnnnnnnv',
+  '......NNNNnnnnnnnnnnnnnnnnnnnnnnnnnnnvv',
+  '......NNNnNNNNNNNNNNNNNNNNNNNnnnnnnnnvv',
+  '......NNNnNNNNNNNNNNNNNNNNNNNnntnnnnnvv',
+  '......NNNnNNNNNNNNNNNNNNNNNNNnnnnnnnnvv',
+  '......NNNnNNNNNNNNNNNNNNNNNNNnnnnnnnnvv',
+  '......NNnNNNNNNNNNNNNNNNNNNNNnntnnnnnvv',
+  '......NNnNNNNNNNNNNNNNNNNNNNNnnnnnnnnvv',
+  '......NNnNNNNNNNNNNNNNNNNNNNNnnnnnnnvvv',
+  '......UUUUUUUUUUUUUUUUtAAAAtUUUUUUUuuuu',
+  '......VVVVVUUUUUUUUUUUAyyyyAUUUUUUuuuuu',
+  '......uuuuuuuuuuuuuuuutAAAAtuuuuuuuuuuu',
+  '.....NNNnNNNNNNvNNNNNNNNNNNNNnnnnnnnnvv',
+  '....NNNnNnNNNNNvNNNNNNnNNNNNNnnnnnnnnvv',
+  '...NNNNnNnNNNNvNNNNNNNnNNNNNNnnnnnnnnvv',
+  '..NNNNnNNnNNNNvNNNNNNNnNNNNNNnnnnnnnnvv',
+  '.NNNNnNNnNNNNvvNNNNNNNnNNNNNNnnnnnnnvvv',
+  'NNNNnNNNnNNNNvnNNNNNNNnNNNNNNnnnnnnnvvv',
+  'NNNnnNNNnNNNvvnnNNNNNNnNNNNNnnnnnnnvvv',
+  'vnnnnnnnnnnvv.vnnnnnnnnnnnnnnnnnnnnvv',
+  '.vvvvvvvvvvv...vvvvvvvvvvvvvvvvvvvvvv',
+]
 
 const LEDGER = [
   'RRRRRRRRRRRRr',
@@ -108,16 +139,16 @@ export const D06: Design = {
   parts: [
     { id: 'shadow', group: 'feet', x: AT.shadow[0], y: AT.shadow[1], rows: SHADOW, ring: 0 },
     { id: 'feet', group: 'feet', x: AT.feet[0], y: AT.feet[1], rows: FEET, ring: 0 },
-    { id: 'body', group: 'body', x: AT.body[0], y: AT.body[1], rows: BODY },
+    { id: 'body', group: 'body', x: 27, y: 45, rows: COAT },
     { id: 'beard', group: 'head', x: 34, y: 34, rows: BEARD, sags: true },
     { id: 'braid', group: 'head', x: 50, y: 44, rows: BRAID, sags: true },
     { id: 'crown', group: 'head', x: 40, y: 17, rows: CROWN, squash: [3, 4] },
     { id: 'brim', group: 'head', x: 27, y: 25, rows: BRIM },
     { id: 'moustache', group: 'head', x: 40, y: 33, rows: MOUSTACHE },
     { id: 'nose', group: 'head', x: 57, y: 30, rows: NOSE },
-    { id: 'ledger', group: 'prop', x: 18, y: 55, rows: LEDGER },
-    { id: 'ledgerOpen', group: 'prop', x: 17, y: 57, rows: LEDGER_OPEN, hidden: true },
-    { id: 'handB', group: 'hands', x: AT.handB[0], y: AT.handB[1], rows: FIST_B },
+    { id: 'ledger', group: 'prop', x: 16, y: 50, rows: LEDGER },
+    { id: 'ledgerOpen', group: 'prop', x: 14, y: 52, rows: LEDGER_OPEN, hidden: true },
+    { id: 'handB', group: 'hands', x: 26, y: 55, rows: FIST_B },
     { id: 'handF', group: 'hands', x: AT.handF[0], y: AT.handF[1], rows: FIST_F },
   ],
   idle: [

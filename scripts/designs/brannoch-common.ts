@@ -73,7 +73,8 @@ export const FIST_B = ['.eeEE', 'eeEEEE', 'eeEEEE', 'eeEEEE', 'eeeEEe', '.eeee']
 export const FIST_F = ['.EEFF', 'eEEFFF', 'eEEEFF', 'eEEEEE', 'eeEEEe', '.eeee']
 
 /**
- * The tunic every Brannoch wears under his head mass: a short, broad bell,
+ * The first-round tunic under the head mass (the top three — d01, d06, d07 — now
+ * wear bodies of their own, drawn in their files; skill § 4b): a short, broad bell,
  * square in the shoulder and flared at the hem (the pack's bodies are small
  * rounded masses, narrower than the head mass that overhangs them). Hand-drawn once in placeholder inks (1 light, 2 mid,
  * 3 shade, 4 hem trim, 5 stitch) and re-inked per design with {@link bell},

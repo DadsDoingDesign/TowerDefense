@@ -174,5 +174,37 @@
     "title": "10. Gate Tollman · motion",
     "caption": "The idle (a heavy squash and bob) and the tic, looped: does the tic say who he is?",
     "file": "d10.webp"
+  },
+  {
+    "id": "brannoch-bodies",
+    "group": "Brannoch designs",
+    "people": "Brannoch",
+    "title": "Brannoch · his own body",
+    "caption": "The top three, each before (the shared bell) and after (a body of his own), at 4×. Judge: does each body say who he is, and do the three differ below the beard?",
+    "file": "bodies.png"
+  },
+  {
+    "id": "brannoch-d07-body",
+    "group": "Brannoch designs",
+    "people": "Brannoch",
+    "title": "7. Mason Guild Elder · own body, motion",
+    "caption": "The idle and the tic in his own body: a short stone-grey smock, belted, under a long leather mason's apron that hangs to his boots: dust ground in, a stitched pocket, a pouch and a chisel at the belt. Judge: is it broad and planted, and still head-led?",
+    "file": "d07-body.webp"
+  },
+  {
+    "id": "brannoch-d01-body",
+    "group": "Brannoch designs",
+    "people": "Brannoch",
+    "title": "1. Lamp-Helm Foreman · own body, motion",
+    "caption": "The idle and the tic in his own body: a square padded miner's jerkin in puffed quilting, leather braces and belt, a tin lamp-oil flask at the hip. Judge: is it broad and planted, and still head-led?",
+    "file": "d01-body.webp"
+  },
+  {
+    "id": "brannoch-d06-body",
+    "group": "Brannoch designs",
+    "people": "Brannoch",
+    "title": "6. Cart-Train Master · own body, motion",
+    "caption": "The idle and the tic in his own body: a long drover's coat, square in the shoulder, a wide belt with a big buckle, the skirts split at the vent and kicked out behind. Judge: is it broad and planted, and still head-led?",
+    "file": "d06-body.webp"
   }
 ]

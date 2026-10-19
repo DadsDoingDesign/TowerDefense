@@ -6,19 +6,23 @@
  *   npx tsx scripts/designs/brannoch.ts                 # measure all ten: bands, palette, clearance
  *   npx tsx scripts/designs/brannoch.ts --preview DIR   # 8× stills + 1×/3× line-ups for the critique rounds
  *   npx tsx scripts/designs/brannoch.ts --cards         # the cards in docs/characters/cards/designs/brannoch/
+ *   npx tsx scripts/designs/brannoch.ts --bodies [DIR]  # the top three's own bodies: before/after card + motion (or a preview into DIR)
  *
  * Every figure is a hand-authored pixel map (brannoch-d01.ts … brannoch-d10.ts);
  * brannoch-lib.ts only stamps the pack's outline and composes the frames. The
  * pack figures shown beside them are the old-CC0 stills already shipped in
  * public/assets/sprites/tinyswords/ (see sprites/CREDITS.md).
  */
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import sharp from 'sharp'
 import { H, INK, W, idleFrames, measure, misses, orphans, render, ticFrames, type Design, type Rgba } from './brannoch-lib'
 import { DESIGNS } from './brannoch-all'
-import { DASH } from './brannoch-common'
+import { AT, DASH } from './brannoch-common'
+import { BODY_SHARED as D01_SHARED } from './brannoch-d01'
+import { BODY_SHARED as D06_SHARED } from './brannoch-d06'
+import { BODY_SHARED as D07_SHARED } from './brannoch-d07'
 import { packColours } from './brannoch-pal'
 
 const ROOT = resolve(import.meta.dirname, '..', '..')
@@ -306,6 +310,107 @@ async function motion(d: Design, path: string, box: { x: number; y: number; w: n
     .toFile(path)
 }
 
+// ── the top three's own bodies (the designer: "Body doesn't need to be shared, it should be unique") ──
+
+interface Bodied {
+  id: string
+  /** The shared bell it wore before. */
+  shared: readonly string[]
+  /** Parts its own body moved, back where they stood in the bell. */
+  before?: Readonly<Record<string, readonly [number, number]>>
+  /** The body, in words, for the card. */
+  body: string
+}
+
+const BODIED: readonly Bodied[] = [
+  { id: 'd07', shared: D07_SHARED, body: 'a short stone-grey smock, belted, under a long leather mason\'s apron that hangs to his boots: dust ground in, a stitched pocket, a pouch and a chisel at the belt' },
+  { id: 'd01', shared: D01_SHARED, body: 'a square padded miner\'s jerkin in puffed quilting, leather braces and belt, a tin lamp-oil flask at the hip' },
+  {
+    id: 'd06',
+    shared: D06_SHARED,
+    before: { ledger: [18, 55], ledgerOpen: [17, 57], handB: [AT.handB[0], AT.handB[1]] },
+    body: 'a long drover\'s coat, square in the shoulder, a wide belt with a big buckle, the skirts split at the vent and kicked out behind',
+  },
+]
+
+/** The design as it stood in the shared bell: its own body parts gone, the bell back at the shared spot. */
+function before(d: Design, b: Bodied): Design {
+  const moved = b.before ?? {}
+  return {
+    ...d,
+    id: `${d.id}-shared`,
+    parts: d.parts
+      .filter((p) => !p.id.startsWith('body') || p.id === 'body')
+      .map((p) => (p.id === 'body' ? { ...p, x: AT.body[0], y: AT.body[1], rows: b.shared } : moved[p.id] ? { ...p, x: moved[p.id][0], y: moved[p.id][1] } : p)),
+  }
+}
+
+async function bodies(dir?: string) {
+  const out = dir ?? OUT
+  mkdirSync(out, { recursive: true })
+  const grass = b64(await sharp(join(PACK, 'grass.png')).png().toBuffer())
+  const pack = await Promise.all(PACK_PEOPLE.map(async (p) => ({ ...p, img: await readPack(p.file) })))
+  const pairs = BODIED.map((b) => {
+    const d = DESIGNS.find((x) => x.id === b.id)
+    if (!d) throw new Error(`no design ${b.id}`)
+    return { ...b, d, old: before(d, b), n: DESIGNS.indexOf(d) + 1 }
+  })
+  const box = frameBox(pairs.flatMap((p) => [render(p.old), ...idleFrames(p.d), ...ticFrames(p.d)]))
+  const cut = (img: Rgba) => crop(img, box.x0 - 2, box.y0 - 2, box.x1 - box.x0 + 5, box.y1 - box.y0 + 5)
+  const cell = async (img: Rgba, s: number) => b64(await png(img, s))
+  const rows = await Promise.all(
+    pairs.map(
+      async (p) => `<h2><span class="no">${p.n}.</span> ${p.d.title}</h2><p>${p.body}.</p>
+      <div class="two grass"><figure><img src="${await cell(cut(render(p.old)), 4)}"><figcaption>Before · the shared bell</figcaption></figure>
+      <figure><img src="${await cell(cut(render(p.d)), 4)}"><figcaption>After · his own body</figcaption></figure></div>`,
+    ),
+  )
+  const ones =
+    (await Promise.all(pack.map(async (p) => `<img src="${await cell(p.img, 1)}">`))).join('') +
+    (await Promise.all(pairs.map(async (p) => `<img src="${await cell(cut(render(p.d)), 1)}">`))).join('')
+  const threes = (await Promise.all(pairs.map(async (p) => `<img src="${await cell(cut(render(p.d)), 3)}">`))).join('')
+  const html = `<!doctype html><meta charset="utf-8"><style>${CSS(grass)}
+    .wrap{padding:12px;width:576px} h1{font-size:20px;margin:0 0 2px} p{margin:2px 0 6px;color:#c9cbbf;font-size:13px}
+    h2{font-size:17px;margin:12px 0 0} .no{color:#ffe46b}
+    .two{display:flex;justify-content:space-around;align-items:flex-end;border-radius:8px;padding:8px 4px 2px}
+    figure{margin:0;display:flex;flex-direction:column;align-items:center}
+    figcaption{font-size:12px;color:#fff;text-shadow:0 1px 0 #161c2e,0 0 3px #161c2e;margin:2px 0 4px}
+    .row{display:flex;align-items:flex-end;gap:3px;padding:8px;border-radius:8px;margin-top:6px;flex-wrap:wrap}
+    </style><div class="wrap"><h1>Brannoch · his own body</h1><p>The top three, each before (the one shared bell tunic) and after (a body drawn for who he is), at 4×.</p>
+    ${rows.join('')}
+    <h2>Together</h2><p>The three at 3×, then at 1× beside the CC0 pawn, knight, archer and torch goblin.</p>
+    <div class="row grass">${threes}</div><div class="row grass">${ones}</div></div>`
+  await shoot(html, join(out, 'bodies.png'), 600)
+  for (const p of pairs) {
+    const b = frameBox([...idleFrames(p.d), ...ticFrames(p.d)])
+    const bx = Math.max(0, b.x0 - 2), by = Math.max(0, b.y0 - 2)
+    await motion(p.d, join(out, `${p.d.id}-body.webp`), { x: bx, y: by, w: Math.min(W, b.x1 + 3) - bx, h: Math.min(H, b.y1 + 3) - by })
+  }
+  if (dir) return
+  type Card = { id: string; group: string; people: string; title: string; caption: string; file: string }
+  const mpath = join(OUT, 'manifest.json')
+  const keep = (JSON.parse(readFileSync(mpath, 'utf8')) as Card[]).filter((m) => m.id !== 'brannoch-bodies' && !m.id.endsWith('-body'))
+  keep.push(
+    {
+      id: 'brannoch-bodies',
+      group: GROUP,
+      people: 'Brannoch',
+      title: 'Brannoch · his own body',
+      caption: 'The top three, each before (the shared bell) and after (a body of his own), at 4×. Judge: does each body say who he is, and do the three differ below the beard?',
+      file: 'bodies.png',
+    },
+    ...pairs.map((p) => ({
+      id: `brannoch-${p.d.id}-body`,
+      group: GROUP,
+      people: 'Brannoch',
+      title: `${p.n}. ${p.d.title} · own body, motion`,
+      caption: `The idle and the tic in his own body: ${p.body}. Judge: is it broad and planted, and still head-led?`,
+      file: `${p.d.id}-body.webp`,
+    })),
+  )
+  writeFileSync(mpath, JSON.stringify(keep, null, 2) + '\n')
+}
+
 async function main() {
   const args = process.argv.slice(2)
   const pack = await packColours()
@@ -320,6 +425,11 @@ async function main() {
   if (args.includes('--cards')) {
     if (fail && !args.includes('--force')) throw new Error(`${fail} design(s) out of band: fix them before making cards`)
     await cards()
+  }
+  const bi = args.indexOf('--bodies')
+  if (bi >= 0) {
+    if (fail && !args.includes('--force')) throw new Error(`${fail} design(s) out of band: fix them before making cards`)
+    await bodies(args[bi + 1] && !args[bi + 1].startsWith('--') ? args[bi + 1] : undefined)
   }
 }
 

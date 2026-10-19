@@ -92,13 +92,41 @@ const NOSE = [
   '.cccc.',
 ]
 
-const BODY = bell(
+/** The shared bell this design wore before it got its own body (for the before/after card). */
+export const BODY_SHARED = bell(
   { 1: 'N', 2: 'n', 3: 'v', 4: 'u', 5: 'U' },
   {
     5: '...VVUUUUUUUUUUUAttAUUUUUuuu',
     6: '..uuuuuuuuuuuuuaAAauuuuuuuuu',
   },
 )
+
+/** His own body: a padded miner's jerkin, square and boxy, quilted in puffed cells, brick-set and pinched at the seams, leather braces over it, a leather belt. */
+const BODY = [
+  '.NNNnNUuNnNNNNvNNnnvNUunvnnnnvn.',
+  'NNNnnNUunnNNNnvNnnnvNUunvnnnvvnn',
+  'NnnnvNUunvNnnnvnnnvvnUuvvnnvvvnn',
+  'vnvvvvUuvvvnvvvvvvvvvUuvvvvvvvvv',
+  'NNnNNNUuNNNNnNNnnvNNnUuNnnnvnnnn',
+  'NnnNNNUuNNNnnNnnnvNnnUuNnnvvnnnv',
+  'nnvNnnUuNnnnvNnnvvnnnUunnvvvnnvv',
+  'vvvvnvUuvnvvvvvvvvvvvUuvvvvvvvvv',
+  'UUUUUUUUUUUUUUtAAtUUUUUUUUUUUUuu',
+  'uuuuuuuuuuuuuuaAAauuuuuuuuuuuuuu',
+  'NNNNnNNNNnNNNNvNNnnvNNnnvnnnnvnn',
+  'NNNnnNNNnnNNNnvNnnnvNnnnvnnnvvnn',
+  '.vvvvvvvvvvvvvvvvvvvvvvvvvvvvvv.',
+]
+
+/** A tin lamp-oil flask with a brass stopper, hung from the belt on the front hip. */
+const FLASK = [
+  '.aAa',
+  '.iJi',
+  'iJwJIi',
+  'iJJIIi',
+  'iJIIii',
+  '.iiii',
+]
 
 const SLATE = [
   'tVVVVVVVVVVU',
@@ -158,7 +186,8 @@ export const D01: Design = {
   parts: [
     { id: 'shadow', group: 'feet', x: AT.shadow[0], y: AT.shadow[1], rows: SHADOW, ring: 0 },
     { id: 'feet', group: 'feet', x: AT.feet[0], y: AT.feet[1], rows: FEET, ring: 0 },
-    { id: 'body', group: 'body', x: AT.body[0], y: AT.body[1], rows: BODY },
+    { id: 'body', group: 'body', x: 34, y: 52, rows: BODY },
+    { id: 'bodyFlask', group: 'body', x: 58, y: 61, rows: FLASK },
     { id: 'beard', group: 'head', x: 31, y: 37, rows: BEARD, sags: true },
     { id: 'helm', group: 'head', x: 33, y: 18, rows: HELM, squash: [8, 11] },
     { id: 'brim', group: 'head', x: 31, y: 31, rows: BRIM },

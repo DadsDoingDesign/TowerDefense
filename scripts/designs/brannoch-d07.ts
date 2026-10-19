@@ -83,7 +83,64 @@ const NOSE = [
   '.ccccc.',
 ]
 
-const BODY = bell({ 1: 'T', 2: 'P', 3: 'p', 4: 'u', 5: 'U' })
+/** The shared bell this design wore before it got its own body (for the before/after card). */
+export const BODY_SHARED = bell({ 1: 'T', 2: 'P', 3: 'p', 4: 'u', 5: 'U' })
+
+/** His own body: a short stone-grey smock with dust on its sleeves, belted, under the apron. */
+const BODY = [
+  '...TTPPPPPPPPPPPPPPPPPPPPPPPPpppp',
+  '..TTPPPPPPPPPPPPPPPPPPPPPPPPPPpppp',
+  '..TTPPPPPPPPPPPPPPPPPPPPPPPPPPpppp',
+  '.TTPPPPPPPPPPPPPPPPPPPPPPPPPPPppppp',
+  '.UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUuuuu',
+  '.uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu',
+  'TTPPPLPPPPPPPPPPPPPPPPPPPPPPPpPPpppp',
+  'TTPPTLPPPPPPPPPPPPPPPPPPPPPPPpPPpppp',
+  'TPPPPPPPPPPPPPPPPPPPPPPPPPPPpPPPpppp',
+  'TPPPPPPPPPPPPPPPPPPPPPPPPPPPpPPPpppp',
+  'pppppppppppppppppppppppppppppppppppp',
+]
+
+/**
+ * The long leather mason's apron that hangs below the smock to his boots (the stepped hem is
+ * his silhouette): stone dust ground into it, a stitched pocket with a chisel's steel showing.
+ */
+const APRON = [
+  '..VVVVVVVVVVVVVUUu',
+  '..VVTVVVVVVVVVVUUu',
+  '..VTTVVVVVVVVVVUUu',
+  '.VVVVVVVVVVVVVVVUUu',
+  '.VVVVVVVVVVJIVVVUUu',
+  '.VVVVVVVVVuJIuuuUUu',
+  '.VVVVVVVVVuUVUUuUUu',
+  'VVVVVVVTVVuUUUUuUUuu',
+  'VVVVVVTTVVuUUUUuUUuu',
+  'VVVVVVVVVVuuuuuuUUuu',
+  'VtVVtVVtVVtVVtVVtUuu',
+  'UVVVVVVVVVVVVVVVUUuu',
+  '.uUUUUUUUUUUUUUUUuu',
+  '..uuuuuuuuuuuuuuuu',
+]
+
+/** A leather pouch on the back hip, its flap held by a brass stud. */
+const POUCH = [
+  'UUUUUu',
+  'VVtVUu',
+  'VVVVUu',
+  'UVVVUu',
+  'UUUUuu',
+  '.uuuu',
+]
+
+/** A second chisel hung blade-down through a loop on the belt, at his front hip. */
+const CHISEL = [
+  'uUu',
+  '.JI',
+  '.JI',
+  '.JI',
+  '.Ji',
+  '..i',
+]
 
 const MALLET = [
   '......VU',
@@ -107,16 +164,19 @@ export const D07: Design = {
   parts: [
     { id: 'shadow', group: 'feet', x: AT.shadow[0], y: AT.shadow[1], rows: SHADOW, ring: 0 },
     { id: 'feet', group: 'feet', x: AT.feet[0], y: AT.feet[1], rows: FEET, ring: 0 },
-    { id: 'body', group: 'body', x: AT.body[0], y: AT.body[1], rows: BODY },
+    { id: 'body', group: 'body', x: 32, y: 52, rows: BODY },
+    { id: 'bodyPouch', group: 'body', x: 34, y: 57, rows: POUCH },
+    { id: 'bodyChisel', group: 'body', x: 61, y: 57, rows: CHISEL, ring: 1 },
+    { id: 'bodyApron', group: 'body', x: 41, y: 55, rows: APRON },
     { id: 'fringe', group: 'head', x: 31, y: 28, rows: FRINGE },
     { id: 'dome', group: 'head', x: 36, y: 20, rows: DOME, squash: [4, 7] },
     { id: 'beard', group: 'head', x: 29, y: 36, rows: BEARD, sags: true },
     { id: 'brows', group: 'head', x: 46, y: 30, rows: BROWS },
     { id: 'moustache', group: 'head', x: 42, y: 37, rows: MOUSTACHE },
     { id: 'nose', group: 'head', x: 58, y: 34, rows: NOSE },
-    { id: 'mallet', group: 'prop', x: 63, y: 61, rows: MALLET },
-    { id: 'handB', group: 'hands', x: AT.handB[0], y: AT.handB[1], rows: FIST_B },
-    { id: 'handF', group: 'hands', x: AT.handF[0], y: AT.handF[1], rows: FIST_F },
+    { id: 'mallet', group: 'prop', x: 64, y: 61, rows: MALLET },
+    { id: 'handB', group: 'hands', x: 27, y: 58, rows: FIST_B },
+    { id: 'handF', group: 'hands', x: 67, y: 58, rows: FIST_F },
   ],
   idle: [
     {},
