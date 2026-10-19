@@ -418,7 +418,7 @@ async function options() {
   writeFileSync(mpath, JSON.stringify(keep, null, 2) + '\n')
 }
 
-/** All six side by side at 3× on one grass strip: each plays its idle once, then its tic, then idles out to 3 s; a frame is cut wherever any of the six changes. */
+/** All six side by side at 3× on one grass strip: each plays its idle once, then its tic, then idles out to 3 s; a frame is cut wherever any of the six changes (on a 20 ms grid). */
 async function optionsMotion(list: readonly Design[], path: string, box: { x: number; y: number; w: number; h: number }) {
   const S = 3, pad = 6, gap = 4
   const cw = list.length * (box.w * S + gap) - gap + pad * 2, ch = box.h * S + pad * 2
@@ -436,7 +436,8 @@ async function optionsMotion(list: readonly Design[], path: string, box: { x: nu
   })
   const at = (seq: { img: Rgba; ms: number }[], t: number) => { let a = 0; for (const q of seq) { if (t < a + q.ms) return q.img; a += q.ms } return seq[seq.length - 1].img }
   const cuts = new Set<number>([0])
-  for (const seq of lines) { let a = 0; for (const q of seq) { a += q.ms; if (a < TOTAL) cuts.add(a) } }
+  // cuts snapped to a 20 ms grid: players stretch any delay of 10 ms or less to 100 ms
+  for (const seq of lines) { let a = 0; for (const q of seq) { a += q.ms; const c = Math.round(a / 20) * 20; if (c > 0 && c < TOTAL) cuts.add(c) } }
   const times = [...cuts].sort((p, q) => p - q)
   const frames: Buffer[] = []
   const delays: number[] = []
