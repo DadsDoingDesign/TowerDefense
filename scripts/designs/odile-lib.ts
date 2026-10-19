@@ -30,6 +30,8 @@ export interface Part {
   /** Ink ring in px: 2 (default, the pack's line), 1 (a thin inner part), 0 (none: ink drawn by hand, light). */
   ring?: 0 | 1 | 2
   hidden?: boolean
+  /** Paint this part see-through at this alpha, unringed (ground effects only: water round the boots). */
+  alpha?: number
   /** Rows of this part (top-down indices) that a squash may drop, in order. */
   squash?: readonly number[]
   /** Rows (top-down indices, before any squash) that splay a pixel wider each side when the frame spreads: the flare of a mass that settles. */
@@ -134,6 +136,10 @@ export function render(d: Design, f: Frame = {}, groups?: readonly Group[]): Rgb
     y += mv[1] + nd[1]
     if (p.id === 'shadow') {
       rows.forEach((row, r) => [...row].forEach((ch, c) => ch !== '.' && put(x + c, y + r, INK, SHADOW_ALPHA)))
+      continue
+    }
+    if (p.alpha !== undefined) {
+      rows.forEach((row, r) => [...row].forEach((ch, c) => ch !== '.' && put(x + c, y + r, ch === 'k' ? INK : d.pal[ch], p.alpha)))
       continue
     }
     const solid = (c: number, r: number) => r >= 0 && r < rows.length && c >= 0 && c < rows[r].length && rows[r][c] !== '.'
