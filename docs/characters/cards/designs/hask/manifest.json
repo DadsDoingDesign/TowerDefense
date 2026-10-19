@@ -52,7 +52,7 @@
     "group": "Hask designs",
     "people": "Hask",
     "title": "3. Salt-Barge Poleman",
-    "caption": "Poles the salt barges down the reed channels: a broad ribbed reed cone wider than he is, a short oilcloth smock with a rope belt and a salt-crusted hem, bare scaled legs, the pole set from behind him into the water. Judge: would it pass for Pixel Frog's, and is it Hask?",
+    "caption": "Poles the salt barges down the reed channels: a broad ribbed reed cone, a short oilcloth smock leaning into the stroke, a rope belt and a salt-crusted hem, bare scaled legs in a stride, the pole in both fists. Judge: would it pass for Pixel Frog's, and is it Hask?",
     "file": "d03.png"
   },
   {
@@ -206,5 +206,21 @@
     "title": "Marsh Trapper · new body, motion",
     "caption": "A patched hide vest laced over his belly scales, strapped hide leggings planted wide, the trap’s chain from his belt; his far fist on his hip. The idle and the tic, looped. Judge: does the body move with weight?",
     "file": "d02-body.webp"
+  },
+  {
+    "id": "hask-d03-final",
+    "group": "Hask designs",
+    "people": "Hask",
+    "title": "3. Salt-Barge Poleman · refined",
+    "caption": "The pick, refined: before and after at 4×, the idle and the stroke, and at 1× beside the pack. Judge: is he ready to ship as Hask?",
+    "file": "d03-final.png"
+  },
+  {
+    "id": "hask-d03-final-motion",
+    "group": "Hask designs",
+    "people": "Hask",
+    "title": "3. Salt-Barge Poleman · refined, motion",
+    "caption": "The poling breath twice, then the stroke with its splash, looped. Judge: does it move with weight, and does the stroke land?",
+    "file": "d03-final.webp"
   }
 ]

@@ -18,7 +18,7 @@
  *   overlap w the hat"): no prop or effect pixel, in any frame, may touch the
  *   head mass (the head group with its ink ring).
  */
-import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -278,7 +278,11 @@ async function cards() {
     { id: 'hask-sheet', group: 'Hask designs', people: 'Hask', title: 'Hask · all ten at 3×', caption: 'Ten brand-new designs beside the CC0 pawn and knight. Judge: which two or three are Hask?', file: 'sheet.png' },
     { id: 'hask-lineup', group: 'Hask designs', people: 'Hask', title: 'Hask · at game size', caption: 'All ten at 1× on the grass beside the pack. Judge: does each read as a reptile, and does any stand out as not Pixel Frog?', file: 'lineup.png' },
   )
-  writeFileSync(join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n')
+  // keep the cards other scripts add (hask-bodies.ts, hask-d03-final.ts) after the set's own
+  const mpath = join(OUT, 'manifest.json')
+  const own = new Set(manifest.map((m) => m.id))
+  const extra = existsSync(mpath) ? (JSON.parse(readFileSync(mpath, 'utf8')) as typeof manifest).filter((m) => !own.has(m.id)) : []
+  writeFileSync(mpath, JSON.stringify([...manifest, ...extra], null, 2) + '\n')
 }
 
 /** A 3 s+ loop at 4× on grass: the idle twice, the tic, then the idle to fill 3 s. Animated WebP (lossless) via sharp. */
