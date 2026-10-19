@@ -254,5 +254,21 @@
     "title": "9. Flowerpot Potter · E, final, moving",
     "caption": "The idle (the nose swings a frame behind the head) and the stamp (the nose bounces and wobbles still). Judge: a pendulum, not a jitter?",
     "file": "d09-E-final.webp"
+  },
+  {
+    "id": "wren-d09-final-smock",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "9. Flowerpot Potter · the smock, final",
+    "caption": "The smock with the nose coming out from under the pot, shorter and bulb-shaped; every part named, three nose shapes. Judge: does the nose come from under the rim, and which shape?",
+    "file": "d09-final-smock.png"
+  },
+  {
+    "id": "wren-d09-final-smock-motion",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "9. Flowerpot Potter · the smock, final, moving",
+    "caption": "The idle (the nose swings a frame behind the head) and the stamp (it bounces and settles). Judge: soft and floppy, not jittery?",
+    "file": "d09-final-smock.webp"
   }
 ]

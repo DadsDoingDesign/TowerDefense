@@ -15,6 +15,8 @@
  *   npx tsx scripts/designs/wren.ts --options       # d09-options.png + d09-options.webp
  *   npx tsx scripts/designs/wren.ts --epreview DIR  # option E made final and its outfit variants: 8× stills + line-ups
  *   npx tsx scripts/designs/wren.ts --efinal        # d09-E-final.png + d09-E-final.webp
+ *   npx tsx scripts/designs/wren.ts --spreview DIR  # the smock made final and its nose shapes: 8× stills + line-ups
+ *   npx tsx scripts/designs/wren.ts --sfinal        # d09-final-smock.png + d09-final-smock.webp
  *
  * Every figure is a hand-placed pixel map (wren-d01.ts … wren-d10.ts);
  * wren-lib.ts only stamps the pack's outline and composes the frames. The
@@ -37,6 +39,9 @@ import { D09_E_APRON } from './wren-d09-E-apron'
 import { D09_E_SMOCK } from './wren-d09-E-smock'
 import { D09_E_NOSE_TAN } from './wren-d09-E-nose-tan'
 import { D09_E_NOSE_ROSY } from './wren-d09-E-nose-rosy'
+import { D09_E_SMOCK_FINAL } from './wren-d09-E-smock-final'
+import { D09_E_SMOCK_NOSE_BLOB } from './wren-d09-E-smock-nose-blob'
+import { D09_E_SMOCK_NOSE_CURL } from './wren-d09-E-smock-nose-curl'
 
 /** The designer's pick (option E) made final, with its two outfit variants; the first is the recommended one. */
 const E_OUTFITS: readonly { d: Design; label: string }[] = [
@@ -68,6 +73,95 @@ const E_PARTS: readonly { name: string; at: [number, number]; side: 'l' | 'r' }[
   { name: 'button line', at: [65, 74], side: 'r' },
   { name: 'root stick', at: [80, 77], side: 'r' },
 ]
+
+/** The smock made final (the designer's favourite): three nose shapes from under the pot; the first is the recommended one. */
+const S_NOSES: readonly { d: Design; label: string }[] = [
+  { d: D09_E_SMOCK_FINAL, label: 'Potato: lumpy, a wart (recommended)' },
+  { d: D09_E_SMOCK_NOSE_BLOB, label: "Blob: Grumpy's round bulb" },
+  { d: D09_E_SMOCK_NOSE_CURL, label: 'Droop: curls to the front' },
+]
+const S_PARTS: readonly { name: string; at: [number, number]; side: 'l' | 'r' }[] = [
+  { name: 'seedling', at: [53, 27], side: 'r' },
+  { name: 'flowerpot (upside down)', at: [44, 40], side: 'l' },
+  { name: 'pot rim on the shoulders', at: [34, 57], side: 'l' },
+  { name: 'moustache', at: [50, 62], side: 'l' },
+  { name: 'yoke (lighter, at the shoulders)', at: [44, 63], side: 'l' },
+  { name: 'sleeve, bent at the elbow', at: [30, 67], side: 'l' },
+  { name: 'fist on the hip', at: [40, 70], side: 'l' },
+  { name: 'gathers under the yoke', at: [47, 68], side: 'l' },
+  { name: 'clay boots', at: [42, 84], side: 'l' },
+  { name: 'nose, from under the rim', at: [57, 63], side: 'r' },
+  { name: 'front sleeve', at: [71, 63], side: 'r' },
+  { name: 'belt, riding up at the back', at: [60, 72], side: 'r' },
+  { name: 'brass buckle', at: [65, 72], side: 'r' },
+  { name: 'smock below the belt', at: [57, 77], side: 'r' },
+  { name: 'root stick', at: [80, 77], side: 'r' },
+]
+
+/** d09-final-smock.png (the smock before / after at 4×, every part named, the nose shapes at 4× and 1×, 1× and 2× beside the pack) and d09-final-smock.webp. */
+async function sFinal() {
+  mkdirSync(OUT, { recursive: true })
+  const grass = b64(await sharp(join(PACK, 'grass.png')).png().toBuffer())
+  const pack = await Promise.all(PACK_PEOPLE.map(async (p) => ({ ...p, img: await readPack(p.file) })))
+  const cell = async (img: Rgba, s: number) => b64(await png(img, s))
+  const before = D09_E_SMOCK, fin = S_NOSES[0].d
+  const all = frameBox([before, ...S_NOSES.map((o) => o.d)].flatMap((d) => [...idleFrames(d), ...ticFrames(d)]))
+  const x = Math.max(0, all.x0 - 1), y = Math.max(0, all.y0 - 1), w = Math.min(W, all.x1 + 2) - x, h = Math.min(H, all.y1 + 2) - y
+  const cut = (img: Rgba) => crop(img, x, y, w, h)
+  const S = 5, lw = 210, figW = w * S, figH = h * S
+  const lefts = S_PARTS.filter((p) => p.side === 'l'), rights = S_PARTS.filter((p) => p.side === 'r')
+  const rowY = (i: number, n: number) => 18 + (i * (figH - 36)) / Math.max(1, n - 1)
+  const lines: string[] = [], labels: string[] = []
+  const place = (list: typeof S_PARTS, left: boolean) =>
+    list.forEach((p, i) => {
+      const ly = rowY(i, list.length), lx = left ? lw - 6 : lw + figW + 6
+      const px = lw + (p.at[0] - x + 0.5) * S, py = (p.at[1] - y + 0.5) * S
+      lines.push(`<line x1="${lx}" y1="${ly}" x2="${px}" y2="${py}" stroke="#ffe46b" stroke-width="1.5"/><circle cx="${px}" cy="${py}" r="3" fill="#ffe46b" stroke="#161c2e"/>`)
+      labels.push(`<div class="cl" style="top:${ly - 9}px;${left ? `right:${lw + figW + 10}px;text-align:right` : `left:${lw + figW + 10}px`}">${p.name}</div>`)
+    })
+  place(lefts, true)
+  place(rights, false)
+  const callout = `<div class="call" style="width:${lw * 2 + figW}px;height:${figH}px"><img class="grass" style="position:absolute;left:${lw}px;top:0" src="${await cell(cut(render(fin)), S)}">
+    <svg width="${lw * 2 + figW}" height="${figH}" style="position:absolute;left:0;top:0">${lines.join('')}</svg>${labels.join('')}</div>`
+  const noseCut = (img: Rgba) => crop(img, 42, 50, 32, 22)
+  const noses = await Promise.all(S_NOSES.map(async ({ d, label }, i) => `<div class="v${i === 0 ? ' rec' : ''}"><img src="${await cell(noseCut(render(d)), 4)}"><b>${label}</b></div>`))
+  const noseOnes = await Promise.all([pack[0].img, ...S_NOSES.map(({ d }) => cut(render(d)))].map((im) => cell(im, 1)))
+  const ones = await Promise.all([...pack.map((p) => p.img), cut(render(before)), cut(render(fin))].map((im) => cell(im, 1)))
+  const twos = await Promise.all([...pack.map((p) => p.img), cut(render(fin))].map((im) => cell(im, 2)))
+  const html = `<!doctype html><meta charset="utf-8"><style>${CSS(grass)}
+    .wrap{padding:12px;width:876px} h1{font-size:21px;margin:0} p{margin:2px 0 8px;color:#c9cbbf;font-size:13.5px}
+    h2{font-size:15px;margin:14px 0 4px;color:#ffe46b}
+    .top{display:flex;align-items:flex-end;justify-content:space-around;padding:10px 6px 4px;border-radius:8px}
+    .lab{display:flex;justify-content:space-around;font-size:12.5px;color:#c9cbbf;margin:4px 0 4px}
+    .call{position:relative;margin:4px auto} .cl{position:absolute;font-size:13px;color:#fff;white-space:nowrap}
+    .vs{display:flex;justify-content:space-between;gap:6px;padding:8px;border-radius:8px}
+    .v{display:flex;flex-direction:column;align-items:center;padding:4px;border-radius:6px;border:2px solid transparent}
+    .v.rec{border-color:#ffe46b} .v b{font-size:12.5px;color:#fff;text-shadow:0 2px 0 #161c2e;max-width:240px;text-align:center}
+    .k{font-size:12px;color:#c9cbbf;margin:10px 0 3px}
+    .row{display:flex;align-items:flex-end;gap:8px;padding:8px 10px;border-radius:6px;flex-wrap:wrap}
+    </style><div class="wrap"><h1>9. Flowerpot Potter · the smock, final</h1><p>The smock, as picked (yoke, gathers, belt, the body and the bent arms kept). The nose now comes out from UNDER the pot: its root is hidden by the rim, its first rows in the rim's shadow, and it hangs centred between the moustache's halves, two thirds as long, a soft potato of a nose with a ruddy tip.</p>
+    <div class="top grass"><img src="${await cell(cut(render(before)), 4)}"><img src="${await cell(cut(render(fin)), 4)}"></div>
+    <div class="lab"><span>The smock as picked · 4×</span><span>Final · 4×</span></div>
+    <h2>Every part, named (5×)</h2>${callout}
+    <h2>The nose: three shapes from under the pot, at 4× and 1× (the gold frame is the recommended one)</h2><div class="vs grass">${noses.join('')}</div>
+    <div class="row grass">${noseOnes.map((u) => `<img src="${u}">`).join('')}</div>
+    <div class="k">At 1× (game size): the CC0 pawn, knight, archer and torch goblin, then the smock as picked and the final</div>
+    <div class="row grass">${ones.map((u) => `<img src="${u}">`).join('')}</div>
+    <div class="k">The same at 2×</div>
+    <div class="row grass">${twos.map((u) => `<img src="${u}">`).join('')}</div></div>`
+  await shoot(html, join(OUT, 'd09-final-smock.png'), 900)
+  const fb = frameBox([...idleFrames(fin), ...ticFrames(fin)])
+  const bx = Math.max(0, fb.x0 - 2), by = Math.max(0, fb.y0 - 2)
+  await motion(fin, join(OUT, 'd09-final-smock.webp'), { x: bx, y: by, w: Math.min(W, fb.x1 + 3) - bx, h: Math.min(H, fb.y1 + 3) - by })
+  const mpath = join(OUT, 'manifest.json')
+  const manifest: { id: string; group: string; people: string; title: string; caption: string; file: string }[] = existsSync(mpath) ? JSON.parse(readFileSync(mpath, 'utf8')) : []
+  const keep = manifest.filter((m) => !m.id.startsWith('wren-d09-final-smock'))
+  keep.push(
+    { id: 'wren-d09-final-smock', group: 'Wren designs', people: 'Wren', title: '9. Flowerpot Potter · the smock, final', caption: 'The smock with the nose coming out from under the pot, shorter and bulb-shaped; every part named, three nose shapes. Judge: does the nose come from under the rim, and which shape?', file: 'd09-final-smock.png' },
+    { id: 'wren-d09-final-smock-motion', group: 'Wren designs', people: 'Wren', title: '9. Flowerpot Potter · the smock, final, moving', caption: 'The idle (the nose swings a frame behind the head) and the stamp (it bounces and settles). Judge: soft and floppy, not jittery?', file: 'd09-final-smock.webp' },
+  )
+  writeFileSync(mpath, JSON.stringify(keep, null, 2) + '\n')
+}
 
 /** The five refinement options of the pick (d09), each pushing one direction; the label is what it pushes. */
 const OPTIONS: readonly { d: Design; label: string }[] = [
@@ -594,6 +688,16 @@ async function main() {
     const bad = E_OUTFITS.map((o) => report(o.d)).filter((r) => r.miss.length || r.clear.length)
     if (bad.length) throw new Error('an outfit is out of band or a prop touches the head: no cards')
     await eFinal()
+  }
+  const si2 = args.indexOf('--spreview')
+  if (si2 >= 0) {
+    S_NOSES.forEach((o) => report(o.d))
+    await preview(args[si2 + 1], undefined, [D09_E_SMOCK, ...S_NOSES.map((o) => o.d)])
+  }
+  if (args.includes('--sfinal')) {
+    const bad = S_NOSES.map((o) => report(o.d)).filter((r) => r.miss.length || r.clear.length)
+    if (bad.length) throw new Error('a nose shape is out of band or a prop touches the head: no cards')
+    await sFinal()
   }
   const fi = args.indexOf('--final')
   if (fi >= 0) await final(args[fi + 1])
