@@ -1,81 +1,135 @@
 import { describe, expect, it } from 'vitest'
-import { HQ_IDS, HQ_LEVELS_MAX, HQ_STAGES, hqCost, hqLevelsBought, hqMax, hqStage, hqUpgrade } from '../src/game/run/hq'
-import { ctaWords, firstFocus, hqCard, hqCards, hqMark, HQ_ORDER, STAGE_MARK, stageLine } from '../src/ui/shell/hq/hqModel'
+import {
+  CASTLE_PARTS,
+  CASTLE_TIERS,
+  castlePart,
+  castleTier,
+  HQ_IDS,
+  HQ_LEVELS_MAX,
+  hqCost,
+  hqLevelsBought,
+  hqMax,
+  hqUpgrade,
+} from '../src/game/run/hq'
+import { ctaWords, firstFocus, hqCard, hqCards, hqMark, HQ_ORDER, TIER_MARK, tierLine } from '../src/ui/shell/hq/hqModel'
+import { CASTLE_SCENE, CASTLE_SHEETS } from '../src/ui/shell/hq/castleScene.generated'
 import { ICON_ORDER } from '../src/game/data/iconAtlas'
 
 const ALL = Object.fromEntries(HQ_IDS.map((id) => [id, hqMax(id)]))
+const tierOf = (lv: Record<string, number>) => castleTier(lv).tier.id
 
-describe('the castle grows with the upgrades (hq.hqStage)', () => {
-  it('counts every level bought, clamped, unknown ids ignored', () => {
-    expect(hqLevelsBought(undefined)).toBe(0)
-    expect(hqLevelsBought({})).toBe(0)
-    expect(hqLevelsBought({ deal: 2, pack: 1 })).toBe(3)
-    expect(hqLevelsBought({ deal: 99, rate: 3, rocks: 2, nope: 7 })).toBe(hqMax('deal'))
-    expect(hqLevelsBought({ deal: -4, pack: Number.NaN, focus: 1.9 })).toBe(1)
-    expect(hqLevelsBought(ALL)).toBe(HQ_LEVELS_MAX)
-    expect(HQ_LEVELS_MAX).toBe(15)
+describe('the castle: a part per upgrade (hq.castlePart)', () => {
+  it('gives every upgrade its own part', () => {
+    const ids = HQ_IDS.map((id) => CASTLE_PARTS[id].id)
+    expect(new Set(ids).size).toBe(HQ_IDS.length)
+    expect(castlePart('scouting', 1)).toEqual({ id: 'lookout', name: 'Lookout', level: 1, max: 2 })
+    expect(castlePart('deal', 0).id).toBe('yard')
   })
 
-  it('is a ladder: four stages, from 0, rising, the last reachable', () => {
-    expect(HQ_STAGES.map((s) => s.id)).toEqual(['lodge', 'watchtower', 'castle', 'stronghold'])
-    expect(HQ_STAGES[0].from).toBe(0)
-    for (let i = 1; i < HQ_STAGES.length; i++) expect(HQ_STAGES[i].from).toBeGreaterThan(HQ_STAGES[i - 1].from)
-    expect(HQ_STAGES.at(-1)!.from).toBeLessThanOrEqual(HQ_LEVELS_MAX)
+  it('clamps the level to the upgrade’s range', () => {
+    expect(castlePart('pack', 99).level).toBe(4)
+    expect(castlePart('pack', -3).level).toBe(0)
+    expect(castlePart('hiring', Number.NaN).level).toBe(0)
+    expect(castlePart('focus', 2.7).level).toBe(2)
   })
 
-  it('stands at the stage its levels reach, and says how far the next is', () => {
-    const at = (n: number) => {
-      // n levels spread over the purchases in order.
-      const lv: Record<string, number> = {}
-      let left = n
+  it('has a baked sprite for every part at every level, in every tier, inside the scene', () => {
+    for (const t of CASTLE_TIERS)
       for (const id of HQ_IDS) {
-        lv[id] = Math.min(hqMax(id), left)
-        left -= lv[id]
+        const layers = CASTLE_SHEETS[t.id].layers[CASTLE_PARTS[id].id]
+        expect(layers).toHaveLength(hqMax(id) + 1)
+        for (const [sx, sy, w, h, x, y] of layers) {
+          expect(sy).toBeGreaterThanOrEqual(CASTLE_SCENE.h)
+          expect(sx + w).toBeLessThanOrEqual(CASTLE_SCENE.w)
+          expect(sy + h).toBeLessThanOrEqual(CASTLE_SHEETS[t.id].h)
+          expect(x).toBeGreaterThanOrEqual(0)
+          expect(y).toBeGreaterThanOrEqual(0)
+          expect(x + w).toBeLessThanOrEqual(CASTLE_SCENE.w)
+          expect(y + h).toBeLessThanOrEqual(CASTLE_SCENE.h)
+        }
       }
-      return hqStage(lv)
-    }
-    expect(at(0)).toMatchObject({ index: 0, bought: 0, toNext: 3 })
-    expect(at(0).stage.id).toBe('lodge')
-    expect(at(2).stage.id).toBe('lodge')
-    expect(at(3).stage.id).toBe('watchtower')
-    expect(at(6)).toMatchObject({ toNext: 1 })
-    expect(at(7).stage.id).toBe('castle')
-    expect(at(11).stage.id).toBe('castle')
-    expect(at(12).stage.id).toBe('stronghold')
-    expect(at(15)).toMatchObject({ next: null, toNext: 0, bought: 15 })
-    // Every count lands on exactly one stage, and the stage never goes back.
-    let last = -1
-    for (let n = 0; n <= HQ_LEVELS_MAX; n++) {
-      const s = at(n)
-      expect(s.index).toBeGreaterThanOrEqual(last)
-      last = s.index
-      expect(s.bought).toBe(n)
-      if (s.next) expect(s.next.from - n).toBe(s.toNext)
+  })
+})
+
+describe('the castle’s quality: a milestone across every upgrade (hq.castleTier)', () => {
+  it('is a ladder of four, from Timber, ending with everything maxed', () => {
+    expect(CASTLE_TIERS.map((t) => t.id)).toEqual(['timber', 'stone', 'fortified', 'grand'])
+    expect(CASTLE_TIERS[0].needs).toEqual({})
+    expect(CASTLE_TIERS.at(-1)!.needs).toEqual(ALL)
+    // Each mark asks at least what the one before did, and never past a max.
+    for (let i = 1; i < CASTLE_TIERS.length; i++)
+      for (const id of HQ_IDS) {
+        expect(CASTLE_TIERS[i].needs[id] ?? 0).toBeGreaterThanOrEqual(CASTLE_TIERS[i - 1].needs[id] ?? 0)
+        expect(CASTLE_TIERS[i].needs[id] ?? 0).toBeLessThanOrEqual(hqMax(id))
+      }
+  })
+
+  it('reads the LOWEST upgrade: one short keeps the whole castle back', () => {
+    expect(tierOf({})).toBe('timber')
+    expect(tierOf({ deal: 5, hiring: 1, pack: 4, scouting: 0 })).toBe('timber')
+    expect(tierOf({ deal: 1, hiring: 1, pack: 1, scouting: 1 })).toBe('stone')
+    // Company focus opens late (the fifth contract), so Stone does not ask for it…
+    expect(tierOf({ deal: 1, hiring: 1, pack: 1, scouting: 1, focus: 0 })).toBe('stone')
+    // …and Fortified does: halfway on every upgrade.
+    expect(tierOf({ deal: 3, hiring: 1, pack: 2, scouting: 1, focus: 1 })).toBe('stone')
+    expect(tierOf({ deal: 3, hiring: 1, pack: 2, scouting: 1, focus: 2 })).toBe('fortified')
+    expect(tierOf({ ...ALL, focus: 2 })).toBe('fortified')
+    expect(tierOf(ALL)).toBe('grand')
+  })
+
+  it('never falls back as levels rise, one level at a time in any order', () => {
+    const orders = [HQ_IDS, [...HQ_IDS].reverse(), ['focus', 'scouting', 'deal', 'pack', 'hiring'] as const]
+    for (const order of orders) {
+      const lv: Record<string, number> = {}
+      let last = 0
+      for (let step = 0; step < HQ_LEVELS_MAX; step++) {
+        const id = order.find((i) => (lv[i] ?? 0) < hqMax(i))!
+        lv[id] = (lv[id] ?? 0) + 1
+        const t = castleTier(lv)
+        expect(t.index).toBeGreaterThanOrEqual(last)
+        last = t.index
+      }
+      expect(hqLevelsBought(lv)).toBe(HQ_LEVELS_MAX)
+      expect(last).toBe(3)
     }
   })
 
-  it('has a home-plate mark per stage, in the atlas', () => {
-    for (const s of HQ_STAGES) expect(ICON_ORDER).toContain(STAGE_MARK[s.id])
-    expect(hqMark({})).toBe('hqLodge')
-    expect(hqMark(ALL)).toBe('hqStronghold')
+  it('names what the next tier still needs, and nothing at the last', () => {
+    expect(castleTier({ deal: 1, hiring: 1 }).missing).toEqual([
+      { id: 'pack', have: 0, need: 1 },
+      { id: 'scouting', have: 0, need: 1 },
+    ])
+    expect(castleTier(ALL)).toMatchObject({ next: null, missing: [] })
+    expect(castleTier({ deal: 99, rate: 3, nope: 7 } as Record<string, number>).tier.id).toBe('timber')
   })
 
-  it('says the next stage in words', () => {
-    expect(stageLine({})).toBe('Watchtower in 3 upgrades')
-    expect(stageLine({ deal: 2 })).toBe('Watchtower in 1 upgrade')
-    expect(stageLine({ deal: 5, hiring: 1, pack: 4, focus: 2 })).toBe('12 of 15 upgrades')
-    expect(stageLine(ALL)).toBe('Every upgrade bought')
+  it('says the next milestone in one line', () => {
+    expect(tierLine({ deal: 1, hiring: 1 })).toBe('Stone castle: raise Pack slots and Scouts to level 1')
+    expect(tierLine({ deal: 1, hiring: 1, pack: 1 })).toBe('Stone castle: raise Scouts to level 1')
+    expect(tierLine({ deal: 2, hiring: 1, pack: 2, scouting: 1, focus: 1 })).toBe('Fortified castle: raise Opening deal to 3 and Company focus to 2')
+    expect(tierLine({})).toBe('Stone castle: raise Opening deal, Hiring Hall, Pack slots and Scouts to level 1')
+    expect(tierLine({ ...ALL, deal: 3, pack: 2, focus: 2 })).toBe('Grand castle: max the last 3 upgrades')
+    expect(tierLine({ ...ALL, deal: 4 })).toBe('Grand castle: raise Opening deal to level 5')
+    expect(tierLine(ALL)).toBe('Every upgrade bought')
+  })
+
+  it('has a home-plate mark per tier, in the atlas', () => {
+    for (const t of CASTLE_TIERS) expect(ICON_ORDER).toContain(TIER_MARK[t.id])
+    expect(hqMark({})).toBe('hqTimber')
+    expect(hqMark({ deal: 1, hiring: 1, pack: 1, scouting: 1 })).toBe('hqStone')
+    expect(hqMark(ALL)).toBe('hqGrand')
   })
 })
 
 describe('the HQ page as data (hqModel)', () => {
   const facts = { levels: {}, bank: 0, runs: 9, focus: null }
 
-  it('shows every upgrade once, in the page order, with its own mark', () => {
+  it('shows every upgrade once, in the page order, with its own mark and part', () => {
     expect([...HQ_ORDER].sort()).toEqual([...HQ_IDS].sort())
     const cards = hqCards(facts)
     expect(cards.map((c) => c.id)).toEqual([...HQ_ORDER])
     expect(new Set(cards.map((c) => c.mark)).size).toBe(cards.length)
+    expect(new Set(cards.map((c) => c.part)).size).toBe(cards.length)
     for (const c of cards) expect(ICON_ORDER).toContain(c.mark)
   })
 

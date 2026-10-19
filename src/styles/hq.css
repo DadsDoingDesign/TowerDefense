@@ -34,23 +34,101 @@
 }
 .hq-scene {
   position: relative;
-  height: var(--hq-h);
   overflow: hidden;
   background: color-mix(in srgb, var(--shade) 60%, transparent);
 }
-/* Centred and never scaled: a phone sees the scene's middle, where it is composed. */
-.hq-scene > img {
+/* The castle: the tier's scene and each part at its level, as layers of one
+   sheet — centred and never scaled; a phone sees the middle, where it is
+   composed. */
+.hq-castle {
   position: absolute;
   left: 50%;
   top: 0;
-  width: var(--hq-w);
-  height: var(--hq-h);
   translate: -50% 0;
-  image-rendering: pixelated;
 }
-/* Under the picture: the stage's name, and the four stages as a track —
-   past ones lit, this one ringed, the ones to come in shadow (the marks are
-   the home plate's) — then the bar and the line to the next. */
+.hq-layer {
+  position: absolute;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  transition: filter 180ms ease;
+}
+/* The focused upgrade's part, lit: a 1 px gold ring outside the pack's ink;
+   everything else steps back a little. */
+.hq-castle.has-lit .hq-layer:not(.is-lit) {
+  filter: brightness(0.78) saturate(0.85);
+}
+.hq-part.is-lit {
+  filter: drop-shadow(1px 0 0 var(--gold)) drop-shadow(-1px 0 0 var(--gold)) drop-shadow(0 1px 0 var(--gold)) drop-shadow(0 -1px 0 var(--gold));
+}
+:root[data-reduced-motion='true'] .hq-layer {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hq-layer {
+    transition: none;
+  }
+}
+
+/* The tier's rise (once, `useTierRise`): the old castle fades off the new
+   one, the new tier's name hangs for a beat. Never under reduced motion (the
+   hook does not start it). */
+.hq-rise {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.hq-rise-old {
+  animation: hq-rise-out 1300ms ease-in 300ms both;
+}
+.hq-rise-tag {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  translate: -50% -50%;
+  padding: 6px 14px;
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--shade) 82%, transparent);
+  border: 1px solid var(--gold);
+  color: var(--gold-text);
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  white-space: nowrap;
+  animation: hq-rise-tag 2600ms ease both;
+}
+@keyframes hq-rise-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes hq-rise-tag {
+  0%,
+  20% {
+    opacity: 0;
+    translate: -50% -40%;
+  }
+  35%,
+  80% {
+    opacity: 1;
+    translate: -50% -50%;
+  }
+  100% {
+    opacity: 0;
+    translate: -50% -50%;
+  }
+}
+/* A 320 phone: the castle runs edge to edge, so the whole of it fits. */
+@media (max-width: 359.98px) {
+  .hq-keep {
+    margin-inline: calc(-1 * var(--gutter));
+    border-radius: 0;
+    border-inline: 0;
+  }
+}
+
+/* Under the picture: the tier's name and the four tiers as a track — past
+   ones lit, this one ringed, the ones to come in shadow (the marks are the
+   home plate's) — then the next milestone, in one quiet line. */
 .hq-stage {
   display: flex;
   align-items: center;
@@ -86,36 +164,16 @@
   background: color-mix(in srgb, var(--accent) 26%, transparent);
   box-shadow: inset 0 0 0 1px var(--accent);
 }
-.hq-stage-foot {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.hq-tier-line {
+  margin: 0;
   padding: 0 12px;
-}
-.hq-stage-bar {
-  flex: 1 1 auto;
-  display: flex;
-  gap: 3px;
-}
-.hq-stage-bar i {
-  flex: 1;
-  height: 6px;
-  border-radius: 2px;
-  background: color-mix(in srgb, var(--rule) 14%, transparent);
-}
-.hq-stage-bar i.on {
-  background: var(--accent);
-}
-.hq-stage-bar.full i {
-  background: var(--gold);
-}
-.hq-stage-next {
-  flex: none;
-  margin-left: auto;
   font-size: var(--fs-sm);
-  font-weight: 700;
+  font-weight: 600;
+  line-height: 1.3;
   color: var(--muted);
-  white-space: nowrap;
+}
+.hq-tier-line.is-done {
+  color: var(--gold-text);
 }
 
 /* ------------------------------------------------------------ the strip */
@@ -195,6 +253,10 @@
 .hq-note-line {
   margin: 0;
   color: var(--muted);
+}
+/* The card's kicker names the part and its level ("Lookout · 1/2") on one line. */
+.hq-up .pk-kicker {
+  white-space: nowrap;
 }
 /* Maxed: the card says so in gold, the way the pips do. */
 .hq-up.is-max .pk-kicker {

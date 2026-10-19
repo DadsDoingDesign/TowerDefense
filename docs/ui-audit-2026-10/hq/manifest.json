@@ -1,12 +1,15 @@
 [
-  { "id": "before-after-phone", "group": "HQ", "people": "", "title": "Before → after, phone", "caption": "Two tabs hid three of five upgrades; now one page: the castle, five tokens, one card, one CTA.", "file": "before-after-phone.png" },
+  { "id": "before-after-phone", "group": "HQ", "people": "", "title": "Before → after, phone", "caption": "Two tabs hid three of five upgrades; now the castle, five tokens, one card, one CTA.", "file": "before-after-phone.png" },
   { "id": "before-after-desk", "group": "HQ", "people": "", "title": "Before → after, desk", "caption": "A narrow column of buttons becomes the castle beside the pick.", "file": "before-after-desk.png" },
-  { "id": "plate-stages", "group": "HQ", "people": "", "title": "The HQ plate at each stage", "caption": "Lodge, Watchtower, Castle, Stronghold, redrawn at 16 px and shown at 2×. Does each read apart?", "file": "plate-stages.png" },
-  { "id": "home-bar-stages", "group": "HQ", "people": "", "title": "The home bar at each stage", "caption": "The plate beside Crates, Codex and Settings. Same family?", "file": "home-bar-stages.png" },
-  { "id": "castle-stages", "group": "HQ", "people": "", "title": "The big castle at each stage", "caption": "The pack's own buildings at 1×, the next stage's footing beside each one.", "file": "castle-stages.png" },
-  { "id": "castle-in-page", "group": "HQ", "people": "", "title": "The castle on the page", "caption": "Under the picture: the stage's name, the four-stage track and the bar to the next stage.", "file": "castle-in-page.png" },
+  { "id": "tier-castles", "group": "HQ", "people": "", "title": "Each tier's whole castle, parts at mixed levels", "caption": "Timber, Stone, Fortified, Grand: walls, roofs and gate redraw; every part keeps its level.", "file": "tier-castles.png" },
+  { "id": "part-yard-levels", "group": "HQ", "people": "", "title": "One part across its levels: the barracks yard", "caption": "Opening deal 0–5: the fenced plot, a tent, the arms rack, a second tent, a recruit, an archer.", "file": "part-yard-levels.png" },
+  { "id": "part-lookout-levels", "group": "HQ", "people": "", "title": "The lookout across its levels", "caption": "Scouts 0–2: timber on the east tower, a lookout, then taller with a roof and a flag.", "file": "part-lookout-levels.png" },
+  { "id": "highlight-on-tap", "group": "HQ", "people": "", "title": "The highlight on tap", "caption": "Tap an upgrade and its part is ringed in gold while the rest steps back. Clear which part is which?", "file": "highlight-on-tap.png" },
+  { "id": "milestone-line", "group": "HQ", "people": "", "title": "The milestone line", "caption": "One quiet line names what the next tier needs, e.g. 'Stone castle: raise Scouts to level 1'.", "file": "milestone-line.png" },
+  { "id": "home-mark-tiers", "group": "HQ", "people": "", "title": "The home mark per tier", "caption": "Log palisade, grey stone, slate with gold banners, white stone with red pennants, redrawn at 16 px.", "file": "home-mark-tiers.png" },
+  { "id": "home-bar-tiers", "group": "HQ", "people": "", "title": "The home bar per tier", "caption": "The plate beside Crates, Codex and Settings. Same family?", "file": "home-bar-tiers.png" },
   { "id": "card-states", "group": "HQ", "people": "", "title": "Upgrade states: locked, buyable, can't afford, maxed", "caption": "Padlock and count; price; price in red and 'Need 60 more'; gold pips and 'Max'.", "file": "card-states.png" },
-  { "id": "card-states-close", "group": "HQ", "people": "", "title": "The card, close up", "caption": "Now and Next, one note, the level in the kicker. Easy to read?", "file": "card-states-close.png" },
-  { "id": "focus-card", "group": "HQ", "people": "", "title": "Company focus", "caption": "Pick a crest (free); the one-contract order is a quiet second button.", "file": "focus-card.png" },
+  { "id": "tier-rise", "group": "HQ", "people": "", "title": "The tier's rise", "caption": "Once per new tier, the next time the HQ opens: the old castle fades off and the new name shows for a beat. Off under reduced motion.", "file": "tier-rise.png" },
+  { "id": "phone-320", "group": "HQ", "people": "", "title": "A 320 phone", "caption": "The castle runs edge to edge so every part fits; the card is a scroll below.", "file": "phone-320.png" },
   { "id": "desk-layout", "group": "HQ", "people": "", "title": "Desk layout", "caption": "The castle on the left, the pick on the right, the CTA under the pick.", "file": "desk-layout.png" }
 ]

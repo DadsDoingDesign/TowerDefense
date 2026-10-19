@@ -19,20 +19,22 @@
  */
 import { companyById, type CompanyId } from '../../../game/data/companies'
 import {
+  castlePart,
+  CASTLE_TIERS,
+  castleTier,
   DEAL_STEPS,
   dealSummary,
   FOCUS_FROM_RUN,
   FOCUS_STEP,
-  HQ_LEVELS_MAX,
   hqCost,
   hqLevel,
   hqMax,
-  hqStage,
   hqUpgrade,
   packSlots,
   scoutsAt,
+  type CastlePartId,
+  type CastleTierId,
   type HqId,
-  type HqStageId,
 } from '../../../game/run/hq'
 import type { IconKey } from '../../channels'
 
@@ -43,6 +45,10 @@ export interface HqCardView {
   name: string
   /** Its picture: an atlas mark. */
   mark: IconKey
+  /** The part of the castle it builds (`hq.CASTLE_PARTS`), lit on the picture while it is in focus. */
+  part: CastlePartId
+  /** That part's name ("Lookout"). */
+  partName: string
   level: number
   max: number
   /** The next level's price, or null when maxed. */
@@ -72,29 +78,46 @@ export const HQ_MARK: Readonly<Record<HqId, IconKey>> = {
   scouting: 'map',
 }
 
-/** The home plate's mark for each castle stage (`scripts/fw-icons.ts`, redrawn for 16 px). */
-export const STAGE_MARK: Readonly<Record<HqStageId, IconKey>> = {
-  lodge: 'hqLodge',
-  watchtower: 'hqTower',
-  castle: 'hqCastle',
-  stronghold: 'hqStronghold',
+/** The home plate's mark for each castle tier (`scripts/fw-icons.ts`, redrawn for 16 px). */
+export const TIER_MARK: Readonly<Record<CastleTierId, IconKey>> = {
+  timber: 'hqTimber',
+  stone: 'hqStone',
+  fortified: 'hqFortified',
+  grand: 'hqGrand',
 }
 
-/** The HQ's mark as it stands now: the home plate's picture. */
-export const hqMark = (levels: Readonly<Record<string, number>> | undefined): IconKey => STAGE_MARK[hqStage(levels).stage.id]
+/** The HQ's mark as it stands now: the home plate's picture, the castle's material. */
+export const hqMark = (levels: Readonly<Record<string, number>> | undefined): IconKey => TIER_MARK[castleTier(levels).tier.id]
 
-/** The page's castle picture for a stage (`scripts/hq-keep.ts`, native pixels drawn at 1×). */
-export const stageArt = (id: HqStageId): string => `assets/scenes/hq-${id}.png`
-/** The baked scene's size, in native pixels: a phone sees its middle. */
-export const HQ_SCENE = { w: 400, h: 232 } as const
+/** A tier's sheet (`scripts/hq-keep.ts`): the scene and every part at every level, native pixels drawn at 1×. */
+export const castleSheet = (id: CastleTierId): string => `assets/scenes/hq-castle-${id}.png`
 
-/** "Castle in 3 upgrades" — the stage line under the picture. */
-export function stageLine(levels: Readonly<Record<string, number>> | undefined): string {
-  const s = hqStage(levels)
-  if (!s.next) return s.bought >= HQ_LEVELS_MAX ? 'Every upgrade bought' : `${s.bought} of ${HQ_LEVELS_MAX} upgrades`
-  return `${s.next.name} in ${s.toNext} upgrade${s.toNext === 1 ? '' : 's'}`
+const list = (names: string[]): string => (names.length <= 1 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`)
+
+/**
+ * The next milestone, in one line: "Stone castle: raise Pack slots and Scouts
+ * to level 1"; mixed marks name each ("Fortified castle: raise Opening deal
+ * to 3 and Company focus to 2"); more than four, the first three and a
+ * count. Before Grand, how many are left to max. At the last: "Every upgrade
+ * bought".
+ */
+export function tierLine(levels: Readonly<Record<string, number>> | undefined): string {
+  const t = castleTier(levels)
+  if (!t.next) return 'Every upgrade bought'
+  // The last tier asks for every level: say how many upgrades are still short of their max.
+  if (t.next.id === CASTLE_TIERS[CASTLE_TIERS.length - 1].id && t.missing.length > 2)
+    return `${t.next.name}: max the last ${t.missing.length} upgrades`
+  const named = t.missing.map((m) => ({ name: hqUpgrade(m.id)!.name, need: m.need }))
+  const shown = named.length > 4 ? named.slice(0, 3) : named
+  const more = named.length - shown.length
+  const same = named.every((n) => n.need === named[0].need)
+  const body = same
+    ? `${more ? `${shown.map((n) => n.name).join(', ')} and ${more} more` : list(shown.map((n) => n.name))} to level ${named[0].need}`
+    : more
+      ? `${shown.map((n) => `${n.name} to ${n.need}`).join(', ')} and ${more} more`
+      : list(shown.map((n) => `${n.name} to ${n.need}`))
+  return `${t.next.name}: raise ${body}`
 }
-
 export interface HqFacts {
   levels: Readonly<Record<string, number>> | undefined
   bank: number
@@ -142,7 +165,8 @@ export function hqCard(id: HqId, f: HqFacts): HqCardView {
   const max = hqMax(id)
   const cost = hqCost(id, level)
   const [now, next] = lines(id, level, f.focus)
-  const base = { id, name: u.name, mark: HQ_MARK[id], level, max, cost, now, next, note: NOTES[id] }
+  const p = castlePart(id, level)
+  const base = { id, name: u.name, mark: HQ_MARK[id], part: p.id, partName: p.name, level, max, cost, now, next, note: NOTES[id] }
   if (id === 'focus' && f.runs < FOCUS_FROM_RUN)
     return { ...base, state: 'locked', short: 0, locked: `Opens after your ${ordinal(FOCUS_FROM_RUN)} finished contract`, note: undefined }
   if (cost == null) return { ...base, state: 'max', short: 0 }

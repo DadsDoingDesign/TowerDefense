@@ -1,16 +1,32 @@
-import { useState, type CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { COMPANIES, type CompanyId } from '../../../game/data/companies'
-import { BASE_INTEREST, FOCUS_FROM_RUN, FOCUS_ORDER_PRICE, FOCUS_STEP, HQ_LEVELS_MAX, HQ_STAGES, hqStage, interestFor, ratePct, type HqId } from '../../../game/run/hq'
+import {
+  BASE_INTEREST,
+  CASTLE_TIERS,
+  castlePart,
+  castleTier,
+  FOCUS_FROM_RUN,
+  FOCUS_ORDER_PRICE,
+  FOCUS_STEP,
+  hqLevel,
+  interestFor,
+  ratePct,
+  type CastlePartId,
+  type CastleTierId,
+  type HqId,
+} from '../../../game/run/hq'
 import { companyOpen } from '../../../game/run/standing'
 import { useMetaStore } from '../../../state/metaStore'
 import { useSettingsStore } from '../../../state/settingsStore'
 import { companyVar, moneyText } from '../../channels'
 import { Icon } from '../../Icon'
 import { Crest, Lock } from '../../pixel'
+import { useMedia } from '../../pointer'
 import { Money } from '../Money'
 import { PickCard, PickStrip, stepId, type PickTokenSpec } from '../PickStrip'
 import { ContractPage, Gold, PageTip } from '../contracts/parts'
-import { ctaWords, firstFocus, HQ_SCENE, hqCards, STAGE_MARK, stageArt, stageLine, type HqCardView } from './hqModel'
+import { CASTLE_SCENE, CASTLE_SHEETS, type CastleLayer } from './castleScene.generated'
+import { castleSheet, ctaWords, firstFocus, HQ_ORDER, hqCards, TIER_MARK, tierLine, type HqCardView } from './hqModel'
 
 /**
  * The mercenary company's headquarters (the HQ pass, Oct 2026; the designer:
@@ -21,10 +37,11 @@ import { ctaWords, firstFocus, HQ_SCENE, hqCards, STAGE_MARK, stageArt, stageLin
  * One page, no tabs — the two offices held five upgrades between them, and a
  * tab hid three of them — in three parts:
  *
- *  - **the castle** (`.hq-keep`): the HQ as it stands, a picture that grows
- *    with every level bought (`run/hq.hqStage`: Lodge, Watchtower, Castle,
- *    Stronghold — the home plate shows the same stage), the next stage's
- *    footing beside it, and one line: how many upgrades raise it;
+ *  - **the castle** (`.hq-keep`): the HQ as it stands — each upgrade a part
+ *    built level by level (`run/hq.castlePart`), the focused one lit, the
+ *    whole castle in the material its milestones reached (`castleTier`:
+ *    Timber, Stone, Fortified, Grand; the home plate shows the same), and one
+ *    line naming the next milestone;
  *  - **pick one, then read** (`PickStrip` + `PickCard`, as the merchant and
  *    the battle's Upgrade panel): the five upgrades as picture tokens, each
  *    with its level pips and its price (in the warning ink when the bank is
@@ -102,7 +119,7 @@ export function HqScreen({ onBack }: { onBack: () => void }) {
     >
       {!taught && <PageTip>Paid from your bank, kept for good. Tap an upgrade to read it.</PageTip>}
       <div className="hq-grid">
-        <Keep levels={levels} />
+        <Keep levels={levels} lit={card.part} />
         <div className="pk hq-pick">
           <PickStrip
             className="hq-strip"
@@ -123,39 +140,122 @@ export function HqScreen({ onBack }: { onBack: () => void }) {
 // The castle
 // ---------------------------------------------------------------------------
 
-/** The HQ as it stands: its stage's picture, its name, and how far the next one is. */
-function Keep({ levels }: { levels: Readonly<Record<string, number>> }) {
-  const s = hqStage(levels)
-  const line = stageLine(levels)
-  const from = s.stage.from
-  const to = s.next?.from ?? from
+/** One layer of a tier's sheet, stood where it belongs in the scene. */
+function Layer({ url, sheetH, layer, className }: { url: string; sheetH: number; layer: CastleLayer; className: string }) {
+  const [sx, sy, w, h, x, y] = layer
   return (
-    <section className="hq-card hq-keep" aria-label={`Your HQ: ${s.stage.name}. ${line}.`}>
-      <div className="hq-scene" style={{ '--hq-w': `${HQ_SCENE.w}px`, '--hq-h': `${HQ_SCENE.h}px` } as CSSProperties}>
-        <img src={stageArt(s.stage.id)} alt="" width={HQ_SCENE.w} height={HQ_SCENE.h} draggable={false} />
+    <span
+      className={className}
+      style={{
+        left: x,
+        top: y,
+        width: w,
+        height: h,
+        backgroundImage: `url(${url})`,
+        backgroundPosition: `-${sx}px -${sy}px`,
+        backgroundSize: `${CASTLE_SCENE.w}px ${sheetH}px`,
+      }}
+    />
+  )
+}
+
+/** The whole castle in a tier: the scene, then each part at its level; the lit one ringed. */
+function Castle({ tier, levels, lit, className = '' }: { tier: CastleTierId; levels: Readonly<Record<string, number>>; lit: CastlePartId | null; className?: string }) {
+  const sheet = CASTLE_SHEETS[tier]
+  const url = castleSheet(tier)
+  return (
+    <span className={`hq-castle${lit ? ' has-lit' : ''}${className ? ` ${className}` : ''}`} style={{ width: CASTLE_SCENE.w, height: CASTLE_SCENE.h }}>
+      <Layer url={url} sheetH={sheet.h} layer={[0, 0, CASTLE_SCENE.w, CASTLE_SCENE.h, 0, 0]} className="hq-layer hq-base" />
+      {HQ_ORDER.map((id) => {
+        const p = castlePart(id, hqLevel(levels, id))
+        return <Layer key={id} url={url} sheetH={sheet.h} layer={sheet.layers[p.id][p.level]} className={`hq-layer hq-part${p.id === lit ? ' is-lit' : ''}`} />
+      })}
+    </span>
+  )
+}
+
+/** Remembers, on this device, the tier the castle was last seen in (a UI note, not the save). */
+const SEEN_KEY = 'mm.hq.tierSeen'
+const readSeen = (): number | null => {
+  try {
+    const v = localStorage.getItem(SEEN_KEY)
+    const n = v == null ? NaN : Number(v)
+    return Number.isFinite(n) ? n : null
+  } catch {
+    return null
+  }
+}
+const writeSeen = (n: number) => {
+  try {
+    localStorage.setItem(SEEN_KEY, String(n))
+  } catch {
+    /* a private window: no celebration next time, nothing else */
+  }
+}
+
+/**
+ * The tier's rise, once: the first time the page opens on a tier higher than
+ * the one last seen here — or the moment a purchase on the page raises it —
+ * the old castle fades off the new one and its name is hung up for a beat.
+ * Nothing moves under reduced motion (the note is still kept).
+ */
+function useTierRise(index: number): number | null {
+  const reducedSetting = useSettingsStore((s) => s.reducedMotion)
+  const osReduced = useMedia('(prefers-reduced-motion: reduce)')
+  const motion = !(reducedSetting || osReduced)
+  const [rise, setRise] = useState<number | null>(() => {
+    const seen = readSeen()
+    return motion && seen != null && seen < index ? seen : null
+  })
+  const last = useRef(index)
+  useEffect(() => {
+    if (index > last.current && motion) setRise(last.current)
+    last.current = index
+    writeSeen(index)
+  }, [index, motion])
+  useEffect(() => {
+    if (rise == null) return
+    const t = setTimeout(() => setRise(null), RISE_MS)
+    return () => clearTimeout(t)
+  }, [rise])
+  return rise
+}
+/** How long a rise plays: the old castle fades over the first half, the name holds, then goes. */
+const RISE_MS = 2600
+
+/** The HQ as it stands: the castle with the focused upgrade's part lit, its tier, and the next milestone. */
+function Keep({ levels, lit }: { levels: Readonly<Record<string, number>>; lit: CastlePartId }) {
+  const t = castleTier(levels)
+  const line = tierLine(levels)
+  const rise = useTierRise(t.index)
+  return (
+    <section className="hq-card hq-keep" aria-label={`Your HQ: ${t.tier.name}. ${line}.`}>
+      <div className="hq-scene" style={{ height: CASTLE_SCENE.h }}>
+        <Castle tier={t.tier.id} levels={levels} lit={lit} />
+        {rise != null && (
+          <span className="hq-rise" aria-hidden="true">
+            <Castle tier={CASTLE_TIERS[rise].id} levels={levels} lit={null} className="hq-rise-old" />
+            <span className="hq-rise-tag">{t.tier.name}</span>
+          </span>
+        )}
       </div>
       <div className="hq-stage" aria-hidden="true">
-        <span className="hq-stage-name">{s.stage.name}</span>
+        <span className="hq-stage-name">{t.tier.name}</span>
         <ol className="hq-stages">
-          {HQ_STAGES.map((st, i) => (
-            <li key={st.id} className={i < s.index ? 'done' : i === s.index ? 'on' : ''}>
-              <Icon name={STAGE_MARK[st.id]} />
+          {CASTLE_TIERS.map((st, i) => (
+            <li key={st.id} className={i < t.index ? 'done' : i === t.index ? 'on' : ''}>
+              <Icon name={TIER_MARK[st.id]} />
             </li>
           ))}
         </ol>
       </div>
-      <div className="hq-stage-foot" aria-hidden="true">
-        {/* To the next stage; at the last, every level bought so far, in gold when all are. */}
-        <span className={`hq-stage-bar${s.next ? '' : ' last'}${s.bought >= HQ_LEVELS_MAX ? ' full' : ''}`}>
-          {s.next
-            ? Array.from({ length: to - from }, (_, i) => <i key={i} className={from + i < s.bought ? 'on' : ''} />)
-            : Array.from({ length: HQ_LEVELS_MAX - from }, (_, i) => <i key={i} className={from + i < s.bought ? 'on' : ''} />)}
-        </span>
-        <span className="hq-stage-next">{line}</span>
-      </div>
+      <p className={`hq-tier-line${t.next ? '' : ' is-done'}`} aria-hidden="true">
+        {line}
+      </p>
     </section>
   )
 }
+
 // ---------------------------------------------------------------------------
 // The strip and the card
 // ---------------------------------------------------------------------------
@@ -198,7 +298,8 @@ function token(c: HqCardView, runs: number): PickTokenSpec {
 
 function UpgradeCard({ card, index, count, onStep }: { card: HqCardView; index: number; count: number; onStep: (d: number) => void }) {
   const runs = useMetaStore((s) => s.stats.runsCompleted)
-  const kicker = card.state === 'locked' ? 'Locked' : `Level ${card.level} of ${card.max}`
+  // The part it builds, then its level: "Lookout · 1/2".
+  const kicker = `${card.partName} · ${card.state === 'locked' ? 'Locked' : `${card.level}/${card.max}`}`
   return (
     <PickCard
       className={`hq-up is-${card.state}`}

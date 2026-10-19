@@ -171,33 +171,15 @@ export const hqLevel = (levels: Readonly<Record<string, number>> | undefined, id
   Math.min(hqMax(id), whole(levels?.[id]))
 
 // ---------------------------------------------------------------------------
-// The castle grows with the upgrades (Oct 2026, the HQ pass)
+// The castle: a part per upgrade, a quality tier per milestone (Oct 2026)
 // ---------------------------------------------------------------------------
-
-export type HqStageId = 'lodge' | 'watchtower' | 'castle' | 'stronghold'
-export interface HqStage {
-  id: HqStageId
-  /** The stage's name, under its picture. */
-  name: string
-  /** Levels bought, across every purchase, from which the HQ stands as this. */
-  from: number
-}
-
-/**
- * What the HQ looks like, by how much of it you have bought — the way a Town
- * Hall grows as it levels. A picture only: a stage pays nothing and gates
- * nothing. The art is the pack's own buildings (`scripts/hq-keep.ts` for the
- * page, `scripts/fw-icons.ts` for the home plate's mark): a thatched lodge,
- * a watchtower, a castle, a castle flying its banners. Thresholds: the first
- * three cheap levels raise the tower (about 450 gold), seven the castle,
- * twelve of the fifteen the banners.
- */
-export const HQ_STAGES: readonly HqStage[] = [
-  { id: 'lodge', name: 'Lodge', from: 0 },
-  { id: 'watchtower', name: 'Watchtower', from: 3 },
-  { id: 'castle', name: 'Castle', from: 7 },
-  { id: 'stronghold', name: 'Stronghold', from: 12 },
-]
+//
+// The designer: "the upgrades should correlate to parts of the castle but when
+// certain milestone across all the options are met then the entire castle
+// upgrades in quality". A picture only: a part or a tier pays nothing and
+// gates nothing. The art is the pack's own castle and troops, with the parts
+// drawn in its palette (`scripts/hq-keep.ts`); the home plate's mark is the
+// tier (`scripts/fw-icons.ts`).
 
 /** Every level of every purchase: the whole HQ (15). */
 export const HQ_LEVELS_MAX = HQ_IDS.reduce((a, id) => a + hqMax(id), 0)
@@ -206,25 +188,97 @@ export const HQ_LEVELS_MAX = HQ_IDS.reduce((a, id) => a + hqMax(id), 0)
 export const hqLevelsBought = (levels: Readonly<Record<string, number>> | undefined): number =>
   HQ_IDS.reduce((a, id) => a + hqLevel(levels, id), 0)
 
-/** Where the HQ stands: its stage, the next one, and how many levels raise it. */
-export interface HqStageView {
-  stage: HqStage
-  /** The stage's place in {@link HQ_STAGES}, from 0. */
-  index: number
-  /** Levels bought in all. */
-  bought: number
-  /** The next stage, or null at the last. */
-  next: HqStage | null
-  /** Levels still to buy before the next stage (0 at the last). */
-  toNext: number
+export type CastlePartId = 'yard' | 'hall' | 'store' | 'banners' | 'lookout'
+
+/**
+ * Which part of the castle each upgrade builds, in a fixed spot on the
+ * picture: the first heroes drill in the barracks yard by the gate, the
+ * Hiring Hall is the great hall in the courtyard, the pack fills the
+ * storehouse, company focus flies pennants on the front wall, and the scouts
+ * raise the lookout on the east tower. Level 0 is the part's empty plot.
+ */
+export const CASTLE_PARTS: Readonly<Record<HqId, { id: CastlePartId; name: string }>> = {
+  deal: { id: 'yard', name: 'Barracks yard' },
+  hiring: { id: 'hall', name: 'Great hall' },
+  pack: { id: 'store', name: 'Storehouse' },
+  focus: { id: 'banners', name: 'Pennants' },
+  scouting: { id: 'lookout', name: 'Lookout' },
 }
 
-export function hqStage(levels: Readonly<Record<string, number>> | undefined): HqStageView {
-  const bought = hqLevelsBought(levels)
+/** The part an upgrade builds, and how far it is built (its level, clamped). */
+export function castlePart(id: HqId, level: number): { id: CastlePartId; name: string; level: number; max: number } {
+  const max = hqMax(id)
+  return { ...CASTLE_PARTS[id], level: Math.min(max, whole(level)), max }
+}
+
+export type CastleTierId = 'timber' | 'stone' | 'fortified' | 'grand'
+export interface CastleTier {
+  id: CastleTierId
+  /** "Stone castle" — under the picture. */
+  name: string
+  /** The level every named upgrade must reach for the castle to stand in this material. */
+  needs: Partial<Record<HqId, number>>
+}
+
+const halfOf = (id: HqId) => Math.ceil(hqMax(id) / 2)
+const each = (f: (id: HqId) => number, ids: readonly HqId[] = HQ_IDS): Partial<Record<HqId, number>> =>
+  Object.fromEntries(ids.map((id) => [id, f(id)]))
+
+/**
+ * The castle's quality, a Town Hall gate across every upgrade: the whole
+ * castle — walls, roofs, gate and every part — redraws in a better material
+ * when the LOWEST upgrade reaches the mark, and each part keeps its level.
+ *
+ *  - Timber: the start — log walls and thatch.
+ *  - Stone: every upgrade at level 1, but Company focus (630 gold). Focus
+ *    opens only after the fifth finished contract; counting it here would let
+ *    the castle fall back to timber the day it opens, so it joins at the next.
+ *  - Fortified: every upgrade at least halfway — Opening deal 3, Hiring Hall
+ *    1, Pack slots 2, Company focus 2, Scouts 1 (2,430 gold).
+ *  - Grand: every upgrade maxed (6,230 gold).
+ *
+ * Levels only ever rise, so a castle never loses a tier.
+ */
+export const CASTLE_TIERS: readonly CastleTier[] = [
+  { id: 'timber', name: 'Timber castle', needs: {} },
+  { id: 'stone', name: 'Stone castle', needs: each(() => 1, ['deal', 'hiring', 'pack', 'scouting']) },
+  { id: 'fortified', name: 'Fortified castle', needs: each(halfOf) },
+  { id: 'grand', name: 'Grand castle', needs: each(hqMax) },
+]
+
+/** An upgrade still short of a tier's mark. */
+export interface TierNeed {
+  id: HqId
+  have: number
+  need: number
+}
+
+/** Where the castle stands: its tier, the next one, and what the next still needs. */
+export interface CastleTierView {
+  tier: CastleTier
+  /** Its place in {@link CASTLE_TIERS}, from 0. */
+  index: number
+  /** The next tier, or null at Grand. */
+  next: CastleTier | null
+  /** The upgrades short of the next tier's mark, in `HQ_IDS` order (empty at Grand). */
+  missing: TierNeed[]
+}
+
+const shortOf = (t: CastleTier, levels: Readonly<Record<string, number>> | undefined): TierNeed[] =>
+  HQ_IDS.flatMap((id) => {
+    const need = t.needs[id] ?? 0
+    const have = hqLevel(levels, id)
+    return have < need ? [{ id, have, need }] : []
+  })
+
+export function castleTier(levels: Readonly<Record<string, number>> | undefined): CastleTierView {
   let index = 0
-  for (let i = 0; i < HQ_STAGES.length; i++) if (bought >= HQ_STAGES[i].from) index = i
-  const next = HQ_STAGES[index + 1] ?? null
-  return { stage: HQ_STAGES[index], index, bought, next, toNext: next ? next.from - bought : 0 }
+  for (let i = 1; i < CASTLE_TIERS.length; i++) {
+    if (shortOf(CASTLE_TIERS[i], levels).length) break
+    index = i
+  }
+  const next = CASTLE_TIERS[index + 1] ?? null
+  return { tier: CASTLE_TIERS[index], index, next, missing: next ? shortOf(next, levels) : [] }
 }
 
 // ---------------------------------------------------------------------------

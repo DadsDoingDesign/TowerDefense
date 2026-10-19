@@ -1,53 +1,61 @@
 /**
- * hq-keep.ts — bake the HQ page's castle, one picture per stage
- * (`run/hq.HQ_STAGES`), from the CC0 Tiny Swords pack.
+ * hq-keep.ts — bake the HQ page's castle from the CC0 Tiny Swords pack: one
+ * sheet per quality tier (`run/hq.CASTLE_TIERS`), each holding the scene and
+ * every part of the castle at every level.
  *
- *   npx tsx scripts/hq-keep.ts            # write public/assets/scenes/hq-<stage>.png
- *   npx tsx scripts/hq-keep.ts --check    # re-bake into memory and compare; write nothing
+ *   npx tsx scripts/hq-keep.ts                    # write the sheets and their layout
+ *   npx tsx scripts/hq-keep.ts --check            # re-bake into memory and compare; write nothing
+ *   npx tsx scripts/hq-keep.ts --compose <dir>    # also each tier's whole castle and each part's
+ *                                                 # levels as flat PNGs, into <dir> (review cards)
  *
- * The HQ grows the way a Town Hall does (the HQ pass, Oct 2026; the designer:
- * "I need the castle icon to be like castle upgrades"): a thatched lodge, a
- * watchtower, a castle, a castle flying its banners. Each picture is the
- * pack's own buildings at their own density (drawn at 1× on the page, never
- * scaled), stood on the pack's meadow, with the NEXT stage's footing beside
- * it — the hint of what is coming, in the pack's own construction art:
+ * The designer (the HQ pass, Oct 2026): "the upgrades should correlate to
+ * parts of the castle but when certain milestone across all the options are
+ * met then the entire castle upgrades in quality". So:
  *
- *  - Lodge: `House_Blue`, and `Tower_Construction` going up beside it;
- *  - Watchtower: `Tower_Blue` by the lodge, and `Castle_Construction` laid
- *    out behind them;
- *  - Castle: `Castle_Blue`, bare flagpoles on its two towers;
- *  - Stronghold: the castle with red pennants on the poles and its two
- *    hanging banners re-dyed red: the cloth `Castle_Red` dyes, found pixel
- *    for pixel, in the pack's red ramp (its shades kept).
+ *  - **The castle** is the pack's own (`Castle_Blue`) at its own density
+ *    (drawn at 1×, never scaled), re-dressed per tier by `dress`: its slate
+ *    re-inked, pixel for pixel by light, in logs (Timber), grey stone
+ *    (Stone), the pack's slate as it ships (Fortified) or white stone with
+ *    gold caps and red banners (Grand) — every brick and crack is the pack's.
+ *  - **Each upgrade is a part** (`run/hq.CASTLE_PARTS`) in a fixed spot, one
+ *    sprite per level from its empty plot (0): the barracks yard before the
+ *    west tower (fence, tents, the pack's pawns and archer), the great hall
+ *    at the back of the courtyard, the storehouse before the east tower
+ *    (pallets, crates, barrels), three company pennants
+ *    on the front wall, and the lookout on the east tower. Each part is drawn
+ *    in the tier's material, so a tier redraws the whole castle and every
+ *    part keeps its level.
+ *
+ * Each sheet is `public/assets/scenes/hq-castle-<tier>.png`: the scene at the
+ * top, the parts packed under it; `src/ui/shell/hq/castleScene.generated.ts`
+ * says where every part's every level is in the sheet and where it stands in
+ * the scene, so the page lays the parts as layers it can light one at a time.
  *
  * ## Where the art comes from
  *
  * Every sprite is read from the OLD, public-domain build of Tiny Swords, from
  * the cache `harvest-cc0.ts` and `stop-scenes.ts` fill (the verified upstream,
  * `FulAppiOS/Agent-Quest`, CC0 1.0). Nothing from the current, non-CC0
- * download. The poles and pennants are drawn here in the pack's palette and
- * inked with its outline. The scenes are not under the `tinyswords` folders
- * the palette check scans; provenance: `public/assets/sprites/CREDITS.md`.
- *
- * Size: `HQ_SCENE` (`ui/shell/hq/hqModel.ts`), 400 × 232 native; the scene is
- * composed on its middle 358, which a 390 px phone sees.
+ * download, nothing from `BuildingsCustom/`. The hall, lookout, tents, crates,
+ * barrels, pallets, stakes and poles are drawn here in the pack's palette and
+ * inked with its outline. Provenance: `public/assets/sprites/CREDITS.md`.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import sharp from 'sharp'
-import { HQ_STAGES, type HqStageId } from '../src/game/run/hq'
-import { HQ_SCENE } from '../src/ui/shell/hq/hqModel'
+import { COMPANY_IDS, companyById } from '../src/game/data/companies'
+import { CASTLE_PARTS, CASTLE_TIERS, HQ_IDS, hqMax, type CastlePartId, type CastleTierId } from '../src/game/run/hq'
 
 const ROOT = resolve(import.meta.dirname, '..')
 const CACHE = join(ROOT, 'node_modules', '.cache', 'cc0-pack')
 const OUT = join(ROOT, 'public', 'assets', 'scenes')
+const GEN = join(ROOT, 'src', 'ui', 'shell', 'hq', 'castleScene.generated.ts')
 const UPSTREAM = 'https://raw.githubusercontent.com/FulAppiOS/Agent-Quest/main/client/public/assets/themes/tiny-swords-cc0/'
 const CHECK = process.argv.includes('--check')
 
-const W = HQ_SCENE.w
-const H = HQ_SCENE.h
-/** Where the buildings stand: their feet. */
-const GROUND = H - 8
+/** The scene, native pixels: a 390 phone sees its middle 358, a 320 phone (full bleed) its middle 320. */
+const W = 400
+const H = 300
 
 type RGB = readonly [number, number, number]
 type RGBA = readonly [number, number, number, number?]
@@ -171,16 +179,6 @@ function outline(s: Cv): Cv {
   o.draw(s, 1, 1)
   return o
 }
-function shadow(w: number, h: number, a = 60): Cv {
-  const c = new Cv(w, h)
-  for (let y = 0; y < h; y++)
-    for (let x = 0; x < w; x++) {
-      const dx = (x + 0.5 - w / 2) / (w / 2)
-      const dy = (y + 0.5 - h / 2) / (h / 2)
-      if (dx * dx + dy * dy <= 1) c.px(x, y, [22, 28, 46, a])
-    }
-  return c
-}
 
 // ------------------------------------------------------------- the meadow
 
@@ -238,197 +236,736 @@ function vignette(s: Cv, k: number): void {
     }
 }
 
-// ------------------------------------------------------------- drawn parts (the pack's palette)
+// ------------------------------------------------------------- the pack's palette
 
-const WD = { lt: [214, 156, 96], md: [176, 112, 62], dk: [128, 78, 44] } as const
-const RED = { hi: [246, 150, 120], lt: [228, 102, 84], md: [196, 74, 58], dk: [140, 48, 50] } as const
+const WD = { hi: [233, 186, 118], lt: [214, 156, 96], md: [176, 112, 62], dk: [128, 78, 44], sh: [92, 56, 34] } as const
 const GOLD: RGB = [224, 172, 76]
+const IRON: RGB = [64, 70, 86]
+const DARK: RGB = [40, 30, 34]
+const lum = (c: readonly number[]) => 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2]
+const mix = (a: RGB, b: RGB, t: number): RGB => [0, 1, 2].map((k) => Math.round(a[k] + (b[k] - a[k]) * t)) as unknown as RGB
+const hexRgb = (h: string): RGB => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]
+const rampOf = (c: RGB): [RGB, RGB, RGB] => [mix(c, [255, 255, 255], 0.3), c, mix(c, [0, 0, 0], 0.32)]
 
-/** A flagpole of `h` px, a gold knob on top; with a pennant flying `dir` (+1 right, −1 left), or bare. */
-function pole(h: number, flag: 0 | 1 | -1): Cv {
-  const fw = 24
-  const fh = 13
+// ------------------------------------------------------------- the four materials
+
+type Ramp5 = readonly [RGB, RGB, RGB, RGB, RGB]
+type Ramp4 = readonly [RGB, RGB, RGB, RGB]
+interface Material {
+  /** The walls' stone (or logs), light to dark; null keeps the pack's own (Fortified). */
+  stone: Ramp5 | null
+  /** The merlon caps' light; null: the stone's lightest step. */
+  cap: RGB | null
+  /** The hanging banners' cloth. */
+  cloth: Ramp4 | null
+  /** The gate's doors. */
+  door: readonly [RGB, RGB, RGB] | null
+  /** The parts' walls (the pack's own stone where `stone` is null). */
+  wall: Ramp5
+  /** The hall's and the lookout's roofs. */
+  roof: Ramp4
+  /** The yard's tents: canvas, and its shade or stripe. */
+  canvas: readonly [RGB, RGB]
+  /** The storehouse's bands. */
+  band: RGB
+  /** Logs, not courses: the timber castle's walls are staked. */
+  logs: boolean
+  /** Gold trim on the hall (Grand). */
+  trim: boolean
+}
+/** The pack's own slate (Castle_Blue's stone), for Fortified's parts. */
+const SLATE: Ramp5 = [
+  [132, 214, 196],
+  [92, 176, 172],
+  [70, 138, 150],
+  [56, 100, 122],
+  [44, 66, 94],
+]
+const MAT: Record<CastleTierId, Material> = {
+  timber: {
+    stone: [
+      [206, 150, 92],
+      [178, 120, 70],
+      [146, 92, 54],
+      [112, 68, 40],
+      [80, 48, 30],
+    ],
+    cap: [228, 178, 116],
+    cloth: [
+      [204, 172, 120],
+      [176, 140, 92],
+      [142, 108, 70],
+      [104, 76, 50],
+    ],
+    door: [
+      [150, 96, 56],
+      [116, 70, 42],
+      [84, 50, 32],
+    ],
+    wall: [
+      [206, 150, 92],
+      [178, 120, 70],
+      [146, 92, 54],
+      [112, 68, 40],
+      [80, 48, 30],
+    ],
+    roof: [
+      [240, 216, 150],
+      [214, 184, 118],
+      [176, 144, 88],
+      [128, 100, 64],
+    ],
+    canvas: [
+      [204, 176, 132],
+      [160, 128, 92],
+    ],
+    band: WD.dk,
+    logs: true,
+    trim: false,
+  },
+  stone: {
+    stone: [
+      [210, 212, 214],
+      [176, 180, 186],
+      [142, 148, 156],
+      [108, 114, 126],
+      [74, 80, 94],
+    ],
+    cap: [226, 228, 230],
+    cloth: [
+      [172, 186, 172],
+      [138, 154, 142],
+      [106, 120, 112],
+      [76, 88, 84],
+    ],
+    door: [
+      [140, 100, 70],
+      [108, 74, 52],
+      [78, 54, 40],
+    ],
+    wall: [
+      [210, 212, 214],
+      [176, 180, 186],
+      [142, 148, 156],
+      [108, 114, 126],
+      [74, 80, 94],
+    ],
+    roof: [
+      [146, 152, 168],
+      [116, 122, 140],
+      [90, 96, 116],
+      [64, 68, 88],
+    ],
+    canvas: [
+      [236, 226, 196],
+      [198, 184, 152],
+    ],
+    band: WD.dk,
+    logs: false,
+    trim: false,
+  },
+  fortified: {
+    stone: null,
+    cap: null,
+    cloth: null,
+    door: null,
+    wall: SLATE,
+    roof: [
+      [104, 128, 170],
+      [78, 100, 140],
+      [58, 76, 112],
+      [42, 54, 82],
+    ],
+    canvas: [
+      [226, 232, 236],
+      [74, 118, 176],
+    ],
+    band: IRON,
+    logs: false,
+    trim: false,
+  },
+  grand: {
+    stone: [
+      [250, 246, 234],
+      [230, 222, 202],
+      [202, 192, 172],
+      [164, 154, 140],
+      [118, 110, 106],
+    ],
+    cap: [236, 192, 86],
+    cloth: [
+      [246, 150, 120],
+      [228, 102, 84],
+      [196, 74, 58],
+      [140, 48, 50],
+    ],
+    door: [
+      [176, 72, 58],
+      [138, 50, 46],
+      [98, 34, 36],
+    ],
+    wall: [
+      [250, 246, 234],
+      [230, 222, 202],
+      [202, 192, 172],
+      [164, 154, 140],
+      [118, 110, 106],
+    ],
+    roof: [
+      [222, 104, 78],
+      [188, 76, 60],
+      [148, 54, 48],
+      [104, 38, 40],
+    ],
+    canvas: [
+      [246, 236, 212],
+      [196, 74, 58],
+    ],
+    band: GOLD,
+    logs: false,
+    trim: true,
+  },
+}
+
+// ------------------------------------------------------------- the castle, re-dressed
+
+const P = {
+  flat: 'Terrain/Ground/Tilemap_Flat.png',
+  tree: 'Resources/Trees/Tree.png',
+  castle: 'Factions/Knights/Buildings/Castle/Castle_Blue.png',
+  pawn: 'Factions/Knights/Troops/Pawn/Blue/Pawn_Blue.png',
+  archer: 'Factions/Knights/Troops/Archer/Blue/Archer_Blue.png',
+  deco: (n: number) => `Deco/${String(n).padStart(2, '0')}.png`,
+}
+
+/** The castle's two hanging banners and its gate, in `Castle_Blue`'s own pixels (320 × 256). */
+const BANNERS = [
+  { x: 70, y: 164, w: 30, h: 50 },
+  { x: 222, y: 164, w: 30, h: 50 },
+]
+const GATE = { x: 138, y: 186, w: 46, h: 64 }
+/** A pixel this green or lighter inside a banner box is cloth, not stone. */
+const CLOTH_G = 150
+const inBox = (b: { x: number; y: number; w: number; h: number }, x: number, y: number) => x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h
+
+/**
+ * The castle in a tier's material: every pixel of the pack's slate (its
+ * stone, merlon caps, banners and doors — the teal the Blue set is built
+ * from) takes the material's step for its light, ranked over the sprite's
+ * own colours, so every brick, crack and highlight is the pack's. The ink and
+ * the wood (decks, palisade, gate frame) are kept. Fortified is the pack's
+ * castle as it ships.
+ */
+function dress(src: Cv, m: Material): Cv {
+  const out = crop(src, 0, 0, src.w, src.h)
+  if (!m.stone) return out
+  const teal = (r: number, g: number, b: number) => b > r + 8 && g > r && lum([r, g, b]) > 55
+  // Rank the stone's colours by light: five bins.
+  const stoneCols = new Map<number, number>()
+  for (let y = 0; y < src.h; y++)
+    for (let x = 0; x < src.w; x++) {
+      const i = (y * src.w + x) * 4
+      const [r, g, b, a] = [src.d[i], src.d[i + 1], src.d[i + 2], src.d[i + 3]]
+      if (a && teal(r, g, b) && !BANNERS.some((bx) => inBox(bx, x, y) && g >= CLOTH_G) && !inBox(GATE, x, y)) stoneCols.set(key(r, g, b), lum([r, g, b]))
+    }
+  const ls = [...stoneCols.values()].sort((a, b) => b - a)
+  const step = (l: number, n: number, list: number[]) => Math.min(n - 1, Math.floor((list.findIndex((v) => v <= l) / Math.max(1, list.length)) * n))
+  for (let y = 0; y < src.h; y++)
+    for (let x = 0; x < src.w; x++) {
+      const i = (y * src.w + x) * 4
+      const [r, g, b, a] = [src.d[i], src.d[i + 1], src.d[i + 2], src.d[i + 3]]
+      if (!a || !teal(r, g, b)) continue
+      const l = lum([r, g, b])
+      let to: RGB
+      if (BANNERS.some((bx) => inBox(bx, x, y)) && g >= CLOTH_G) to = m.cloth![l > 215 ? 0 : l > 188 ? 1 : l > 160 ? 2 : 3]
+      else if (inBox(GATE, x, y)) to = m.door![l > 150 ? 0 : l > 110 ? 1 : 2]
+      else {
+        const k = step(l, 5, ls)
+        to = k === 0 && m.cap ? m.cap : m.stone[k]
+      }
+      out.d[i] = to[0]
+      out.d[i + 1] = to[1]
+      out.d[i + 2] = to[2]
+    }
+  return out
+}
+
+// ------------------------------------------------------------- drawn parts
+
+/** A block of wall in a material: courses of stone (or upright logs), lit from the upper left. */
+function wall(c: Cv, x: number, y: number, w: number, h: number, m: Material): void {
+  const r = m.wall
+  c.rect(x, y, w, h, r[1])
+  if (m.logs) {
+    for (let i = 0; i < w; i += 4) {
+      c.rect(x + i, y, 1, h, r[0])
+      c.rect(x + i + 3, y, 1, h, r[3])
+    }
+  } else
+    for (let j = 3; j < h; j += 4) {
+      c.rect(x, y + j, w, 1, r[2])
+      for (let i = ((j / 4) | 0) % 2 ? 2 : 6; i < w; i += 8) c.px(x + i, y + j - 1, r[2])
+    }
+  c.rect(x, y, w, 1, r[0])
+  c.rect(x, y, 1, h, r[0])
+  c.rect(x + w - 1, y, 1, h, r[3])
+}
+/** A hip roof seen from the front: shingle rows, a lit left slope, a ridge. */
+function roof(c: Cv, x: number, y: number, w: number, h: number, m: Material): void {
+  const r = m.roof
+  for (let j = 0; j < h; j++) {
+    const inset = Math.round(((h - 1 - j) / Math.max(1, h - 1)) * w * 0.24)
+    for (let i = inset; i < w - inset; i++) {
+      const left = i < w / 2
+      let col = left ? r[1] : r[2]
+      if (j % 4 === 3) col = r[3]
+      if (m.logs && (i + j * 3) % 7 === 0) col = r[0]
+      c.px(x + i, y + j, col)
+    }
+    c.px(x + inset, y + j, r[0])
+  }
+  c.rect(x + Math.round(w * 0.24), y, w - 2 * Math.round(w * 0.24), 1, m.trim ? GOLD : r[0])
+}
+/** Merlons along a top edge. */
+function merlons(c: Cv, x: number, y: number, w: number, m: Material): void {
+  for (let i = 0; i < w; i += 6) {
+    c.rect(x + i, y, Math.min(4, w - i), 4, m.wall[1])
+    c.rect(x + i, y, Math.min(4, w - i), 1, m.wall[0])
+  }
+  c.rect(x, y + 4, w, 3, m.wall[2])
+}
+function crate(m: Material, w = 18, h = 15): Cv {
+  const c = new Cv(w, h)
+  c.rect(0, 0, w, h, WD.md)
+  c.rect(0, 0, w, 2, WD.hi)
+  c.rect(0, h - 2, w, 2, WD.dk)
+  for (let i = 0; i < Math.min(w, h) - 2; i++) c.px(2 + Math.round((i * (w - 4)) / (h - 4)), h - 2 - i, WD.dk)
+  c.rect(0, 0, 2, h, m.band)
+  c.rect(w - 2, 0, 2, h, m.band)
+  return outline(c)
+}
+function barrel(m: Material): Cv {
+  const c = new Cv(14, 18)
+  for (let y = 0; y < 18; y++) {
+    const inset = y < 2 || y > 15 ? 2 : y < 4 || y > 13 ? 1 : 0
+    for (let x = inset; x < 14 - inset; x++) c.px(x, y, x < 4 ? WD.lt : x > 9 ? WD.dk : WD.md)
+  }
+  c.rect(2, 0, 10, 2, WD.hi)
+  for (const y of [4, 12]) c.rect(0, y, 14, 2, m.band)
+  return outline(c)
+}
+function pallet(): Cv {
+  const c = new Cv(30, 5)
+  c.rect(0, 0, 30, 2, WD.lt)
+  c.rect(0, 2, 30, 3, WD.dk)
+  for (const x of [2, 13, 25]) c.rect(x, 2, 3, 3, WD.md)
+  return outline(c)
+}
+function stake(h: number): Cv {
+  const c = new Cv(2, h)
+  c.rect(0, 0, 2, h, WD.md)
+  c.rect(0, 0, 1, h, WD.lt)
+  return outline(c)
+}
+/** A pile of building timber: the plot of a part not built yet. */
+function timber(w: number): Cv {
+  const c = new Cv(w, 8)
+  for (const [y, inset] of [
+    [0, 4],
+    [3, 2],
+    [5, 0],
+  ] as const) {
+    c.rect(inset, y, w - inset * 2, 3, WD.md)
+    c.rect(inset, y, w - inset * 2, 1, WD.hi)
+    c.px(inset, y + 1, WD.sh)
+    c.px(w - inset - 1, y + 1, WD.sh)
+  }
+  return outline(c)
+}
+/** A rack of arms: two posts, a bar, a sword, a spear and a sword stood in it; its iron in the tier's band. */
+function rack(m: Material): Cv {
+  const c = new Cv(26, 30)
+  c.rect(0, 8, 2, 22, WD.md)
+  c.rect(24, 8, 2, 22, WD.md)
+  c.rect(0, 12, 26, 2, WD.lt)
+  c.rect(0, 24, 26, 2, WD.dk)
+  const steel: RGB = [196, 214, 206]
+  const steelDk: RGB = [110, 136, 142]
+  for (const [x, top] of [
+    [6, 2],
+    [18, 3],
+  ] as const) {
+    c.rect(x, top, 1, 16, steel)
+    c.rect(x + 1, top, 1, 16, steelDk)
+    c.rect(x - 2, top + 16, 6, 2, m.band)
+    c.rect(x, top + 18, 2, 6, WD.dk)
+  }
+  c.rect(12, 0, 2, 3, steel)
+  c.rect(12, 3, 2, 26, WD.lt)
+  return outline(c)
+}
+/** A canvas tent, its lit side left, its door open. */
+function tent(w: number, h: number, m: Material): Cv {
+  const c = new Cv(w, h)
+  const [a, b] = m.canvas
+  for (let y = 0; y < h; y++) {
+    const half = Math.round(((y + 1) / h) * (w / 2))
+    for (let x = w / 2 - half; x < w / 2 + half; x++) {
+      const stripe = Math.floor((x - (w / 2 - half)) / 4) % 2 === 1
+      c.px(x, y, x < w / 2 ? (stripe ? mix(a, b, 0.5) : a) : stripe ? b : mix(b, [0, 0, 0], 0.15))
+    }
+  }
+  const dh = Math.round(h * 0.55)
+  for (let y = h - dh; y < h; y++) {
+    const half = Math.round(((y - (h - dh) + 1) / dh) * (w / 7))
+    for (let x = w / 2 - half; x < w / 2 + half; x++) c.px(x, y, DARK)
+  }
+  c.px(w / 2 - 1, 0, GOLD)
+  return outline(c)
+}
+/** A flagpole of `h` px, a gold knob on top; with a pennant (`ramp`) flying right, or bare. */
+function pole(h: number, ramp: readonly [RGB, RGB, RGB] | null, fw = 18): Cv {
+  const fh = fw >= 22 ? 13 : 11
   const c = new Cv(3 + fw * 2, h + 3)
   const px = fw
   c.rect(px, 3, 2, h, WD.md)
   c.rect(px, 3, 1, h, WD.lt)
   c.rect(px - 1, 0, 4, 3, GOLD)
-  if (flag) {
-    // A swallow-tailed pennant, wider at the pole, lit on top and darker in its fold.
+  if (ramp)
     for (let y = 0; y < fh; y++) {
       const t = Math.abs(y - (fh - 1) / 2) / ((fh - 1) / 2)
       const len = Math.round(fw - t * 3)
-      const notch = Math.max(0, Math.round((1 - t * 1.6) * 7))
+      const notch = Math.max(0, Math.round((1 - t * 1.6) * 6))
       for (let i = 0; i < len - notch; i++) {
-        const x = flag > 0 ? px + 2 + i : px - 1 - i
         const wave = Math.round(Math.sin(i / 4) * 0.8)
-        const col = y + wave <= 1 ? RED.lt : y + wave >= fh - 3 ? RED.dk : (i + 2) % 8 === 0 ? RED.dk : RED.md
-        c.px(x, 4 + y + wave, col)
+        const col = y + wave <= 1 ? ramp[0] : y + wave >= fh - 3 ? ramp[2] : ramp[1]
+        c.px(px + 2 + i, 4 + y + wave, col)
       }
     }
-  }
   return outline(trim(c))
 }
 
-// ------------------------------------------------------------- the scenes
+/** The company pennants on the front wall: the first three companies' colours, one a level. */
+const PENNANTS = COMPANY_IDS.slice(0, 3).map((id) => rampOf(hexRgb(companyById(id).color)))
 
-const P = {
-  flat: 'Terrain/Ground/Tilemap_Flat.png',
-  tree: 'Resources/Trees/Tree.png',
-  house: 'Factions/Knights/Buildings/House/House_Blue.png',
-  tower: 'Factions/Knights/Buildings/Tower/Tower_Blue.png',
-  towerBuild: 'Factions/Knights/Buildings/Tower/Tower_Construction.png',
-  castle: 'Factions/Knights/Buildings/Castle/Castle_Blue.png',
-  castleRed: 'Factions/Knights/Buildings/Castle/Castle_Red.png',
-  castleBuild: 'Factions/Knights/Buildings/Castle/Castle_Construction.png',
-  deco: (n: number) => `Deco/${String(n).padStart(2, '0')}.png`,
+type Sprite = { cv: Cv; x: number; y: number }
+interface PartArt {
+  /** Draw the part at a level, in a material: its sprite and where it stands in the scene. */
+  draw: (level: number, m: Material) => Promise<Sprite>
+}
+
+const cell = async (rel: string, col: number, row: number, size = 192) => trim(crop(await load(rel), col * size, row * size, size, size))
+const flipX = (s: Cv): Cv => {
+  const c = new Cv(s.w, s.h)
+  for (let y = 0; y < s.h; y++)
+    for (let x = 0; x < s.w; x++) {
+      const a = (y * s.w + x) * 4
+      const b = (y * s.w + (s.w - 1 - x)) * 4
+      for (let k = 0; k < 4; k++) c.d[b + k] = s.d[a + k]
+    }
+  return c
 }
 
 /**
- * The castle's two hanging banners, in the sprite's own pixels (`Castle_Blue`
- * is 320 × 256; the banners hang off the front wall's lip either side of the
- * gate). Inside these boxes, a colour that `Castle_Red` paints differently at
- * the same pixel is the banner's dye — the walls behind it are teal in one and
- * red in the other too, so only the banner's own colours (the mint and teal of
- * the cloth, never the stone's) are swapped: those that occur nowhere in the
- * walls' boxes above.
+ * The castle's layout, in scene pixels. The castle (296 × 205) stands centred
+ * with its feet at y 241; scene = sprite + (`CX`, `CY`).
  */
-const BANNERS = [
-  { x: 70, y: 164, w: 30, h: 50 },
-  { x: 222, y: 164, w: 30, h: 50 },
-]
-/** The decks the castle's two towers stand open on, where a pole is set (sprite pixels). */
-/** The cloth's floor: a pixel this green or lighter inside a banner box is cloth, not stone. */
-const CLOTH_G = 150
-/** The poles' height: their pennants clear the back battlements. */
-const POLE = 56
-const DECKS = [
-  [62, 96],
-  [258, 96],
-] as const
-
-async function redBanners(): Promise<Cv> {
-  const blue = await load(P.castle)
-  const red = await load(P.castleRed)
-  const out = crop(blue, 0, 0, blue.w, blue.h)
-  // The cloth: inside the boxes, the light mint and teal the blue castle
-  // hangs (the stone behind it is darker), taken from the red castle's same pixel.
-  const map = new Map<number, RGB>()
-  const at = (c: Cv, x: number, y: number) => {
-    const i = (y * c.w + x) * 4
-    return [c.d[i], c.d[i + 1], c.d[i + 2], c.d[i + 3]] as const
-  }
-  for (const bx of BANNERS)
-    for (let y = bx.y; y < bx.y + bx.h; y++)
-      for (let x = bx.x; x < bx.x + bx.w; x++) {
-        const [r, g, b, a] = at(blue, x, y)
-        const [r2, g2, b2] = at(red, x, y)
-        if (!a || g < CLOTH_G || (r === r2 && g === g2 && b === b2)) continue
-        // The red castle's cloth is a faded rose; the stronghold's is dyed deep,
-        // its shades kept: each cloth colour takes the red ramp's step for its light.
-        const l = 0.3 * r + 0.59 * g + 0.11 * b
-        map.set(key(r, g, b), l > 215 ? RED.hi : l > 188 ? RED.lt : l > 160 ? RED.md : RED.dk)
-      }
-  for (const bx of BANNERS) swap(out, map, (x, y) => x >= bx.x && x < bx.x + bx.w && y >= bx.y && y < bx.y + bx.h)
-  return out
+const CX = 40
+const CY = -3
+/** Where each part stands. */
+const AT = {
+  /** The great hall: the back of the courtyard deck, centred. */
+  hall: { cx: 200, by: 82 },
+  /** The lookout: the east tower's open deck. */
+  lookout: { cx: 300, by: 96 },
+  /** The pennants: three poles on the front wall's walk. */
+  banners: { xs: [150, 200, 250], by: 140 },
+  /** The barracks yard: the ground before the west tower. */
+  yard: { x: 34, w: 140, by: 296 },
+  /** The storehouse: the ground before the east tower. */
+  store: { x: 258, w: 100, by: 294 },
 }
 
-async function bake(): Promise<Record<HqStageId, Buffer>> {
+const PARTS: Record<CastlePartId, PartArt> = {
+  hall: {
+    async draw(level, m) {
+      if (level <= 0) {
+        // The plot: a stone sill marked out on the deck, four stakes, timber stacked.
+        const c = new Cv(108, 14)
+        c.rect(2, 9, 104, 4, m.wall[2])
+        c.rect(2, 9, 104, 1, m.wall[0])
+        for (const x of [2, 36, 70, 104]) c.draw(stake(10), x - 1, 0)
+        c.draw(timber(30), 8, 2)
+        c.draw(timber(30), 40, 2)
+        const o = outline(c)
+        return { cv: o, x: AT.hall.cx - Math.floor(o.w / 2), y: AT.hall.by - o.h }
+      }
+      const w = 104
+      const c = new Cv(w + 10, 52)
+      roof(c, 0, 0, w + 10, 28, m)
+      wall(c, 5, 28, w, 24, m)
+      // The door, its frame, and two windows.
+      c.rect(w / 2 - 3, 34, 16, 18, m.trim ? GOLD : WD.lt)
+      c.rect(w / 2 - 1, 36, 12, 16, WD.dk)
+      c.rect(w / 2 + 4, 36, 1, 16, WD.sh)
+      for (const x of [22, w - 22]) {
+        c.rect(x, 36, 10, 8, DARK)
+        c.rect(x - 1, 44, 12, 1, m.trim ? GOLD : m.wall[0])
+      }
+      if (m.trim) {
+        // A red banner over the door.
+        c.rect(w / 2 + 1, 29, 8, 5, [196, 74, 58])
+      }
+      const o = outline(c)
+      return { cv: o, x: AT.hall.cx - Math.floor(o.w / 2), y: AT.hall.by - o.h }
+    },
+  },
+  lookout: {
+    async draw(level, m) {
+      if (level <= 0) {
+        const c = new Cv(30, 14)
+        c.draw(stake(12), 2, 0)
+        c.draw(stake(12), 26, 0)
+        c.draw(timber(24), 3, 5)
+        const o = outline(c)
+        return { cv: o, x: AT.lookout.cx - Math.floor(o.w / 2), y: AT.lookout.by - o.h }
+      }
+      const shaft = level >= 2 ? 36 : 26
+      const roofH = level >= 2 ? 18 : 0
+      const flag = level >= 2 ? 22 : 0
+      const c = new Cv(40, flag + roofH + 7 + shaft)
+      let y = 0
+      if (flag) {
+        const p = pole(flag - 3, PENNANTS[1], 14)
+        c.draw(p, 20 - 15, 0)
+        y = flag
+      }
+      if (roofH) {
+        roof(c, 2, y, 36, roofH, m)
+        y += roofH
+      }
+      merlons(c, 4, y, 32, m)
+      y += 7
+      wall(c, 6, y, 28, shaft, m)
+      // A window slit for the watch.
+      c.rect(18, y + 6, 4, 9, DARK)
+      const o = outline(trim(c))
+      return { cv: o, x: AT.lookout.cx - Math.floor(o.w / 2), y: AT.lookout.by - o.h }
+    },
+  },
+  banners: {
+    async draw(level) {
+      const c = new Cv(150, 40)
+      AT.banners.xs.forEach((x, i) => {
+        const p = pole(30, i < level ? PENNANTS[i] : null, 22)
+        c.draw(p, x - AT.banners.xs[0] + 6 - 1, 40 - p.h)
+      })
+      const t = trim(c)
+      const b = bbox(c)
+      return { cv: t, x: AT.banners.xs[0] - 6 + b.x0, y: AT.banners.by - 40 + b.y0 }
+    },
+  },
+  yard: {
+    async draw(level, m) {
+      // Back to front: the fence and tents at the castle's foot, then the rack,
+      // then the recruits on the grass — each level adds one, spaced so none
+      // hides another.
+      const W = AT.yard.w
+      const H = 104
+      const c = new Cv(W, H)
+      const back = 58
+      for (let i = 0; i < 5; i++) c.draw(stake(12), 4 + i * 29, back - 12)
+      c.rect(5, back - 8, 118, 1, WD.sh)
+      if (level >= 1) c.put(tent(46, 36, m), 44, back + 4)
+      if (level >= 3) c.put(tent(40, 32, m), 104, back + 2)
+      if (level >= 2) c.put(rack(m), 74, back + 8)
+      if (level >= 4) c.put(await cell(P.pawn, 0, 0), 16, H)
+      if (level >= 5) c.put(flipX(await cell(P.archer, 0, 0)), 120, H)
+      const b = bbox(c)
+      return { cv: trim(c), x: AT.yard.x + b.x0, y: AT.yard.by - H + b.y0 }
+    },
+  },
+  store: {
+    async draw(level, m) {
+      const W = AT.store.w
+      const H = 60
+      const c = new Cv(W, H)
+      c.put(pallet(), 24, H)
+      c.put(pallet(), 66, H)
+      if (level >= 1) {
+        c.put(crate(m), 16, H - 4)
+        c.put(crate(m), 34, H - 4)
+      }
+      if (level >= 2) {
+        c.put(barrel(m), 58, H - 4)
+        c.put(barrel(m), 74, H - 4)
+      }
+      if (level >= 3) {
+        c.put(crate(m), 25, H - 18)
+        c.put(crate(m, 14, 12), 26, H - 32)
+      }
+      if (level >= 4) {
+        c.put(barrel(m), 66, H - 21)
+        c.put(crate(m), 92, H - 4)
+        c.put(crate(m, 14, 12), 92, H - 18)
+      }
+      const b = bbox(c)
+      return { cv: trim(c), x: AT.store.x + b.x0, y: AT.store.by - H + b.y0 }
+    },
+  },
+}
+
+/** Each part's levels: one sprite each, from its empty plot (0) to its last. */
+const PART_LEVELS: Record<CastlePartId, number> = Object.fromEntries(HQ_IDS.map((id) => [CASTLE_PARTS[id].id, hqMax(id) + 1])) as Record<CastlePartId, number>
+
+// ------------------------------------------------------------- the meadow and the earth
+
+const EARTH = new Map<number, RGB>([
+  [key(254, 250, 157), [230, 204, 152]],
+  [key(248, 242, 115), [216, 186, 132]],
+  [key(241, 218, 132), [200, 168, 118]],
+  [key(222, 200, 126), [180, 148, 104]],
+  [key(178, 150, 120), [142, 110, 80]],
+])
+
+async function base(tier: CastleTierId, castle: Cv): Promise<Cv> {
   const flat = await load(P.flat)
   const grass = crop(flat, 64, 64, 64, 64)
+  const earth = crop(flat, 384, 64, 64, 64)
+  swap(earth, EARTH, () => true)
+  const c = new Cv(W, H)
+  c.tile(grass)
+  patches(c, 31)
+  // The road out of the gate: trodden earth, a noisy edge.
+  for (let y = 232; y < H; y++) {
+    const t = (y - 232) / (H - 232)
+    const half = 26 + t * 22
+    for (let x = 0; x < W; x++) {
+      const d = Math.abs(x - 200) + (vnoise(x, y, 7, 5) - 0.5) * 8
+      if (d < half) {
+        const k = ((y % 64) * 64 + (x % 64)) * 4
+        c.px(x, y, d > half - 1.5 ? [142, 110, 80] : [earth.d[k], earth.d[k + 1], earth.d[k + 2]])
+      }
+    }
+  }
   const tree = async (i: number) => trim(crop(await load(P.tree), i * 192, 0, 192, 192))
-  const deco = async (n: number) => trim(await load(P.deco(n)))
-  const meadow = async (seed: number) => {
-    const c = new Cv(W, H)
-    c.tile(grass)
-    patches(c, seed)
-    // Trees frame the top corners and the wings; nothing stands in the middle.
-    const t = [await tree(0), await tree(1), await tree(2), await tree(3)]
-    for (const [i, [x, y]] of ([[-6, 70], [28, 40], [404, 66], [372, 38], [-18, 150], [414, 152]] as const).entries()) c.put(t[i % 4], x, y)
-    return c
-  }
-  /** The meadow's foreground: tufts and a bush or two, at the margins. */
-  const scatter = async (c: Cv) => {
-    c.put(await deco(8), 34, H - 2)
-    c.put(await deco(10), 70, H - 18)
-    c.put(await deco(5), 356, H - 6)
-    c.put(await deco(11), 330, H - 22)
-    c.put(await deco(7), 380, H - 30)
-  }
-  const finish = (c: Cv) => {
-    vignette(c, 0.55)
-    return sharp(Buffer.from(c.d.buffer), { raw: { width: W, height: H, channels: 4 } }).png({ compressionLevel: 9, effort: 10 }).toBuffer()
-  }
-  const house = trim(await load(P.house))
-  const tower = trim(await load(P.tower))
-  const towerBuild = trim(await load(P.towerBuild))
-  const castleBuild = trim(await load(P.castleBuild))
-  const castleBlue = await load(P.castle)
-  const cb = bbox(castleBlue)
-  const castle = trim(castleBlue)
-  const castleDressed = trim(await redBanners())
-  const out = {} as Record<HqStageId, Buffer>
+  for (const [i, [x, y]] of ([[-6, 96], [26, 60], [404, 92], [374, 58], [-26, 180], [424, 182]] as const).entries()) c.put(await tree(i % 4), x, y)
+  c.draw(trim(dress(castle, MAT[tier])), CX + 12, CY + 45)
+  c.put(trim(await load(P.deco(9))), 16, H - 4)
+  c.put(trim(await load(P.deco(5))), 384, H - 6)
+  vignette(c, 0.5)
+  return c
+}
 
-  /** A stand of pines behind a small building, so its sky is woodland, not bare grass. */
-  const grove = async (c: Cv, xs: readonly number[]) => {
-    for (const [i, x] of xs.entries()) c.put(await tree(i % 4), x, 112 + (i % 2) * 14)
+// ------------------------------------------------------------- the sheets
+
+/** One layer: where it is in the sheet (sx, sy, w, h) and where it stands in the scene (x, y). */
+type Layer = readonly [number, number, number, number, number, number]
+
+async function bakeTier(tier: CastleTierId): Promise<{ png: Buffer; layers: Record<CastlePartId, Layer[]>; h: number }> {
+  const castle = await load(P.castle)
+  const b = await base(tier, castle)
+  const sprites: { part: CastlePartId; s: Sprite }[] = []
+  for (const part of Object.keys(PARTS) as CastlePartId[])
+    for (let lv = 0; lv < PART_LEVELS[part]; lv++) sprites.push({ part, s: await PARTS[part].draw(lv, MAT[tier]) })
+  // Shelf-pack the parts under the scene.
+  let x = 0
+  let y = H + 2
+  let row = 0
+  const placed: { part: CastlePartId; s: Sprite; sx: number; sy: number }[] = []
+  for (const it of sprites) {
+    if (x + it.s.cv.w > W) {
+      x = 0
+      y += row + 2
+      row = 0
+    }
+    placed.push({ ...it, sx: x, sy: y })
+    x += it.s.cv.w + 2
+    row = Math.max(row, it.s.cv.h)
   }
-  // ---- the lodge: a thatched house, and the next stage's footing going up beside it.
-  {
-    const c = await meadow(21)
-    await grove(c, [96, 150, 214, 300])
-    c.put(shadow(96, 12, 50), 252, GROUND - 2)
-    c.put(towerBuild, 254, GROUND)
-    c.put(house, 166, GROUND)
-    await scatter(c)
-    out.lodge = await finish(c)
+  const sheetH = y + row
+  const sheet = new Cv(W, sheetH)
+  sheet.draw(b, 0, 0)
+  const layers = Object.fromEntries((Object.keys(PARTS) as CastlePartId[]).map((p) => [p, [] as Layer[]])) as Record<CastlePartId, Layer[]>
+  for (const p of placed) {
+    sheet.draw(p.s.cv, p.sx, p.sy)
+    layers[p.part].push([p.sx, p.sy, p.s.cv.w, p.s.cv.h, p.s.x, p.s.y])
   }
-  // ---- the watchtower: the tower beside the lodge, the castle's deck laid out behind them.
-  {
-    const c = await meadow(22)
-    await grove(c, [70, 132])
-    c.put(castleBuild, 262, GROUND - 22)
-    c.put(house, 106, GROUND)
-    c.put(tower, 196, GROUND)
-    await scatter(c)
-    out.watchtower = await finish(c)
+  const png = await sharp(Buffer.from(sheet.d.buffer), { raw: { width: W, height: sheetH, channels: 4 } }).png({ compressionLevel: 9, effort: 10 }).toBuffer()
+  return { png, layers, h: sheetH }
+}
+
+/** `--compose <dir>`: also write each tier's whole castle at given part levels (the review cards). */
+async function compose(dir: string, sheet: Buffer, layers: Record<CastlePartId, Layer[]>, levels: Record<CastlePartId, number>, name: string) {
+  const comp = [{ input: await sharp(sheet).extract({ left: 0, top: 0, width: W, height: H }).png().toBuffer(), left: 0, top: 0 }]
+  for (const part of ['hall', 'lookout', 'banners', 'store', 'yard'] as CastlePartId[]) {
+    const [sx, sy, w, h, x, y] = layers[part][levels[part]]
+    comp.push({ input: await sharp(sheet).extract({ left: sx, top: sy, width: w, height: h }).png().toBuffer(), left: x, top: y })
   }
-  // ---- the castle, bare poles set on its towers' decks (the banners are next).
-  // ---- the stronghold: the poles fly red pennants, the banners are dyed red.
-  for (const id of ['castle', 'stronghold'] as const) {
-    const c = await meadow(id === 'castle' ? 23 : 24)
-    const x0 = Math.round(W / 2 - castle.w / 2)
-    const y0 = GROUND - castle.h
-    c.draw(id === 'stronghold' ? castleDressed : castle, x0, y0)
-    // Poles stand on the towers' open decks.
-    const poles: Cv[] = [pole(POLE, id === 'stronghold' ? -1 : 0), pole(POLE, id === 'stronghold' ? 1 : 0)]
-    DECKS.forEach(([dx, dy], i) => c.put(poles[i], x0 + (dx - cb.x0), y0 + (dy - cb.y0)))
-    await scatter(c)
-    out[id] = await finish(c)
+  await sharp({ create: { width: W, height: H, channels: 4, background: '#000' } }).composite(comp).png().toFile(join(dir, name))
+}
+
+function generated(sheets: Record<CastleTierId, { layers: Record<CastlePartId, Layer[]>; h: number }>): string {
+  const tiers = CASTLE_TIERS.map((t) => t.id)
+  const lines = [
+    '// Generated by `npx tsx scripts/hq-keep.ts` — do not edit.',
+    '// The HQ castle: one sheet per tier (`public/assets/scenes/hq-castle-<tier>.png`), the',
+    '// scene (its base) at the top and every part at every level under it. A layer is',
+    '// [sx, sy, w, h, x, y]: where it is in the sheet, and where it stands in the scene.',
+    "import type { CastlePartId, CastleTierId } from '../../../game/run/hq'",
+    '',
+    `export const CASTLE_SCENE = { w: ${W}, h: ${H} } as const`,
+    'export type CastleLayer = readonly [number, number, number, number, number, number]',
+    `export const CASTLE_SHEETS: Record<CastleTierId, { h: number; layers: Record<CastlePartId, readonly CastleLayer[]> }> = {`,
+  ]
+  for (const t of tiers) {
+    lines.push(`  ${t}: {`, `    h: ${sheets[t].h},`, '    layers: {')
+    for (const [p, ls] of Object.entries(sheets[t].layers)) lines.push(`      ${p}: [${ls.map((l) => `[${l.join(', ')}]`).join(', ')}],`)
+    lines.push('    },', '  },')
   }
-  return out
+  lines.push('}', '')
+  return lines.join('\n')
 }
 
 async function main() {
-  const out = await bake()
-  if (Object.keys(out).length !== HQ_STAGES.length) throw new Error('hq-keep: a stage has no picture')
-  mkdirSync(OUT, { recursive: true })
+  const ci = process.argv.indexOf('--compose')
+  const composeDir = ci > 0 ? resolve(process.argv[ci + 1]) : null
+  const sheets = {} as Record<CastleTierId, { png: Buffer; layers: Record<CastlePartId, Layer[]>; h: number }>
+  for (const t of CASTLE_TIERS) sheets[t.id] = await bakeTier(t.id)
+  const ts = generated(sheets)
   let stale = 0
-  for (const s of HQ_STAGES) {
-    const file = join(OUT, `hq-${s.id}.png`)
+  const put = (file: string, data: Buffer | string) => {
     if (CHECK) {
       const on = existsSync(file) ? readFileSync(file) : null
-      if (!on || !on.equals(out[s.id])) {
+      if (!on || !on.equals(Buffer.from(data))) {
         console.error(`hq-keep: ${file} is stale — run \`npx tsx scripts/hq-keep.ts\``)
         stale++
       }
     } else {
-      writeFileSync(file, out[s.id])
-      console.log(`hq-keep: ${file}  ${W}x${H}  ${(out[s.id].length / 1024).toFixed(1)} KB`)
+      writeFileSync(file, data)
+      console.log(`hq-keep: ${file}`)
     }
   }
+  mkdirSync(OUT, { recursive: true })
+  for (const t of CASTLE_TIERS) put(join(OUT, `hq-castle-${t.id}.png`), sheets[t.id].png)
+  put(GEN, ts)
+  if (composeDir) {
+    mkdirSync(composeDir, { recursive: true })
+    const mixed: Record<CastleTierId, Record<CastlePartId, number>> = {
+      timber: { yard: 2, hall: 0, store: 1, banners: 0, lookout: 1 },
+      stone: { yard: 3, hall: 1, store: 2, banners: 1, lookout: 1 },
+      fortified: { yard: 4, hall: 1, store: 3, banners: 2, lookout: 2 },
+      grand: { yard: 5, hall: 1, store: 4, banners: 3, lookout: 2 },
+    }
+    for (const t of CASTLE_TIERS) await compose(composeDir, sheets[t.id].png, sheets[t.id].layers, mixed[t.id], `tier-${t.id}.png`)
+    for (const part of Object.keys(PARTS) as CastlePartId[])
+      for (let lv = 0; lv < PART_LEVELS[part]; lv++) {
+        const lvls = { yard: 0, hall: 0, store: 0, banners: 0, lookout: 0, [part]: lv } as Record<CastlePartId, number>
+        await compose(composeDir, sheets.stone.png, sheets.stone.layers, lvls, `part-${part}-${lv}.png`)
+      }
+  }
   if (stale) process.exit(1)
-  if (CHECK) console.log(`hq-keep: ${HQ_STAGES.length} scenes current`)
+  if (CHECK) console.log(`hq-keep: ${CASTLE_TIERS.length} castle sheets current`)
 }
 
 main()

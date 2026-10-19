@@ -5078,3 +5078,58 @@ becomes, current → next in two rows, one big gold-price button. It falls
 short in two ways: there is no moment when the castle levels up (no
 animation or reveal), and on a 375 × 667 phone the card starts below the
 picture, so the page scrolls.
+
+### 2026-10-19 — the HQ castle, round two: a part per upgrade, a material per milestone
+
+The designer, on the stage castle above: "the castle the upgrades should
+correlate to parts of the castle but when certain milestone across all the
+options are met then the entire castle upgrades in quality". The total-levels
+stages are gone. Each upgrade now builds one part in a fixed spot
+(`hq.castlePart`):
+
+- Opening deal: the barracks yard (fence, tents, an arms rack, a recruit, an
+  archer);
+- Hiring Hall: the great hall in the courtyard;
+- Pack slots: the storehouse (pallets, crates, barrels);
+- Company focus: three company pennants on the front wall;
+- Scouts: the lookout on the east tower.
+
+Level 0 is the part's empty plot. The castle's material is a milestone
+across every upgrade (`hq.castleTier`):
+
+- Timber at the start;
+- Stone at every upgrade but focus at level 1;
+- Fortified at every upgrade halfway;
+- Grand at everything maxed.
+
+Focus opens late, so it joins at Fortified; that way the castle never falls
+back a tier. One sheet per tier is baked by `scripts/hq-keep.ts`. The page
+lays the parts as layers and rings the focused one in gold. A rise plays
+once per new tier. Shot at 390, 320 and 1280; cards are in
+`docs/ui-audit-2026-10/hq/`.
+
+**Round 1.** The yard's pack pawns covered its tents, so the yard was re-laid
+back to front (fence and tents, then the rack, then the recruits at the
+sides), and its pawn and warrior gave way to a rack, one pawn and the archer.
+The pennants were drawn off their poles and the lime one sat on the deck
+unseen: the offset is fixed and they are bigger. The tall lookout's flag
+left the scene (`tests/hqStage.test.ts` caught it), so it is shorter and the
+castle sits 6 px lower. A two-line kicker ("Barracks yard · Level 3 of 5")
+became "Barracks yard · 3/5".
+
+**Round 2.** At 320 the castle was wider than the column, so it runs edge to
+edge there and the yard moved inward. The milestone line said "raise A,
+B and 2 more to level 1": it names up to four now, and before Grand it says
+"max the last 4 upgrades". The storehouse's diagonal log read as a mistake,
+so crates replaced it.
+
+**Round 3.** The kicker wrapped at 320, so it now stays on one line. The
+milestone line reads in one line on a phone at every tier checked. The lit
+part is clear on all five tokens (`highlight-on-tap.png`).
+
+**Benchmark.** It is closer to Clash of Clans than the stage version: each
+upgrade is a building you can see, and the Town Hall gate is the tier. It
+still falls short in three ways. The parts are small next to the castle
+(the pack's 296 px castle at 1× leaves them about 40 px). The yard's pack
+units are large for its plot. And on a 320 × 568 phone the card is a scroll
+below the castle.
