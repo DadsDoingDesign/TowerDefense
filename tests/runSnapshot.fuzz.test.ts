@@ -209,7 +209,7 @@ function assertPlayable(snap: RunSnapshot, where: string): void {
   // Field-per-act: the act the field belongs to is always a real act.
   if (validFieldAct(snap.fieldAct) === null) throw new Error(`${where}: field act ${snap.fieldAct}`)
   const cursed = (field.tiles ?? []).filter((t) => t.danger)
-  // A route's own ground may curse more (Moonquill's, the Sovereign Route's).
+  // A route's own ground may curse more (Greenvial's, the Sovereign Route's).
   const cursedMax = DANGER_TILES + (field.terrainRule ? (ROUTE_HAZARDS[field.terrainRule]?.dangerTiles ?? 0) : 0)
   if (cursed.length > cursedMax * 4 || cursed.some((t) => t.block)) throw new Error(`${where}: bad danger ground`)
   const team = [...snap.runMods, ...teamKeepsakeMods(snap.roster), ...relicTeamMods(snap.relics)]

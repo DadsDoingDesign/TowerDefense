@@ -107,10 +107,10 @@
      gold, CTA teal). `data/companies.ts` carries the same hexes for the canvas;
      `channels.companyVar` is how the UI names them. */
   --co-spice: #c6e05a;
-  --co-art: #c6a4ff;
+  --co-art: #c25b6b;
   --co-metals: #5d8be2;
   --co-silk: #dba5b9;
-  --co-scrolls: #e4e8f2;
+  --co-scrolls: #2fa58a;
   /* The Sovereign tier and route (the endgame charter; trade/NOTES.md §
      Palette): an electric aqua at ΔE2000 ≥ 20 from every rarity, company and
      reserved hue, 9.7:1 on --panel-2. Always with its initial "S" or the

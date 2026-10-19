@@ -298,7 +298,7 @@ describe('your own militia mixes them', () => {
     expect(some.charges.find((o) => o.id === 'chili')?.company).toBe('spice')
     expect(some.pairs.find((o) => o.id === 'spice:saffron')?.pair).toEqual(['sable', 'saffron'])
     expect(some.charges.find((o) => o.id === 'flame')).toBeUndefined()
-    // Easel House at 1: its chequers.
+    // Butcherblock at 1: its chequers (a chopping block's end grain).
     expect(some.patterns.find((o) => o.id === 'checky')?.company).toBe('art')
     // Ironvein at 10: everything, the shield cut already a base shape.
     for (const id of ['pick', 'anvil', 'gem'] as const) expect(some.charges.find((o) => o.id === id)?.company).toBe('metals')
@@ -312,7 +312,7 @@ describe('your own militia mixes them', () => {
   })
 
   it('a militia flying company pieces loads whole', () => {
-    const mixed = { name: 'The Ashford Company', shape: 'crescent', tincture: 'saffron', tincture2: 'cobalt', pattern: 'checky', charge: 'anvil', metal: 'electrum' }
+    const mixed = { name: 'The Ashford Company', shape: 'crescent', tincture: 'saffron', tincture2: 'cobalt', pattern: 'checky', charge: 'anvil', metal: 'verdigris' }
     expect(readMilitia(mixed)).toEqual(mixed)
     expect(migrateMeta({ militia: mixed }, META_VERSION).militia).toEqual(mixed)
     for (const c of COMPANY_IDS)

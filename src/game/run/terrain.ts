@@ -38,7 +38,7 @@ export interface GroundOpts {
   /**
    * The route's ground (the mercenary company): the map challenges a battle on
    * this company's road may carry — Wildfire on Peppercorn's, Flooded canals on
-   * Easel House's, and so on (`data/companies.ts`). The draw is the same hash;
+   * Butcherblock's, and so on (`data/companies.ts`). The draw is the same hash;
    * only the list it picks from is the route's. Omitted: the open ground every
    * road used to share (Flooded meadow or Wildfire).
    */

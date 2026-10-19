@@ -4919,3 +4919,65 @@ dock face and WHICH frame from each size's own holds, scaled to fit.
 - The post figures (`hero/post.ts`) run on the dock clock, so they now get
   these periods and tic lengths, with their own frames stretched to fit.
   Their motion still needs a branded port to match.
+
+## The companies' rename: Easel House → Butcherblock, Moonquill → Greenvial (2026-10-18)
+
+The designer, on the phone build: "Looks like the new content/copy isn't in."
+The dock showed Hask and Wren, and everything else still said the old houses.
+What the player now reads and sees in the `art` / `scrolls` slots (ids and
+saves unchanged):
+
+- **Names and roads:** Butcherblock, the **Salt road** (Brinefen, Smoke Ferry,
+  Saltcleave; "salt meat"). Greenvial, the **Potions road** (Mossdell, Spore
+  Hollow, Greenglass; "tonic"). Each name is one constant (`companies.BUTCHERBLOCK`,
+  `GREENVIAL`). The trade-off copy reads "The channels flood".
+- **Voices:** Hask, Butcherblock's salter, and Wren, Greenvial's herbalist,
+  each with a full new set of lines (≤ 40 characters).
+- **Marks:** the marks proposals ship: a haunch on the bone and a sprouting
+  flask. The flag kits move to oxblood and hide with a cleaver, a hook and a
+  bone, and to jade and lichen with a vial, a leaf and a mushroom.
+- **Worlds:** smoke-grey hide and bone with a cured-meat CTA. The frame is a
+  reed stem lashed with twine, the strip a rail of hooks, and the ambient
+  layer a reed bed in mist, rising smoke and salt glints. Greenvial gets
+  bottle-green glass, a jade CTA, a leaded line with a vine under it, a vine
+  strip, and three small glowing caps with spores.
+- **Seasons:** marsh spring (sedge, reeds, pools, salt crust, low mist,
+  cattail fluff) and spore dusk (moss, jade broadleaves, glowing caps, spores).
+- **Clans:** the Gnawbone Pack and the Sporecap Rot proposals, baked as the
+  `smudge` / `hexmoon` strips.
+- **Posts: not changed.** The liaison posts and `stop-scenes.ts` are left
+  as they were (the post figures were rejected; a separate pass will build
+  them). The shipped `liaison-art` / `liaison-scrolls` scenes still show the
+  old houses' pawn, gallery and scriptorium, and the old standards baked in.
+
+**Round 1 (the app, 390 × 844 and 1280 × 800):**
+- The haunch on an S-hook read as a red potion flask at signpost size, a
+  twin of Greenvial's.
+- "HERBS & POTIONS ROAD" truncated beside the market badge.
+- The glasshouse caps were three stalls on the dock (watched, not felt).
+- The reed bed read as a fence on a desk.
+- Greenvial's frame was a dashed line.
+- Both CTA strips read as grass.
+
+**Round 2:**
+- The haunch alone (the proposal) now reads as meat.
+- The goods are "Potions".
+- The caps are halved and dimmed.
+- The reeds stand in clumps.
+- The vine runs unbroken under the lead.
+- The strip is a rail with hooks, two to a tile at first. Two read as a
+  ruler, so it is one to a tile now.
+
+**Round 3:**
+- The Codex shows the clans by their new names.
+- The city page's bubble carries Hask's and Wren's new lines over the old
+  posts, which is the mismatch the separate post pass will close.
+
+**Weakest:** the haunch on Butcherblock's red cloth is low in contrast (the
+known patch problem at the livery's size). Spore dusk is a green, damp day
+more than a dusk. The item names Gilded Easel and Moonquill Codex, and the
+signature skills, still carry the old houses: they belong to the gear and
+skills agent.
+
+Cards: `docs/ui-audit-2026-10/rename/` (`node scripts/rename-shots.mjs <dir>`,
+then `npx tsx scripts/rename-cards.ts <dir> <before>`).

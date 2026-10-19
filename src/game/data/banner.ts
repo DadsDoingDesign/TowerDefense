@@ -61,14 +61,14 @@ export const TINCTURES = {
   // the pattern's colour on its standard, a pair on a militia's flag.
   saffron: '#d39a1c',
   chili: '#8e2418',
-  lilac: '#7454b8',
-  canvas: '#d8ccb0',
+  oxblood: '#74282e',
+  hide: '#8e6440',
   cobalt: '#2b4aa0',
   iron: '#5b6068',
   rose: '#a84468',
   ivory: '#efe4cf',
-  ink: '#1b2040',
-  moonsilver: '#a8b3c9',
+  jade: '#2a6a58',
+  lichen: '#9aae62',
 } as const
 export type Tincture = keyof typeof TINCTURES
 export const TINCTURE_IDS = Object.keys(TINCTURES) as Tincture[]
@@ -109,14 +109,14 @@ export const TINCTURE_NAMES: Record<Tincture, string> = {
   ash: 'Ash',
   saffron: 'Saffron',
   chili: 'Chili',
-  lilac: 'Lilac',
-  canvas: 'Canvas',
+  oxblood: 'Oxblood',
+  hide: 'Hide',
   cobalt: 'Cobalt',
   iron: 'Iron',
   rose: 'Rose',
   ivory: 'Ivory',
-  ink: 'Ink',
-  moonsilver: 'Moonsilver',
+  jade: 'Jade',
+  lichen: 'Lichen',
 }
 
 /**
@@ -148,7 +148,7 @@ export const pairIndex = (look: BannerLook): number => {
 
 /** The patterns that divide the field: where the pattern's colour lies. */
 export const PATTERNS = ['plain', 'pale', 'fess', 'quarterly', 'bend', 'chevron', 'barry', 'paly', 'cross', 'saltire', 'chief', 'pall'] as const
-/** The patterns only a company's kit gives: Easel House's chequers, Rosethread's border. */
+/** The patterns only a company's kit gives: Butcherblock's chequers (a chopping block's end grain), Rosethread's border. */
 export const KIT_PATTERNS = ['checky', 'bordure'] as const
 export const ALL_PATTERNS = [...PATTERNS, ...KIT_PATTERNS] as const
 export type Pattern = (typeof ALL_PATTERNS)[number]
@@ -189,23 +189,26 @@ export const CHARGES = {
   wheat: ['p.p.p', '.ppp.', 'p.p.p', '.ppp.', '..p..'],
   // The companies' emblems (Draft 4 § C), three each, earned by standing.
   // The marks critique (Oct 2026) redrew the eight that read as something
-  // else at 3x: the gem and the palette as skulls, the rose as a key, the
-  // chili and the quill as a slash, the flame, the sack and the candle as blobs.
+  // else at 3x: the gem as a skull, the rose as a key, the chili as a slash,
+  // the flame and the sack as blobs. (The companies' rename, Oct 2026:
+  // Butcherblock's cleaver, hook and bone, Greenvial's vial, leaf and
+  // mushroom replaced the old houses' brush, frame and palette, quill,
+  // candle and eye.)
   chili: ['...p.', '..pp.', '..pp.', '.pp..', 'pp...'],
   flame: ['.p...', '.pp.p', 'ppppp', 'ppppp', '.ppp.'],
   sack: ['.p.p.', '..p..', '.ppp.', 'ppppp', '.ppp.'],
-  brush: ['...p.', '...p.', '..p..', '.ppp.', '.ppp.'],
-  frame: ['ppppp', 'p...p', 'p.p.p', 'p...p', 'ppppp'],
-  palette: ['.ppp.', 'ppppp', 'p.ppp', 'pp...', '.ppp.'],
+  cleaver: ['pppp.', 'p.pp.', 'pppp.', '..pp.', '...p.'],
+  hook: ['.pp..', 'p..p.', '...p.', 'p..p.', '.pp..'],
+  bone: ['.....', 'p...p', 'ppppp', 'p...p', '.....'],
   pick: ['.ppp.', 'p.p.p', '..p..', '..p..', '..p..'],
   anvil: ['pppp.', '.pppp', '..p..', '.ppp.', 'ppppp'],
   gem: ['.....', '.ppp.', 'ppppp', '.ppp.', '..p..'],
   spool: ['ppppp', '.ppp.', '.p.p.', '.ppp.', 'ppppp'],
   rose: ['.ppp.', 'ppppp', '.ppp.', 'pp.p.', '..p..'],
   moth: ['pp.pp', 'ppppp', '..p..', 'ppppp', 'pp.pp'],
-  quill: ['...pp', '..ppp', '.pp.p', '.p.p.', 'p....'],
-  candle: ['..p..', '.....', '.ppp.', '.ppp.', '.ppp.'],
-  eye: ['.....', '.ppp.', 'pp.pp', '.ppp.', '.....'],
+  vial: ['..p..', '.ppp.', '..p..', '.ppp.', 'ppppp'],
+  leaf: ['...pp', '.pppp', 'ppp.p', 'pp.p.', 'p....'],
+  mushroom: ['.ppp.', 'ppppp', 'p.p.p', '..p..', '.ppp.'],
 } as const
 export type Charge = keyof typeof CHARGES
 /** The emblems everyone has. */
@@ -232,18 +235,18 @@ export const CHARGE_NAMES: Record<Charge, string> = {
   chili: 'Chili',
   flame: 'Flame',
   sack: 'Spice sack',
-  brush: 'Brush',
-  frame: 'Frame',
-  palette: 'Palette',
+  cleaver: 'Cleaver',
+  hook: 'Meat hook',
+  bone: 'Bone',
   pick: 'Pick',
   anvil: 'Anvil',
   gem: 'Gem',
   spool: 'Spool',
   rose: 'Rose',
   moth: 'Moth',
-  quill: 'Quill',
-  candle: 'Candle',
-  eye: 'Eye',
+  vial: 'Vial',
+  leaf: 'Leaf',
+  mushroom: 'Mushroom',
 }
 
 /** The metals: the emblem's colour and the cloth's edge. */
@@ -253,10 +256,10 @@ export const METALS = {
   silver: '#c3cad2',
   // One trim per company (Draft 4 § C).
   copper: '#c8642a',
-  verdigris: '#4f9a8c',
+  steel: '#8a939c',
   bronze: '#9c7a3c',
   rosegold: '#c97a64',
-  electrum: '#c9a94a',
+  verdigris: '#4f9a8c',
 } as const
 export type Metal = keyof typeof METALS
 /** The metals everyone has. */
@@ -267,10 +270,10 @@ export const METAL_NAMES: Record<Metal, string> = {
   gold: 'Gold',
   silver: 'Silver',
   copper: 'Copper',
-  verdigris: 'Verdigris',
+  steel: 'Steel',
   bronze: 'Bronze',
   rosegold: 'Rose gold',
-  electrum: 'Electrum',
+  verdigris: 'Verdigris',
 }
 
 export interface BannerLook {
@@ -325,7 +328,7 @@ function inCloth(shape: BannerShape, x: number, y: number, clothH: number): bool
     case 'notch':
       return !(x >= W - 4 && Math.abs(y - (clothH / 2 + 0.5)) < (x - (W - 5)) * 0.9)
     case 'wave':
-      // A ragged foot and fly, as a flag that has seen the road.
+      // A ragged foot and fly, as a flag that has seen the road (and Butcherblock's hide).
       return y <= clothH - 2 - ((x * 7) % 3 === 0 ? 1 : 0) && !(x === W - 1 && y % 4 === 1)
     case 'flame': {
       // Four tongues of flame along the foot, long and short (Peppercorn Co.).
@@ -334,7 +337,7 @@ function inCloth(shape: BannerShape, x: number, y: number, clothH: number): bool
       return FLAME_TONGUES.some(([fx, len]) => t <= len && Math.abs(x - fx) <= (len - t + 1) * 0.45 + 0.1)
     }
     case 'scallop': {
-      // Three round lobes along the foot (Easel House).
+      // Three round lobes along the foot, like leaves (Greenvial).
       const t = y - (clothH - 3)
       if (t <= 0) return true
       return [3.5, 7.5, 11.5].some((c) => (x - c) ** 2 / 4.4 + (t - 0.5) ** 2 / 4 <= 1)
@@ -346,7 +349,7 @@ function inCloth(shape: BannerShape, x: number, y: number, clothH: number): bool
       // A fringed foot, every other thread hanging loose (Rosethread).
       return y <= clothH - 3 || x % 2 === 0
     case 'crescent':
-      // A foot cut in a hollow curve, its two horns at the sides (Moonquill).
+      // A foot cut in a hollow curve, its two horns at the sides (Greenvial).
       return y <= clothH - 4 + 4 * ((x - 7) / 5.5) ** 2
     default:
       return true

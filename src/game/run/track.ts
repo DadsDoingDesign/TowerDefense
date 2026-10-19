@@ -351,7 +351,7 @@ export function deliveriesWord(n: number): string {
   return n <= 1 ? 'about one delivery away' : `about ${n} deliveries away`
 }
 
-/** A short name for a company in a row ("Peppercorn", "Easel House"). */
+/** A short name for a company in a row ("Peppercorn", "Butcherblock"). */
 export const shortCompany = (company: CompanyId): string => companyById(company).name.replace(/ Co\.$/, '')
 
 /** What a company's track pays next, as the home card's Unlocks row names it. */

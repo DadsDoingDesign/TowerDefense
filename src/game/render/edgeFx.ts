@@ -6,8 +6,8 @@ import { drawnRoad, worldOf } from './terrain'
 
 /**
  * The company world at the battlefield's edges (Oct 2026). The designer:
- * "Edges only" — embers, leaves, sparks and drizzle, paint and blossom,
- * petals and mist, snow and stars, in a thin band along the margins of the
+ * "Edges only" — embers, leaves, sparks and drizzle, salt and ash off the
+ * smokehouses, petals and mist, glowing spores, in a thin band along the margins of the
  * view, in the run's world and season (`data/fieldSeasons.ts`, `edge`).
  *
  * Never over the game: a particle lives only in a cell of the map that is
@@ -43,7 +43,7 @@ const CELL = 8
 const COLORS: Record<EdgeKind, readonly string[]> = {
   ember: ['#fff3c0', '#ffd35e', '#ff8a2c'],
   leaf: ['#b86a26', '#9c5420', '#c88a34'],
-  fleck: ['#c6a4ff', '#e2aa5a', '#5fb0a8', '#e58fb0'],
+  salt: ['#f4efe4', '#e6dcc8'],
   blossom: ['#f6d2de', '#fbeef2', '#e9a8bf'],
   spark: ['#fff6d8', '#ffe08a'],
   ash: ['#8a939e', '#b3bcc6'],
@@ -51,7 +51,7 @@ const COLORS: Record<EdgeKind, readonly string[]> = {
   petal: ['#e9a8bf', '#f6d2de', '#d98aa6'],
   mote: ['#f2e8f0'],
   snow: ['#ffffff', '#eef3f8'],
-  star: ['#ffffff', '#d4daf2'],
+  spore: ['#cfe86a', '#a8e08a', '#7fe0c4'],
 }
 
 /** Which cells of a map are clear of the road (and its verge), every slot and the wagon (`CELL` px). */
@@ -165,6 +165,9 @@ export class EdgeBand {
         case 'spark':
           q.vy += 90 * u * dt
           break
+        case 'spore':
+          q.vx = Math.sin(q.age * 0.9 + q.phase) * 3 * u
+          break
       }
       q.x += q.vx * dt
       q.y += q.vy * dt
@@ -230,17 +233,28 @@ export class EdgeBand {
           B.alpha = fade * 0.35
           B.rect(x, y, s, s)
           break
-        case 'star': {
+        case 'salt': {
+          // A grain of salt on the air: a pixel, glinting now and then.
           const tw = 0.5 + 0.5 * Math.sin(q.age * 1.2 + q.phase)
           B.alpha = fade * (0.35 + 0.65 * tw)
           B.rect(x, y, u, u)
-          if (tw > 0.75) {
-            B.alpha = fade * 0.5
+          if (tw > 0.85) {
+            B.alpha = fade * 0.4
             B.rect(x - u, y, u, u)
             B.rect(x + u, y, u, u)
-            B.rect(x, y - u, u, u)
-            B.rect(x, y + u, u, u)
           }
+          break
+        }
+        case 'spore': {
+          // A glowing spore rising: its core and a faint cross of glow.
+          const tw = 0.5 + 0.5 * Math.sin(q.age * 1.1 + q.phase)
+          B.alpha = fade * (0.55 + 0.35 * tw)
+          B.rect(x, y, u, u)
+          B.alpha = fade * 0.3 * tw
+          B.rect(x - u, y, u, u)
+          B.rect(x + u, y, u, u)
+          B.rect(x, y - u, u, u)
+          B.rect(x, y + u, u, u)
           break
         }
         default:
@@ -272,10 +286,10 @@ export class EdgeBand {
         return { ...base, vx: (r() - 0.5) * 4 * u, vy: (5 + r() * 4) * u, life: 4, size: u }
       case 'mote':
         return { ...base, vx: (r() < 0.5 ? -1 : 1) * (4 + r() * 4) * u, vy: -r() * 2 * u, life: 4 + r() * 2, size: 3 * u }
-      case 'star':
-        return { ...base, life: 2.5 + r() * 2, size: u }
-      case 'fleck':
-        return { ...base, vx: (r() - 0.5) * 6 * u, vy: (3 + r() * 5) * u, life: 4 + r() * 2 }
+      case 'salt':
+        return { ...base, vx: (r() - 0.5) * 3 * u, vy: (2 + r() * 3) * u, life: 3 + r() * 2, size: u }
+      case 'spore':
+        return { ...base, vy: -(4 + r() * 5) * u, life: 4 + r() * 2, size: u }
     }
   }
 }

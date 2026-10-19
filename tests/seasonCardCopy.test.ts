@@ -38,12 +38,12 @@ describe('the season card', () => {
 
   it('tied in your deliveries: both named, and what breaks the tie', () => {
     const c = card(play(freshSeason(), [deliver('metals', 8), deliver('art')]))
-    expect(c.headline).toBe('Ironvein and Easel House are level')
+    expect(c.headline).toBe('Ironvein and Butcherblock are level')
     expect(c.sub).toBe('A tie goes to the bigger share: Ironvein pays, for now.')
     expect(c.sum).toBe(PATRON_PURSE)
     // Level on share too: the season's hash, said as "for now".
     const flat = { ...freshSeason(), contracts: 2, deliveries: { ...freshSeason().deliveries, metals: 1, art: 1 } }
-    expect(card(flat).sub).toMatch(/^Your deliveries and their shares are level: (Ironvein|Easel House) pays, for now\.$/)
+    expect(card(flat).sub).toMatch(/^Your deliveries and their shares are level: (Ironvein|Butcherblock) pays, for now\.$/)
   })
 
   it('the season’s last contract: said as such, and with no delivery yet, what one would do', () => {

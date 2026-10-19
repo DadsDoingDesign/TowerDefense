@@ -14,6 +14,7 @@
  *
  * Pure: no DOM.
  */
+import { BUTCHERBLOCK, GREENVIAL } from '../../data/companies'
 import type { RampId } from './palette'
 import type { Grip, Motion, PersonaId, Posture, RaceId } from './rig'
 
@@ -391,10 +392,8 @@ export const LIVERIES: Readonly<Record<string, Livery>> = {
   Peppercorn: { cloth: 'red', trim: 'gold' },
   Rosethread: { cloth: 'rose', trim: 'linen' },
   Ironvein: { cloth: 'navy', trim: 'ember' },
-  Butcherblock: { cloth: 'oxblood', trim: 'bone' },
-  Greenvial: { cloth: 'leaf', trim: 'aqua' },
-  'Easel House': { cloth: 'plum', trim: 'cream' },
-  Moonquill: { cloth: 'navy', trim: 'hairSilver' },
+  [BUTCHERBLOCK]: { cloth: 'oxblood', trim: 'bone' },
+  [GREENVIAL]: { cloth: 'leaf', trim: 'aqua' },
 }
 
 // ── the spec ───────────────────────────────────────────────────────────────

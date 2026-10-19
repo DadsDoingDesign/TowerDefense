@@ -101,16 +101,22 @@ describe('the season a battle wears', () => {
     // What the designer asked for, season by season.
     expect(FIELD_SEASONS.spice.cover && FIELD_SEASONS.spice.broadleaf && FIELD_SEASONS.spice.light).toBeTruthy()
     expect(FIELD_SEASONS.spice.props?.map((p) => p.kind)).toEqual(expect.arrayContaining(['bale', 'sheaf', 'sunflower', 'pumpkin']))
-    expect(FIELD_SEASONS.art.broadleaf?.blossom?.length).toBeGreaterThan(0)
-    expect(FIELD_SEASONS.art.weather.kinds).toEqual(expect.arrayContaining(['petal', 'butterfly']))
+    // Butcherblock's salt marsh (the rename, Oct 2026): reed beds and brackish pools, salt on the air, a low mist, cattail fluff.
+    expect(FIELD_SEASONS.art.props?.map((p) => p.kind)).toEqual(expect.arrayContaining(['reeds', 'pool']))
+    expect(FIELD_SEASONS.art.edge).toContain('salt')
+    expect(FIELD_SEASONS.art.weather.fog?.banks).toBeGreaterThan(0)
+    expect(FIELD_SEASONS.art.weather.kinds).toContain('fluff')
     expect(FIELD_SEASONS.metals.weather.sheet).toBe('rain')
     expect(FIELD_SEASONS.metals.weather.clouds).toBeTruthy()
     expect(FIELD_SEASONS.metals.props?.map((p) => p.kind)).toEqual(expect.arrayContaining(['puddle', 'mud']))
     expect(FIELD_SEASONS.metals.rocks).toBeTruthy()
     expect(FIELD_SEASONS.silk.weather.fog?.banks).toBeGreaterThan(1)
     expect(FIELD_SEASONS.silk.props?.map((p) => p.kind)).toEqual(expect.arrayContaining(['reeds', 'lily']))
-    expect(FIELD_SEASONS.scrolls.cover?.tufts && FIELD_SEASONS.scrolls.caps && FIELD_SEASONS.scrolls.icicles && FIELD_SEASONS.scrolls.ice).toBeTruthy()
-    expect(FIELD_SEASONS.scrolls.weather.sheet).toBe('snow')
+    // Greenvial's hollows at dusk: moss, glowing caps and mushrooms in the wood, spores rising.
+    expect(FIELD_SEASONS.scrolls.cover && FIELD_SEASONS.scrolls.broadleaf && FIELD_SEASONS.scrolls.mist).toBeTruthy()
+    expect(FIELD_SEASONS.scrolls.props?.map((p) => p.kind)).toEqual(expect.arrayContaining(['glowcap', 'mushroom']))
+    expect(FIELD_SEASONS.scrolls.weather.kinds).toContain('spore')
+    expect(FIELD_SEASONS.scrolls.edge).toContain('spore')
   })
 })
 

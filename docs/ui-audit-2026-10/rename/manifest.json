@@ -1,0 +1,58 @@
+[
+ {
+  "id": "rename-home-butcherblock",
+  "group": "Rename",
+  "people": "Hask",
+  "title": "Butcherblock on the home",
+  "caption": "The home with Butcherblock focused, phone and desk: its road (Salt), its cities, its mark, its world. Judge it reads as Butcherblock, not the old house.",
+  "file": "rename-home-butcherblock.png"
+ },
+ {
+  "id": "rename-home-greenvial",
+  "group": "Rename",
+  "people": "Wren",
+  "title": "Greenvial on the home",
+  "caption": "The home with Greenvial focused, phone and desk: its road (Potions), its cities, its mark, its world. Judge it reads as Greenvial, not the old house.",
+  "file": "rename-home-greenvial.png"
+ },
+ {
+  "id": "rename-terms-butcherblock",
+  "group": "Rename",
+  "people": "Hask",
+  "title": "Butcherblock's terms",
+  "caption": "Butcherblock's terms page on a phone: the head, its asks, the three cities and its world's frames and CTA strip. Judge the words and the world.",
+  "file": "rename-terms-butcherblock.png"
+ },
+ {
+  "id": "rename-terms-greenvial",
+  "group": "Rename",
+  "people": "Wren",
+  "title": "Greenvial's terms",
+  "caption": "Greenvial's terms page on a phone: the head, its asks, the three cities and its world's frames and CTA strip. Judge the words and the world.",
+  "file": "rename-terms-greenvial.png"
+ },
+ {
+  "id": "rename-liaisons",
+  "group": "Rename",
+  "people": "Hask, Wren",
+  "title": "Hask and Wren speak",
+  "caption": "Each slot’s first city on a phone with its liaison’s new line: Hask the salter, Wren the herbalist. The posts behind them are still the old houses’ (a separate pass); judge the words.",
+  "file": "rename-liaisons.png"
+ },
+ {
+  "id": "rename-crests",
+  "group": "Rename",
+  "people": "Butcherblock, Greenvial",
+  "title": "The crests, before → after",
+  "caption": "The old marks and standards (an easel, a quill on a moon) beside the new: Butcherblock’s haunch on the bone, Greenvial’s sprouting flask, at 6×, on the standard, at 2× and 1×.",
+  "file": "rename-crests.png"
+ },
+ {
+  "id": "rename-clans",
+  "group": "Rename",
+  "people": "Gnawbone Pack, Sporecap Rot",
+  "title": "The goblin clans, before → after",
+  "caption": "The two clans re-dressed (a look and a name only): tier 3 of each line, paint and moon before, skulls and hooks / caps and rot after, and their Codex sections.",
+  "file": "rename-clans.png"
+ }
+]

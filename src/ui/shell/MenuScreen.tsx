@@ -1,7 +1,7 @@
 import { useMilitia } from './useMilitia'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { COMPANY_IDS, companyById, FIRST_COMPANY, type CompanyId } from '../../game/data/companies'
-import { CHARGES, DEFAULT_BANNER } from '../../game/data/banner'
+import { DEFAULT_BANNER } from '../../game/data/banner'
 import type { StandardLook } from '../../game/data/companyStandard'
 import { MARKET_MULT, marketOfDay, utcDateKey } from '../../game/run/contracts'
 import { companyOpen, standingOf } from '../../game/run/standing'
@@ -641,7 +641,7 @@ function CompanyCard({
           <button type="button" className="mn-livery" onClick={onLivery} aria-label={`Dress ${co.name}’s standard`}>
             <CompanyFlag company={company} look={look} />
             <span className="mn-livery-mark" aria-hidden="true">
-              <Pixel rows={CHARGES.brush} palette={BRUSH_MARK} scale={2} />
+              <Pixel rows={BRUSH_ROWS} palette={BRUSH_MARK} scale={2} />
             </span>
           </button>
         ) : (
@@ -667,5 +667,6 @@ function CompanyCard({
   )
 }
 
-/** The livery's mark on the card's flag: a brush, in ink. */
+/** The livery's mark on the card's flag: a brush (dress the standard), in ink. */
+const BRUSH_ROWS = ['...p.', '...p.', '..p..', '.ppp.', '.ppp.']
 const BRUSH_MARK = { p: '#2a1e14' }

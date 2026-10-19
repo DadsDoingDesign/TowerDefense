@@ -344,7 +344,7 @@ describe('standing', () => {
     expect(charterDoor({ skills: [...RANDOM_UNLOCK_SKILLS], items: [] }).open).toBe(false)
   })
 
-  it('old Watch XP is spread evenly, and Moonquill opens at standing 3 anywhere', () => {
+  it('old Watch XP is spread evenly, and Greenvial opens at standing 3 anywhere', () => {
     const spread = spreadWatchXp(1000)
     expect(Object.values(spread)).toEqual([200, 200, 200, 200, 200])
     expect(companyOpen('scrolls', {})).toBe(false)

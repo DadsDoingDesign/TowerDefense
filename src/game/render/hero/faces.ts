@@ -2,13 +2,12 @@
  * The company faces — each company's liaison given a body, built on the hero
  * rig (prototype, Oct 2026; nothing in the shipped game reads this yet).
  *
- * Saffra, Brannoch and Odile are the liaisons `src/game/data/liaisons.ts`
- * already voices. The Butcherblock (`art` slot) and Greenvial (`scrolls`
- * slot) faces are PROPOSALS for the designer: liaisons.ts is untouched.
- *   - Butcherblock: Vell (Easel House's fussy curator) does not fit hides
- *     and salt, so a new face is proposed: Hask, the salter.
- *   - Greenvial: Wren (Moonquill's quiet, slightly ominous archivist) fits
- *     a poison-wise herbalist, so the name is kept, with a new trade.
+ * All five are the liaisons `src/game/data/liaisons.ts` voices. The `art`
+ * and `scrolls` slots were renamed Butcherblock and Greenvial (Oct 2026):
+ *   - Butcherblock: Vell (the old house's fussy curator) did not fit hides
+ *     and salt, so the slot has a new face and voice: Hask, the salter.
+ *   - Greenvial: Wren (the old house's quiet, slightly ominous archivist)
+ *     fits a poison-wise herbalist, so the name is kept, with a new trade.
  *
  * Each brief follows the character-design skill (§ 2): who, want and worry,
  * temperament (one contradiction), the tic, two silhouette words, the prop.
@@ -18,6 +17,7 @@
  *
  * Pure data.
  */
+import { BUTCHERBLOCK, GREENVIAL } from '../../data/companies'
 import type { HeroLook } from './look'
 import type { PersonaId } from './rig'
 
@@ -112,10 +112,10 @@ export const FACES: readonly CompanyFace[] = [
   {
     id: 'hask',
     company: 'art',
-    companyName: 'Butcherblock',
+    companyName: BUTCHERBLOCK,
     name: 'Hask',
     role: 'salter',
-    proposal: 'New face for the art slot (was Easel House’s Vell): a fussy curator does not fit hides and salt.',
+    proposal: 'New face for the art slot (was the old house’s Vell): a fussy curator does not fit hides and salt.',
     brief: {
       who: 'Hask, reptilian, Butcherblock’s salter. Works the smokehouses along the salt marsh’s reed channels, weighing hides and salting the catch.',
       want: 'Wants the meat delivered fresh. Fears rot, and the salt running out.',
@@ -125,7 +125,7 @@ export const FACES: readonly CompanyFace[] = [
       prop: 'A butcher\u2019s J hook.',
     },
     look: {
-      race: 'reptilian', persona: 'hask', posture: 'hunch', company: 'Butcherblock', head: 'snout', hair: 'crest', skin: 'scaleTeal', hairInk: 'oxblood',
+      race: 'reptilian', persona: 'hask', posture: 'hunch', company: BUTCHERBLOCK, head: 'snout', hair: 'crest', skin: 'scaleTeal', hairInk: 'oxblood',
       gear: { main: 'Meat Hook', off: 'Salt Sack', body: 'Smokehouse Apron' },
     },
     ticEvery: 5.9,
@@ -133,10 +133,10 @@ export const FACES: readonly CompanyFace[] = [
   {
     id: 'wren',
     company: 'scrolls',
-    companyName: 'Greenvial',
+    companyName: GREENVIAL,
     name: 'Wren',
     role: 'herbalist',
-    proposal: 'Keeps the scrolls slot’s name (Moonquill’s Wren): quiet and a little ominous suits a herbalist who knows every poison. A new trade, a new body.',
+    proposal: 'Keeps the scrolls slot’s name (the old house’s Wren): quiet and a little ominous suits a herbalist who knows every poison. A new trade, a new body.',
     brief: {
       who: 'Wren, gnome, Greenvial’s herbalist. Tends the glasshouses in the mushroom hollows and bottles whatever glows there.',
       want: 'Wants the rare cuttings brought home whole. Fears a cracked vial, and what spills out of it.',
@@ -146,7 +146,7 @@ export const FACES: readonly CompanyFace[] = [
       prop: 'A glowing green vial.',
     },
     look: {
-      race: 'gnome', persona: 'wren', posture: 'still', company: 'Greenvial', hair: 'sproutcap',
+      race: 'gnome', persona: 'wren', posture: 'still', company: GREENVIAL, hair: 'sproutcap',
       gear: { off: 'Glow Vial', body: "Herbalist's Coat" },
     },
     ticEvery: 7.7,

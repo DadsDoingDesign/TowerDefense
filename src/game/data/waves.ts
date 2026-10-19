@@ -983,7 +983,7 @@ export interface NodeEncounterSpec {
  * From {@link ARMOUR_DEPTH}: barrels march from depth 3 (`gate`), so a Plated
  * column has plate in it, and the opening fights teach the plain game first.
  * A company's road leans one way ({@link ARMOUR_LEAN} of its armoured fights):
- * Ironvein's raiders strap on plate, Moonquill's are warded.
+ * Ironvein's raiders strap on plate, Greenvial's are warded.
  *
  * Its own RNG, hashed from (run seed, layer, row) — never a draw on a run
  * stream, so it moves no other roll.

@@ -28,7 +28,7 @@ export const SLOT_MARKS = 2
 
 export interface DockSlot {
   company: CompanyId
-  /** It hires you (Moonquill opens at Standing 3 with any company). */
+  /** It hires you (Greenvial opens at Standing 3 with any company). */
   open: boolean
   /** Standing 0–10 overall, the term signed, and the level on that term's track. */
   standing: number

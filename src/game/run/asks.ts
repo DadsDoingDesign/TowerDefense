@@ -128,7 +128,7 @@ export const ASKS: readonly AskDef[] = [
   { id: 'spice.burning', company: 'spice', stat: 'burnKills', target: 120, text: (n) => `Fell ${n} raiders while they burn`, label: 'Felled while burning' },
   { id: 'spice.clean', company: 'spice', stat: 'cleanFights', target: 7, text: cleanFights, label: 'Fights without a leak' },
   { id: 'spice.felled', company: 'spice', stat: 'kills', target: 260, text: felled, label: 'Raiders felled' },
-  // Easel House — the cargo, unharmed.
+  // Butcherblock — the meat, kept fresh: the cargo unharmed.
   { id: 'art.cargo', company: 'art', stat: 'cargo', target: 100, atEnd: true, text: (n) => (n >= 100 ? 'Deliver with full cargo' : `Deliver with ${n}% cargo`), label: 'Cargo' },
   { id: 'art.cities', company: 'art', stat: 'cleanCities', target: 3, text: cleanCities, label: 'City fights without a leak' },
   { id: 'art.clean', company: 'art', stat: 'cleanFights', target: 7, text: cleanFights, label: 'Fights without a leak' },
@@ -140,7 +140,7 @@ export const ASKS: readonly AskDef[] = [
   { id: 'silk.wares', company: 'silk', stat: 'wares', target: 4, text: (n) => (n === 1 ? 'Buy a ware from a merchant' : `Buy ${n} wares from merchants`), label: 'Wares bought' },
   { id: 'silk.roadGold', company: 'silk', stat: 'roadGold', target: 3500, atEnd: true, text: (n) => `Deliver with ${n.toLocaleString('en')} road gold`, label: 'Road gold' },
   { id: 'silk.earned', company: 'silk', stat: 'earned', target: 3900, text: (n) => `Earn ${n.toLocaleString('en')} gold on the road`, label: 'Gold earned' },
-  // Moonquill — pacts and wards.
+  // Greenvial — pacts and wards.
   { id: 'scrolls.pact', company: 'scrolls', stat: 'pacts', target: 1, text: (n) => (n === 1 ? 'Accept a shrine pact' : `Accept ${n} shrine pacts`), label: 'Pacts accepted' },
   { id: 'scrolls.warded', company: 'scrolls', stat: 'wardedKills', target: 35, text: (n) => `Fell ${n} Warded raiders`, label: 'Warded felled' },
   { id: 'scrolls.city', company: 'scrolls', stat: 'cleanCities', target: 2, text: cleanCities, label: 'City fights without a leak' },

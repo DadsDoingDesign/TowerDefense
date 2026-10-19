@@ -30,7 +30,7 @@ fs.mkdirSync(OUT, { recursive: true })
 const W = 600
 const FPS = 12
 const SECS = 3.5
-const NAMES = { spice: 'Peppercorn Co.', art: 'Easel House', metals: 'Ironvein', silk: 'Rosethread', scrolls: 'Moonquill' }
+const NAMES = { spice: 'Peppercorn Co.', art: 'Butcherblock', metals: 'Ironvein', silk: 'Rosethread', scrolls: 'Greenvial' }
 /** What changed, one line per company and screen (the caption). */
 const CAPTIONS = {
   home: {

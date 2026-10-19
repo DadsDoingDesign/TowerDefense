@@ -78,29 +78,30 @@ export const LIAISONS: Readonly<Record<CompanyId, Liaison>> = {
     fallen: ['Smoke and ash. Next road, burn them.'],
   },
 
-  // Easel House — a curator: fussy, precise, in love with the frames.
+  // Butcherblock — Hask, a salter: dry, patient, a little menacing, practical
+  // about meat and coin.
   art: {
     company: 'art',
-    name: 'Vell',
-    role: 'curator',
+    name: 'Hask',
+    role: 'salter',
     city: {
-      good: ['Not a scratch. Exquisite.', 'Spotless. On to {next}, gently.'],
-      fair: ['A frame or two chipped. Tolerable.'],
-      rough: ['My paintings! Half of them, ruined.'],
+      good: ['Fresh, and salted. On to {next}.', 'Every cask keeps. So do you.'],
+      fair: ['Some of it turned. Salt the rest.'],
+      rough: ['Half spoiled. I don’t pay for rot.'],
     },
     asks: {
-      'art.cargo': { open: 'Every frame to {dest}, mind.' },
-      'art.cities': { open: 'Keep the city fights spotless.', met: 'Clean cities. Reach {dest}, it tips.' },
-      'art.clean': { open: 'No raider near the wagons. None.', met: 'Spotless fights. {dest} tips for it.' },
+      'art.cargo': { open: 'Every cask to {dest}. Whole.' },
+      'art.cities': { open: 'Clean city fights. Nothing gets in.', met: 'Clean cities. {dest} tips for it.' },
+      'art.clean': { open: 'Nothing touches the meat. Nothing.', met: 'Clean work. {dest} tips for it.' },
     },
     delivered: {
-      all: ['Every frame, every ask. A triumph.'],
-      some: ['The frames survived. Mostly.'],
-      none: ['Delivered, though not as I asked.'],
-      plain: ['Delivered. Hang them in the light.'],
+      all: ['Every ask kept. You cut clean.'],
+      some: ['Delivered. Most of it keeps.'],
+      none: ['Delivered. I remember my asks.'],
+      plain: ['Fresh to the hook. Come back.'],
     },
-    cashedOut: ['Sold here? To these philistines?'],
-    fallen: ['Ruined. All of it, in the canal.'],
+    cashedOut: ['Sold here. Meat doesn’t wait. Fine.'],
+    fallen: ['All of it, for the marsh crows.'],
   },
 
   // Ironvein — a factor: gruff, short, counts every cart.
@@ -153,29 +154,30 @@ export const LIAISONS: Readonly<Record<CompanyId, Liaison>> = {
     fallen: ['All that silk, in the mud.'],
   },
 
-  // Moonquill — an archivist: quiet, a little ominous.
+  // Greenvial — Wren, a herbalist: quiet, a little ominous; talks of growth,
+  // rot and doses.
   scrolls: {
     company: 'scrolls',
     name: 'Wren',
-    role: 'archivist',
+    role: 'herbalist',
     city: {
-      good: ['The seals hold. On to {next}.', 'Every seal whole. As foretold.'],
-      fair: ['A few seals cracked. It will do.'],
-      rough: ['Half the scrolls lost. Ill omen.'],
+      good: ['Nothing cracked. On to {next}.', 'Every vial whole. It grows well.'],
+      fair: ['A few vials cracked. Small doses.'],
+      rough: ['Half spilled. Something will grow.'],
     },
     asks: {
-      'scrolls.pact': { open: 'The old stones bargain. Heed one.', met: 'A pact made. Reach {dest}, it tips.' },
-      'scrolls.warded': { open: 'Warded ones ahead. Steel, not spells.', met: 'Wards broken. Reach {dest}, it tips.' },
-      'scrolls.city': { open: 'Hold the cities. Let none through.', met: 'Clean cities. Reach {dest}, it tips.' },
+      'scrolls.pact': { open: 'The old stones offer. Take a dose.', met: 'A pact taken. {dest} tips for it.' },
+      'scrolls.warded': { open: 'Warded ones ahead. Steel, not spells.', met: 'Wards broken. {dest} tips for it.' },
+      'scrolls.city': { open: 'Hold the cities. Let nothing root.', met: 'Clean cities. {dest} tips for it.' },
     },
     delivered: {
-      all: ['All asked, all done. It is written.'],
-      some: ['Delivered. The seals held.'],
+      all: ['All asked, all done. It took.'],
+      some: ['Delivered. Most of it took.'],
       none: ['Delivered. My asks went unheard.'],
-      plain: ['Delivered. The seals held.'],
+      plain: ['Delivered. Let it steep.'],
     },
-    cashedOut: ['You turn back. The scrolls remember.'],
-    fallen: ['The scrolls burn. So it was written.'],
+    cashedOut: ['You turn back. Some things wilt.'],
+    fallen: ['Spilled. The hollow will drink it.'],
   },
 }
 

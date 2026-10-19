@@ -8,8 +8,8 @@
  * parts (`ui/pixel.tsx`, `CompanyFlag`), the canvases blit the same pixel rows
  * (`companies.COMPANY_LOGOS`, `companyStandard`, `banner`) at whole-number
  * scales, and the brand files are the shipped ones. Each `section[data-shot]`
- * is one element screenshot; `?proposal=1` adds the unshipped proposals
- * (`harness/marksProposals.ts`).
+ * is one element screenshot. (Butcherblock's and Greenvial's marks were
+ * proposals here until the companies' rename shipped them, Oct 2026.)
  */
 import '../src/styles/global.css'
 import '../src/styles/shell.css'
@@ -29,7 +29,6 @@ import markMono from '../src/assets/brand/mark-mono.svg'
 import mark16 from '../src/assets/brand/mark-16.png'
 
 const out = document.getElementById('out')!
-const params = new URLSearchParams(location.search)
 
 /** Rows blitted to a canvas at `k` px a cell. */
 function blit(rows: PixelRows, pal: Palette, k: number): HTMLCanvasElement {
@@ -158,11 +157,6 @@ sections.push(
 sections.push(sec('coin-8x', 'Coin 8×', ground('wood', canvasNode(blit(COIN, COIN_PALETTE, 8)))))
 // Each logo alone at 8× for the zoom panels.
 for (const c of [...COMPANY_IDS, 'locked' as const]) sections.push(sec(`logo8-${c}`, `${c} 8×`, ground('wood', canvasNode(blit(COMPANY_LOGOS[c].rows, COMPANY_LOGOS[c].palette, 8)))))
-
-if (params.get('proposal')) {
-  const { proposalSections } = await import('./marksProposals')
-  sections.push(...proposalSections({ blit, sec, cell, ground, canvasNode }))
-}
 
 void Pixel
 createRoot(out).render(h('div', null, ...sections))

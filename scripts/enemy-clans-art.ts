@@ -432,161 +432,96 @@ function cinder(): Kit {
   }
 }
 
-// ────────────────────────────────────────────────────────────── SMUDGE ──
-// Easel House's road: paint-splattered scavengers. The tell: an upturned paint
-// bucket for a helmet, dripping colour down the hood; brushes for weapons;
-// paint tubes in the basket; the keg is a paint tin under a tall wire bail.
-
-// Round 3: paint poured over the bucket's crown and running down its side —
-// the gang paints what it wears (a clean grey pail read as a plain pot).
-const BUCKET = [
-  '....11111111111111111111....',
-  '...14PppppppPm44444444441...',
-  '...1PpPPPPPPPm55555544431...',
-  '...1PpPPPPPm4444444444331...',
-  '..1PpPPPPPm44444444443331...',
-  '..1PPPPPm4444444444443331...',
-  '..1PPPPm44444444444443331...',
-  '..1PPPm44PP44444444443331...',
-  '.1PPPm444P4444444444433331..',
-  '.1PPm444444444444444433331..',
-  '.1Pm3333333333333333333331..',
-  '1uuuu333PPPP333yyyy33qqqq31.',
-  '1uuuu333PPPP333yyyy33qqqq31.',
-  '.uu......PP.....yy....qq....',
-  '.uu......PP.....yy....qq....',
-  '..........P.....yy..........',
-  '................y...........',
-]
-
-function smudge(): Kit {
-  const bucket: Part[] = [
-    { name: 'bucket-helm', grid: BUCKET.slice(0, 13), at: 'head', x: 65, y: 1 },
-    { name: 'bucket-drips', grid: BUCKET.slice(13), at: 'head', x: 65, y: 14, ink: false },
-    { name: 'bucket-bail', grid: ['B..........................B', 'B..........................B', '.B........................B.', '..BB....................BB..', '....BBBBBBBBBBBBBBBBBBBB....'], at: 'head', x: 65, y: 9, ink: false },
+// ──────────────────────────────────────────────────────────── GNAWBONE ──
+// Butcherblock's road (the `smudge` id, Oct 2026: it wore the old house's
+// paint): marsh goblins who raid the smokehouse barges for salt and meat. The
+// tell: a boar's skull for a helm, snout forward (tusks at T4, a bone crown at
+// T5); a meat hook for the torch; a hide pauldron; a smoke rack of meat; salt
+// sacks in the basket and a salt pouch to throw; the keg heaped with salt
+// under twine, crossed bones on a hide label. Greedy, swaggering, secretly
+// squeamish: the skull is worn so nobody sees them flinch.
+function gnawbone(): Kit {
+  const skull = [
+    'TT.....................T....',
+    'TtT...................TtT...',
+    '.TtT.................TtT....',
+    '..TtT......55555555.TtT.....',
+    '...TtTT..5TTTTTTTT5TtT......',
+    '.....tTT5TTTTTTTTTTTT5......',
+    '.......5TTTTTTTTTTTTT55.....',
+    '......5TTTTTTTBBTTTTTTT5....',
+    '......5TTTTTTBBBBTTTTTTTT5..',
+    '......5TTTTTTTBBTTTTTTTTTT5.',
+    '......t5TTTTTTTTTTTTTTTTTBT5',
+    '.......t555TTTTTTTTTTTTTTTt5',
+    '.........ttt5t5t5t5t5t5ttt..',
+    '..........t.t.t.t.t.t.t.....',
   ]
-  const top = ['.....111111111111.....', '....14444444444441....', '....14555555554441....', '....14444444444331....', '....13333333333331....', '....1PP33uu33yy331....']
-  const stack: Part[] = [{ name: 'top-bucket', grid: top, at: 'head', x: 68, y: -5 }, ...bucket]
+  const tusks = overlay(skull, ['TT', 'Tt', '.Tt', '..T'], 25, 12)
+  const bigSkull = overlay(
+    tusks,
+    ['TT.........', 'TtT........', '.TtT.......', '..TtT......', '...TtTT....'],
+    0,
+    0,
+  )
+  const boneCrown = ['.T...T...T...T.', 'TtT.TtT.TtT.TtT', 'TtTTTtTTTtTTTtT', 'ttttttttttttttt']
+  const hat: Part = { name: 'boar-skull', grid: skull, at: 'head', x: 64, y: 2 }
+  const hatBig: Part = { name: 'tusked-skull', grid: bigSkull, at: 'head', x: 64, y: 1 }
   const crown: Part[] = [
-    {
-      name: 'brush-crown',
-      grid: [
-        '..PP......uu......yy......qq..',
-        '.PPPP....uuuu....yyyy....qqqq.',
-        '.PPPP....uuuu....yyyy....qqqq.',
-        '.tttt....tttt....tttt....tttt.',
-        '.4444....4444....4444....4444.',
-        '.4344....4344....4344....4344.',
-        '..bb......bb......bb......bb..',
-        '..bb......bb......bb......bb..',
-        '..bb......bb......bb......bb..',
-        '111111111111111111111111111111',
-        '1tPttttuttttyttttqttttPttttut1',
-        '111111111111111111111111111111',
-      ],
-      at: 'head',
-      x: 64,
-      y: 2,
-    },
+    { name: 'bone-crown', grid: boneCrown, at: 'head', x: 73, y: 2 },
+    { name: 'crowned-skull', grid: tusks, at: 'head', x: 64, y: 2 },
   ]
-  const palette = ['....ttttttt....', '..ttttttttttt..', '.ttPPtttuuttbt.', 'tttPPtt.uuttbbt', 'tttttt...ttbbt.', '.ttyytqqtttbt..', '...tttttttt....']
-  const canvas = ['WWWWWWWWWWW', 'W555555555W', 'W5PP5555u5W', 'W5PPP55uu5W', 'W555y55u55W', 'W55yyy5555W', 'W55555q555W', 'WWWWWWWWWWW', '.B.......B.']
-  const smock = [
-    '..5555555....',
-    '.555555555...',
-    '.5u55555P5...',
-    '5555555555...',
-    '55555y555555.',
-    '5P5555555u55.',
-    '555555555555.',
-    '55q5555P55555',
-    '5555555555555',
-    '555u55y555555',
-    '5555555555P55',
-    '5y555555q5555',
-    '555555555555.',
-    '55P55u55555..',
-    '5555555555...',
-    '555555y5.....',
-    '.5.5.5.......',
-  ]
-  const brush = ['.PPPPPPP.', 'PPPPPPPPP', 'PPPPPPPPP', 'PtPtPtPtP', 'ttttttttt', 'ttttttttt', 'ttttttttt', '.4444444.', '.4343434.', '.4444444.', '...bbb...', '...bBb...', '...bBb...']
-  const tubes = [
-    '..44.....44........44.....',
-    '.4PP4...4uu4......4yy4....',
-    '.4PP4...4uu4..44..4yy4....',
-    '.4PP4...4uu4.4qq4.4yy4.44.',
-    '.4PP4...4uu4.4qq4.4yy44vv4',
-    '.4PP4..4uuu4.4qq4.4yy44vv4',
-    '.4PP44.4uu4..4qq4.4yy4.4vv4',
-    '4PPP4..4uu4..4qq4.4yy4.4vv4',
-    '4PP4...4uu4.4qqq4.4yy4.4vv4',
-    '4PP4...4uu4.4qq4..4yy4.4vv4',
-  ]
-  const bail = bailArc(49, 25)
+  const hook = ['..3333...', '.34..43..', '34....43.', '4......3.', '4......3.', '.4.....3.', '..1....3.', '.......3.', '......aaa', '......aaa', '.......b.']
+  const hide = ['....aaaaaaa....', '..aaabaaabaa...', '.aabaaaabaaab..', 'aaaaabaaaaaaab.', 'abBabBabBabBa..', '.B.B.B.B.B.B...']
+  const rack = ['BBBBBBBBBBB', '.R...R...R.', '.Rr..Rr..Rr', '.RR..RR..RR', '.Rp..Rr..Rp', '.RR..RR..RR', '.R...R....R', '.....R.....']
+  const cape = ['..aaaaaaa....', '.aaaaaaaaa...', '.aabaaaaaaa..', 'aaaabaaaaaa..', 'aaaaaabaaaaa.', 'aabaaaaaaaaa.', 'aaaaaaaabaaa.', 'aaaabaaaaaaaa', 'aaaaaaaaaabaa', 'abaaaaaaaaaaa', 'aaaaaabaaaaaa', 'aaaaaaaaaaaa.', 'TaTaTaTaTaTa.', '.T.T.T.T.T...']
+  const sack = ['..b...', '.TbT..', 'TTTTT.', 'T5TTTT', 'TTTT5T', 'TTTTTT', '.TTTT.']
+  const salt = ['.........W..........', '......WWW4WW........', '....WW44WWW4WWW.....', '...W4WWWsWW44WW4W...', '.WWW4WWW4WWWWsWWWWW.', 'W4WWWWsWWW4WWWWW4WWW', 'sWWsWWWWsWWWsWWWWsWs']
   return {
-    weapon: { name: 'paintbrush', grid: brush, at: 'tip', x: -4, y: -12 },
-    hat: bucket,
-    hatBig: stack,
+    weapon: { name: 'meat-hook', grid: hook, at: 'tip', x: -6, y: -10 },
+    hat,
+    hatBig,
     crown,
-    pad: { name: 'palette-pauldron', grid: palette, ...PAD_AT },
-    back: { name: 'canvas-flag', grid: banner(canvas, 46), at: 'head', x: 56, y: -8, layer: 'under' },
-    mantle: { name: 'splattered-smock', grid: smock, at: 'head', x: 50, y: 30, layer: 'under' },
-    tntHat: onTnt(bucket),
-    tntHatBig: onTnt(stack),
+    pad: { name: 'hide-pauldron', grid: hide, ...PAD_AT },
+    back: { name: 'smoke-rack', grid: banner(rack, 46), at: 'head', x: 56, y: -8, layer: 'under' },
+    mantle: { name: 'hide-cape', grid: cape, at: 'head', x: 50, y: 30, layer: 'under' },
+    tntHat: onTnt(hat),
+    tntHatBig: onTnt(hatBig),
     tntCrown: onTnt(crown),
-    tntPad: { name: 'palette-pauldron', grid: palette, ...TNT_PAD_AT },
-    tntBack: { name: 'canvas-flag', grid: banner(canvas, 34), at: 'head', x: 3, y: -8, layer: 'under' },
-    tntStandard: { name: 'easel-standard', grid: banner(overlay(smock.slice(0, 12), canvas, 1, 1), 42), at: 'head', x: 0, y: -16, layer: 'under' },
-    pack: { name: 'paint-tubes', grid: tubes, at: 'head', x: 3, y: 22, layer: 'under' },
-    bomb: { name: 'paint-bomb', grid: ['...bb...', '...tt...', '..4PP4..', '.4PPPP4.', '4PPWPPP4', '4PPPPPP4', '4PPPPPP4', '.4PPPP4.', '..4444..', '...P....', '...P....'], at: 'hand', x: -4, y: -6 },
-    cap: [
-      { name: 'wire-bail', grid: bail, at: 'head', x: 1, y: 3 },
-      { name: 'tin-lid-knob', grid: ['..444..', '.43334.', '4333334'], at: 'head', x: 22, y: 15 },
-    ],
+    tntPad: { name: 'hide-pauldron', grid: hide, ...TNT_PAD_AT },
+    tntBack: { name: 'smoke-rack', grid: banner(rack, 34), at: 'head', x: 3, y: -8, layer: 'under' },
+    tntStandard: { name: 'hide-standard', grid: banner(cape.slice(0, 12), 42), at: 'head', x: 0, y: -16, layer: 'under' },
+    pack: { name: 'salt-sacks', grid: overlay(overlay(overlay(['', ''], sack, 0, 5), sack, 7, 1), sack, 14, 6), at: 'head', x: 4, y: 20, layer: 'under' },
+    bomb: { name: 'salt-pouch', grid: ['...bb...', '..bTTb..', '..TTTT..', '.TTWTTT.', 'TT5TTTTT', 'TTTTT5TT', '.TTTTTT.', '..TTTT..'], at: 'hand', x: -4, y: -4 },
+    cap: { name: 'salt-heap', grid: salt, at: 'head', x: 16, y: 12 },
     capBig: [
-      { name: 'wire-bail', grid: bail, at: 'head', x: 1, y: 3 },
-      { name: 'brush-in-tin', grid: ['..PPP..', '.PPPPP.', '.PtPtP.', '..ttt..', '..444..', '..bbb..', '..bbb..', '..bbb..', '.43334.', '4333334'], at: 'head', x: 22, y: 8 },
+      { name: 'salt-heap', grid: salt, at: 'head', x: 16, y: 12 },
+      { name: 'bone-in-salt', grid: ['TT.', 'TtT', '.Tt', '..T', '..T', '..T', '.TT'], at: 'head', x: 27, y: 6 },
     ],
     bossCap: [
-      { name: 'wire-bail', grid: bail, at: 'head', x: 1, y: 3 },
-      {
-        name: 'brush-crown',
-        grid: ['.PP...uu...yy...qq.', 'PPPP.uuuu.yyyy.qqqq', 'tttt.tttt.tttt.tttt', '4444.4444.4444.4444', '.bb...bb...bb...bb.', '1111111111111111111', '1tPttuttyttqttPttt1', '1111111111111111111'],
-        at: 'head',
-        x: 16,
-        y: 6,
-      },
+      { name: 'salt-heap', grid: salt, at: 'head', x: 16, y: 12 },
+      { name: 'bone-crown-keg', grid: ['.T....T....T.', 'TtT..TtT..TtT', '.t....t....t.'], at: 'head', x: 19, y: 9 },
     ],
     mark: {
-      name: 'paint-splotch',
+      name: 'crossed-bones',
       grid: [
-        '.....PPPP......uuu.......',
-        '...PPPPPPPP..uuuuuu......',
-        '..PPPPPWPPPPuuuWuuuuu....',
-        '.PPPPPPPPPPPuuuuuuuuuyy..',
-        'PPPPPPPPPPyyyyuuuuuyyyyy.',
-        '.PPPPPPPPyyyyyyyyyyyyWyyy',
-        '..PPPPPPqqqqyyyyyyyyyyyy.',
-        '...PPP.qqqqqqqyyyyyyyy...',
-        '.......qqqqqqqq..yyyy....',
-        '........qqqqq............',
-      ],
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        'abbbbbbbbTT........TTbbbbbba',
+        'abbbbbbbbbTT......TTbbbbbbba',
+        'abbbbbbbbbbTTT..TTTbbbbbbbba',
+        'abbbbbbbbbbbbTTTTbbbbbbbbbba',
+        'abbbbbbbbbbTTT..TTTbbbbbbbba',
+        'abbbbbbbbbTT......TTbbbbbbba',
+        'abbbbbbbbTT........TTbbbbbba',
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      ].map((r) => r.replace(/\./g, 'b')),
       at: 'head',
-      x: 13,
-      y: 46,
-      inkOver: false,
+      x: 12,
+      y: 47,
     },
-    hoops: {
-      name: 'paint-drips',
-      grid: ['PP...uu....yy...qq...PP..', 'PP...uu....yy...qq...PP..', 'PP...uu....yy...qq...PP..', '.P...uu....yy....q...PP..', '.P....u....yy....q....P..', '......u.....y.........P..', '............y............'],
-      at: 'head',
-      x: 13,
-      y: 58,
-      ink: false,
-    },
-    sides: [lugs('paint-tube', ['.33.', '.44.', '4uu4', '4uu4', '4uu4', '4uu4', '4444', '.44.'], 29, false)[0], lugs('paint-tube', ['.33.', '.44.', '4PP4', '4PP4', '4PP4', '4PP4', '4444', '.44.'], 29, false)[1]],
-    bands: { light: '4', dark: '3', hi: '5' },
+    hoops: { name: 'twine', grid: ['b.a.b.a.b.a.b.a.b.a.b.a.b', '.........................', ...Array(13).fill('.........................'), 'a.b.a.b.a.b.a.b.a.b.a.b.a'], at: 'head', x: 13, y: 43, ink: false },
+    sides: lugs('hanging-bone', ['.TT', 'TtT', '.T.', '.T.', '.T.', 'TtT', '.TT'], 30),
+    bands: { light: 'a', dark: 'b', hi: 't' },
   }
 }
 
@@ -912,176 +847,99 @@ function silkcut(): Kit {
   }
 }
 
-// ──────────────────────────────────────────────────────────── HEXMOON ──
-// Moonquill's road: rune-masked moonlit hexers. The tell: pale crescent horns
-// rising from the head and a pale moon mask; quill staves; scroll cases; the
-// keg is a rune urn with silver hoops and a crescent lid.
-
-function hexmoon(): Kit {
-  const horns = sym([
-    'CC...........',
-    'CsC..........',
-    '.CsC.........',
-    '.CsC.........',
-    '.CssC........',
-    '..CsC........',
-    '..CssC.......',
-    '...CssC......',
-    '...CsssC.....',
-    '....CsssCCCCC',
-    '.....CCssssss',
-    '....nnnnnnnnn',
-    '....nUcUcUcUc',
-    '....nnnnnnnnn',
-  ])
-  const fullMoon = overlay(horns, ['.....CCCCC.....', '...CCsssssCC...', '..CssssWWsssC..', '..CsssWWWsssC..', '..CssssWssssC..', '...CCsssssCC...', '.....CCCCC.....'], 6, 0)
-  const halo = sym([
-    '.......CCCCCC',
-    '....CCC......',
-    '...C.........',
-    '..C......c...',
-    '.C...c.......',
-    '.C...........',
-    'C.....CC.....',
-    'C.....CsC....',
-    'C......CsC...',
-    'C......CssC..',
-    'C.......CssCC',
-    'C........ssss',
-    '.C.....nnnnnn',
-    '.C.....nUcUcU',
-    '..C....nnnnnn',
-  ])
-  const pad = ['...nnnnnnnnn...', '.nnUUUUUUUUUnn.', 'nUUUUcUUUcUUUUn', 'nUUUUUcccUUUUUn', 'nUUUUcUUUcUUUUn', '.nnnnnnnnnnnnn.']
-  const scroll = ['TTTTTTTTT', 'tTTTTTTTt', '.T5c55T..', '.T55c5T..', '.Tc555T..', '.T5c55T..', '.T55c5T..', 'tTTTTTTTt', 'TTTTTTTTT']
-  const stars = [
-    '..nnnnnnn....',
-    '.nUUUUUUUn...',
-    '.nUUCUUUUUn..',
-    'nUUUUUUUcUn..',
-    'nUUUUUUUUUn..',
-    'nUcUUUUCUUUn.',
-    'nUUUUUUUUUUn.',
-    'nUUUUUcUUUUUn',
-    'nUUCUUUUUUUUn',
-    'nUUUUUUUUcUUn',
-    'nUUUUUUUUUUUn',
-    'nUUUcUUUCUUn.',
-    'nUUUUUUUUUn..',
-    'nUCUUUUUcn...',
-    'nUUUUUUUn....',
-    'nUUUcUUn.....',
-    '.nnnnn.......',
+// ──────────────────────────────────────────────────────────── SPORECAP ──
+// Greenvial's road (the `hexmoon` id, Oct 2026: it wore the old house's
+// moon): hollow-dwellers who brew Greenvial's spoiled stock into rot. The
+// tell: a huge spotted cap with glowing gills (a second cap at T4, a ring of
+// toadstools at T5); a swinging spore censer; a moss pauldron; rot jars and a
+// puffball to throw; the keg a verdigris vat foaming over, a window of
+// bubbling rot, toadstools at its sides. Dreamy, patient, gleefully filthy.
+function sporecap(): Kit {
+  const cap = [
+    '..........vvvvvvvv..........',
+    '.......vvvvCCvvvvvvvv.......',
+    '.....vvvvvCCCCvvvvvvvvv.....',
+    '....vvCCvvvCCvvvvvCCvvvv....',
+    '...vvCCCCvvvvvvvvCCCCvvvv...',
+    '..vvvvCCvvvvvCCvvvvCCvvvVV..',
+    '..vvvvvvvvvvCCCCvvvvvvvVVV..',
+    '.vvvvvvvvvvvvCCvvvvvvvVVVVV.',
+    '.VvvvvvvvvvvvvvvvvvvvVVVVVV.',
+    'VVVVVVVVVVVVVVVVVVVVVVVVVVVV',
+    '.hGhGhGhGhGhGhGhGhGhGhGhGhG.',
+    '..h.h.h.h.h.h.h.h.h.h.h.h...',
   ]
-  // Round 3: a fat crescent moon on a rune plinth (the thin hooked one on a
-  // stem read as a spanner).
-  const crescent = ['....CCC.......', '..CCss........', '..Csss........', '.Csss.........', '.Csss.........', '.Csss.........', '.CsssC........', '.Cssss........', '.CssssC.......', '..CssssCC.....', '..CssssssCCC..', '....Csssss....', '..nnnnnnnnn...', '.nUcUcUcUcUn..']
+  const small = ['..vvvv..', '.vCvvvv.', 'vvvvCvvV', 'VVVVVVVV', '.hGhGhG.', '...55...', '...55...']
+  const doubleCap = overlay(['', '', '', '', '', '', '', ...cap], small, 12, 0)
+  const toadstool = ['.vvv.', 'vCvvV', 'VVVVV', '.h5h.', '..5..']
+  const ring = overlay(overlay(overlay(overlay(['', '', '', '', ''], toadstool, 0, 0), toadstool, 7, 0), toadstool, 14, 0), toadstool, 21, 0)
+  const hat: Part = { name: 'spotted-cap', grid: cap, at: 'head', x: 63, y: 1 }
+  const hatBig: Part = { name: 'double-cap', grid: doubleCap, at: 'head', x: 63, y: -6 }
+  const crown: Part[] = [
+    { name: 'toadstool-ring', grid: ring, at: 'head', x: 65, y: -4 },
+    { name: 'crowned-cap', grid: cap, at: 'head', x: 63, y: 1 },
+  ]
+  const censer: Part[] = [
+    { name: 'spore-censer', grid: ['...BB...', '..B..B..', '.333333.', '33h3h333', '3hhhhhh3', '33333333', '.3h3h33.', '..3333..', '...bb...', '...bb...'], at: 'tip', x: -4, y: -9 },
+    { name: 'censer-spores', grid: ['.h...z.', 'h.h.z.z', '.h...z.', '...h...'], at: 'tip', x: -5, y: -15, ink: false },
+  ]
+  const moss = ['....GGGGGGG....', '..GGgGGGgGGG...', '.GgGGhGGGgGGG..', 'GGGgGGGGhGGGGG.', 'GhGGGgGGGGgGG..', '.G.G.G.G.G.G...']
+  const cloak = ['..GGGGGGG....', '.GGgGGGGGG...', '.GGGGGhGGGG..', 'GGgGGGGGGGG..', 'GGGGGGGgGGGG.', 'GhGGGGGGGGGG.', 'GGGGgGGGhGGG.', 'GGGGGGGGGGGGG', 'GgGGGGhGGGGGG', 'GGGGGGGGGgGGG', 'GGhGGGGGGGGGG', 'GGGGGgGGGGGG.', 'gGgGgGgGgGgG.', '.g.g.g.g.g...']
+  const jar = ['.bb.', 'cccc', 'czqc', 'cqqc', 'cqzc', 'cccc']
+  const ooze = ['....gggggggggg....', '..gghhggggggghgg..', '.ghhgggGggggggggg.', 'gggggGgggggGggggg.', 'g.gg.G.ggg.g.gg.g.', 'g..g...g.g...g..g.', '...g.....g.......g', '.........g........']
   return {
-    weapon: {
-      name: 'quill-staff',
-      grid: [
-        '.......WW',
-        '......WWs',
-        '.....WWsW',
-        '....WWsWW',
-        '...WWsWW.',
-        '...WsWW..',
-        '..WWsW...',
-        '..WsWW...',
-        '.WWsW....',
-        '.WsWW....',
-        '.WsW.....',
-        '.sWW.....',
-        '.s.......',
-        'cqc......',
-        'qzq......',
-        'cqc......',
-        '.b.......',
-        '.B.......',
-      ],
-      at: 'tip',
-      x: -1,
-      y: -17,
-    },
-    // Round 2: the mask is ON the face now, eye holes and all (it was a pale
-    // disc stuck to the hood above the face, which read as a moon badge).
-    face: { name: 'moon-mask', grid: ['.CCCCCCCC.', 'CCnnCCCnnC', 'CCnnCCCnnC', 'CCCCCCCCCs', '.CCCssCCs.', '..CC..Cs..'], at: 'head', x: 79, y: 35 },
-    hat: { name: 'crescent-horns', grid: horns, at: 'head', x: 66, y: 1 },
-    hatBig: { name: 'full-moon-horns', grid: fullMoon, at: 'head', x: 66, y: 1 },
-    crown: { name: 'moon-halo', grid: halo, at: 'head', x: 66, y: 0 },
-    pad: { name: 'rune-pauldron', grid: pad, ...PAD_AT },
-    back: { name: 'scroll-pole', grid: banner(scroll, 46), at: 'head', x: 56, y: -8, layer: 'under' },
-    mantle: { name: 'star-mantle', grid: stars, at: 'head', x: 50, y: 30, layer: 'under' },
-    tntHat: onTnt({ name: 'crescent-horns', grid: horns, at: 'head', x: 66, y: 1 }),
-    tntHatBig: onTnt({ name: 'full-moon-horns', grid: fullMoon, at: 'head', x: 66, y: 1 }),
-    tntCrown: onTnt({ name: 'moon-halo', grid: halo, at: 'head', x: 66, y: 0 }),
-    tntPad: { name: 'rune-pauldron', grid: pad, ...TNT_PAD_AT },
-    tntBack: { name: 'scroll-pole', grid: banner(scroll, 34), at: 'head', x: 3, y: -8, layer: 'under' },
-    tntStandard: { name: 'star-standard', grid: banner(stars.slice(0, 13), 42), at: 'head', x: 4, y: -16, layer: 'under' },
-    // Round 1: a full moon mask hid the goggles — the bomber's own tell.
-    // The goggles stay; their lenses glow moonlight instead.
-    tntRecolor: [{ box: [33, 14, 64, 33], map: { '#f4e341': 'C', '#d9945f': 'u' } }],
-    // Round 2: three scroll cases standing in the basket, capped in silver
-    // (it was a navy shelf jutting out of the basket's side with three
-    // cream knobs on it — a tray of eggs).
-    pack: {
-      name: 'scroll-cases',
-      grid: [
-        '.........ss...........',
-        '........sCCs..........',
-        '...ss...nUUn..........',
-        '..sCCs..nUcn....ss....',
-        '..nUUn..nUUn...sCCs...',
-        '..nUcn..nUUn...nUUn...',
-        '..nUUn..nUcn...nUcn...',
-        '..nUUn..nUUn...nUUn...',
-        '..nUcn..nUUn...nUUn...',
-        '..nUUn..nUUn...nUcn...',
-      ],
-      at: 'head',
-      x: 4,
-      y: 23,
-      layer: 'under',
-    },
-    bomb: { name: 'hex-vial', grid: ['...bb...', '...44...', '..4cc4..', '.4cqqc4.', '4cqzqqc4', '4qqqzqq4', '4qqqqqq4', '.4qqqq4.', '..4444..'], at: 'hand', x: -4, y: -4 },
-    cap: { name: 'crescent-lid', grid: crescent, at: 'head', x: 19, y: 5 },
-    capBig: [
-      { name: 'crescent-lid', grid: crescent, at: 'head', x: 19, y: 5 },
-      { name: 'lid-star', grid: ['..W..', '.WWW.', 'WWsWW', '.WWW.', '..W..'], at: 'head', x: 28, y: 4 },
+    weapon: censer,
+    hat,
+    hatBig,
+    crown,
+    pad: { name: 'moss-pauldron', grid: moss, ...PAD_AT },
+    back: { name: 'glow-cap-pole', grid: pole(small, 3, 40), at: 'head', x: 55, y: -6, layer: 'under' },
+    mantle: { name: 'moss-cloak', grid: cloak, at: 'head', x: 50, y: 30, layer: 'under' },
+    tntHat: onTnt(hat),
+    tntHatBig: onTnt(hatBig),
+    tntCrown: onTnt(crown),
+    tntPad: { name: 'moss-pauldron', grid: moss, ...TNT_PAD_AT },
+    tntBack: { name: 'glow-cap-pole', grid: pole(small, 3, 28), at: 'head', x: 2, y: -6, layer: 'under' },
+    tntStandard: { name: 'moss-standard', grid: banner(cloak.slice(0, 12), 42), at: 'head', x: 0, y: -16, layer: 'under' },
+    tntRecolor: [{ box: [33, 14, 64, 33], map: { '#f4e341': 'h', '#d9945f': 'g' } }],
+    pack: { name: 'rot-jars', grid: overlay(overlay(overlay(['', ''], jar, 1, 4), jar, 7, 1), jar, 13, 5), at: 'head', x: 4, y: 22, layer: 'under' },
+    bomb: [
+      { name: 'puffball', grid: ['..5555..', '.5TT555.', '5T55t555', '5555555t', '55t5555t', '.555t5t.', '..tttt..'], at: 'hand', x: -4, y: -3 },
+      { name: 'puff-spores', grid: ['h.z', '.h.', 'z.h'], at: 'hand', x: -1, y: -7, ink: false },
     ],
-    bossCap: {
-      name: 'full-moon-crown',
-      grid: ['.....CCCCC.....', '...CCsssssCC...', '..CssssWWsssC..', '.CsssssWWWsssC.', '.CssssssWssssC.', '.CsssssssssssC.', '..CCsssssssCC..', '....CCCCCCC....', 'nnnnnnnnnnnnnnn', 'nUcUcUcUcUcUcUn'],
-      at: 'head',
-      x: 18,
-      y: 6,
-    },
+    cap: { name: 'rot-ooze', grid: ooze, at: 'head', x: 17, y: 14, ink: false },
+    capBig: [
+      { name: 'rot-ooze', grid: ooze, at: 'head', x: 17, y: 14, ink: false },
+      { name: 'vat-toadstool', grid: ['..vvvv..', '.vCvvvv.', 'vvvvCvvV', 'VVVVVVVV', '...55...', '...55...'], at: 'head', x: 22, y: 7 },
+    ],
+    bossCap: [
+      { name: 'rot-ooze', grid: ooze, at: 'head', x: 17, y: 14, ink: false },
+      { name: 'vat-toadstools', grid: ring.map((r) => r.slice(0, 19)), at: 'head', x: 17, y: 8 },
+    ],
     mark: {
-      name: 'rune-mark',
-      // Round 3: a crescent between two stars, big enough to read on the
-      // field (the old glyph was a 5-px squiggle: a navy box at size).
+      name: 'rot-window',
       grid: [
-        'nnnnnnnnnnnnnnnnnnnnnnnnnnnn',
-        'nUUUUUUUUUUUCCCCUUUUUUUUUUUn',
-        'nUUUcUUUUUUCCUUUUUUUUUUcUUUn',
-        'nUUcccUUUUUCCUUUUUUUUUcccUUn',
-        'nUUUcUUUUUUCCUUUUUUUUUUcUUUn',
-        'nUUUUUUUUUUCCUUUUUUUUUUUUUUn',
-        'nUUUUUUUUUUUCCCCUUUUUUUUUUUn',
-        'nUUUUUUUUUUUUUUUUUUUUUUUUUUn',
-        'nnnnnnnnnnnnnnnnnnnnnnnnnnnn',
+        '1111111111111111111111111111',
+        '1cccccccccccccccccccccccccc1',
+        '1cqqqqzqqqqqhqqqqqzqqqqqqc1.',
+        '1cqzqqqqqhqqqqqzqqqqqhqqqc1.',
+        '1cqqqhqqqqqqzqqqqqqqqqqzqc1.',
+        '1cqqqqqqzqqqqqqqhqqqzqqqqc1.',
+        '1cqhqqqqqqqqqqqqqqqqqqhqqc1.',
+        '1cccccccccccccccccccccccccc1',
+        '1111111111111111111111111111',
       ],
       at: 'head',
       x: 12,
       y: 47,
     },
-    hoops: { name: 'star-studs', grid: ['W...C...W...C...W...C...W', '.........................', '.........................', '.........................', '.........................', '.........................', '.........................', '.........................', '.........................', '.........................', '.........................', '.........................', '.........................', '.........................', '.........................', 'C...W...C...W...C...W...C'], at: 'head', x: 13, y: 43, ink: false },
-    sides: lugs('rune-stone', ['.333', '33333', '3c3c3', '33c33', '3c3c3', '33333', '.222'], 31),
-    bands: { light: 's', dark: 'c', hi: 'C' },
+    hoops: { name: 'moss-patches', grid: ['GG.....Gg.......GG....gG.', '.G......G........G.....G.', ...Array(12).fill('.........................'), 'gG......GG.....Gg.....GG.', '.G.......G......G......G.'], at: 'head', x: 13, y: 42, ink: false },
+    sides: lugs('side-toadstool', ['.vvv', 'vCvvV', 'VVVVV', '..55.', '..55.'], 30),
+    bands: { light: 'z', dark: 'u', hi: 'C' },
   }
 }
 
-const KITS: Readonly<Record<ClanId, () => Kit>> = { cinder, smudge, delve, silkcut, hexmoon }
+const KITS: Readonly<Record<ClanId, () => Kit>> = { cinder, smudge: gnawbone, delve, silkcut, hexmoon: sporecap }
 const kitCache = new Map<ClanId, Kit>()
 function kitOf(clan: ClanId): Kit {
   const hit = kitCache.get(clan)
@@ -1102,7 +960,7 @@ export function recipeFor(clan: ClanId, faction: Faction, tier: number): Recipe 
   return recipeFromKit(kitOf(clan), faction, tier)
 }
 
-/** The ladder over any kit (the shipped clans', or a proposal's — `enemy-clans-proposals.ts`). */
+/** The ladder over any kit. */
 export function recipeFromKit(k: Kit, faction: Faction, tier: number): Recipe {
   if (faction === 'torch') {
     const head = tier >= 5 ? k.crown : tier >= 4 ? k.hatBig : k.hat
