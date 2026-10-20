@@ -6,7 +6,7 @@ import { ACHIEVEMENTS, newlyEarned, type RunFacts } from '../game/data/achieveme
 import { addFelled, sanitizeFelled } from '../game/data/enemyKnowledge'
 import { readMet, type IdeaId } from './staging'
 import { rollItemUnlock, rollUnlock, watchLevelFor } from '../game/run/watch'
-import { RANDOM_UNLOCK_SKILLS, SIGNATURE_SKILLS } from '../game/data/skills'
+import { isNamedId, RANDOM_UNLOCK_SKILLS, SIGNATURE_SKILLS } from '../game/data/skills'
 import { SOVEREIGN_ITEM_KINDS, UNLOCK_ITEM_KINDS } from '../game/data/itemKinds'
 import { rollSovereign } from '../game/run/charter'
 import { COMPANY_IDS, isCompanyId, type CompanyId } from '../game/data/companies'
@@ -96,8 +96,14 @@ export interface Codex {
    * clans: read as the clans of the roads you have earned standing on.
    */
   clans?: string[]
+  /**
+   * The fused skills made (skill fusion, Oct 2026, `data/fusions.ts`), in the
+   * order found: the Codex reveals a recipe's result once it is here. Absent
+   * on a save from before fusion: none found. Known fusion ids only, each once.
+   */
+  fusions?: string[]
 }
-const freshCodex = (): Codex => ({ enemies: [], relics: [], felled: {}, clans: [] })
+const freshCodex = (): Codex => ({ enemies: [], relics: [], felled: {}, clans: [], fusions: [] })
 const strList = (raw: unknown): string[] =>
   Array.isArray(raw) ? [...new Set(raw.filter((x): x is string => typeof x === 'string'))] : []
 function migrateCodex(raw: unknown, standing?: Record<CompanyId, number>): Codex {
@@ -107,7 +113,7 @@ function migrateCodex(raw: unknown, standing?: Record<CompanyId, number>): Codex
   const clans = Array.isArray(o.clans)
     ? strList(o.clans).filter(isClanId)
     : COMPANY_IDS.filter((c) => (standing?.[c] ?? 0) > 0).map((c) => CLAN_OF_COMPANY[c])
-  return { enemies: strList(o.enemies), relics: strList(o.relics), felled: sanitizeFelled(o.felled), clans }
+  return { enemies: strList(o.enemies), relics: strList(o.relics), felled: sanitizeFelled(o.felled), clans, fusions: strList(o.fusions).filter(isNamedId) }
 }
 function migrateAchievements(raw: unknown): Record<string, number> {
   const out: Record<string, number> = {}
@@ -749,8 +755,11 @@ export const useMetaStore = create<MetaState>()(
         const merge = (a: string[], b?: string[]) => (b && b.some((x) => !a.includes(x)) ? [...a, ...b.filter((x, i) => !a.includes(x) && b.indexOf(x) === i)] : a)
         const prevClans = cur.clans ?? []
         const clans = merge(prevClans, seen.clans)
-        const next: Codex = { enemies: merge(cur.enemies, seen.enemies), relics: merge(cur.relics, seen.relics), felled: cur.felled, clans }
-        if (next.enemies !== cur.enemies || next.relics !== cur.relics || clans !== prevClans) set({ codex: next })
+        // Fusions found: known fused ids only.
+        const prevFusions = cur.fusions ?? []
+        const fusions = merge(prevFusions, seen.fusions?.filter(isNamedId))
+        const next: Codex = { enemies: merge(cur.enemies, seen.enemies), relics: merge(cur.relics, seen.relics), felled: cur.felled, clans, fusions }
+        if (next.enemies !== cur.enemies || next.relics !== cur.relics || clans !== prevClans || fusions !== prevFusions) set({ codex: next })
       },
 
       recordMet: (ids) => {

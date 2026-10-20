@@ -146,7 +146,7 @@ describe('feats pay gold into the bank (state/metaStore)', () => {
     expect(m.bank).toBe(190 + 60)
     expect(migrateMeta({ watchMarks: 90 }, 3).bank).toBe(NEW_BANK)
     expect(m.achievements).toEqual({})
-    expect(m.codex).toEqual({ enemies: [], relics: [], felled: {}, clans: [] })
+    expect(m.codex).toEqual({ enemies: [], relics: [], felled: {}, clans: [], fusions: [] })
     const junk = migrateMeta({ achievements: { act_two: 'x', nope: 1, first_light: -4 }, codex: { enemies: ['a', 'a', 3], relics: 'no' } }, 4)
     expect(junk.achievements).toEqual({ act_two: 1, first_light: 1 })
     expect(junk.codex.enemies).toEqual(['a'])

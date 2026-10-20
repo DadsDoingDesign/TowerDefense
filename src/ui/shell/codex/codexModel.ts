@@ -16,7 +16,7 @@ import { ENEMY_TYPES } from '../../../game/data/enemies'
 import { knowledgeOf } from '../../../game/data/enemyKnowledge'
 import { RELICS, relicMark, relicSupported } from '../../../game/data/relics'
 import { RELIC_NOTE } from '../relicOffers'
-import { ALL_SKILLS, skillHeadline } from '../../../game/data/skills'
+import { ALL_SKILLS, isNamedId, NAMED_MERGES, skillById, skillHeadline } from '../../../game/data/skills'
 import { ITEM_KINDS, itemPoolFor, kindEffect, kindSlot, SOVEREIGN_LEVEL } from '../../../game/data/itemKinds'
 import { itemIcon, type IconKey } from '../../../game/data/iconAtlas'
 import { companyById, type CompanyId } from '../../../game/data/companies'
@@ -65,6 +65,18 @@ export interface CodexEntry {
   chips: string[]
   does: string
   how: string
+  /**
+   * A named merge's recipe (Oct 2026): [base, card], always shown in that
+   * order — the tile is "A ← B → ?" until it is made once — its tier, and,
+   * once found, its twist.
+   */
+  fusion?: { parts: { name: string; icon: IconKey }[]; tier: 1 | 2; twist?: string }
+}
+
+/** One row of the Merges build tree: a tier-1 named merge, and the greater one it builds into. */
+export interface CodexTreeRow {
+  entry: CodexEntry
+  greater?: CodexEntry
 }
 
 export interface CodexSection {
@@ -73,6 +85,8 @@ export interface CodexSection {
   hue?: string
   entries: CodexEntry[]
   have: number
+  /** Laid out as a build tree (the Merges section): its rule line, its count, its rows. */
+  tree?: { rule: string; made: string; rows: CodexTreeRow[] }
 }
 
 export interface CodexFeat {
@@ -187,7 +201,65 @@ function skillsTab(v: CodexView): CodexTab {
       LEVEL_HUE[l],
     ),
   )
-  return tab('skills', 'Skills', 'boon', sections)
+  return tab('skills', 'Skills', 'boon', [...sections, fusionsSection(v)])
+}
+
+/** The Merges section's hue: the house accent (a merge is no one level). */
+export const FUSION_HUE = 'var(--accent)'
+/** The section's one-line rule (the whole system, said once). */
+export const MERGE_RULE = 'Drop a card on a held skill to merge it in. The skill in the slot leads: order matters.'
+/** How far the player is: the named merges made out of all of them. */
+export const mergesMade = (n: number, of: number): string => `Made ${n} of ${of} named merges.`
+/** What an undiscovered named merge's card says under its recipe: how to find it, never what it is. */
+export const fusionHow = (base: string, card: string): string => `Drop ${card} on ${base} at a level-up to find out.`
+/** What a found one's says. */
+export const fusionFound = (base: string, card: string): string => `Found. Drop ${card} on ${base} at a level-up.`
+
+/**
+ * Merging (Oct 2026, `docs/SKILL_FUSION.md` § 4): every NAMED merge as a tile,
+ * laid out as its build tree — each tier-1 recipe in a row, and the greater
+ * one it builds into beside it (`tree`). Its parts always show, in their
+ * order (base ← card) — a recipe is a goal to chase, not a secret — and its
+ * result is "?" until the player has made it once (`codex.fusions`). The
+ * plain merges are not listed: every ordered pair makes one, and the rule
+ * line says so.
+ */
+function fusionsSection(v: CodexView): CodexSection {
+  const found = new Set(v.codex.fusions ?? [])
+  const entry = (f: (typeof NAMED_MERGES)[number]): CodexEntry => {
+    const has = found.has(f.id)
+    const parts = f.parts.map((id) => {
+      const k = skillById(id)!
+      // A greater recipe's base is a named merge: locked, it shows as "?" too.
+      const hidden = isNamedId(id) && !found.has(id)
+      return { name: hidden ? '???' : k.name, icon: skillHeadline(k).icon }
+    })
+    const named = f.named!
+    return {
+      id: `fusion:${f.id}`,
+      name: has ? f.name : '???',
+      locked: !has,
+      badge: has ? String(f.level) : '',
+      hue: FUSION_HUE,
+      // Locked, the tile draws its parts and a "?" (`CodexScreen.Art`); found, its own mark.
+      icon: has ? f.icon : parts[0].icon,
+      company: has ? f.company : undefined,
+      chips: has ? [`${named.tier === 2 ? 'Greater' : 'Named'} · ${LEVEL_NAME[f.level]}`, companyById(f.company).name] : [named.tier === 2 ? 'Greater' : 'Named'],
+      does: has ? f.lines.slice(0, -1).join(' ') : '',
+      how: has ? fusionFound(parts[0].name, parts[1].name) : fusionHow(parts[0].name, parts[1].name),
+      fusion: { parts, tier: named.tier, ...(has ? { twist: f.twist } : {}) },
+    }
+  }
+  const tier1 = NAMED_MERGES.filter((f) => f.named!.tier === 1)
+  const rows = tier1.map((f) => {
+    const g = NAMED_MERGES.find((x) => x.parts[0] === f.id)
+    return { entry: entry(f), ...(g ? { greater: entry(g) } : {}) }
+  })
+  // The grid's own order (paging, NEW, the desk's side card) reads the tree's:
+  // the branches (each tier 1, then its greater), then the leaves.
+  const entries = [...rows.filter((r) => r.greater).flatMap((r) => [r.entry, r.greater!]), ...rows.filter((r) => !r.greater).map((r) => r.entry)]
+  const out = section('Merges', entries, FUSION_HUE)
+  return { ...out, tree: { rule: MERGE_RULE, made: mergesMade(out.have, entries.length), rows } }
 }
 
 /** A signature skill's chip (Draft 4 · B): the company's own, from its loyalty track. */

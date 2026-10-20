@@ -133,6 +133,22 @@ export function describeMods(m: EffectMods): string[] {
   if (m.chainEvery) out.push(`every ${ordinal(m.chainEvery.every)} attack jumps to ${m.chainEvery.chains} more for ${pct(m.chainEvery.dmgFrac)}`)
   if (m.spitEvery) out.push(`every ${ordinal(m.spitEvery.every)} attack poisons the ${m.spitEvery.count} nearest ${Math.round(m.spitEvery.dps)}/s`)
   if (m.root) out.push(m.root.count >= 50 ? `roots what it hits for ${m.root.dur}s` : `roots ${m.root.count} it hits for ${m.root.dur}s`)
+  // The fusions' twists (Oct 2026): each line is the rule the engine applies.
+  if (m.ricochet) out.push(`crits bounce to 1 more enemy for ${pct(m.ricochet)}`)
+  if (m.overkill) out.push(`a kill's excess damage carries ${pct(m.overkill)} to the nearest enemy`)
+  if (m.arcCarry) out.push('its arcs carry its burn and slow')
+  if (m.critFreeze) out.push(`+${pct(m.critFreeze.chance)} crit on slowed enemies; those crits deal ${pct(m.critFreeze.bonus)} more and freeze them ${m.critFreeze.dur}s`)
+  if (m.focusStack) out.push(`each hit on an enemy makes the next on it +${pct(m.focusStack.step)}, to +${pct(m.focusStack.cap)}`)
+  if (m.heldBurst) out.push(`a held enemy that dies bursts ${pct(m.heldBurst.frac)} of its hit around it`)
+  if (m.firstHit) out.push(`its first hit on each enemy deals ${pct(m.firstHit)} more`)
+  if (m.contagion) out.push(`poisoned enemies spread it to ${m.contagion.count} near when they die`)
+  if (m.deathBurst) out.push(`enemies it set burning burst ${pct(m.deathBurst.frac)} of its hit when they die`)
+  if (m.fanEvery) out.push(`every ${ordinal(m.fanEvery.every)} attack also shoots ${m.fanEvery.count} more for ${pct(m.fanEvery.frac)}`)
+  if (m.executeReady) out.push('an execution readies its next attack')
+  if (m.frostSplash) out.push(`hits on slowed enemies splinter ${pct(m.frostSplash.frac)} to those near`)
+  if (m.critAura) out.push(`heroes near it crit +${pct(m.critAura.add)}`)
+  if (m.quakeEvery) out.push(`every ${ordinal(m.quakeEvery.every)} attack shakes enemies near its target for ${pct(m.quakeEvery.frac)}`)
+  if (m.frenzy) out.push(`each kill +${pct(m.frenzy.rate)} attack speed for the wave, to +${pct(m.frenzy.cap)}`)
   return out
 }
 

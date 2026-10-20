@@ -63,6 +63,8 @@ import { EffectLine } from './EffectLine'
 import { HeroCard } from './HeroCard'
 import { TeamPanel } from './TeamPanel'
 import { openUpgrade, UpgradePanel } from './UpgradePanel'
+import { FuseBeat } from './FuseBeat'
+import { useFuseBeat } from './fuseBeat'
 import { canSpend, heroUpgrades, placementsCount, upgradeButtonName, upgradeWaiting } from './heroCard'
 import { fieldConflicts, fieldStanding, gearLocked } from '../../state/game/selectors'
 import { useRunClan } from './useRunClan'
@@ -85,7 +87,7 @@ export function DetailBand({ offers }: { offers: Offer[] }) {
   // LS3: gear and the pack arrive with the first win's spoils. Until then the
   // context panel has the band to itself (`.sh-detail.no-gear`).
   const shown = useShown('gear')
-  // SK1: a skill choice has the band to itself — three skills, a swap row and
+  // SK1: a skill choice has the band to itself — three skills, the slots they drop on and
   // a stat bump do not fit a third of a phone, and gear is not what is being
   // decided. The gear and pack return the moment the choice is made or put off.
   const choosing = useSkillChoiceOpen()
@@ -583,8 +585,11 @@ function ContextPanel({ offers }: { offers: Offer[] }) {
   const screen = useGameStore((s) => s.screen)
   const focusedNode = useMapFocus((s) => s.nodeId)
   const heroTab = useGameStore((s) => s.heroTab)
+  // Merging: for a moment after a merge the panel IS the fuse beat.
+  const fusing = useFuseBeat((s) => !!s.show)
 
   if (stranded) return <StrandedPanel />
+  if (fusing) return <FuseBeat />
   // A focused map node takes the panel whatever else is selected: it is the
   // decision in front of the player, and it must be readable BEFORE the march
   // is committed (Wave 1).

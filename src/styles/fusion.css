@@ -1,0 +1,508 @@
+/* ---------------------------------------------------------------------------
+   Skill fusion (Oct 2026, docs/SKILL_FUSION.md § 5)
+
+   Every colour here is a design token: a fusion's element (`--fz`, set from
+   `fusions.ELEMENT_TOKEN`: fire is --fighter, frost --info …) and the house
+   panels. No frame inside the Context panel's frame: the tag is a strip of
+   ink on the token's lip, the twist a rule on the card's edge.
+   --------------------------------------------------------------------------- */
+
+/* ---- the offer: a card that fuses wears a quiet tag in its token's corner
+   (positioned on the token, `.pk-tok` is relative), clear of the picture */
+.fz-tok {
+  display: grid;
+  place-items: center;
+}
+.fz-tag {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  padding: 0 4px;
+  border-radius: var(--r-xs, 3px);
+  background: color-mix(in srgb, var(--fz, var(--accent)) 26%, var(--panel));
+  color: var(--text);
+  box-shadow: inset 0 -1px 0 var(--fz, var(--accent));
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 13px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.pk.compact .fz-tag {
+  top: 3px;
+  right: 3px;
+}
+
+/* ---- the fusion's card: its recipe, what it does, its twist on a rule */
+.fz-recipe {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 6px;
+  margin: 0;
+  font-size: var(--fs-xs);
+}
+.fz-recipe .field-v {
+  font-weight: 700;
+}
+.fz-plus {
+  color: var(--fz, var(--accent));
+  font-weight: 800;
+}
+.fz-twist {
+  padding-left: 8px;
+  border-left: 2px solid var(--fz, var(--accent));
+  font-weight: 700;
+}
+.fz-twist .fw-i {
+  vertical-align: -3px;
+}
+
+/* ---- the hero card: a fused skill's slot wears a small fused corner */
+.sh-sk.fused {
+  box-shadow: inset 0 -2px 0 var(--fz, var(--accent));
+}
+.sh-sk.fused::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 6px;
+  height: 6px;
+  rotate: 45deg;
+  background: var(--fz, var(--accent));
+  pointer-events: none;
+}
+
+/* ---- the fuse beat: the two cards slam together into the one ---------- */
+.fz-beat {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 150px;
+  cursor: pointer;
+  overflow: hidden;
+}
+.fz-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 140px;
+  /* The slam lands with a small thump (Full only: Light and off have no flash). */
+  animation: fz-thump 160ms ease-out var(--fz-slide) both;
+}
+.fz-beat[data-fz='light'] .fz-stage,
+.fz-beat[data-fz='off'] .fz-stage {
+  animation: none;
+}
+@keyframes fz-thump {
+  0% {
+    translate: 0 3px;
+  }
+  40% {
+    translate: 0 -2px;
+  }
+  100% {
+    translate: 0 0;
+  }
+}
+.fz-part,
+.fz-result {
+  grid-area: 1 / 1;
+}
+.fz-part {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: min(42%, 150px);
+  padding: 10px 8px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-strong);
+  background: var(--panel-2);
+  font-size: var(--fs-xs);
+  text-align: center;
+}
+.fz-part.a {
+  justify-self: start;
+  animation:
+    fz-in-a var(--fz-slide) cubic-bezier(0.6, 0, 1, 0.6) both,
+    fz-gone 70ms ease-in var(--fz-slide) forwards;
+}
+.fz-part.b {
+  justify-self: end;
+  animation:
+    fz-in-b var(--fz-slide) cubic-bezier(0.6, 0, 1, 0.6) both,
+    fz-gone 70ms ease-in var(--fz-slide) forwards;
+}
+@keyframes fz-in-a {
+  from {
+    translate: 0 0;
+  }
+  to {
+    translate: calc(50% + 6px) 0;
+  }
+}
+@keyframes fz-in-b {
+  from {
+    translate: 0 0;
+  }
+  to {
+    translate: calc(-50% - 6px) 0;
+  }
+}
+@keyframes fz-gone {
+  to {
+    opacity: 0;
+    scale: 1.15;
+  }
+}
+.fz-flash {
+  position: absolute;
+  inset: -20%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--fz) 85%, transparent), transparent);
+  opacity: 0;
+  pointer-events: none;
+  /* Forwards only: before the slam it is not there at all. */
+  animation: fz-flash var(--fz-flash) ease-out var(--fz-slide) forwards;
+}
+@keyframes fz-flash {
+  0% {
+    opacity: 0.95;
+    scale: 0.4;
+  }
+  100% {
+    opacity: 0;
+    scale: 1.15;
+  }
+}
+.fz-result {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--fz, var(--accent));
+  background: color-mix(in srgb, var(--fz, var(--accent)) 14%, var(--panel-2));
+  animation: fz-rise var(--fz-settle) cubic-bezier(0.2, 1.5, 0.4, 1) calc(var(--fz-slide) + 50ms) both;
+}
+@keyframes fz-rise {
+  from {
+    opacity: 0;
+    scale: 0.8;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+.fz-result-art {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--fz, var(--accent)) 28%, var(--panel));
+}
+.fz-result-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.fz-kicker {
+  font-size: var(--fs-micro);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.fz-result strong {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  line-height: 1.1;
+}
+.fz-result-twist {
+  font-size: var(--fs-xs);
+  line-height: 1.3;
+}
+/* Light: the cards cut in and slam — no flash (`fuseBeatPlan` drops it). */
+.fz-beat[data-fz='light'] .fz-result {
+  animation-timing-function: ease-out;
+}
+/* Reduced motion: nothing moves. The fused card stands, still. */
+.fz-beat[data-fz='off'] .fz-part {
+  display: none;
+}
+.fz-beat[data-fz='off'] .fz-result {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fz-part {
+    display: none;
+  }
+  .fz-result,
+  .fz-flash {
+    animation: none;
+  }
+  .fz-flash {
+    display: none;
+  }
+}
+
+/* ---- the Codex: a recipe's tile is its two parts and its result -------
+   An undiscovered fusion is not a silhouette: its parts are known (a recipe
+   is a goal to chase), so they show, dimmed, and only the result is a "?". */
+.cx-fz {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+}
+.cx-art .cx-fz .fw-i,
+.cx-card-art .cx-fz .fw-i {
+  transform: none;
+}
+/* (Doubled class: codex.css is loaded after this file, lazily, and its
+   silhouette rule is as specific as these.) */
+.cx-tile.locked .cx-art:has(.cx-fz.cx-fz),
+.cx-card.locked .cx-card-art > .cx-fz.cx-fz {
+  filter: saturate(0.7) opacity(0.85);
+}
+.cx-card-art .cx-fz .fw-i {
+  --fw-i-size: 32px;
+}
+.cx-card-art .cx-fz-q {
+  width: 32px;
+  height: 32px;
+  font-size: 18px;
+}
+.cx-fz-op {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--muted);
+}
+.cx-fz-q {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--r-xs, 3px);
+  border: 1px dashed var(--line-strong);
+  font-weight: 800;
+  font-size: 12px;
+  color: var(--muted);
+}
+.cx-card-recipe {
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+.cx-card-twist {
+  margin: 0;
+  padding-left: 8px;
+  border-left: 2px solid var(--lv, var(--accent));
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+
+/* ---- the drop (Oct 2026): the hero's slots as targets under the strip ----
+   One row of three, the same boxes for every hero (no wiggle: a focus or a
+   drag changes the words in them, never their size). Each says what it holds
+   and, for the card in hand, what it makes there. */
+.sk-strip .pk-tok {
+  /* A press on a skill token may become a drag: the pointer keeps it (no
+     scroll steals it) and no text is picked up. */
+  touch-action: none;
+  user-select: none;
+}
+.sk-slots {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 6px 0;
+}
+.sk-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  min-height: calc(var(--hit-min) + 12px);
+  padding: 4px 6px;
+  border-radius: var(--r-sm);
+  border: 1px dashed var(--line-strong);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-xs);
+  text-align: left;
+  cursor: pointer;
+}
+.sk-slot.fused {
+  border-style: solid;
+  box-shadow: inset 0 -2px 0 var(--fz, var(--accent));
+}
+.sk-slot:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.sk-slot.idle:disabled {
+  opacity: 1;
+}
+.sk-slot-held {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.sk-slot-held .fw-i {
+  flex: none;
+}
+.sk-slot-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+.sk-slot-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px dashed var(--line-strong);
+}
+.sk-slot-to {
+  /* Two lines at most, in a box whose height is fixed: "→ Berserk Arc Spark" reads whole. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  min-width: 0;
+  min-height: 2.5em;
+  overflow: hidden;
+  line-height: 1.25;
+  color: var(--accent);
+  font-weight: 800;
+  font-size: var(--fs-micro);
+}
+.sk-slot-to.muted {
+  color: var(--muted);
+}
+.sk-slot.named .sk-slot-to,
+.sk-star {
+  color: var(--gold-text);
+}
+.sk-slot.on {
+  border-style: solid;
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface));
+}
+.sk-slot.named.on {
+  border-color: var(--gold-text);
+  background: color-mix(in srgb, var(--gold-text) 14%, var(--surface));
+}
+/* The slot under a dragged card. */
+.sk-slot.over {
+  border-style: solid;
+  border-color: var(--accent);
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: 1px;
+}
+.sk-slot.named.over {
+  border-color: var(--gold-text);
+  outline-color: color-mix(in srgb, var(--gold-text) 55%, transparent);
+}
+/* The card in hand: a copy under the pointer, lifted a little (still under
+   reduced motion — no lift, no tilt, no shadow). */
+.sk-ghost {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  /* Above the finger, so the slot under it stays readable. */
+  margin: -64px 0 0 -40px;
+  padding: 6px 10px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--accent);
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: var(--fs-xs);
+  pointer-events: none;
+  box-shadow: 0 6px 0 var(--shade);
+  rotate: -3deg;
+  scale: 1.06;
+}
+.sk-ghost.still {
+  rotate: none;
+  scale: none;
+  box-shadow: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sk-ghost {
+    rotate: none;
+    scale: none;
+    box-shadow: none;
+  }
+}
+.fz-line {
+  font-size: var(--fs-xs);
+}
+
+/* ---- the hero card: a plain skill's build, after its sentence */
+.fz-builds {
+  color: var(--muted);
+}
+
+/* ---- the Codex's Merges build tree: the rule, the count, then rows of a
+   tier-1 named merge and the greater one it builds into, joined by an arrow */
+.cx-tree-rule {
+  margin: 0 0 2px;
+  font-size: var(--fs-sm);
+}
+.cx-tree-made {
+  margin: 0 0 8px;
+  font-size: var(--fs-xs);
+  font-style: italic;
+  color: var(--muted);
+}
+.cx-tree {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cx-tree-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 14px minmax(0, 1fr);
+  align-items: center;
+}
+.cx-tree-leaves {
+  margin-top: 8px;
+}
+.cx-tree-link {
+  position: relative;
+  height: 2px;
+  background: var(--line-strong);
+}
+.cx-tree-link::after {
+  content: '';
+  position: absolute;
+  right: -1px;
+  top: -3px;
+  border: 4px solid transparent;
+  border-left-color: var(--line-strong);
+  border-right: 0;
+}
+.cx.is-desk .cx-tree {
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}

@@ -1,6 +1,8 @@
 import type { CompanyId } from './companies'
 import type { CoreStats, EffectMods } from '../types'
 import type { IconKey } from './iconAtlas'
+import { FUSIONS, type FusionDef, type FusionElement } from './fusions'
+import { deliveryOf, INFUSIONS, reexpress, TAG_ELEMENT } from './infusions'
 
 /**
  * ---------------------------------------------------------------------------
@@ -75,7 +77,38 @@ export interface Skill {
    * cards first (`run/standing.rollStandingCard`). Every card names one.
    */
   company: CompanyId
+  /**
+   * A MERGED skill (`run/fusion.ts`): [base, infusion] — the skill that was in
+   * the slot and the card dropped on it. Its `mods` are the twist (or the
+   * re-expression) alone; `skillModsOf` adds the base and the share first.
+   */
+  parts?: readonly [string, string]
+  /** A merged skill's twist or re-expression, in one line ('' when no rule applies). */
+  twist?: string
 }
+
+/**
+ * A merged skill, as the library reads it (Oct 2026, `docs/SKILL_FUSION.md`):
+ * any held skill with a card poured in. Its `desc` is its root base's own
+ * sentence (the base keeps its identity) and `lines` what each infusion added,
+ * in order: the share's line, then its rule's or twist's.
+ */
+export interface MergedSkill extends Skill {
+  parts: readonly [string, string]
+  twist: string
+  /** The library skills in its slot, base first: at most `MAX_DEPTH`. */
+  chain: readonly string[]
+  /** What it adds over its root base, in order (each ≤ 80 characters). */
+  lines: readonly string[]
+  /** The named merge it is, if it is one (`data/fusions.ts`). */
+  named?: FusionDef
+  icon: IconKey
+  element: FusionElement
+  /** Every mods block it adds to a hero, in order: the base's, the share, the twist. */
+  expanded: readonly EffectMods[]
+}
+/** The old name: a named merge is the fusion of before (`data/fusions.ts`). */
+export type FusedSkill = MergedSkill
 
 const L1: Skill[] = [
   // ---- starters ------------------------------------------------------------
@@ -193,11 +226,208 @@ const L3: Skill[] = [
   { id: 'tinkers_spark', name: 'Tinker’s Spark', level: 3, company: 'scrolls', desc: 'Every 5th attack jumps to 3 more enemies in full; hits 25% harder.', mods: { chainEvery: { every: 5, chains: 3, dmgFrac: 1 }, damageMult: 1.25 }, from: 'New with the peoples’ rosters (the gnomes)' },
 ]
 
+/**
+ * The library: every skill a card, a pool, a crate or a track can deal. The
+ * merged skills are NOT in it (`mergedById`): they come only from merging, so
+ * no pool, unlock, starter or signature list built off this ever holds one.
+ */
 export const ALL_SKILLS: readonly Skill[] = [...L1, ...L2, ...L3]
 const BY_ID = new Map(ALL_SKILLS.map((s) => [s.id, s]))
 
-export const skillById = (id: string): Skill | undefined => BY_ID.get(id)
-export const isSkillId = (v: unknown): v is string => typeof v === 'string' && BY_ID.has(v)
+// ---------------------------------------------------------------------------
+// Merged skills (Oct 2026): any held skill with a card poured in
+// ---------------------------------------------------------------------------
+
+/** A slot holds at most this many library skills: a base and two infusions (a greater named merge is three). */
+export const MAX_DEPTH = 3
+
+const NAMED_BY_ID = new Map(FUSIONS.map((f) => [f.id, f]))
+const NAMED_BY_ORDER = new Map(FUSIONS.map((f) => [`${f.parts[0]}<${f.parts[1]}`, f]))
+const MERGED = new Map<string, MergedSkill | null>()
+
+/** The larger of two values of one field (a number, or each field of a block). */
+function bestField<T>(a: T, b: T): T {
+  if (typeof a === 'number' && typeof b === 'number') return (a >= b ? a : b) as T
+  if (a && b && typeof a === 'object') {
+    const out: Record<string, unknown> = { ...(a as object) }
+    for (const [k, v] of Object.entries(b as object)) {
+      const w = out[k]
+      out[k] = typeof v === 'number' && typeof w === 'number' ? Math.max(v, w) : (w ?? v)
+    }
+    return out as T
+  }
+  return a ?? b
+}
+
+/**
+ * The share an infusion lends, stacked on what the base already does: a burn
+ * onto a burn adds its damage (the longer duration kept), a slow onto a slow
+ * its slow (to 60%), a jump's or an aura's share its strength, a rush its
+ * rate, an execute its threshold, a stun its chance. Everything else is added
+ * as it is (`mergeMods` folds it with the rest of the hero). Without this a
+ * share the base already had was worth nothing: `mergeMods` keeps the best of
+ * a burn, not the sum.
+ */
+export function stackShare(base: readonly EffectMods[], share: EffectMods): EffectMods {
+  const top = <K extends keyof EffectMods>(k: K): EffectMods[K] => {
+    let best: EffectMods[K] = undefined
+    for (const m of base) if (m[k] != null) best = best == null ? m[k] : bestField(best, m[k])
+    return best
+  }
+  const out: EffectMods = { ...share }
+  const burn = top('burn')
+  if (share.burn && burn) out.burn = { dps: burn.dps + share.burn.dps, dur: Math.max(burn.dur, share.burn.dur) }
+  const chill = top('chill')
+  if (share.chill && chill) out.chill = { slow: Math.min(0.6, chill.slow + share.chill.slow), dur: Math.max(chill.dur, share.chill.dur) }
+  const shock = top('shock')
+  if (share.shock && shock) out.shock = { chains: Math.max(shock.chains, share.shock.chains), dmgFrac: shock.dmgFrac + share.shock.dmgFrac }
+  const trap = top('trap')
+  if (share.trap && trap) out.trap = { dps: trap.dps + share.trap.dps, slow: Math.min(0.6, trap.slow + share.trap.slow) }
+  const buff = top('buffAura')
+  if (share.buffAura && buff) out.buffAura = { damageMult: buff.damageMult + share.buffAura.damageMult - 1, radius: Math.max(buff.radius, share.buffAura.radius) }
+  const rate = top('rateAura')
+  if (share.rateAura && rate) out.rateAura = { rateMult: rate.rateMult + share.rateAura.rateMult - 1, radius: Math.max(rate.radius, share.rateAura.radius) }
+  const kill = top('killRush')
+  if (share.killRush && kill) out.killRush = { rate: kill.rate + share.killRush.rate, dur: Math.max(kill.dur, share.killRush.dur) }
+  const open = top('openingRush')
+  if (share.openingRush && open) out.openingRush = { rate: open.rate + share.openingRush.rate, dur: Math.max(open.dur, share.openingRush.dur) }
+  const thornsBurn = top('thornsBurn')
+  if (share.thornsBurn && thornsBurn) out.thornsBurn = { dps: thornsBurn.dps + share.thornsBurn.dps, dur: Math.max(thornsBurn.dur, share.thornsBurn.dur) }
+  const spit = top('spitEvery')
+  if (share.spitEvery && spit) out.spitEvery = { every: Math.min(spit.every, share.spitEvery.every), count: Math.max(spit.count, share.spitEvery.count), dps: spit.dps + share.spitEvery.dps, dur: Math.max(spit.dur, share.spitEvery.dur) }
+  const chain = top('chainEvery')
+  if (share.chainEvery && chain) out.chainEvery = { every: Math.min(chain.every, share.chainEvery.every), chains: Math.max(chain.chains, share.chainEvery.chains), dmgFrac: chain.dmgFrac + share.chainEvery.dmgFrac }
+  const execute = top('execute')
+  if (share.execute && execute) out.execute = execute + share.execute
+  const stun = top('stunChance')
+  if (share.stunChance && stun) out.stunChance = stun + share.stunChance
+  return out
+}
+
+/** The library skills in a held skill's slot, base first (a library card is its own). Empty for an unknown id. */
+export function chainOf(id: string): readonly string[] {
+  if (BY_ID.has(id)) return [id]
+  return mergedById(id)?.chain ?? []
+}
+
+/**
+ * What dropping `card` onto the held skill `base` makes — its id — or null
+ * when it cannot: the card is not a library card, it is already in the slot,
+ * or the slot is at `MAX_DEPTH`. The id is a named merge's (`fz_*`) when the
+ * order is a recipe's, and otherwise the plain merge's: `mx.` and the slot's
+ * skills, base first (`mx.frostbite.arc_spark`; onto a named base,
+ * `mx.fz_rimecut.anchor`). One id for one slot: a chain whose first two make a
+ * named merge is always written from it, so a save can hold nothing else.
+ */
+export function mergeId(base: string, card: string): string | null {
+  if (!BY_ID.has(card)) return null
+  const chain = chainOf(base)
+  if (!chain.length || chain.includes(card) || chain.length >= MAX_DEPTH) return null
+  const named = NAMED_BY_ORDER.get(`${base}<${card}`)
+  if (named) return named.id
+  return base.startsWith('mx.') ? `${base}.${card}` : `mx.${base}.${card}`
+}
+
+/** A merged skill's [base, card], read off its id; null for anything else. */
+function splitId(id: string): readonly [string, string] | null {
+  const named = NAMED_BY_ID.get(id)
+  if (named) return named.parts
+  if (!id.startsWith('mx.')) return null
+  const t = id.split('.')
+  if (t.length < 3) return null
+  return [t.length === 3 ? t[1] : t.slice(0, -1).join('.'), t[t.length - 1]]
+}
+
+function buildMerged(id: string): MergedSkill | null {
+  const split = splitId(id)
+  if (!split) return null
+  const [baseId, cardId] = split
+  const named = NAMED_BY_ID.get(id)
+  // A plain merge's id must be the one `mergeId` writes for its slot; a named
+  // merge's parts are its recipe (the shape test holds each to a valid slot).
+  if (!named && mergeId(baseId, cardId) !== id) return null
+  const base = skillById(baseId)
+  const card = BY_ID.get(cardId)
+  const inf = INFUSIONS[cardId]
+  if (!base || !card || !inf) return null
+  const baseChain = chainOf(baseId)
+  if (baseChain.includes(cardId) || baseChain.length >= MAX_DEPTH) return null
+  const root = BY_ID.get(baseChain[0])!
+  const baseExpanded = expandedOf(baseId)
+  const share = stackShare(baseExpanded, inf.mods)
+  const rule = named ? null : ruleFor(baseId, cardId)
+  const extra: EffectMods = named ? named.mods : (rule?.mods ?? {})
+  const twist = named ? named.twist : (rule?.line ?? '')
+  const baseLines = (base as Partial<MergedSkill>).lines ?? []
+  return {
+    id,
+    name: named?.name ?? `${inf.adj} ${base.name}`,
+    level: Math.max(base.level, card.level) as SkillLevel,
+    company: named?.company ?? base.company,
+    desc: root.desc,
+    mods: extra,
+    from: `${base.name}, with ${card.name} poured in`,
+    parts: [baseId, cardId],
+    twist,
+    chain: [...baseChain, cardId],
+    lines: [...baseLines, inf.line, ...(twist ? [twist] : [])],
+    named,
+    icon: named?.icon ?? skillHeadline(root).icon,
+    element: named?.element ?? TAG_ELEMENT[inf.tag],
+    expanded: [...baseExpanded, share, ...(Object.keys(extra).length ? [extra] : [])],
+  }
+}
+
+/** The re-expression rule a card meets on a base (`infusions.reexpress`), read through the base's ROOT skill. */
+function ruleFor(baseId: string, cardId: string) {
+  const root = BY_ID.get(chainOf(baseId)[0])
+  const inf = INFUSIONS[cardId]
+  return root && inf ? reexpress(inf.tag, deliveryOf(root.mods), INFUSIONS[root.id].tag) : null
+}
+
+/**
+ * What the PLAIN merge of this order adds over its base — the stacked share
+ * and the rule — even where the order is a named merge's (which has its twist
+ * in place of the rule). The balance bench grades a named merge against this.
+ */
+export function plainExtra(baseId: string, cardId: string): EffectMods[] {
+  const inf = INFUSIONS[cardId]
+  if (!inf || !chainOf(baseId).length) return []
+  const rule = ruleFor(baseId, cardId)
+  return [stackShare(expandedOf(baseId), inf.mods), ...(rule && Object.keys(rule.mods).length ? [rule.mods] : [])]
+}
+
+/** A merged skill (named or plain) by its id; undefined for a library card or an id this build cannot read. */
+export function mergedById(id: string): MergedSkill | undefined {
+  if (BY_ID.has(id)) return undefined
+  if (!MERGED.has(id)) {
+    MERGED.set(id, null)
+    MERGED.set(id, buildMerged(id))
+  }
+  return MERGED.get(id) ?? undefined
+}
+
+/** Every mods block a held skill adds to a hero, in order. */
+function expandedOf(id: string): readonly EffectMods[] {
+  const k = BY_ID.get(id)
+  if (k) return [k.mods]
+  return mergedById(id)?.expanded ?? []
+}
+
+/** A skill a hero may hold: a library card or a merged skill. */
+export const skillById = (id: string): Skill | undefined => BY_ID.get(id) ?? mergedById(id)
+/** Any id a hero may hold (`hero.skills`): a library card or a merged skill. */
+export const isSkillId = (v: unknown): v is string => typeof v === 'string' && (BY_ID.has(v) || !!mergedById(v))
+/** A library card (never a merged skill): what pools, unlocks and the meta save may hold. */
+export const isCardId = (v: unknown): v is string => typeof v === 'string' && BY_ID.has(v)
+/** A merged skill's id (named or plain). */
+export const isMergedId = (v: unknown): v is string => typeof v === 'string' && !BY_ID.has(v) && !!mergedById(v)
+/** A named merge's id (`fz_*`): what the Codex records. */
+export const isNamedId = (v: unknown): v is string => typeof v === 'string' && NAMED_BY_ID.has(v)
+/** A named merge's recipe, by its id. */
+export const namedById = (id: string): FusionDef | undefined => NAMED_BY_ID.get(id)
+/** The named merge an ordered pair makes (base first), if any. */
+export const namedFor = (base: string, card: string): FusionDef | undefined => NAMED_BY_ORDER.get(`${base}<${card}`)
 
 /** The skills everyone has from the first run: three per level. */
 export const STARTER_SKILLS: readonly string[] = ALL_SKILLS.filter((s) => s.starter).map((s) => s.id)
@@ -233,10 +463,8 @@ export const skillLevelLabel = (level: number): string => `Level ${level}`
  */
 export function skillModsOf(s: { skills?: readonly string[] }): EffectMods[] {
   const out: EffectMods[] = []
-  for (const id of s.skills ?? []) {
-    const k = BY_ID.get(id)
-    if (k) out.push(k.mods)
-  }
+  // A merged skill is its base's mods, then the share, then its twist.
+  for (const id of s.skills ?? []) out.push(...expandedOf(id))
   return out
 }
 
@@ -410,7 +638,17 @@ const HEADLINES: readonly [keyof EffectMods, (m: EffectMods) => SkillHeadline][]
   ['vsWarded', () => ({ icon: 'armour', label: 'Vs warded' })],
 ]
 
-export function skillHeadline(skill: Pick<Skill, 'mods'>): SkillHeadline {
+export function skillHeadline(skill: Pick<Skill, 'mods'> & { id?: string }): SkillHeadline {
+  // A merged skill is pictured by its root base (a named merge by its own mark).
+  const f = skill.id && !BY_ID.has(skill.id) ? mergedById(skill.id) : undefined
+  if (f) return { icon: f.icon, label: 'Merge' }
   for (const [key, read] of HEADLINES) if (skill.mods[key] != null) return read(skill.mods)
   return { icon: 'boon', label: 'Skill' }
 }
+
+/**
+ * The named merges (`data/fusions.ts`), as skills: the specials the Codex
+ * lists, tier 1 then greater. Last in the file: building one reads the
+ * headline table above.
+ */
+export const NAMED_MERGES: readonly MergedSkill[] = FUSIONS.map((f) => mergedById(f.id)!)

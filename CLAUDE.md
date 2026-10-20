@@ -169,10 +169,42 @@ result. Append a short note to the review log when you're done.
   is made in the Context panel, `LevelUpPanel`). Eager non-shell CSS it (and
   BattleCanvas) needs lives in `src/styles/app.css`.
 - Skills (SK1): the library `src/game/data/skills.ts`; in-run rules (offers,
-  slots, swap/bump, the hero pick, a hire's skill, old-save mapping)
+  slots, the drop/bump, the hero pick, a hire's skill, old-save mapping)
   `src/game/run/skills.ts`; the generic unlock roll (`rollFromPool`)
   `src/game/run/watch.ts`. Every skill roll is a fresh RNG hashed from (run
   seed, purpose, hero id) — never a draw on a run stream.
+  Merging (Oct 2026, spec `docs/SKILL_FUSION.md`): a milestone's card is
+  DROPPED on one of the hero's slots (`run/skills.dropSkill(hero, card,
+  slot, pool, seed)`, the one move; pure rule `run/fusion.dropOnto`). Onto
+  an empty slot it is learned as itself; onto a held skill it MERGES in —
+  always allowed, the only way once all three are full: there is no swap.
+  ORDER MATTERS: the held skill is the BASE (keeps its name, numbers,
+  delivery), the card the INFUSION (lends its share and one re-expression
+  rule: `src/game/data/infusions.ts`, every library skill's tag, adjective
+  and share, and the thirteen rules keyed on the base's delivery, which use
+  only the fusion twists). Any ordered pair makes a skill ("Frozen Arc
+  Spark", id `mx.<base>.<card>`); twenty NAMED merges are the specials for
+  one ordered pair each (`src/game/data/fusions.ts`: fifteen tier 1, five
+  greater = a tier-1 named merge ← a Level 3 card; ids `fz_*`) — the same
+  base and share, their own twist in place of the rule. A slot holds at
+  most `MAX_DEPTH` (3) library skills, none twice. The resolver is in
+  `data/skills.ts` (`mergeId`, `mergedById`, `chainOf`, `plainExtra`;
+  `skillModsOf` expands a merge into its base, the stacked share, its
+  twist; `isSkillId` takes merged ids, `isCardId` library cards only,
+  `isNamedId` the twenty). Merged ids are never in any pool, unlock, crate
+  or track; the offer never deals a skill a slot already holds. A named
+  merge forms only by a drop in its order (parts held apart stay apart).
+  The fifteen twists are `EffectMods` fields at the end of `types.ts`, each
+  read in one place in the engine, inert unless granted, drawing nothing.
+  Discoveries are `codex.fusions` (named ids; metaStore, recorded by
+  `rosterSlice.dropSkill`); the Codex's Merges section is a build tree
+  ("base ← card → ?" until made). UI: the slot row, drag (pointer events),
+  tap-then-slot and keyboard in `LevelUpPanel` (words in
+  `ui/shell/skillDrop.ts`), the merge's `PickCard`, the fuse beat
+  (`FuseBeat.tsx`, timings `fuseBeat.ts`, cue `audio.sfxFusion`), the
+  merged slot (`.sh-sk.fused`); styles `src/styles/fusion.css`. Balance §7b
+  (`balance/fusion-eval.ts`). Tests `tests/fusion.test.ts`; shots
+  `scripts/fusion-shots.mjs`, cards `scripts/fusion-cards.mjs`.
 - The mercenary company (spec: `docs/MERCENARY_COMPANY.md`): gold is the only
   currency (purse for the run, bank at home, `metaStore.bank`). Companies
   `src/game/data/companies.ts`; contracts, stakes, city pay and cash-out

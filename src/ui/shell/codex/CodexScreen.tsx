@@ -9,6 +9,7 @@ import { codexModel, glossaryLines, type CodexEntry, type CodexTab, type CodexTa
 import { markCodexSeen, readCodexSeen } from './codexSeen'
 import { ThemeFx } from '../../theme/ThemeFx'
 import '../../../styles/codex.css'
+import '../../../styles/fusion.css'
 
 /**
  * The Codex (October 2026, Figma-free: mockups approved by the designer in
@@ -100,11 +101,39 @@ export function CodexScreen({ onBack }: { onBack: () => void }) {
                     {s.have}/{s.entries.length}
                   </span>
                 </div>
-                <div className="cx-grid">
-                  {s.entries.map((e) => (
-                    <Tile key={e.id} e={e} isNew={isNew(e)} on={e.id === shownId} onOpen={() => open(e.id)} />
-                  ))}
-                </div>
+                {s.tree ? (
+                  // The Merges build tree: the rule once, the count, then each
+                  // tier-1 named merge with the greater one it builds into.
+                  <>
+                    <p className="cx-tree-rule">{s.tree.rule}</p>
+                    <p className="cx-tree-made">{s.tree.made}</p>
+                    {/* The branches first (a tier 1 → the greater it builds into), then the leaves. */}
+                    <ul className="cx-tree" aria-label="Named merges that build into a greater one">
+                      {s.tree.rows
+                        .filter((r) => r.greater)
+                        .map((r) => (
+                          <li key={r.entry.id} className="cx-tree-row">
+                            <Tile e={r.entry} isNew={isNew(r.entry)} on={r.entry.id === shownId} onOpen={() => open(r.entry.id)} />
+                            <span className="cx-tree-link" aria-hidden="true" />
+                            <Tile e={r.greater!} isNew={isNew(r.greater!)} on={r.greater!.id === shownId} onOpen={() => open(r.greater!.id)} />
+                          </li>
+                        ))}
+                    </ul>
+                    <div className="cx-grid cx-tree-leaves">
+                      {s.tree.rows
+                        .filter((r) => !r.greater)
+                        .map((r) => (
+                          <Tile key={r.entry.id} e={r.entry} isNew={isNew(r.entry)} on={r.entry.id === shownId} onOpen={() => open(r.entry.id)} />
+                        ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="cx-grid">
+                    {s.entries.map((e) => (
+                      <Tile key={e.id} e={e} isNew={isNew(e)} on={e.id === shownId} onOpen={() => open(e.id)} />
+                    ))}
+                  </div>
+                )}
               </section>
             ))
           )}
@@ -173,6 +202,18 @@ function Tabs({ tabs, on, newIn, onPick }: { tabs: CodexTab[]; on: CodexTabId; n
 }
 
 function Art({ e }: { e: CodexEntry }) {
+  // An undiscovered named merge: its base, the card poured in, and a "?".
+  if (e.fusion && e.locked) {
+    return (
+      <span className="cx-fz">
+        <Icon name={e.fusion.parts[0].icon} />
+        <span className="cx-fz-op">←</span>
+        <Icon name={e.fusion.parts[1].icon} />
+        <span className="cx-fz-op">→</span>
+        <span className="cx-fz-q">?</span>
+      </span>
+    )
+  }
   return e.enemy ? <EnemyPortrait art={e.enemy} /> : e.icon ? <Icon name={e.icon} lg /> : null
 }
 
@@ -183,7 +224,13 @@ function Tile({ e, isNew, on, onOpen }: { e: CodexEntry; isNew: boolean; on: boo
       className={`cx-tile${e.locked ? ' locked' : ''}${on ? ' on' : ''}`}
       style={{ '--lv': e.hue } as CSSProperties}
       onClick={onOpen}
-      aria-label={e.locked ? `Locked. ${e.chips[0] ?? ''}` : `${e.name}${e.chips[0] ? `, ${e.chips[0]}` : ''}${isNew ? ', new' : ''}`}
+      aria-label={
+        e.fusion && e.locked
+          ? `Undiscovered named merge: ${e.fusion.parts[1].name} dropped on ${e.fusion.parts[0].name}`
+          : e.locked
+            ? `Locked. ${e.chips[0] ?? ''}`
+            : `${e.name}${e.chips[0] ? `, ${e.chips[0]}` : ''}${isNew ? ', new' : ''}`
+      }
       aria-haspopup="dialog"
     >
       {isNew && (
@@ -198,7 +245,7 @@ function Tile({ e, isNew, on, onOpen }: { e: CodexEntry; isNew: boolean; on: boo
             <Crest company={e.company} scale={1} />
           </span>
         )}
-        {e.locked && <Lock scale={1} />}
+        {e.locked && !e.fusion && <Lock scale={1} />}
         <span className="cx-art">
           <Art e={e} />
         </span>
@@ -220,10 +267,10 @@ function Card({ e, entries, onStep, onClose }: { e: CodexEntry; entries: CodexEn
           </button>
         )}
         <div className="cx-card-art" aria-hidden="true">
-          {e.locked && <Lock />}
+          {e.locked && !e.fusion && <Lock />}
           <Art e={e} />
         </div>
-        <h2 className="cx-card-name">{e.locked ? 'Not yet yours' : e.name}</h2>
+        <h2 className="cx-card-name">{e.fusion && e.locked ? 'Undiscovered' : e.locked ? 'Not yet yours' : e.name}</h2>
         <div className="cx-chips">
           {e.chips.map((c, n) => (
             <span key={c} className={`cx-chip${n === 0 ? ' lv' : ''}`}>
@@ -231,7 +278,9 @@ function Card({ e, entries, onStep, onClose }: { e: CodexEntry; entries: CodexEn
             </span>
           ))}
         </div>
+        {e.fusion && <p className="cx-card-recipe">{e.fusion.parts.map((p) => p.name).join(' ← ')}</p>}
         {e.does && <p className="cx-does">{e.does}</p>}
+        {e.fusion?.twist && <p className="cx-card-twist">{e.fusion.twist}</p>}
         <p className="cx-how">{e.how}</p>
         {entries.length > 1 && (
           <div className="cx-pager">

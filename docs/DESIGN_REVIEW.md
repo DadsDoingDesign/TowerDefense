@@ -5282,6 +5282,117 @@ the mark colours. `tests/nodeTitle.test.ts` holds every node's name to
 contrast. Reverting the boss entry fails it at 3.7:1. Checked in the running
 app at 390 px (art, spice, neutral): the head reads `rgb(239, 131, 104)`.
 
+### Skill fusion (Oct 2026)
+
+The designer: "It's also kinda boring having my skills replace each other.
+Can they merge and fuse into new combos and new types of skills." Spec
+`docs/SKILL_FUSION.md`. Two skills a hero holds fuse into one fused skill in
+one slot — both parts' effects plus a twist only the fusion has — so the
+level-15 swap becomes a combo to chase. Fifteen recipes, fifteen new engine
+twists, the offer annotated (never re-dealt), discoveries in the Codex.
+
+Rendered in the running app (`scripts/fusion-shots.mjs`, 390 × 844 at DPR 2
+and 1280 desk; Full, Light and reduced motion), cards by
+`scripts/fusion-cards.mjs`: `docs/ui-audit-2026-10/fusion/fusion.png` (the
+flow), `recipes.png` (every recipe and its twist), `fuse-beat.webp`.
+
+Scored against the checklist, and fixed on the way:
+- **The beat's first frames were wrong.** The flash was filled `both`, so it
+  glowed between the two cards before they met; it is `forwards` now (it is
+  not there until the slam). The part labels overlapped the rising result
+  for 120 ms; the parts now vanish in 70 ms and the result rises 50 ms after
+  the slam. Light drops the flash and the thump; reduced motion shows the
+  fused card still (checked frame by frame by seeking the animations, since a
+  screenshot is slower than a frame).
+- **Said twice.** The held pair's token wore a "Fuse" tag over the label
+  "Fuse" (tag dropped); the Codex's locked card named the parts in the recipe
+  and again in its how-line (now "Fuse these two on one hero at a level-up to
+  find out.").
+- **The tag sat on the picture.** "Fuses" now rides the token's corner,
+  clear of the icon, in the fusion's element colour.
+- **The Codex silhouetted what is known.** A recipe's parts are a goal, not
+  a secret: the locked tile shows them (dimmed) and a "?" for the result; the
+  silhouette rule is overridden for those tiles only.
+- **The hero card scrolled its own slots away.** A fused skill's read line
+  said its parts' sentence and its twist (four lines on a phone), and the
+  card scrolled the slot row half out of view to show it. It now reads
+  "Rimecut · Frostbite + Keen Eye — Crits on slowed …": the parts by name,
+  the twist in full; the parts' numbers are in "All stats".
+
+Benchmark: Hades' duo boons (two gods' boons meet in one new one, announced
+on the offer) and Slay the Spire's card synergies — the "Fuses" tag is the
+duo-boon frame done quietly, and the Codex's "A + B → ?" is the Hades
+codex's chase. Short of them: the beat is a panel moment, not a field one —
+nothing on the battlefield shows a fusion was made — and the twists' own
+effects on the field reuse existing telegraphs (spread ring, floaters).
+Every colour is a token (the element is `--fighter` / `--info` / `--rogue`
+…); no frame inside the Context panel's frame; the commit stays the plain
+accent button beside Start Wave, the screen's one primary.
+
+Balance (`balance/REPORT.md` §7b, and `docs/SKILL_FUSION.md` § 7): the
+twists sit at +10–25% damage-equivalent over their parts. The first recipe
+set let the three Level 1 starters fuse each other, and whole runs read the
+first-timer line 12% → 28%: fixed by pairing every Level 1 recipe with a
+card the collection unlocks. The veteran still read 47% / 18%, past its
+bands, until fusion opened at level 10 (a level-5 fusion's freed slot filled
+twice); every gate passes. Re-shot: the level-5 card now wears "Pairs" and
+says when they can fuse.
+
+### 2026-10-20 — merging, round two: drag and drop, and order matters
+
+The designer, on the fusion cards: fusing "should be more like how items
+merge in DOTA 2"; then "a similar interaction to drag and drop the items. If
+into an empty slot then it's kept as is, but if all slots are full you are
+forced to merge in"; then "the merging should be possible with any
+combination in any order, but order does matter and affects what's made".
+Spec rewritten (`docs/SKILL_FUSION.md`): a milestone card is DROPPED on a
+slot; onto a held skill it merges in, the held skill the base, the card the
+infusion; 2,450 ordered pairs each make a skill of their own, twenty named
+merges (fifteen tier 1, five greater) are the specials. No swap, no "Pairs",
+no level-10 gate.
+
+Rendered in the running app (`scripts/fusion-shots.mjs`: 390 × 844 at DPR 2
+and 1280 desk; Full and reduced motion; a real pointer drag held mid-air),
+cards by `scripts/fusion-cards.mjs`: `docs/ui-audit-2026-10/fusion/fusion.png`
+(the flow), `recipes.png` (the named merges as a build tree), `matrix.png`
+(6 × 6 ordered pairs), `fuse-beat.webp`.
+
+Scored against the checklist, and fixed on the way:
+- **The slot previews cut their own answer.** "→ Berserk Arc S…" — the one
+  word the slot exists to say. Two lines now, in a box of fixed height (no
+  wiggle between cards).
+- **The dragged card hid its target.** The copy sat under the fingertip, on
+  the slot it was over; it rides 64 px above the pointer now, and is still
+  (no tilt, no lift, no shadow) under reduced motion.
+- **The Codex tree was gappy.** Rows with no greater left a hole beside
+  every tile; the five branches (tier 1 → greater, with an arrow) now come
+  first, the ten leaves after in the usual grid.
+- **The beat's kicker wrapped to three lines** in the narrow Context panel
+  ("NAMED MERGE · FROSTBITE ← KEEN EYE"): it is the order alone now, the ★
+  rides the name.
+- **Half the matrix was blank.** A first rule set (13) left 14 of 30 starter
+  pairs with no rule — a merge that was a share and nothing to see. Six more
+  rules (crit, poison, fire, frost and speed into a plain hit or a hold, steel
+  into a status), all existing twists at a low strength, leave eight of thirty.
+- **Said twice.** Long Shot's share read "Reaches 20% farther." under Long
+  Reach's own "Reaches 20% farther." on Hail of Arrows; the share is 15% now.
+
+Benchmark: Dota 2's item recipes (the build tree, the parts named on the
+item, "?" until bought — the Codex tree is that view) and Hades' duo boons
+(the special for one pair, announced before it is taken — the ★ on the token
+and the slot). Short of them: the order is only visible on the card and the
+slot ("base ← card"), not on the field; and a plain merge's rule is a line of
+text, with no picture of its own. Every colour is a token (`--fz` from the
+element, `--gold-text` for a named merge); no frame inside the Context
+panel's frame; the commit stays the plain button beside Start Wave.
+
+Balance (`balance/REPORT.md` §7b, `docs/SKILL_FUSION.md` § 7): named merges
+are graded against the plain merge of their order (the twist alone); 17 of 20
+in +10–25%, none past +40%. The veteran fell from 45% / 16% to 38% / 12% (a
+full hero no longer swaps a Level 1 out for a Level 3 at full strength — it
+pours 40% of it in), inside both bands; the first-timer and zero-meta lines
+did not move.
+
 ### 2026-10-20 — the run map's header: quiet context, the selection leads
 
 The designer, on a 390 px shot of the run map with the foot of the contract

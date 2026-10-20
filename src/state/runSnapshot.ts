@@ -29,7 +29,7 @@
  *   reload, and without it a freshly generated item could collide with the id of
  *   a restored one.
  */
-import { isSkillId, STARTER_SKILLS } from '../game/data/skills'
+import { chainOf, isCardId, isSkillId, STARTER_SKILLS } from '../game/data/skills'
 import { BASIC_ITEM_KINDS, CLASSIC_ITEM_KINDS, isItemKind } from '../game/data/itemKinds'
 import { canonicalKind, renamedItemName } from '../game/data/peopleKinds'
 import { gripOf, type HeroStyle } from '../game/data/items'
@@ -550,6 +550,17 @@ const MOD_STRUCT_FIELDS = {
   chainEvery: ['every', 'chains', 'dmgFrac'],
   spitEvery: ['every', 'count', 'dps', 'dur'],
   root: ['count', 'dur'],
+  // The fusions' twists (Oct 2026, `data/fusions.ts`).
+  critFreeze: ['dur', 'bonus', 'chance'],
+  focusStack: ['step', 'cap'],
+  heldBurst: ['frac', 'radius'],
+  contagion: ['count', 'radius'],
+  deathBurst: ['frac', 'radius'],
+  fanEvery: ['every', 'count', 'frac'],
+  frostSplash: ['frac', 'radius'],
+  critAura: ['add', 'radius'],
+  quakeEvery: ['every', 'frac', 'radius'],
+  frenzy: ['rate', 'cap'],
 } as const satisfies Partial<Record<keyof EffectMods, readonly string[]>>
 /**
  * Mods that are a **capability** rather than a magnitude — booleans.
@@ -565,6 +576,9 @@ const MOD_BOOL_FIELDS = {
   grantsMelee: true,
   // Whisperfang: a kill readies the next attack.
   killReady: true,
+  // The fusions' twists: arcs carry statuses; an execution readies the next attack.
+  arcCarry: true,
+  executeReady: true,
 } as const satisfies Partial<Record<keyof EffectMods, true>>
 const MOD_KEYS: Record<keyof EffectMods, true> = {
   damageMult: true, rateMult: true, rangeMult: true, projSpeedMult: true,
@@ -578,6 +592,9 @@ const MOD_KEYS: Record<keyof EffectMods, true> = {
   thornsBurn: true, rushPerHeld: true, killMend: true,
   rateAura: true, vsPlated: true, vsWarded: true, critBurn: true, doubleEvery: true,
   killReady: true, chainEvery: true, spitEvery: true, root: true,
+  ricochet: true, overkill: true, arcCarry: true, critFreeze: true, focusStack: true,
+  heldBurst: true, firstHit: true, contagion: true, deathBurst: true, fanEvery: true,
+  executeReady: true, frostSplash: true, critAura: true, quakeEvery: true, frenzy: true,
 }
 
 /**
@@ -1019,7 +1036,20 @@ const legacyShield = (heroId: string): Item => ({
 
 function normaliseSkills(s: Sentinel): void {
   // Any hero may hold any skill (no classes): known ids, each once, at most three.
-  const kept = [...new Set(s.skills ?? [])].filter((id) => isSkillId(id)).slice(0, MAX_SKILLS)
+  // A merged skill (`run/fusion.ts`: a named `fz_*` or a plain `mx.…` id the
+  // resolver can read) is a known id. No library skill is held twice: a slot
+  // whose skills another slot before it already holds is dropped (a loose
+  // copy of a merge's part, or two merges sharing one).
+  const ids = [...new Set(s.skills ?? [])].filter((id) => isSkillId(id))
+  const held = new Set<string>()
+  const kept = ids
+    .filter((id) => {
+      const chain = chainOf(id)
+      if (chain.some((c) => held.has(c))) return false
+      for (const c of chain) held.add(c)
+      return true
+    })
+    .slice(0, MAX_SKILLS)
   if (kept.length) s.skills = kept
   else delete s.skills
   const picks = Math.max(0, Math.min(SKILL_MILESTONES.length, Math.floor(num(s.skillPicks, 0))))
@@ -1044,7 +1074,8 @@ function migrateItemPool(raw: unknown, company: CompanyId | null, hq: RunHq): st
 
 /** The run's skill pool: known ids, weighted like the items (company focus too, v16); a payload with none deals the starters. */
 function migrateSkillPool(raw: unknown, company: CompanyId | null, hq: RunHq): string[] {
-  const ids = [...new Set(arr<unknown>(raw).filter(isSkillId))]
+  // Library cards only: a fused skill is never dealt, so never in a pool.
+  const ids = [...new Set(arr<unknown>(raw).filter(isCardId))]
   return weightPool(ids.length ? ids : [...STARTER_SKILLS], company, skillCompany, { company: hq.focus, boost: hq.boost })
 }
 

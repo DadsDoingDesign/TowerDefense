@@ -57,6 +57,15 @@ export const SPREAD_COUNT = 2
 /** …within this radius, for what was left of the burn (at least `SPREAD_MIN_DUR` s). */
 export const SPREAD_RADIUS = 70
 const SPREAD_MIN_DUR = 1
+// ---- the fusions' twists (Oct 2026, `data/fusions.ts`) ------------------------
+/** Overkill: how far a killing hit's excess looks for the next body. */
+export const OVERKILL_RADIUS = 70
+/** Overkill: how many more bodies an excess that kills again may roll on to. */
+export const OVERKILL_HOPS = 3
+/** Ricochet: how far a crit looks for its second body. */
+export const RICOCHET_RADIUS = 140
+/** Freeze (`critFreeze`): seconds a frozen body walks free before it can freeze again. */
+export const FREEZE_REST = 2
 // ---- sub-waves ----------------------------------------------------------------
 /** How far up the road from the Gate a charge aimed at it is drawn (see `gateMark`). */
 const GATE_MARK_INSET = 64
@@ -149,6 +158,8 @@ export interface BehaviourStats {
   holdBlocked: number
   breathers: number
   repositions: number
+  /** The fusions' twists that went off (a bounce, a burst, a freeze, a carry, a quake). */
+  fusionProcs: number
 }
 
 const emptyStats = (): BehaviourStats => ({
@@ -183,6 +194,7 @@ const emptyStats = (): BehaviourStats => ({
   commandsUsed: 0,
   holdBlocked: 0,
   breathers: 0,
+  fusionProcs: 0,
   repositions: 0,
 })
 
@@ -260,6 +272,7 @@ export function enemyBehaviourState(key: string, reward: number) {
     healed: 0,
     piece: false,
     rootReadyAt: 0,
+    freezeReadyAt: 0,
   }
 }
 
@@ -294,6 +307,12 @@ export interface RtSentinel {
    * on cursed ground, 1 anywhere else. Re-read on every move (`placeAt`).
    */
   groundMult: number
+  /** Crit aura (`critAura`): the crit chance the auras covering it add this step (0 = none). */
+  critBuff: number
+  /** Focus (`focusStack`): how many shots it has already aimed at each enemy this wave. */
+  marks?: Map<string, number>
+  /** First strike (`firstHit`): the enemies it has already struck this wave. */
+  struck?: Set<string>
 }
 
 export interface RtEnemy {
@@ -327,6 +346,8 @@ export interface RtEnemy {
   shield: number
   /** Roots (`mods.root`): sim time before which this body cannot be rooted again. */
   rootReadyAt: number
+  /** Freeze (`mods.critFreeze`): sim time before which this body cannot be frozen again. */
+  freezeReadyAt: number
   /** Command: Flare's slow. */
   flareSlow: number
   flareUntil: number
@@ -404,6 +425,8 @@ export interface RtProjectile {
   lifedrain: number
   /** `spitEvery`: this shot also poisons the enemies nearest its target. */
   spit?: { count: number; dps: number; dur: number }
+  /** `quakeEvery`: this shot's impact also strikes every other enemy within `radius` for `frac`. */
+  quake?: { frac: number; radius: number }
 }
 
 export interface RtTrap {
@@ -567,6 +590,17 @@ export class GameEngine {
   private scriptIndex = 0
   private pendingSpawns: RtEnemy[] = []
   private pendingBurns: { e: RtEnemy; dps: number; dur: number; src: string | undefined; type: 'physical' | 'magic' }[] = []
+  /**
+   * The fusions' area damage (`heldBurst`, `deathBurst`), set off by a death
+   * and landed at the end of the tick (`flushPending`) with everything else a
+   * death defers. A burst that kills may set off another — on the next tick.
+   */
+  private pendingBlasts: { x: number; y: number; radius: number; amount: number; src: string; type: 'physical' | 'magic'; kind: 'held' | 'death' }[] = []
+  /**
+   * The fusions' carried damage (`overkill`, `frostSplash`), written by a hit
+   * and landed when its impact has finished touching everything it touches.
+   */
+  private carries: { x: number; y: number; amount: number; radius: number; nearest: boolean; skip: RtEnemy; src: string; type: 'physical' | 'magic'; hops: number }[] = []
   private telegraphSeq = 0
 
   private spawnQueue: { typeId: string; at: number; hpMult: number; g: number }[]
@@ -683,6 +717,7 @@ export class GameEngine {
         shots: 0,
         rushUntil: 0,
         groundMult: tileDamageMult(opts.map, slotId),
+        critBuff: 0,
       }
       placeIndex++
       this.sentinels.push(rt)
@@ -1060,14 +1095,18 @@ export class GameEngine {
     for (const s of this.sentinels) {
       let buff = 1
       let rate = 1
+      let crit = 0
       for (const src of this.sentinels) {
         const m = src.profile.mods
         if (m.buffAura && dist(s.pos, src.pos) <= m.buffAura.radius) buff *= m.buffAura.damageMult
         // A speed aura (a banner bearer, a captain's shield): the same reach rule.
         if (m.rateAura && dist(s.pos, src.pos) <= m.rateAura.radius) rate *= m.rateAura.rateMult
+        // A crit aura (Rallying Standard): the strongest one covering it counts.
+        if (m.critAura && dist(s.pos, src.pos) <= m.critAura.radius) crit = Math.max(crit, m.critAura.add)
       }
       s.buffMult = buff
       s.rateBuff = rate
+      s.critBuff = crit
     }
   }
 
@@ -1428,16 +1467,30 @@ export class GameEngine {
     if (m.rushPerHeld && s.blockIds.length) rate *= 1 + m.rushPerHeld * s.blockIds.length
     // A speed aura it stands in (`rateAura`, from any hero near it, itself too).
     rate *= s.rateBuff
+    // Frenzy (Red Mist): every kill this wave adds speed, to its cap.
+    if (m.frenzy && s.kills) rate *= 1 + Math.min(m.frenzy.cap, m.frenzy.rate * s.kills)
     s.cooldown = 1 / rate
     s.fireFlash = 1
     this.onEvent?.('shoot', { arch: lookOf(s.def), x: this.fieldX(s.pos.x) })
     // The crit roll is ALWAYS drawn, so a cadence crit never shifts the combat
     // stream for anything that fires after it.
-    const rolled = this.rng.chance(s.profile.critChance)
+    // A crit aura raises the bar the roll is read against, never the draw count.
+    // Rimecut: a frost-chilled target is easier to crit (the bar again, never the draw).
+    const frostCrit = m.critFreeze && this.elapsed < target.frostUntil ? m.critFreeze.chance : 0
+    const critBar = s.critBuff || frostCrit ? Math.min(0.95, s.profile.critChance + s.critBuff + frostCrit) : s.profile.critChance
+    const rolled = this.rng.chance(critBar)
     const isCrit = rolled || (!!m.critEvery && s.shots % m.critEvery === 0)
     // Twin Knives: every Nth attack strikes twice — double the hit, no roll.
     const twice = m.doubleEvery && s.shots % m.doubleEvery === 0 ? 2 : 1
-    const damage = s.profile.damage * (isCrit ? s.profile.critMult : 1) * s.buffMult * twice
+    let damage = s.profile.damage * (isCrit ? s.profile.critMult : 1) * s.buffMult * twice
+    // Focus (Relentless): every shot it has already aimed at this enemy marks
+    // it, and each mark makes the next land harder (a retarget keeps them).
+    if (m.focusStack) {
+      s.marks ??= new Map()
+      const n = s.marks.get(target.id) ?? 0
+      s.marks.set(target.id, n + 1)
+      damage *= 1 + Math.min(m.focusStack.cap, m.focusStack.step * n)
+    }
     const volley = m.volley && s.shots % m.volley.every === 0 ? m.volley.pierce : 0
     // Tinker's Spark: every Nth attack also jumps — this shot carries the
     // extra chains on a copy of the mods (no other shot's mods move).
@@ -1447,6 +1500,34 @@ export class GameEngine {
       : s.profile.mods
     // Venom Spit: every Nth attack poisons the enemies nearest its target.
     const spit = m.spitEvery && s.shots % m.spitEvery.every === 0 ? { count: m.spitEvery.count, dps: m.spitEvery.dps, dur: m.spitEvery.dur } : undefined
+    // Anvilfall: every Nth attack quakes around where it lands.
+    const quake = m.quakeEvery && s.shots % m.quakeEvery.every === 0 ? { frac: m.quakeEvery.frac, radius: m.quakeEvery.radius } : undefined
+    // Hail of Arrows: every Nth attack also shoots the enemies in reach nearest its target.
+    if (m.fanEvery && s.shots % m.fanEvery.every === 0) {
+      const r2 = s.profile.range * s.profile.range
+      const others = this.enemies
+        .filter((e) => e !== target && distSq(s.pos, e.pos) <= r2)
+        .sort((a, b) => distSq(target.pos, a.pos) - distSq(target.pos, b.pos))
+        .slice(0, m.fanEvery.count)
+      for (const e of others) {
+        this.projectiles.push({
+          id: nextId('p'),
+          pos: { ...s.pos },
+          toPos: { ...e.pos },
+          targetId: e.id,
+          srcId: s.id,
+          damage: damage * m.fanEvery.frac,
+          damageType: s.profile.damageType,
+          isCrit,
+          speed: s.profile.projectileSpeed,
+          splashRadius: s.profile.splashRadius,
+          pierce: s.profile.mods.pierce ?? 0,
+          color: lookHue(lookOf(s.def)).accent,
+          mods: s.profile.mods,
+          lifedrain: s.profile.mods.lifedrain ?? 0,
+        })
+      }
+    }
     this.projectiles.push({
       id: nextId('p'),
       pos: { ...s.pos },
@@ -1463,6 +1544,7 @@ export class GameEngine {
       mods,
       lifedrain: s.profile.mods.lifedrain ?? 0,
       ...(spit ? { spit } : {}),
+      ...(quake ? { quake } : {}),
     })
   }
 
@@ -1729,6 +1811,73 @@ export class GameEngine {
           this.onEvent?.('shatter', this.tagOf(e))
         }
       }
+      // Plague Spark: the arcs carry the hero's poison and chill to what they jump to.
+      if (p.mods.arcCarry) {
+        for (const e of chained) {
+          if (e.hp <= 0) continue
+          if (p.mods.burn) this.writeBurn(e, p.mods.burn, p.srcId, p.damageType)
+          if (p.mods.chill) {
+            e.chillSlow = Math.max(e.chillSlow, p.mods.chill.slow)
+            e.chillUntil = Math.max(e.chillUntil, this.elapsed + p.mods.chill.dur)
+            e.frostUntil = Math.max(e.frostUntil, this.elapsed + p.mods.chill.dur)
+          }
+        }
+      }
+    }
+    this.fusionImpact(p, hitList)
+  }
+
+  /**
+   * ---- the fusions' twists that land after an impact (Oct 2026) -----------
+   *
+   * Everything here is off unless a fused skill grants it (`data/fusions.ts`),
+   * so for any other shot this is a length check and two falsy reads. It runs
+   * once the impact has touched everything it touches, so no loop above ever
+   * sees the list change under it, and none of it is a hit: it deals damage
+   * through `damageEnemy` (resist, ground, kill credit) and writes no status.
+   */
+  private fusionImpact(p: RtProjectile, hitList: RtEnemy[]): void {
+    // Overkill (Sunder) and shatter (Shatterglass), written by `applyHit`.
+    if (this.carries.length) {
+      const carries = this.carries
+      this.carries = []
+      // A queue, not a loop over the list: an overkill that kills again
+      // rolls on down the line (`hops` more times), each from where it fell.
+      for (let i = 0; i < carries.length; i++) {
+        const c = carries[i]
+        const r2 = c.radius * c.radius
+        const near = this.enemies.filter((e) => e !== c.skip && e.hp > 0 && distSq(e.pos, c) <= r2)
+        if (c.nearest) near.sort((a, b) => distSq(a.pos, c) - distSq(b.pos, c)).splice(1)
+        for (const e of near) {
+          const before = e.hp
+          this.damageEnemy(e, c.amount, c.src, false, c.type, true)
+          if (c.hops > 0 && e.hp <= 0) {
+            const over = -e.hp
+            carries.push({ ...c, x: e.pos.x, y: e.pos.y, skip: e, amount: c.amount * (over / (before + over)), hops: c.hops - 1 })
+          }
+        }
+        if (near.length) this.behaviourStats.fusionProcs++
+      }
+    }
+    // Thousand Cuts: a crit bounces on to the nearest body it did not touch.
+    if (p.isCrit && p.mods.ricochet && hitList.length) {
+      const origin = hitList[0].pos
+      const next = this.enemies
+        .filter((e) => e.hp > 0 && !hitList.includes(e))
+        .sort((a, b) => distSq(origin, a.pos) - distSq(origin, b.pos))[0]
+      if (next && distSq(origin, next.pos) <= RICOCHET_RADIUS * RICOCHET_RADIUS) {
+        this.damageEnemy(next, p.damage * p.mods.ricochet, p.srcId, true, p.damageType, false)
+        this.behaviourStats.fusionProcs++
+      }
+    }
+    // Anvilfall: the impact quakes every other body around where it landed.
+    if (p.quake) {
+      const r2 = p.quake.radius * p.quake.radius
+      const at = hitList[0]?.pos ?? p.pos
+      const shaken = this.enemies.filter((e) => e.hp > 0 && !hitList.includes(e) && distSq(e.pos, at) <= r2)
+      for (const e of shaken) this.damageEnemy(e, p.damage * p.quake.frac, p.srcId, false, p.damageType, true)
+      this.addTelegraph('spread', at.x, at.y, p.quake.radius, 0.3)
+      this.behaviourStats.fusionProcs++
     }
   }
 
@@ -1774,6 +1923,8 @@ export class GameEngine {
         // Book the executed remainder, or per-Sentinel damage under-reports every
         // execute the build lands (L9).
         src.damageDealt += Math.max(0, e.hp)
+        // Coup de Grâce: an execution readies its next attack.
+        if (p.mods.executeReady) src.cooldown = 0
       }
       this.killEnemy(e, p.srcId)
       return
@@ -1786,7 +1937,35 @@ export class GameEngine {
     // A miner's pick, a rune shield: harder on the armoured columns (`ENEMY_MODS`).
     if (p.mods.vsPlated && e.key.endsWith('_plated')) amount *= 1 + p.mods.vsPlated
     if (p.mods.vsWarded && e.key.endsWith('_warded')) amount *= 1 + p.mods.vsWarded
+    // Bushwhack: its first hit on each enemy lands harder.
+    if (p.mods.firstHit) {
+      const hero = this.sentinels.find((x) => x.id === p.srcId)
+      if (hero) {
+        hero.struck ??= new Set()
+        if (!hero.struck.has(e.id)) {
+          hero.struck.add(e.id)
+          amount *= 1 + p.mods.firstHit
+        }
+      }
+    }
+    // Read before this hit writes its own chill: was the body slowed / frosted?
+    const slowedBefore = this.elapsed < e.chillUntil && e.chillSlow > 0
+    const frostedBefore = this.elapsed < e.frostUntil
+    // Rimecut: a crit on a frost-chilled body lands harder (and freezes it, below).
+    const freeze = p.isCrit && p.mods.critFreeze && frostedBefore ? p.mods.critFreeze : null
+    if (freeze) amount *= 1 + freeze.bonus
+    const hpBefore = e.hp
     const dealt = this.damageEnemy(e, amount, p.srcId, p.isCrit, p.damageType, false)
+    // Sunder: a killing hit's excess (its raw share past the body's HP) carries on.
+    if (p.mods.overkill && e.hp <= 0 && hpBefore > 0) {
+      const over = -e.hp
+      const excess = amount * (over / (hpBefore + over))
+      if (excess > 0) this.carries.push({ x: e.pos.x, y: e.pos.y, amount: excess * p.mods.overkill, radius: OVERKILL_RADIUS, nearest: true, skip: e, src: p.srcId, type: p.damageType, hops: OVERKILL_HOPS })
+    }
+    // Shatterglass: a hit on a slowed body splinters onto those near it.
+    if (p.mods.frostSplash && slowedBefore) {
+      this.carries.push({ x: e.pos.x, y: e.pos.y, amount: amount * p.mods.frostSplash.frac, radius: p.mods.frostSplash.radius, nearest: false, skip: e, src: p.srcId, type: p.damageType, hops: 0 })
+    }
 
     // On-hit statuses (only if the enemy is still alive).
     if (e.hp > 0) {
@@ -1807,6 +1986,15 @@ export class GameEngine {
       if (p.mods.stunChance && this.rng.chance(p.mods.stunChance)) {
         e.stunUntil = Math.max(e.stunUntil, this.elapsed + (p.mods.stunDur ?? 0.5))
         this.spawnFloater(e.pos, 'STUN', '#ffe08a', true)
+        if (src) src.procFlash = 1
+      }
+      // Rimecut: a crit on a frost-chilled body freezes it (no roll: the crit
+      // was already rolled), and it walks `FREEZE_REST` free before the next.
+      if (freeze && this.elapsed >= e.freezeReadyAt) {
+        e.stunUntil = Math.max(e.stunUntil, this.elapsed + freeze.dur)
+        e.freezeReadyAt = this.elapsed + freeze.dur + FREEZE_REST
+        this.spawnFloater(e.pos, 'FREEZE', '#bfe6ff', true)
+        this.behaviourStats.fusionProcs++
         if (src) src.procFlash = 1
       }
     }
@@ -2061,22 +2249,42 @@ export class GameEngine {
       const split = behaviourOf(e.type, 'split')
       if (split) this.splitOnDeath(e, split)
     }
+    const burning = e.burnDps > 0 && this.elapsed < e.burnUntil
+    // The fusions read the hero whose burn is on the body, and the one holding it.
+    const burner = burning && e.burnSrcId ? this.sentinels.find((x) => x.id === e.burnSrcId) : undefined
+    const contagion = burner?.profile.mods.contagion
+    if (burner) this.burstOnDeath(e, burner, burner.profile.mods.deathBurst, 'death')
+    if (e.blockedBy) {
+      const holder = this.sentinels.find((x) => x.id === e.blockedBy)
+      if (holder) this.burstOnDeath(e, holder, holder.profile.mods.heldBurst, 'held')
+    }
     // Burn SPREAD: a burning body that dies lights its nearest neighbours — a
-    // capability the team must carry (`burnSpreadOnDeath`, the Ember Urn).
-    if (this.rules.interactions && this.spreadOnDeath && e.burnDps > 0 && this.elapsed < e.burnUntil) {
-      const r2 = SPREAD_RADIUS * SPREAD_RADIUS
+    // capability the team must carry (`burnSpreadOnDeath`, the Ember Urn), or
+    // the hero whose poison it is (`contagion`, Plaguebearer): the larger wins.
+    const teamSpread = this.rules.interactions && this.spreadOnDeath
+    if ((teamSpread || contagion) && burning) {
+      const radius = Math.max(teamSpread ? SPREAD_RADIUS : 0, contagion?.radius ?? 0)
+      const count = Math.max(teamSpread ? SPREAD_COUNT : 0, contagion?.count ?? 0)
+      const r2 = radius * radius
       const near = this.enemies
         .filter((x) => x.hp > 0 && distSq(x.pos, e.pos) <= r2)
         .sort((a, b) => distSq(a.pos, e.pos) - distSq(b.pos, e.pos))
-        .slice(0, SPREAD_COUNT)
-      const dur = Math.max(SPREAD_MIN_DUR, e.burnUntil - this.elapsed)
+        .slice(0, count)
+      // Contagion passes its poison on fresh (the hero's own burn's length).
+      const dur = Math.max(SPREAD_MIN_DUR, e.burnUntil - this.elapsed, contagion ? (burner?.profile.mods.burn?.dur ?? 0) : 0)
       for (const x of near) this.pendingBurns.push({ e: x, dps: e.burnDps, dur, src: e.burnSrcId, type: e.burnType })
       if (near.length) {
         this.behaviourStats.burnSpreads += near.length
-        this.addTelegraph('spread', e.pos.x, e.pos.y, SPREAD_RADIUS, 0.4)
+        this.addTelegraph('spread', e.pos.x, e.pos.y, radius, 0.4)
         this.onEvent?.('burnSpread', this.tagOf(e))
       }
     }
+  }
+
+  /** Cinderburst / Crushing Grip: queue a death's burst of `hero`'s hit (landed in `flushPending`). */
+  private burstOnDeath(e: RtEnemy, hero: RtSentinel, b: { frac: number; radius: number } | undefined, kind: 'held' | 'death'): void {
+    if (!b) return
+    this.pendingBlasts.push({ x: e.pos.x, y: e.pos.y, radius: b.radius, amount: hero.profile.damage * b.frac, src: hero.id, type: hero.profile.damageType, kind })
   }
 
   private splitOnDeath(e: RtEnemy, b: Behaviour<'split'>): void {
@@ -2116,6 +2324,18 @@ export class GameEngine {
         this.writeBurn(b.e, { dps: b.dps, dur: b.dur }, b.src, b.type)
       }
       this.pendingBurns = []
+    }
+    // The fusions' bursts. Taken off the list first: a burst that kills queues
+    // the next one for the NEXT tick, so a chain reaction plays out, not loops.
+    if (this.pendingBlasts.length) {
+      const blasts = this.pendingBlasts
+      this.pendingBlasts = []
+      for (const b of blasts) {
+        const r2 = b.radius * b.radius
+        for (const e of this.enemies.filter((x) => x.hp > 0 && distSq(x.pos, b) <= r2)) this.damageEnemy(e, b.amount, b.src, false, b.type, true)
+        this.addTelegraph('spread', b.x, b.y, b.radius, 0.35)
+        this.behaviourStats.fusionProcs++
+      }
     }
   }
 

@@ -165,6 +165,43 @@ export interface EffectMods {
    * rooted again until `ROOT_REST` seconds after its roots break.
    */
   root?: { count: number; dur: number }
+
+  // ---- the fusions' twists (Oct 2026, `data/fusions.ts`, docs/SKILL_FUSION.md)
+  // Only a fused skill grants these. Each is read in one place in `engine.ts`,
+  // is off unless granted, and draws nothing, so a hero without one fights
+  // exactly as before. Area damage they deal goes through `damageEnemy`, is
+  // never itself a hit (no statuses, no further twist), and lands after the
+  // loop that set it off.
+  /** Ricochet: a crit that lands bounces to the nearest enemy it did not touch, for this share of the hit. */
+  ricochet?: number
+  /** Overkill: a hit that kills carries this share of its excess to the nearest living enemy. */
+  overkill?: number
+  /** Arc carry: its chain arcs also write its burn and its chill on what they jump to. */
+  arcCarry?: boolean
+  /** Freeze: a crit on a frost-chilled enemy deals `bonus` more and stops it `dur` seconds (not again for `FREEZE_REST`). */
+  critFreeze?: { dur: number; bonus: number; chance: number }
+  /** Focus: each shot it has already aimed at an enemy makes the next on it `step` harder, up to `cap`. */
+  focusStack?: { step: number; cap: number }
+  /** Held burst: an enemy it was holding that dies bursts for `frac` of its hit on enemies within `radius`. */
+  heldBurst?: { frac: number; radius: number }
+  /** First strike: its first hit on each enemy deals this fraction more. */
+  firstHit?: number
+  /** Contagion: an enemy dying of its poison spreads the poison to `count` enemies within `radius`. */
+  contagion?: { count: number; radius: number }
+  /** Death burst: an enemy dying while its burn is on it bursts for `frac` of its hit within `radius`. */
+  deathBurst?: { frac: number; radius: number }
+  /** Fan: every `every`th attack also shoots `count` other enemies in reach for `frac` of the hit. */
+  fanEvery?: { every: number; count: number; frac: number }
+  /** Execute refund: an execution readies its next attack at once. */
+  executeReady?: boolean
+  /** Shatter: a hit on a slowed enemy splinters `frac` of it to the enemies within `radius`. */
+  frostSplash?: { frac: number; radius: number }
+  /** Crit aura: heroes within `radius` (itself too) crit `add` more often; the strongest aura counts. */
+  critAura?: { add: number; radius: number }
+  /** Quake: every `every`th attack's impact also strikes every other enemy within `radius` for `frac`. */
+  quakeEvery?: { every: number; frac: number; radius: number }
+  /** Frenzy: each kill this wave makes it attack `rate` faster, up to `cap`. */
+  frenzy?: { rate: number; cap: number }
 }
 
 /** A run-acquired attack mutation applied to one hero (rolled at the mid-map fork). */
