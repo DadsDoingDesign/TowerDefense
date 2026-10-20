@@ -172,6 +172,34 @@ for (const view of VIEW_ARG ?? Object.keys(VIEWS)) {
   }
   await endBeat(p)
   // 5. The hero card, the merge in its first slot: read it.
+  //    (Shot after the plain merge below, so the card holds both kinds.)
+
+  // 4b. A PLAIN merge committed (the merge art pass): Frostbite dropped on Arc
+  //     Spark makes Frozen Arc Spark — its card shows the composed picture, and
+  //     in the beat the frost rime flies onto the bolt as its colours pour blue.
+  await owe(p, 5, ['arc_spark'], 0, ['frostbite', 'cleave', 'bounty', 'pin_down'])
+  const frost = p.page.locator('.pk-tok[data-pick="skill:frostbite"]').first()
+  if (!(await frost.count())) p.log.push('no frostbite token')
+  await frost.click().catch(() => {})
+  await p.page.locator('.sk-slot[data-slot="0"]').first().click().catch((e) => p.log.push('plain slot ' + e.message.slice(0, 60)))
+  await p.shot('04p-plain-chosen', 300)
+  await p.page.locator('.sh-commit-2').first().click({ timeout: 3000 }).catch((e) => p.log.push('plain commit ' + e.message.slice(0, 60)))
+  await holdBeat(p, ['mx.arc_spark.frostbite', ['arc_spark', 'frostbite']])
+  for (const [tag, ms] of [['a', 200], ['b', 420], ['c', 560], ['d', 900]]) {
+    await seek(p, ms)
+    await p.page.waitForTimeout(80)
+    await p.page.screenshot({ path: path.join(OUT, `05p-beat-${tag}-${view}.png`) })
+  }
+  if (process.env.FRAMES) {
+    fs.mkdirSync(path.join(OUT, `frames-plain-${view}`), { recursive: true })
+    const panel = p.page.locator('.fz-beat').first()
+    for (let i = 0, ms = 0; ms <= 1000; i++, ms += 40) {
+      await seek(p, ms)
+      await p.page.waitForTimeout(30)
+      await panel.screenshot({ path: path.join(OUT, `frames-plain-${view}`, `f${String(i).padStart(3, '0')}.png`) }).catch(() => {})
+    }
+  }
+  await endBeat(p)
   await p.page.locator('.sh-sk.fused').first().click({ timeout: 3000 }).catch((e) => p.log.push('slot ' + e.message.slice(0, 60)))
   await p.shot('06-hero-card')
 

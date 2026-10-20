@@ -205,6 +205,25 @@ result. Append a short note to the review log when you're done.
   merged slot (`.sh-sk.fused`); styles `src/styles/fusion.css`. Balance §7b
   (`balance/fusion-eval.ts`). Tests `tests/fusion.test.ts`; shots
   `scripts/fusion-shots.mjs`, cards `scripts/fusion-cards.mjs`.
+  Skill art (Oct 2026, the merge art pass): every library skill has its own
+  16 × 16 drawing (`src/game/data/skillArt.ts`: the part that carries its
+  element is in key letters `1`/`2`/`3`, which take a tag's hue-shifted ramp,
+  `TAG_RAMP`; one motif per tag on a fixed corner or edge, `MOTIFS`, frost's
+  is rime on the top edges), and the twenty named merges are hand-drawn
+  (`skillArtNamed.ts`; the composer adds a gold bracket on the bottom-right
+  corner, both bottom corners for a greater). The pure composer
+  `skillIcons.ts` (`skillIconPixels`, memoised; `iconRecipe`; `mergeLayers`
+  for the fuse beat) draws a plain merge as its base's drawing (a named
+  base's, unmarked), the keys swapped to the FIRST card's ramp, the rime if
+  frost, the ink, then each card's motif — so A→B is never B→A. The 70 fixed
+  pictures are baked into the atlas from it (`fw-icons.ts`, cells `sk*` /
+  `fz*` = `skillArt.skillArtKey`; `skillHeadline(k).icon` is that cell); the
+  2,437 plain merges are composed at runtime by `src/ui/SkillIcon.tsx` (one
+  canvas → data URL each, memoised; the base's cell where there is no
+  canvas). Draw any held or previewed skill with `<SkillIcon id>`. A chain
+  that carries its status (`arcCarry`) draws its arcs in that status's ink
+  (`attackLook.arcInk`, render only). Tests `tests/skillIcons.test.ts`; cards
+  `scripts/merge-art-cards.mjs` → `docs/ui-audit-2026-10/merge-art/`.
 - The mercenary company (spec: `docs/MERCENARY_COMPANY.md`): gold is the only
   currency (purse for the run, bank at home, `metaStore.bank`). Companies
   `src/game/data/companies.ts`; contracts, stakes, city pay and cash-out

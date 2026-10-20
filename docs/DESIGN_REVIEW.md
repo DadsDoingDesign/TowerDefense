@@ -5495,3 +5495,63 @@ in its draw, so the quiver follows the tunic, not a hand. Under reduced
 motion the figure still plays its idle (unchanged), and the item now rides
 it rather than standing apart. Cards: `docs/ui-audit-2026-10/held-gear/`
 (`scripts/held-gear-shots.mjs`, `scripts/held-gear-cards.ts`).
+
+## 2026-10-20 — Merge art: every skill its own picture, every merge both parts
+
+The designer: "now do a pass to make unique assets that actually feel like the
+different things merging. Look at the skills, per the Stardew Valley work."
+Before it, a skill was pictured by its lead EFFECT's mark (five Rush skills on
+one chevron, six "harder" skills on the slashes) and a merge by its base's, so
+Frozen Arc Spark looked exactly like Arc Spark.
+
+- **Library (50).** Each skill a 16 × 16 drawing whose silhouette names it
+  (`src/game/data/skillArt.ts`): Frostbite a crystal grown on a fang, Arc
+  Spark a forked bolt, Poisoned Tips a venom-coated arrowhead, Rally a war
+  horn, Momentum a rolling wheel. The atlas's hand (1 px `#161c2e` ring,
+  nothing on the cell edge); the part that carries the element is in key
+  letters that take the tag’s ramp. Fifteen ramps, each turning 8–70° in hue
+  light → dark (shadows cool or magenta), every colour found in the harvested
+  pack (tested). Pairwise ≥ 40 px apart.
+- **Plain merges (2,437 + 13 named orders = 2,450).** The Stardew layering
+  (`skillIcons.ts`, pure): the base's drawing, its keys swapped to the card's
+  ramp, frost's rime, the ink, the card's motif on its fixed corner (flame
+  top right, drip bottom right, spark top left, streaks on the left edge …).
+  A→B vs B→A: another drawing AND another motif, ≥ 24 px apart for all
+  2,437 (tested). Composed at runtime, once per merge (`ui/SkillIcon.tsx`).
+- **Named (20).** Hand-drawn objects of both parts (`skillArtNamed.ts`):
+  Rimecut an ice-edged crit blade with its rose star, Plague Spark the fork
+  run green and dripping, Cinderburst Cleave's sweep bursting into embers,
+  Hail of Arrows a fan of shafts; the greater five with gold in them. Marker:
+  a gold bracket bottom right (both bottom corners for a greater) — moved
+  off the top-left after the first Codex shot, where the level badge hid it.
+- **Where shown.** Offer tokens, the drop slots (the RESULT's picture beside
+  "→ name" while dragging), the merge card's head and recipe row, the hero
+  card slot, the Codex tree, the fuse beat: the card's motif flies onto the
+  base, the colours pour down in whole-pixel bands (steps, never a soft
+  crossfade), a named merge's card flies in and its picture pops. Light:
+  quicker; reduced motion: the finished picture only.
+- **Field.** A chain that carries its status (`arcCarry`) draws its arcs in
+  that status's ink (`attackLook.arcInk`): Frozen Arc Spark's arcs are cold.
+  Render only; the engine and `balance/REPORT.md` are untouched.
+
+Critique rounds (rendered at 1×, 4× and in the app at 390 × 844 DPR 2):
+round 1 redrew Hard Hitter (a grey blob → a knuckled gauntlet), Frostbite (an
+ice-cream cone → fang and crystal cluster), Blessing (a pretzel → a haloed
+chalice), Venom Spit, Rally (a carrot → a curved horn with its bell open),
+Snare, Split Shot, Ore Sense; made the motifs bolder (the steel anvil read as a
+dark block → a riveted strap). Round 2: Bolder Bash (read as a snail → a
+boulder with its dust), Heavy Blows (the comb of a ground → a sledge and
+cracks), Bushwhack (a cabbage → a blade out of a bush), Charge, Long Reach and
+Bounty keyed so a merge's colour shows on them; Momentum lost its own speed
+streaks so the speed motif can land on it. Round 3: the named marker moved to
+the bottom corners; the merge card's twist line lost its repeat of the head's
+picture.
+
+Weak spots: two cards of one tag (Quick Hands and Charge, both speed) pour the
+same colour and motif onto a base — the name says which. Frost's motif is rime
+only, the quietest of the fifteen at 1×. At 16 px the motifs are 3–4 px of
+colour: they read at the 32 px tokens, slots and cards, less on a text line.
+On the field the cold arc is as faint as the shock arc always was.
+Cards: `docs/ui-audit-2026-10/merge-art/` (`library.png`, `matrix.png`,
+`named.png`, `system.png`, `in-app.png`, `fuse-beat.webp`;
+`scripts/merge-art-cards.mjs` after `FRAMES=1 scripts/fusion-shots.mjs`).
