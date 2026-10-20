@@ -444,14 +444,18 @@
 }
 
 /* ------------------------------------------------------------ in the run */
+/* The route panel on your own road: the cyan rail, held as quiet as a
+   company's (the map-header pass), so the Context panel still leads. */
 .ct-route.sovereign {
-  border-color: rgba(56, 242, 232, 0.4);
+  border-color: color-mix(in srgb, var(--co) 28%, transparent);
   background:
-    linear-gradient(90deg, rgba(56, 242, 232, 0.08), transparent 60%),
-    var(--panel);
+    linear-gradient(90deg, color-mix(in srgb, var(--co) 6%, transparent), transparent 60%),
+    color-mix(in srgb, var(--panel) 82%, transparent);
 }
-.ct-route.sovereign .ct-route-top b {
-  color: var(--text);
+.ct-route.sovereign.open {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--co) 6%, transparent), transparent 60%),
+    var(--panel);
 }
 
 /* ------------------------------------------------------------ the header's marker */

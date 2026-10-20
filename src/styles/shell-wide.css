@@ -90,6 +90,13 @@
     max-width: 760px;
     margin: 0 auto;
   }
+  /* The route panel over it keeps to the map's column (its own 10px gutters
+     on top), so the road and the map below it share one edge. */
+  .shell:not(.shell-page) > .sh-stage .ct-route-slot {
+    width: 100%;
+    max-width: 780px;
+    margin: 0 auto;
+  }
 
   /* -- band 3: the party row, top of the right column ---------------------- */
   .shell:not(.shell-page) > .sh-selector {

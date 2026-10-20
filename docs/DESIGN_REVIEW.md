@@ -5281,3 +5281,68 @@ the mark colours. `tests/nodeTitle.test.ts` holds every node's name to
 4.5:1 on bg, bg-2 and the three panels, in every theme and under high
 contrast. Reverting the boss entry fails it at 3.7:1. Checked in the running
 app at 390 px (art, spice, neutral): the head reads `rgb(239, 131, 104)`.
+
+### 2026-10-20 — the run map's header: quiet context, the selection leads
+
+The designer, on a 390 px shot of the run map with the foot of the contract
+header circled ("Next: Brinefen, 4 stops · 60" and the two ask rows): "The
+quests are cluttering space, the top info pulls more attention than the
+current selection info." The route panel stood 132 px over the map, in bright
+ink, with two full-width bars (Butcherblock's cargo ask a solid pink bar at
+100%) and a glowing travelled road. It out-shouted the Context panel, which
+holds the focused node, the thing being chosen. No rule, number or RNG draw
+changed.
+
+**What changed** (`contracts/RoutePanel.tsx`, `contracts/AskParts.tsx`,
+`contracts.css`, `charter.css`, `shell-wide.css`):
+- **Two quiet lines, 74 px.** Line one is the crest, the goods' road and its
+  stake, with the asks as chips on the right. Line two is the road. Everything
+  is in `--muted` / `--muted-2`, on a panel washed toward the map. The
+  travelled road is the company colour at 55%, with no glow, and the caravan
+  is the head's 1× crate. Gold stays `--gold-text`. The map gains 58–60 px on
+  every phone and 60 px on the desk.
+- **Each fact once.** "depth 0/12" went: the HUD's chip says it. The "Next:"
+  line went too, since the road already names Brinefen. What was new in it
+  (4 stops, the 60 it pays) now sits under the next city's name. A city
+  passed shows "✓ 140" under its own name, which replaces "✓ Brinefen paid
+  140". On the Sovereign Route the head is its rule, "All or nothing", because
+  the HUD's Sovereign marker names the road. The destination's note is the
+  payout.
+- **Asks as chips.** Each chip is the stat's atlas mark, its count, and a 2 px
+  progress mark in the asking company's ink, with ✓ once met. The whole panel
+  is one button. Its `aria-label` says every ask in full ("Deliver with full
+  cargo: 100%, judged at Saltcleave; …") and `aria-expanded` gives its state.
+  A tap opens the old rows (name, bar, count) in place, and the panel lies
+  over the map. A second tap, Escape, a tap outside or a new map focus closes
+  it. The slot holds the closed height while the panel is open, so the map's
+  box is identical both ways (measured: 127 / 460 at 390 px). `AskToast` is
+  untouched.
+- **Frames.** No new frame: `.ct-route` keeps its world frame, and the button
+  and the open rows sit inside it unframed.
+- **Desk.** The panel keeps to the map's 760 px column, so the road and the
+  map share one edge.
+
+**Rounds** (390 / 375 / 320 phones, 820 tablet, 1280 desk; Butcherblock,
+Ironvein, Rosethread, Peppercorn, Sovereign; closed and open):
+1. Two lines, chips, notes under the cities. At depth 5 the 2× caravan crate
+   covered the passed city's name. The crate went to 1×, centred on the track,
+   and the road gained 2 px of left room so the crate stops at the frame.
+2. At 320 px, "Sovereign Route" with three chips cut to "S…", and "Crownwater"
+   ran into "Highcharter" (an older collision, still there). The Sovereign
+   head became its rule. Under 360 px, "· escort" drops. A narrow phone names
+   only the next city, plus the destination while the next is the first. The
+   others are hidden in place, so each note stays under its own lantern.
+3. A first try hung the middle city's name left of its lantern. That only
+   moved the collision onto the notes ("140" met "3 stops"), so it was
+   reverted for the rule in round 2.
+
+**Scored.** The focused node's preview is now the brightest text below the
+HUD. The header reads as the road at a glance, and its numbers read when
+looked for. Benchmark: Slay the Spire's map keeps the run's context in a slim
+top bar and lets the node you hover lead. This is that split.
+
+**Weak spots.** While the panel is open, each count shows twice (chip and
+row). At 320 px Ironvein's "Metals & Stones road" still cuts to "Metals &
+Stones r…" beside two long counts. An at-end ask (cargo) shows a full mark
+at 100% before it is judged, as the old bar did. Card:
+`docs/ui-audit-2026-10/map-header/before-after.png`.

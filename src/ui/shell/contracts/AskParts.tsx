@@ -11,9 +11,11 @@ import {
   type AskDef,
   type AskFacts,
   type AskResult,
+  type AskStat,
   type RunAsk,
 } from '../../../game/run/asks'
-import { companyVar, SOVEREIGN_VAR } from '../../channels'
+import { companyVar, SOVEREIGN_VAR, type IconKey } from '../../channels'
+import { Icon } from '../../Icon'
 import { Crest } from '../../pixel'
 import { Gold } from './parts'
 import { useMetaStore } from '../../../state/metaStore'
@@ -73,27 +75,96 @@ export function AskTerms({ company, asks }: { company: CompanyId; asks: readonly
   )
 }
 
+/** Where one ask stands on the road: its count now, whether that met it, how far along. */
+interface AskNow {
+  ask: RunAsk
+  def: AskDef
+  got: number
+  met: boolean
+  frac: number
+}
+
+const askNow = (asks: readonly RunAsk[], facts: AskFacts, cargo: number): AskNow[] =>
+  asks.flatMap((a) => {
+    const def = askById(a.id)
+    if (!def) return []
+    const got = askGot(a, facts, cargo)
+    return [{ ask: a, def, got, met: !def.atEnd && got >= a.target, frac: Math.max(0, Math.min(1, got / Math.max(1, a.target))) }]
+  })
+
+/** One ask as a sentence for a screen reader: "Win 7 fights without a leak: 0/7" — never cut to fit. */
+const askSaid = ({ ask, def, got, met }: AskNow, dest: string): string =>
+  `${askText(ask)}: ${met ? 'met' : askProgressText(ask, got)}${def.atEnd ? `, judged at ${dest}` : ''}`
+
+/** Every ask as one sentence: the route panel's accessible name for its asks. */
+export const asksSaid = (asks: readonly RunAsk[], facts: AskFacts, cargo: number, dest: string): string =>
+  askNow(asks, facts, cargo)
+    .map((n) => askSaid(n, dest))
+    .join('; ')
+
+/** Each stat's mark on its chip: the atlas cell the rest of the game draws that thing with. */
+const ASK_ICON: Record<AskStat, IconKey> = {
+  kills: 'battle',
+  burnKills: 'burn',
+  platedKills: 'plate',
+  wardedKills: 'auraShield',
+  cleanFights: 'block',
+  cleanCities: 'boss',
+  eliteWins: 'elite',
+  wares: 'merchant',
+  pacts: 'shrine',
+  earned: 'gold',
+  cargo: 'base',
+  roadGold: 'coffer',
+}
+
+/** "1,480/3,900" is too long for a chip: gold counts shorten to "1.4k/3.9k". */
+const short = (n: number): string => (n < 1000 ? String(n) : `${Math.floor(n / 100) / 10}k`)
+const chipCount = (a: RunAsk, def: AskDef, got: number): string =>
+  def.stat === 'roadGold' || def.stat === 'earned' ? `${short(Math.max(0, Math.floor(got)))}/${short(a.target)}` : askProgressText(a, got)
+
 /**
- * The run's route panel: each ask's count against its target — a bar, the
- * count, and a tick once it is met. An ask judged at the end shows where it
- * stands now (the cargo the wagons carry, the road's gold in hand).
+ * The route panel's collapsed asks (the map-header pass, Oct 2026; the
+ * designer: "the quests are cluttering space"): one small chip an ask — its
+ * stat's mark, its count, and a two-pixel progress mark under it; ✓ once met.
+ * Decorative: the panel's button says every ask in full (`asksSaid`), and the
+ * full rows open under the road on a tap (`AskProgress`).
+ */
+export function AskChips({ asks, facts, cargo }: { asks: readonly RunAsk[]; facts: AskFacts; cargo: number }) {
+  const now = askNow(asks, facts, cargo)
+  if (!now.length) return null
+  return (
+    <span className="ask-chips" aria-hidden="true">
+      {now.map(({ ask, def, got, met, frac }) => (
+        <span key={ask.id} className={`ask-chip${met ? ' met' : ''}`} style={{ '--co': companyVar(def.company) } as CSSProperties}>
+          <Icon name={ASK_ICON[def.stat]} />
+          <b>{met ? '✓' : chipCount(ask, def, got)}</b>
+          <span className="ask-chip-mark">
+            <i style={{ width: `${frac * 100}%` }} />
+          </span>
+        </span>
+      ))}
+    </span>
+  )
+}
+
+/**
+ * The run's route panel, opened: each ask's count against its target — a bar,
+ * the count, and a tick once it is met. An ask judged at the end shows where
+ * it stands now (the cargo the wagons carry, the road's gold in hand).
  */
 export function AskProgress({ asks, facts, cargo, charter, dest }: { asks: readonly RunAsk[]; facts: AskFacts; cargo: number; charter: boolean; dest: string }) {
   if (!asks.length) return null
   return (
     <ul className="ask-track" aria-label="What the road is asked">
-      {asks.map((a) => {
-        const def = askById(a.id)
-        if (!def) return null
-        const got = askGot(a, facts, cargo)
-        const met = !def.atEnd && got >= a.target
-        const frac = Math.max(0, Math.min(1, got / Math.max(1, a.target)))
+      {askNow(asks, facts, cargo).map((n) => {
+        const { ask: a, def, got, met, frac } = n
         return (
           <li
             key={a.id}
             className={`ask-track-row${met ? ' met' : ''}`}
             style={{ '--co': companyVar(def.company) } as CSSProperties}
-            aria-label={`${askText(a)}: ${met ? 'met' : askProgressText(a, got)}${def.atEnd ? `, judged at ${dest}` : ''}`}
+            aria-label={askSaid(n, dest)}
           >
             {charter && <Crest company={def.company} scale={1} />}
             {/* An ask judged at the end says where: what it reads now is not yet met. */}
