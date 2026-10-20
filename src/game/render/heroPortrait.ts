@@ -26,7 +26,7 @@ import { lookOf } from '../data/gear'
 import type { Archetype, Sentinel } from '../types'
 import { torsosFor } from './bodyLayer'
 import { blitPixmap } from './blit'
-import { gearAtlasReady, heroGearCached, paintsMain, type HeroGear } from './gearMarks'
+import { gearAtlasReady, handsAt, heroGearCached, paintsMain, type HeroGear } from './gearMarks'
 import { artFor, onSpritesReady } from './sprites'
 import { onThemeChange } from './themes'
 import { drawHeldGear, heroFigure } from './units'
@@ -92,7 +92,7 @@ export function heroPortraitCanvas(look: Archetype, gear: HeroGear): HTMLCanvasE
   g.imageSmoothingEnabled = false
   g.translate(BOX.ox, BOX.oy)
   blitPixmap(g, fig.pm, 0, 0, 8)
-  drawHeldGear(g, fig.rig, gear, 0, 0, 0, true, false, fig.grips?.[0])
+  drawHeldGear(g, fig.rig, gear, 0, 0, 0, true, false, fig.grips?.[0], handsAt(fig.rig, fig.held, 0))
   g.setTransform(1, 0, 0, 1, 0, 0)
 
   // The bust: from the top of whatever is drawn down to just under the tunic.

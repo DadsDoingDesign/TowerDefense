@@ -15,7 +15,7 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 | Enemies | Name the goblin and the one thing about it that changes how you fight it. | 82 | 31 |
 | Ground and hazards | Say what a tile does to a hero posted on it, in a few words. | 36 | 37 |
 | Shrines | Say the bargain: what you get, what it costs. | 18 | 18 |
-| Companies, contracts and asks | Say what a contract pays, risks and asks, in numbers, before you sign. | 262 | 26 |
+| Companies, contracts and asks | Say what a contract pays, risks and asks, in numbers, before you sign. | 263 | 26 |
 | Loyalty track and liveries | Say what each standing level pays, by name. | 88 | 20 |
 | Trade war | Say who leads the season, who pays you at its end, and what desperate terms mean. | 62 | 28 |
 | Home (map, dock, card) | Say what the focused road is like and what its next level pays; the CTA opens its terms. | 77 | 25 |
@@ -973,15 +973,18 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 
 ### `src/ui/shell/contracts/AskParts.tsx`
 
-- L36: +{standing} standing{tip ? `, ${ASK_TIP} gold}
-- L48: The companies
-- L48: the companies
-- L49: What {who} asked
-- L84: What the road is asked
-- L100: {def.label} at {dest}
-- L102: {frac * 100}%
-- L129: Met
-- L129: Not met
+- L38: +{standing} standing{tip ? `, ${ASK_TIP} gold}
+- L50: The companies
+- L50: the companies
+- L51: What {who} asked
+- L122: {Math.floor(n / 100) / 10}k
+- L124: {short(Math.max(0, Math.f}/{short(a.target)}
+- L143: {frac * 100}%
+- L159: What the road is asked
+- L171: {def.label} at {dest}
+- L173: {frac * 100}%
+- L200: Met
+- L200: Not met
 
 ### `src/ui/shell/contracts/CityScreen.tsx`
 
@@ -1139,15 +1142,13 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 
 ### `src/ui/shell/contracts/RoutePanel.tsx`
 
-- L45: · depth
-- L48: {onWagons} of {c.crates} crates still on the wagons
-- L65: Next:
-- L80: {(layer / last) * 100}%
-- L82: {(((i + 1) * ACT_LAYERS) }%
-- L87: {(layer / last) * 100}%
-- L110: · all or nothing · depth
-- L116: · only
-- L120: · pays
+- L69: All or nothing
+- L93: {c.crates} crate{c.crates === 1 ? '' : 's}, {onWagons} still on the wagons
+- L94: {co.towns[i]} paid {p}
+- L112: · escort
+- L215: {(layer / last) * 100}%
+- L220: {(((i + 1) * ACT_LAYERS) }%
+- L227: {(layer / last) * 100}%
 
 ### `src/ui/shell/contracts/parts.tsx`
 

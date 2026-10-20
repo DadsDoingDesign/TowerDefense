@@ -803,51 +803,100 @@ button.ct-stand-chip:focus-visible {
 }
 
 /* ------------------------------------------------------------ the run's route panel */
-.ct-route {
+/* Quiet context over the map (the map-header pass, Oct 2026): two lines in
+   muted ink, so the focused node's preview in the Context panel is what the
+   eye goes to. The slot is the panel's place in the Stage's column; while the
+   asks are open it keeps the closed height (set inline by `RouteFrame`) and
+   the panel lies over the map, so the map never moves. */
+.ct-route-slot {
   flex: none;
+  position: relative;
+  z-index: 3;
+  padding: 4px 10px 0;
+}
+.ct-route {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  margin: 6px 10px 0;
-  padding: 6px 12px 6px;
   border-radius: 12px;
+  background: color-mix(in srgb, var(--panel) 82%, transparent);
+  border: 1px solid var(--line);
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--co) 45%, transparent);
+}
+.ct-route.open {
+  position: absolute;
+  top: 4px;
+  left: 10px;
+  right: 10px;
   background: var(--panel);
-  border: 1px solid var(--line-strong);
-  box-shadow: inset 3px 0 0 var(--co);
+  box-shadow:
+    inset 2px 0 0 color-mix(in srgb, var(--co) 45%, transparent),
+    0 10px 24px color-mix(in srgb, var(--shade) 55%, transparent);
+}
+/* The head and the road are one control: a tap anywhere opens the asks. */
+.ct-route-btn {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 5px 10px 2px 12px;
+  border: 0;
+  border-radius: inherit;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+div.ct-route-btn {
+  cursor: default;
 }
 .ct-route-top {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: var(--fs-sm);
-}
-.ct-route-top span {
+  gap: 6px;
+  min-height: 20px;
   font-size: var(--fs-xs);
   color: var(--muted);
+  white-space: nowrap;
+}
+.ct-route-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 700;
+}
+.ct-route-stake {
+  flex: none;
+  color: var(--muted-2);
 }
 .ct-route-crates {
-  margin-left: auto;
+  flex: none;
   display: inline-flex;
   gap: 2px;
   align-items: center;
 }
+.ct-route-asks {
+  margin-left: auto;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ct-route-more {
+  font-size: var(--fs-micro);
+  color: var(--muted-2);
+}
 .ct-route .ct-rail-stops b {
   font-size: var(--fs-xs);
 }
-.ct-route-next {
-  margin: 0;
-  font-size: var(--fs-xs);
-  color: var(--muted);
-  line-height: 1.3;
+/* The asks' rows, while open: under the road, over the map. */
+.ct-route-drawer {
+  padding: 0 10px 8px 12px;
 }
-.ct-route-next .ok {
-  color: var(--good);
-  font-weight: 700;
-}
-.ct-route-next .ct-gold {
-  color: var(--gold-text);
-  font-weight: 700;
-  vertical-align: -1px;
+.ct-route-drawer[hidden] {
+  display: none;
 }
 .ct-pill {
   display: inline-flex;
@@ -879,24 +928,27 @@ button.ct-stand-chip:focus-visible {
 }
 .ct-road {
   position: relative;
-  height: 34px;
-  margin: 0 8px 0 4px;
+  display: block;
+  height: 44px;
+  /* The caravan rides centred on the road's start: room for its half. */
+  margin: 0 6px 0 8px;
 }
 .ct-road-track,
 .ct-road-lit {
   position: absolute;
   left: 0;
   top: 9px;
-  height: 4px;
+  height: 3px;
   border-radius: 2px;
 }
 .ct-road-track {
   right: 0;
-  background: color-mix(in srgb, var(--rule) 14%, transparent);
+  background: color-mix(in srgb, var(--rule) 12%, transparent);
 }
+/* The way travelled: the company's colour, held down so it reads as a road
+   and not as the brightest thing on the screen. */
 .ct-road-lit {
-  background: var(--co);
-  box-shadow: 0 0 8px var(--co);
+  background: color-mix(in srgb, var(--co) 55%, var(--panel));
 }
 .ct-road-city {
   position: absolute;
@@ -905,27 +957,71 @@ button.ct-stand-chip:focus-visible {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
 }
 .ct-road-city.end {
   transform: translateX(-100%);
   align-items: flex-end;
 }
+/* A narrow phone has no room for three names (Crownwater met Highcharter at
+   320px): it names the next city, and the destination too while the next is
+   the first. A city behind keeps its lit lantern and what it paid; the
+   panel's accessible name says every city. */
+@media (max-width: 359.98px) {
+  /* Hidden in place: a note stays on the notes' line, under its own lantern. */
+  .ct-road-city.aside small,
+  .ct-road[data-next='1'] .ct-road-city.end small {
+    visibility: hidden;
+  }
+  /* "· escort" is the stake when there is none: the name and the asks need the room. */
+  .ct-route-stake {
+    display: none;
+  }
+}
 .ct-road-city small {
   font-size: var(--fs-micro);
-  font-weight: 700;
-  color: var(--muted);
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--muted-2);
   white-space: nowrap;
+}
+.ct-road-city.next small {
+  color: var(--muted);
+  font-weight: 700;
 }
 .ct-road-city.paid small {
   color: var(--good);
 }
+/* Under a city: what it paid (✓), or — the next one — how far and what it pays. */
+.ct-road-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--fs-micro);
+  line-height: 1.1;
+  color: var(--muted-2);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.ct-road-note .ok {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--good);
+}
+.ct-road-note .ct-gold {
+  gap: 3px;
+  color: var(--gold-text);
+  font-weight: 700;
+}
+/* The caravan: the head's crate mark (1×, 14 × 11), centred on the track so
+   it clears the city names under the lanterns wherever it stands. */
 .ct-road-me {
   position: absolute;
-  top: 1px;
+  top: 5px;
   transform: translateX(-50%);
   z-index: 1;
-  filter: drop-shadow(0 0 5px var(--co));
+  line-height: 0;
 }
 /* A trade company's small hung flag (Oct 2026): the notice's left, the hero
    pick's banner in small. */
@@ -1303,20 +1399,61 @@ button.ct-stand-chip:focus-visible {
   flex: none;
   color: var(--muted);
 }
-/* The route panel's counts: one slim row an ask, under the road. */
+/* The route panel's asks, closed: one small chip an ask — its mark, its
+   count, and a two-pixel progress mark under it. */
+.ask-chips {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.ask-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding-bottom: 3px;
+  font-size: var(--fs-micro);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.ask-chip b {
+  font-weight: 600;
+}
+.ask-chip-mark {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--rule) 14%, transparent);
+  overflow: hidden;
+}
+.ask-chip-mark i {
+  display: block;
+  height: 100%;
+  background: color-mix(in srgb, var(--co) 50%, var(--muted-2));
+}
+.ask-chip.met {
+  color: var(--good);
+}
+.ask-chip.met .ask-chip-mark i {
+  background: var(--good);
+}
+/* The route panel's asks, open: one slim row an ask, under the road. */
 .ask-track {
   list-style: none;
   display: grid;
-  gap: 2px;
-  margin: 2px 0 0;
-  padding: 4px 0 0;
+  gap: 4px;
+  margin: 0;
+  padding: 6px 0 0;
   border-top: 1px dashed var(--line-strong);
 }
 .ask-track-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 18px;
+  min-height: 20px;
   font-size: var(--fs-xs);
 }
 .ask-track-k {

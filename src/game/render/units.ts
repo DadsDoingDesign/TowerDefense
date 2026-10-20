@@ -12,7 +12,7 @@ import type { Archetype, Sentinel } from '../types'
 import { ANIM_FRAMES, loopFrame } from './anim'
 import { fxEnemyDot, fxEnemyFlash, fxEnemyRecoil, fxReducedMotion, fxSentinel, type ProcKind } from './fx'
 import { heroStrip, type Loadout } from './loadout'
-import { drawMainHand, drawOffHand, heroGearCached, offHandPlan, paintsMain, rigFor, unpaintedStrip, unpaints, type HeroGear, type StripFill } from './gearMarks'
+import { drawMainHand, drawOffHand, handsAt, heldGripsFor, heroGearCached, offHandPlan, paintsMain, rigFor, unpaintedStrip, unpaints, type Hands, type HeldStrip, type HeroGear, type StripFill } from './gearMarks'
 import { dressedStrip, wornOnFigure } from './bodyLayer'
 import type { Pixmap } from './pixmap'
 import { deliveryCached, deliveryOfRt, type Delivery } from './attackLook'
@@ -335,6 +335,7 @@ export function drawSentinel(ctx: CanvasRenderingContext2D, s: DrawSentinel): vo
         still,
         !!fig?.firing,
         fig?.grips?.[towerPm.frame],
+        handsAt(rig, fig?.held, towerPm.frame),
       )
   } else if (staticSpr) {
     groundRing()
@@ -430,6 +431,8 @@ export interface HeroFigure {
   rig: ReturnType<typeof rigFor>
   /** Per frame, where the off-hand piece is held on the rebuilt knight (`StripFill.grips`); null when nothing was rebuilt. */
   grips: StripFill['grips'] | null
+  /** Per frame, where each hand is on the strip baked (`heldGrips.generated.ts`); null when not measured (the rig's fixed fists). */
+  held: HeldStrip | null
 }
 
 /**
@@ -484,12 +487,13 @@ export function heroFigure(
   // The body piece, worn over what is left (an empty slot, or BODY_ON_FIGURE off, returns `strip` itself).
   const worn = dressedStrip(strip, pack, off.torso, frames, wornOnFigure(gear))
   const pm = pixmap(worn, { scale: unitPixmapScale(spriteScale), frames, ring: true })
-  return pm ? { pm, frames, firing, ownArt, rig, grips: off.fill?.grips ?? null } : null
+  return pm ? { pm, frames, firing, ownArt, rig, grips: off.fill?.grips ?? null, held: heldGripsFor(pack, `${archetype}_${anim}`) } : null
 }
 
 /**
  * The held marks over a figure: the off-hand piece in the left fist, then the
- * weapon in the right, `lunge` px toward the aim (`gearMarks`). The context is
+ * weapon in the right — each in this frame's fist (`hands`), so it moves with
+ * the hand — `lunge` px toward the aim (`gearMarks`). The context is
  * at the hero's origin (feet at y = +8).
  */
 export function drawHeldGear(
@@ -503,9 +507,11 @@ export function drawHeldGear(
   attacking: boolean,
   /** This frame's off-hand grip on the rebuilt knight (`HeroFigure.grips`), if any. */
   grip?: StripFill['grips'][number],
+  /** This frame's two hands (`gearMarks.handsAt` over `HeroFigure.held`): the marks move with them. */
+  hands?: Hands,
 ): void {
-  drawOffHand(ctx, rig, gear, grip)
-  drawMainHand(ctx, rig, gear, lungeX, lungeY, now, still, attacking)
+  drawOffHand(ctx, rig, gear, grip, hands?.l)
+  drawMainHand(ctx, rig, gear, lungeX, lungeY, now, still, attacking, hands?.r)
 }
 
 /**

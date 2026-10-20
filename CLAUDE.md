@@ -52,7 +52,13 @@ result. Append a short note to the review log when you're done.
   (`Rig.paintedFor` / `paintedBare`, `paintsMain`), the archer's bow for the
   bow; any other weapon cuts the painted one and draws its atlas cell in the
   fist only where it reads (`Rig.markMain`: the robed look's bare fists yes,
-  the hooded look none — a dagger there would float). The knight's painted shield is
+  the hooded look none — a dagger there would float). Every held mark is
+  held at THIS frame's fist (`gearMarks.handsAt`), never one fixed point:
+  `npm run anchors` tracks each fist off the idle and attack strips (a hand
+  hidden behind the body follows the tunic; a marker pack reads its markers;
+  `scripts/held-grips-lib.ts`) into `heldGrips.generated.ts`, `anchors:check`
+  fails if stale, idle frame 0 is the rig's `fistR` / `fistL`; review
+  `harness/kit.html?held=1`, tests `tests/heldGrips.test.ts`. The knight's painted shield is
   flood-cut by `cutOffHand` unless the off hand holds a Shield, and the hole
   it leaves is FILLED, per frame, never by mirroring: the back of the helmet
   continues its painted contour in one rounded arc into the chin (never

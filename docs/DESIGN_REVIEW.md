@@ -5335,3 +5335,106 @@ set let the three Level 1 starters fuse each other, and whole runs read the
 first-timer line 12% → 28%: fixed by pairing every Level 1 recipe with a
 card the collection unlocks. Two veteran contract gates stay red by 2pt (the
 freed slot, not the twists) — a tuning call left to the designer.
+
+### 2026-10-20 — the run map's header: quiet context, the selection leads
+
+The designer, on a 390 px shot of the run map with the foot of the contract
+header circled ("Next: Brinefen, 4 stops · 60" and the two ask rows): "The
+quests are cluttering space, the top info pulls more attention than the
+current selection info." The route panel stood 132 px over the map, in bright
+ink, with two full-width bars (Butcherblock's cargo ask a solid pink bar at
+100%) and a glowing travelled road. It out-shouted the Context panel, which
+holds the focused node, the thing being chosen. No rule, number or RNG draw
+changed.
+
+**What changed** (`contracts/RoutePanel.tsx`, `contracts/AskParts.tsx`,
+`contracts.css`, `charter.css`, `shell-wide.css`):
+- **Two quiet lines, 74 px.** Line one is the crest, the goods' road and its
+  stake, with the asks as chips on the right. Line two is the road. Everything
+  is in `--muted` / `--muted-2`, on a panel washed toward the map. The
+  travelled road is the company colour at 55%, with no glow, and the caravan
+  is the head's 1× crate. Gold stays `--gold-text`. The map gains 58–60 px on
+  every phone and 60 px on the desk.
+- **Each fact once.** "depth 0/12" went: the HUD's chip says it. The "Next:"
+  line went too, since the road already names Brinefen. What was new in it
+  (4 stops, the 60 it pays) now sits under the next city's name. A city
+  passed shows "✓ 140" under its own name, which replaces "✓ Brinefen paid
+  140". On the Sovereign Route the head is its rule, "All or nothing", because
+  the HUD's Sovereign marker names the road. The destination's note is the
+  payout.
+- **Asks as chips.** Each chip is the stat's atlas mark, its count, and a 2 px
+  progress mark in the asking company's ink, with ✓ once met. The whole panel
+  is one button. Its `aria-label` says every ask in full ("Deliver with full
+  cargo: 100%, judged at Saltcleave; …") and `aria-expanded` gives its state.
+  A tap opens the old rows (name, bar, count) in place, and the panel lies
+  over the map. A second tap, Escape, a tap outside or a new map focus closes
+  it. The slot holds the closed height while the panel is open, so the map's
+  box is identical both ways (measured: 127 / 460 at 390 px). `AskToast` is
+  untouched.
+- **Frames.** No new frame: `.ct-route` keeps its world frame, and the button
+  and the open rows sit inside it unframed.
+- **Desk.** The panel keeps to the map's 760 px column, so the road and the
+  map share one edge.
+
+**Rounds** (390 / 375 / 320 phones, 820 tablet, 1280 desk; Butcherblock,
+Ironvein, Rosethread, Peppercorn, Sovereign; closed and open):
+1. Two lines, chips, notes under the cities. At depth 5 the 2× caravan crate
+   covered the passed city's name. The crate went to 1×, centred on the track,
+   and the road gained 2 px of left room so the crate stops at the frame.
+2. At 320 px, "Sovereign Route" with three chips cut to "S…", and "Crownwater"
+   ran into "Highcharter" (an older collision, still there). The Sovereign
+   head became its rule. Under 360 px, "· escort" drops. A narrow phone names
+   only the next city, plus the destination while the next is the first. The
+   others are hidden in place, so each note stays under its own lantern.
+3. A first try hung the middle city's name left of its lantern. That only
+   moved the collision onto the notes ("140" met "3 stops"), so it was
+   reverted for the rule in round 2.
+
+**Scored.** The focused node's preview is now the brightest text below the
+HUD. The header reads as the road at a glance, and its numbers read when
+looked for. Benchmark: Slay the Spire's map keeps the run's context in a slim
+top bar and lets the node you hover lead. This is that split.
+
+**Weak spots.** While the panel is open, each count shows twice (chip and
+row). At 320 px Ironvein's "Metals & Stones road" still cuts to "Metals &
+Stones r…" beside two long counts. An at-end ask (cargo) shows a full mark
+at 100% before it is judged, as the old bar did. Card:
+`docs/ui-audit-2026-10/map-header/before-after.png`.
+
+## 2026-10-20 — Held gear moves with the hand
+
+The designer: "When an item is equipped the animation on the map doesn't move
+the item, it stays still while the character moves which looks odd." Cause:
+`gearMarks.drawMainHand` / `drawOffHand` held every atlas cell at the rig's
+ONE fist point per look (`Rig.fistR` / `fistL`, measured on idle frame 0),
+while the strip under it bobs and sways 1–3 px a frame — so on the robed look
+the wand or staff hung still while the fist rode out from under its handle,
+and a tome, quiver or shield in a rogue's or caster's off hand did the same
+(the knight's rebuilt off hand already had per-frame grips). The painted
+weapons are part of the strip and moved; their enchantment glint did not.
+
+- **Fix.** `npm run anchors` now tracks each fist off the real strips
+  (`scripts/held-grips-lib.ts`): the fist on idle frame 0 at the rig's point
+  (its skin and ink ring) is found near-exactly in every frame of the idle
+  and attack strips, nearest the last place; a hand hidden behind the body
+  (the archer's near hand through the draw) follows the tunic's measured
+  motion. Written to `heldGrips.generated.ts` (a marker pack's own grips too);
+  `anchors:check` fails when stale. `units.heroFigure` carries the strip's
+  table, `drawHeldGear` holds each mark at this frame's fist (`handsAt`), the
+  lunge on top, the painted weapon's glint shifted with its fist. Whole px,
+  render only; idle frame 0 is the rig's fist exactly, so the portraits and
+  every still frame are pixel for pixel what they were (diffed).
+- **Checked** in `harness/kit.html?held=1` (every kit through every frame it
+  draws over), before and after: the staff and wand cover the fist on all six
+  frames (before: the fist peeked out on 2–4); the caster's tome and the
+  archer's quiver ride the near hand; the caster's tome swings out with its
+  fist through the hammer blow; the knight is unchanged. No jitter: each
+  tracked idle point is the fist itself, every step ≤ the art's own (3 px at
+  most). Tests `tests/heldGrips.test.ts`.
+
+Weak spots: in the attack strip the caster's tome travels 18 px with the
+fist's counter-swing — held, but big; the archer's near hand is never seen
+in its draw, so the quiver follows the tunic, not a hand. Under reduced
+motion the figure still plays its idle (unchanged), and the item now rides
+it rather than standing apart. Cards: `docs/ui-audit-2026-10/held-gear/`
+(`scripts/held-gear-shots.mjs`, `scripts/held-gear-cards.ts`).
