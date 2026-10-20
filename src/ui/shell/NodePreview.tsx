@@ -11,7 +11,7 @@ import { contractRules } from '../../game/run/contracts'
 import { groundOf } from '../../state/game/runSlice'
 import { fieldIdOf } from '../../game/data/maps'
 import { fieldName, groundFor } from '../../game/run/fields'
-import { NODE_ICON, strengthPct, strengthText } from '../channels'
+import { NODE_ICON, NODE_TEXT, strengthPct, strengthText } from '../channels'
 import { Icon } from '../Icon'
 import { tapWord } from '../pointer'
 import { resistHint, summarizeEncounter } from './encounterPreview'
@@ -89,7 +89,7 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
         <span className="sh-context-icon" aria-hidden="true">
           <Icon name={NODE_ICON[node.type] ?? 'depth'} />
         </span>
-        <strong id="sh-node-head" style={{ color: meta.color }}>
+        <strong id="sh-node-head" style={{ color: NODE_TEXT[node.type] ?? meta.color }}>
           {summary ? summary.variant : meta.label}
         </strong>
       </div>
