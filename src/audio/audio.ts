@@ -1607,6 +1607,34 @@ export function sfxCrate(cue: 'thud' | 'shake' | 'burst', strength = 1): void {
 }
 
 /**
+ * The fuse beat (skill fusion, Oct 2026, `ui/shell/FuseBeat.tsx`): two quick
+ * knocks as the part cards meet, the slam at `slamS` seconds (a low thump and
+ * a bright strike), and the evolution's struck chord ringing out of it — the
+ * same voices as every other sting, no sample. With nothing moving (reduced
+ * motion) the beat passes `slamS` 0: the chord alone, at once.
+ */
+export function sfxFusion(slamS = 0.26): void {
+  const c = ensureCtx()
+  if (!c || vol.muted) return
+  const play = () => {
+    if (vol.muted) return
+    const at = Math.max(0, slamS)
+    if (at > 0.05) {
+      noise(0.05, 0.05, { bp: 1400, q: 4, bus: 'ui' })
+      noise(0.05, 0.06, { bp: 1700, q: 4, bus: 'ui', at: at * 0.55 })
+    }
+    osc(88, 0.32, 0.26, { type: 'sine', to: 42, bus: 'ui', at })
+    noise(0.22, 0.14, { lp: 6400, lpTo: 600, bus: 'ui', send: 0.35, at })
+    const n = stingDegrees('evolve', stingTiming().key)
+    n.slice(2).forEach((s, i) => pluckVoice('harp', A4_IN_BANK + s, 0.22, { at: at + 0.02 + i * 0.03, send: 0.6 }))
+    arp(n.slice(2, 6).map(a4), 0.7, 0.07, 0.03, { type: 'triangle', at: at + 0.02, send: 0.6 })
+    duckMusic(DUCK.sting, 0.9, at)
+  }
+  if (asleep(c)) void resumeCtx(c).then(play)
+  else play()
+}
+
+/**
  * Wake an EXISTING context back up — for the app's shared visibility handler
  * (see src/state/lifecycle.ts). Deliberately does not create a context: with no
  * gesture behind it that would only produce a suspended one.

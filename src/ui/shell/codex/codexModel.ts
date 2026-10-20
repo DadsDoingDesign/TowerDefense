@@ -16,7 +16,7 @@ import { ENEMY_TYPES } from '../../../game/data/enemies'
 import { knowledgeOf } from '../../../game/data/enemyKnowledge'
 import { RELICS, relicMark, relicSupported } from '../../../game/data/relics'
 import { RELIC_NOTE } from '../relicOffers'
-import { ALL_SKILLS, skillHeadline } from '../../../game/data/skills'
+import { ALL_SKILLS, FUSED_SKILLS, skillById, skillHeadline } from '../../../game/data/skills'
 import { ITEM_KINDS, itemPoolFor, kindEffect, kindSlot, SOVEREIGN_LEVEL } from '../../../game/data/itemKinds'
 import { itemIcon, type IconKey } from '../../../game/data/iconAtlas'
 import { companyById, type CompanyId } from '../../../game/data/companies'
@@ -65,6 +65,11 @@ export interface CodexEntry {
   chips: string[]
   does: string
   how: string
+  /**
+   * A fusion's recipe (skill fusion, Oct 2026): its two parts, always shown —
+   * the tile is "A + B → ?" until it is made once — and, once found, its twist.
+   */
+  fusion?: { parts: { name: string; icon: IconKey }[]; twist?: string }
 }
 
 export interface CodexSection {
@@ -187,7 +192,47 @@ function skillsTab(v: CodexView): CodexTab {
       LEVEL_HUE[l],
     ),
   )
-  return tab('skills', 'Skills', 'boon', sections)
+  return tab('skills', 'Skills', 'boon', [...sections, fusionsSection(v)])
+}
+
+/** The Fusions section's hue: the house accent (a fusion is no one level). */
+export const FUSION_HUE = 'var(--accent)'
+/** What an undiscovered fusion's card says: how to find it, never what it is. */
+export const fusionHow = (a: string, b: string): string => `Fuse ${a} and ${b} on one hero to find out.`
+
+/**
+ * Skill fusion (Oct 2026, `docs/SKILL_FUSION.md` § 4): every recipe as a tile.
+ * Its two parts always show — a recipe is a goal to chase, not a secret — and
+ * its result is "?" until the player has made it once (`codex.fusions`).
+ */
+function fusionsSection(v: CodexView): CodexSection {
+  const found = new Set(v.codex.fusions ?? [])
+  return section(
+    'Fusions',
+    FUSED_SKILLS.map((f): CodexEntry => {
+      const has = found.has(f.id)
+      const parts = f.parts.map((id) => {
+        const k = skillById(id)!
+        return { name: k.name, icon: skillHeadline(k).icon }
+      })
+      const names = parts.map((p) => p.name)
+      return {
+        id: `fusion:${f.id}`,
+        name: has ? f.name : '???',
+        locked: !has,
+        badge: has ? String(f.level) : '',
+        hue: FUSION_HUE,
+        // Locked, the tile draws its parts and a "?" (`CodexScreen.Art`); the icon is the twist's once found.
+        icon: has ? f.icon : parts[0].icon,
+        company: has ? f.company : undefined,
+        chips: has ? [`Fusion · ${LEVEL_NAME[f.level]}`, companyById(f.company).name] : ['Fusion'],
+        does: has ? f.desc : '',
+        how: has ? `Found. A hero holding ${names.join(' and ')} can fuse them at a level-up.` : fusionHow(names[0], names[1]),
+        fusion: { parts, ...(has ? { twist: f.twist } : {}) },
+      }
+    }),
+    FUSION_HUE,
+  )
 }
 
 /** A signature skill's chip (Draft 4 · B): the company's own, from its loyalty track. */

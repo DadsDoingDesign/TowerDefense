@@ -5,7 +5,9 @@
 import { roadPays } from './purse'
 import { canUpgrade, reforgeCost, reforgeItem, upgradeCost, upgradeRarity } from '../../game/data/items'
 import type { BumpStat } from '../../game/data/skills'
-import { takeBump, takeSkill } from '../../game/run/skills'
+import { takeBump, takeFusion, takeSkill } from '../../game/run/skills'
+import { fusedHeld } from '../../game/run/fusion'
+import { useMetaStore } from '../metaStore'
 import { scrapGold, sortItems } from '../../game/run/economy'
 import { equipFromPack, findItem, replaceItem, unequipToPack } from '../../game/run/inventory'
 import { equipRules } from '../../game/run/relics'
@@ -30,7 +32,14 @@ export interface RosterActions {
    * — unless `drop` names the skill it gives up. Never during a live wave:
    * choices are made between rounds.
    */
-  chooseSkill: (sentinelId: string, skillId: string, drop?: string | null) => void
+  chooseSkill: (sentinelId: string, skillId: string, drop?: string | null, partner?: string | null) => void
+  /**
+   * Fuse a pair of skills the hero already holds, at its owed milestone (skill
+   * fusion, path b — `run/skills.takeFusion`). Refused unless the hero holds
+   * both parts of `fusionId` and a milestone is owed; never during a live wave.
+   * A card that fuses (path a) is `chooseSkill`'s: the card always fuses.
+   */
+  chooseFusion: (sentinelId: string, fusionId: string) => void
   /** Take the stat bump instead, at the same milestone, on the stat chosen (SK1). */
   chooseStatBump: (sentinelId: string, stat: BumpStat) => void
 }
@@ -107,16 +116,27 @@ export const createRosterSlice: Slice<RosterActions> = (set, get) => ({
     redressWearer(get, set, itemId)
   },
 
-  chooseSkill: (sentinelId, skillId, drop) => {
+  chooseSkill: (sentinelId, skillId, drop, partner) => {
     const { roster, skillPool, runSeed } = get()
     const hero = roster.find((x) => x.id === sentinelId)
     if (!hero || waveLive(get())) return
-    const next = takeSkill(hero, skillId, skillPool, runSeed, drop)
+    const next = takeSkill(hero, skillId, skillPool, runSeed, drop, partner)
     if (!next) return sfx('error')
     set({ roster: roster.map((x) => (x.id === sentinelId ? next : x)) })
-    // A skill is the biggest choice a hero makes, and keeps the struck chord
+    // A card that fused plays the fuse beat's own cue (`FuseBeat`); a plain
+    // skill is the biggest choice a hero makes, and keeps the struck chord
     // the evolution had.
-    sfx('evolve')
+    if (!noteFused(hero.skills, next.skills)) sfx('evolve')
+  },
+
+  chooseFusion: (sentinelId, fusionId) => {
+    const { roster } = get()
+    const hero = roster.find((x) => x.id === sentinelId)
+    if (!hero || waveLive(get())) return
+    const next = takeFusion(hero, fusionId)
+    if (!next) return sfx('error')
+    set({ roster: roster.map((x) => (x.id === sentinelId ? next : x)) })
+    noteFused(hero.skills, next.skills)
   },
 
   chooseStatBump: (sentinelId, stat) => {
@@ -129,6 +149,18 @@ export const createRosterSlice: Slice<RosterActions> = (set, get) => ({
     sfx('upgrade')
   },
 })
+
+/**
+ * The fused skills a choice made, recorded in the Codex as found (skill
+ * fusion: an undiscovered recipe's result is a "?" until it is made once).
+ * True when the choice fused.
+ */
+function noteFused(before: readonly string[] | undefined, after: readonly string[] | undefined): boolean {
+  const had = new Set(fusedHeld({ skills: [...(before ?? [])] }))
+  const made = fusedHeld({ skills: [...(after ?? [])] }).filter((id) => !had.has(id))
+  if (made.length) useMetaStore.getState().recordCodex({ fusions: made })
+  return made.length > 0
+}
 
 /**
  * A gear change in the breather reaches the fight: the hero standing in the

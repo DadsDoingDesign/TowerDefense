@@ -1,6 +1,7 @@
 import type { CompanyId } from './companies'
 import type { CoreStats, EffectMods } from '../types'
 import type { IconKey } from './iconAtlas'
+import { FUSIONS, type FusionDef } from './fusions'
 
 /**
  * ---------------------------------------------------------------------------
@@ -75,7 +76,17 @@ export interface Skill {
    * cards first (`run/standing.rollStandingCard`). Every card names one.
    */
   company: CompanyId
+  /**
+   * A FUSED skill (`data/fusions.ts`): the two library skills it is made of.
+   * Its `mods` are the twist alone; `skillModsOf` adds the parts' first.
+   */
+  parts?: readonly [string, string]
+  /** A fused skill's twist: the rule only it has, in one line. */
+  twist?: string
 }
+
+/** A fused skill, as the library reads it. */
+export type FusedSkill = Skill & Required<Pick<Skill, 'parts' | 'twist'>> & Pick<FusionDef, 'icon' | 'element'>
 
 const L1: Skill[] = [
   // ---- starters ------------------------------------------------------------
@@ -193,11 +204,39 @@ const L3: Skill[] = [
   { id: 'tinkers_spark', name: 'Tinker’s Spark', level: 3, company: 'scrolls', desc: 'Every 5th attack jumps to 3 more enemies in full; hits 25% harder.', mods: { chainEvery: { every: 5, chains: 3, dmgFrac: 1 }, damageMult: 1.25 }, from: 'New with the peoples’ rosters (the gnomes)' },
 ]
 
+/**
+ * The library: every skill a card, a pool, a crate or a track can deal. The
+ * fused skills are NOT in it (`FUSED_SKILLS`): they come only from fusing, so
+ * no pool, unlock, starter or signature list built off this ever holds one.
+ */
 export const ALL_SKILLS: readonly Skill[] = [...L1, ...L2, ...L3]
 const BY_ID = new Map(ALL_SKILLS.map((s) => [s.id, s]))
 
-export const skillById = (id: string): Skill | undefined => BY_ID.get(id)
-export const isSkillId = (v: unknown): v is string => typeof v === 'string' && BY_ID.has(v)
+/** The fused skills (`data/fusions.ts`), as skills: what a hero holds once two of its skills fuse. */
+export const FUSED_SKILLS: readonly FusedSkill[] = FUSIONS.map((f) => ({
+  id: f.id,
+  name: f.name,
+  level: f.level,
+  desc: f.desc,
+  twist: f.twist,
+  mods: f.mods,
+  parts: f.parts,
+  company: f.company,
+  icon: f.icon,
+  element: f.element,
+  from: `Fused from ${f.parts.map((id) => BY_ID.get(id)?.name ?? id).join(' and ')}`,
+}))
+const FUSED_BY_ID = new Map(FUSED_SKILLS.map((s) => [s.id, s]))
+
+/** A skill a hero may hold: a library card or a fused skill. */
+export const skillById = (id: string): Skill | undefined => BY_ID.get(id) ?? FUSED_BY_ID.get(id)
+/** Any id a hero may hold (`hero.skills`): a library card or a fused skill. */
+export const isSkillId = (v: unknown): v is string => typeof v === 'string' && (BY_ID.has(v) || FUSED_BY_ID.has(v))
+/** A library card (never a fused skill): what pools, unlocks and the meta save may hold. */
+export const isCardId = (v: unknown): v is string => typeof v === 'string' && BY_ID.has(v)
+/** A fused skill's id. */
+export const isFusedId = (v: unknown): v is string => typeof v === 'string' && FUSED_BY_ID.has(v)
+export const fusedById = (id: string): FusedSkill | undefined => FUSED_BY_ID.get(id)
 
 /** The skills everyone has from the first run: three per level. */
 export const STARTER_SKILLS: readonly string[] = ALL_SKILLS.filter((s) => s.starter).map((s) => s.id)
@@ -235,7 +274,18 @@ export function skillModsOf(s: { skills?: readonly string[] }): EffectMods[] {
   const out: EffectMods[] = []
   for (const id of s.skills ?? []) {
     const k = BY_ID.get(id)
-    if (k) out.push(k.mods)
+    if (k) {
+      out.push(k.mods)
+      continue
+    }
+    // A fused skill is its two parts, then its twist.
+    const f = FUSED_BY_ID.get(id)
+    if (!f) continue
+    for (const part of f.parts) {
+      const p = BY_ID.get(part)
+      if (p) out.push(p.mods)
+    }
+    out.push(f.mods)
   }
   return out
 }
@@ -410,7 +460,10 @@ const HEADLINES: readonly [keyof EffectMods, (m: EffectMods) => SkillHeadline][]
   ['vsWarded', () => ({ icon: 'armour', label: 'Vs warded' })],
 ]
 
-export function skillHeadline(skill: Pick<Skill, 'mods'>): SkillHeadline {
+export function skillHeadline(skill: Pick<Skill, 'mods'> & { id?: string }): SkillHeadline {
+  // A fused skill is pictured by its twist (the rule only it has).
+  const f = skill.id ? FUSED_BY_ID.get(skill.id) : undefined
+  if (f) return { icon: f.icon, label: 'Fusion' }
   for (const [key, read] of HEADLINES) if (skill.mods[key] != null) return read(skill.mods)
   return { icon: 'boon', label: 'Skill' }
 }

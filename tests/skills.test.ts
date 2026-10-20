@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   ALL_SKILLS,
+  FUSED_SKILLS,
   EVOLUTION_TO_SKILL,
   FEAT_SKILLS,
   PERK_TO_SKILL,
@@ -23,6 +24,7 @@ import {
   takeBump,
   takeSkill,
 } from '../src/game/run/skills'
+import { cardFusions, recipeFor } from '../src/game/run/fusion'
 import { difficultyRules, LAST_LEG, legMult, MAX_DIFFICULTY, rollUnlock, skillPoolFor, watchLevelFor, watchXpToReach } from '../src/game/run/watch'
 import { standingXpFor } from '../src/game/run/standing'
 import { classicHero } from '../src/game/data/sentinels'
@@ -138,7 +140,8 @@ describe('milestones and offers', () => {
 
   it('takes a skill into a free slot, and swaps one out when full', () => {
     const h = at('fighter', 5, { skills: ['quick_hands'] })
-    const pick = skillOffer(h, ALL_POOL, seed)[0].id
+    // A card that does not fuse with Quick Hands (one that does fuses instead: tests/fusion.test.ts).
+    const pick = skillOffer(h, ALL_POOL, seed).find((k) => !recipeFor('quick_hands', k.id))!.id
     const t = takeSkill(h, pick, ALL_POOL, seed)!
     expect(t.skills).toEqual(['quick_hands', pick])
     expect(t.skillPicks).toBe(1)
@@ -148,6 +151,7 @@ describe('milestones and offers', () => {
     const l3 = skillOffer(full, ALL_POOL, seed)[0].id
     expect(takeSkill(full, l3, ALL_POOL, seed)).toBeNull()
     expect(takeSkill(full, l3, ALL_POOL, seed, 'not_held')).toBeNull()
+    expect(cardFusions(full, [{ id: l3 }]).size).toBe(0)
     const sw = takeSkill(full, l3, ALL_POOL, seed, 'hard_hitter')!
     expect(sw.skills).toEqual(['quick_hands', l3, 'heavy_blows'])
     expect(sw.skillPicks).toBe(3)
@@ -285,10 +289,11 @@ describe('the Codex collection (items and skills)', () => {
     expect(tabs.map((t) => t.label)).toEqual(['Items', 'Skills', 'Goblins', 'Relics', 'Feats'])
     const [items, skills] = tabs
     const itemTiles = items.sections.flatMap((s) => s.entries)
-    const skillTiles = skills.sections.flatMap((s) => s.entries)
+    // The library's tiles; the Fusions section's are held in tests/fusion.test.ts.
+    const skillTiles = skills.sections.filter((s) => s.title !== 'Fusions').flatMap((s) => s.entries)
     expect(itemTiles).toHaveLength(ITEM_KINDS.length)
     expect(skillTiles).toHaveLength(ALL_SKILLS.length)
-    expect(`${skills.have}/${skills.total}`).toBe(`${STARTER_SKILLS.length + 1}/${ALL_SKILLS.length}`)
+    expect(`${skills.have}/${skills.total}`).toBe(`${STARTER_SKILLS.length + 1}/${ALL_SKILLS.length + FUSED_SKILLS.length}`)
     expect(`${items.have}/${items.total}`).toBe(`${BASIC_ITEM_KINDS.length + 1}/${ITEM_KINDS.length}`)
     // A locked kind says how it opens: by playing, or — the Sovereign tier — by a delivered Sovereign Route.
     const sovereign = items.sections.find((s) => s.title === 'Sovereign')!
@@ -304,7 +309,7 @@ describe('the Codex collection (items and skills)', () => {
       expect(e.does).toBe('')
       expect(ALL_SKILLS.some((k) => e.how.includes(k.desc))).toBe(false)
     }
-    expect(skills.sections.map((s) => s.title)).toEqual(['Level 1', 'Level 2', 'Level 3'])
+    expect(skills.sections.map((s) => s.title)).toEqual(['Level 1', 'Level 2', 'Level 3', 'Fusions'])
     // Every tile has a picture from the atlas.
     for (const e of [...itemTiles, ...skillTiles]) expect(ICON_ORDER as readonly string[], e.id).toContain(e.icon)
   })

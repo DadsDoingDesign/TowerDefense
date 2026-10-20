@@ -2,7 +2,7 @@ import { canUpgrade, HERO_SLOT_LABEL, RARITY, raiseAdds, raisedBase, upgradeCost
 import { computeCombat, type CombatProfile } from '../../game/engine/combat'
 import { MAX_LEVEL } from '../../game/engine/leveling'
 import { MAX_SKILLS, nextMilestone, pendingMilestone, SKILL_MILESTONES, type Milestone } from '../../game/run/skills'
-import { skillById, skillHeadline, type Skill } from '../../game/data/skills'
+import { fusedById, skillById, skillHeadline, type FusedSkill, type Skill } from '../../game/data/skills'
 import type { HeroSlot, Item, Sentinel } from '../../game/types'
 import type { IconKey } from '../channels'
 import { gearDeltas, type GearDelta } from './gearPlan'
@@ -64,7 +64,14 @@ export function levelWords(level: number, progress: number): string {
  * now, or the level the next one opens at.
  */
 export type SkillSlot =
-  | { kind: 'held'; skill: Skill; icon: IconKey; level: number }
+  | {
+      kind: 'held'
+      skill: Skill
+      icon: IconKey
+      level: number
+      /** A fused skill (skill fusion): its record, with its parts' names. */
+      fused?: { skill: FusedSkill; parts: readonly [string, string] }
+    }
   | { kind: 'owed'; milestone: Milestone }
   /** An empty slot, and the hero level the next choice comes at (null: no choice left). */
   | { kind: 'later'; level: number | null }
@@ -79,7 +86,11 @@ export type SkillSlot =
  */
 export function skillSlots(hero: Pick<Sentinel, 'level' | 'skills' | 'skillPicks'>): SkillSlot[] {
   const held = (hero.skills ?? []).map((id) => skillById(id)).filter((k): k is Skill => !!k)
-  const slots: SkillSlot[] = held.slice(0, MAX_SKILLS).map((skill) => ({ kind: 'held', skill, icon: skillHeadline(skill).icon, level: skill.level }))
+  const slots: SkillSlot[] = held.slice(0, MAX_SKILLS).map((skill) => {
+    const f = fusedById(skill.id)
+    const fused = f ? { skill: f, parts: f.parts.map((id) => skillById(id)?.name ?? id) as unknown as readonly [string, string] } : undefined
+    return { kind: 'held', skill, icon: skillHeadline(skill).icon, level: skill.level, ...(fused ? { fused } : {}) }
+  })
   const owed = pendingMilestone(hero)
   if (owed && slots.length < MAX_SKILLS) slots.push({ kind: 'owed', milestone: owed })
   const next = nextMilestone(hero)

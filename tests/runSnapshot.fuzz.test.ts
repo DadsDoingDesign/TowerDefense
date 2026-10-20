@@ -50,7 +50,7 @@ import {
   type RunSnapshot,
 } from '../src/state/runSnapshot'
 import { relicTeamMods } from '../src/game/data/relics'
-import { skillById, STARTER_SKILLS } from '../src/game/data/skills'
+import { isFusedId, skillById, STARTER_SKILLS } from '../src/game/data/skills'
 import { ALL_ITEM_KINDS, BASIC_ITEM_KINDS, CLASSIC_ITEM_KINDS, isItemKind, isSovereignKind, SOVEREIGN_ITEM_KINDS } from '../src/game/data/itemKinds'
 import { MAX_SKILLS, skillOffer } from '../src/game/run/skills'
 import { CITY_COUNT, MARKET_MULT, MAX_CRATES, runItemPool } from '../src/game/run/contracts'
@@ -121,6 +121,10 @@ function buildBase(): Record<string, unknown> {
   const extra: Sentinel = {
     ...classicHero('mystic'),
     equipment: { mainHand: null, offHand: { ...epic('oneHand'), name: 'Heavy Sword' }, body: null },
+    // Skill fusion (Oct 2026): a fused skill in a slot, so every load of the
+    // base validates one and every mutation of `skills` reaches it.
+    skills: ['fz_thousand_cuts'],
+    skillPicks: 1,
   }
   const runMods: EffectMods[] = [{ damageMult: 1.05, burn: { dps: 2, dur: 1.5 } }]
   useGameStore.setState({
@@ -318,6 +322,8 @@ function assertPlayable(snap: RunSnapshot, where: string): void {
   // SK1 (v13): the run's pool is known skill ids, and every hero's skills are
   // known, distinct, its class's, at most three — and its owed offer deals.
   if (!snap.skillPool.length || !snap.skillPool.every((id) => !!skillById(id))) throw new Error(`${where}: bad skill pool`)
+  // Fusion: a pool is library cards only — a fused skill is never dealt.
+  if (snap.skillPool.some((id) => isFusedId(id))) throw new Error(`${where}: a fused skill in the pool`)
   // v14: the item pool is known kinds, always holding the basic five; v15:
   // weighted to the contract's company — and (v16) its HQ focus — exactly as
   // a run beginning on those terms weights it, nothing more.
@@ -332,6 +338,8 @@ function assertPlayable(snap: RunSnapshot, where: string): void {
     for (const id of ks) {
       const k = skillById(id)
       if (!k) throw new Error(`${where}: ${s.id} holds ${id}`)
+      // A fused skill's parts are never also held loose.
+      if (k.parts?.some((p) => ks.includes(p))) throw new Error(`${where}: ${s.id} holds ${id} and a part of it`)
     }
     const picks = s.skillPicks ?? 0
     if (!Number.isInteger(picks) || picks < 0 || picks > 3) throw new Error(`${where}: ${s.id} skillPicks ${picks}`)
