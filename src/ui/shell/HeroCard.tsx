@@ -10,6 +10,7 @@ import { meleeSource, MELEE_LINE, weaponWord } from '../../game/engine/melee'
 import type { Sentinel } from '../../game/types'
 import { useGameStore } from '../../state/gameStore'
 import { Icon } from '../Icon'
+import { SkillIcon } from '../SkillIcon'
 import { EffectLine } from './EffectLine'
 import { InfoToggle } from './InfoToggle'
 import { cardFields, levelWords, skillSlots, type SkillSlot } from './heroCard'
@@ -238,7 +239,7 @@ function SkillSlotButton({ slot, open, live, onRead, onChoose }: { slot: SkillSl
         style={slot.fused ? elementVar(slot.fused.skill) : undefined}
         onClick={onRead}
       >
-        <Icon name={slot.icon} lg />
+        <SkillIcon id={slot.skill.id} lg />
         <b className="sh-sk-lv" aria-hidden="true">
           L{slot.level}
         </b>
