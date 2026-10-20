@@ -1475,7 +1475,10 @@ export class GameEngine {
     // The crit roll is ALWAYS drawn, so a cadence crit never shifts the combat
     // stream for anything that fires after it.
     // A crit aura raises the bar the roll is read against, never the draw count.
-    const rolled = this.rng.chance(s.critBuff ? Math.min(0.95, s.profile.critChance + s.critBuff) : s.profile.critChance)
+    // Rimecut: a frost-chilled target is easier to crit (the bar again, never the draw).
+    const frostCrit = m.critFreeze && this.elapsed < target.frostUntil ? m.critFreeze.chance : 0
+    const critBar = s.critBuff || frostCrit ? Math.min(0.95, s.profile.critChance + s.critBuff + frostCrit) : s.profile.critChance
+    const rolled = this.rng.chance(critBar)
     const isCrit = rolled || (!!m.critEvery && s.shots % m.critEvery === 0)
     // Twin Knives: every Nth attack strikes twice — double the hit, no roll.
     const twice = m.doubleEvery && s.shots % m.doubleEvery === 0 ? 2 : 1

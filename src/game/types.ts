@@ -179,7 +179,7 @@ export interface EffectMods {
   /** Arc carry: its chain arcs also write its burn and its chill on what they jump to. */
   arcCarry?: boolean
   /** Freeze: a crit on a frost-chilled enemy deals `bonus` more and stops it `dur` seconds (not again for `FREEZE_REST`). */
-  critFreeze?: { dur: number; bonus: number }
+  critFreeze?: { dur: number; bonus: number; chance: number }
   /** Focus: each shot it has already aimed at an enemy makes the next on it `step` harder, up to `cap`. */
   focusStack?: { step: number; cap: number }
   /** Held burst: an enemy it was holding that dies bursts for `frac` of its hit on enemies within `radius`. */

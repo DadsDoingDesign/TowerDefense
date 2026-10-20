@@ -551,7 +551,7 @@ const MOD_STRUCT_FIELDS = {
   spitEvery: ['every', 'count', 'dps', 'dur'],
   root: ['count', 'dur'],
   // The fusions' twists (Oct 2026, `data/fusions.ts`).
-  critFreeze: ['dur', 'bonus'],
+  critFreeze: ['dur', 'bonus', 'chance'],
   focusStack: ['step', 'cap'],
   heldBurst: ['frac', 'radius'],
   contagion: ['count', 'radius'],

@@ -72,13 +72,13 @@ await page.evaluate(async (style) => {
           <div class="tw"><b>${kind}</b>${f.twist}</div></div>`
       })
       .join('')
-    const when = lv === 1 ? 'met at level 5' : lv === 2 ? 'met at level 10' : 'met at level 15'
+    const when = lv === 1 ? 'paired at level 5, fused from level 10' : lv === 2 ? 'met at level 10' : 'met at level 15'
     return `<p class="lv">Level ${lv} fusions · ${when}</p>${rows}`
   })
   document.head.insertAdjacentHTML('beforeend', `<style>${style}</style>`)
   document.body.insertAdjacentHTML(
     'beforeend',
-    `<div class="card" id="recipes"><h1>Skill fusions</h1><p class="sub">Two skills a hero holds fuse into one, in one slot: both effects, plus a twist only the fusion has. ${FUSIONS.length} recipes.</p>${levels.join('')}</div>`,
+    `<div class="card" id="recipes"><h1>Skill fusions</h1><p class="sub">Two skills a hero holds fuse into one, in one slot, from level 10: both effects, plus a twist only the fusion has. ${FUSIONS.length} recipes.</p>${levels.join('')}</div>`,
   )
 }, STYLE)
 await page.waitForTimeout(500)
@@ -92,12 +92,13 @@ const img = (f) => {
   return fs.existsSync(p) ? `data:image/png;base64,${fs.readFileSync(p).toString('base64')}` : ''
 }
 const steps = [
-  ['02-offer-fuses-p390.png', '1 · A card that fuses', 'At level 5 the hero holds Keen Eye; a card that fuses with it wears “Fuses”, and its card is the fusion’s.'],
-  ['03-beat-b-p390.png', '2 · The fuse beat', 'The two cards slam together in the fusion’s colour. Under a second; still under reduced motion.'],
-  ['04-hero-card-p390.png', '3 · One slot, two skills', 'The fusion sits in one slot; the next two milestones fill the others. Its read line names its parts.'],
-  ['05-held-pair-p390.png', '4 · A pair already held', 'A hero holding both parts gets “Fuse” beside the cards: it frees a slot.'],
-  ['06-codex-p390.png', '5 · The Codex', 'Every recipe: its parts and a “?” until made once, then the fusion, NEW.'],
-  ['08-codex-found-p390.png', '6 · Found', 'A found fusion’s card: its recipe, what it does, its twist.'],
+  ['01-offer-pairs-p390.png', '1 · A pair, at level 5', 'Fusion opens at level 10. At 5 a card that pairs with a held skill wears “Pairs” and says when they can fuse.'],
+  ['02-offer-fuses-p390.png', '2 · A card that fuses', 'At level 10 the hero holds Poisoned Tips; Venom Spit wears “Fuses”, and its card is the fusion’s.'],
+  ['03-beat-b-p390.png', '3 · The fuse beat', 'The two cards slam together in the fusion’s colour. Under a second; still under reduced motion.'],
+  ['04-hero-card-p390.png', '4 · One slot, two skills', 'The fusion sits in one slot, and level 15 fills the one it freed. Its read line names its parts and its twist.'],
+  ['05-held-pair-p390.png', '5 · A pair already held', 'The pair it took at level 5 is “Fuse” beside the level-10 cards: it frees a slot.'],
+  ['06-codex-p390.png', '6 · The Codex', 'Every recipe: its parts and a “?” until made once, then the fusion, NEW.'],
+  ['08-codex-found-p390.png', '7 · Found', 'A found fusion’s card: its recipe, what it does, its twist.'],
 ]
 await page.evaluate((steps) => {
   document.getElementById('recipes')?.remove()

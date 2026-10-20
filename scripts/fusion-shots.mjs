@@ -104,9 +104,15 @@ for (const view of VIEW_ARG ?? Object.keys(VIEWS)) {
   await cta(p) // sign → pick
   await cta(p, 2500) // march → the opening fight
 
-  // (a) A level-5 offer where cards fuse with the Keen Eye it holds.
-  const pool = ['quick_hands', 'keen_eye', 'long_reach', 'frostbite', 'bounty', 'heavy_blows', 'long_shot', 'finisher', 'berserk', 'weaponmaster', 'volley', 'venom_spit', 'shield_wall', 'blessing']
+  // Level 5: fusion is not open yet; a card that pairs with the Keen Eye it holds says so.
+  const pool = ['quick_hands', 'keen_eye', 'long_reach', 'frostbite', 'bounty', 'heavy_blows', 'long_shot', 'finisher', 'cold_snap', 'berserk', 'weaponmaster', 'volley', 'venom_spit', 'shield_wall', 'blessing']
   await owe(p, 5, ['keen_eye'], 0, pool)
+  const pairs = p.page.locator('.pk-tok:has(.fz-tag)').first()
+  if (await pairs.count()) await pairs.click()
+  await p.shot('01-offer-pairs')
+
+  // (a) A level-10 offer where a card fuses with the Poisoned Tips it holds.
+  await owe(p, 10, ['poison_tips', 'bounty'], 1, pool)
   await p.shot('01-offer')
   const fusing = p.page.locator('.pk-tok:has(.fz-tag)').first()
   if (await fusing.count()) await fusing.click()
@@ -143,8 +149,8 @@ for (const view of VIEW_ARG ?? Object.keys(VIEWS)) {
   await p.page.locator('.sh-sk.fused').first().click({ timeout: 3000 }).catch((e) => p.log.push('slot ' + e.message.slice(0, 60)))
   await p.shot('04-hero-card')
 
-  // (b) A level-10 hero already holding a pair that fuses.
-  await owe(p, 10, ['poison_tips', 'venom_spit'], 1, null)
+  // (b) A level-10 hero already holding a pair that fuses (they paired at level 5).
+  await owe(p, 10, ['keen_eye', 'frostbite'], 1, null)
   const pair = p.page.locator('.pk-tok[aria-label^="Fuse "]').first()
   if (await pair.count()) await pair.click()
   else p.log.push('no held pair token')

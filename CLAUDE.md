@@ -179,7 +179,9 @@ result. Append a short note to the review log when you're done.
   fused ids `fz_*`, in `FUSED_SKILLS`, never in `ALL_SKILLS` or any pool,
   unlock, crate or track); `skills.skillModsOf` expands a fusion into its
   parts then its twist; `isSkillId` takes fused ids, `isCardId` library
-  cards only. Rules `src/game/run/fusion.ts` + `run/skills.ts`: a milestone
+  cards only. Rules `src/game/run/fusion.ts` + `run/skills.ts`: fusion opens
+  at the level-10 milestone (`FUSION_FROM_LEVEL`; at 5 a pairing card is
+  taken as itself, tagged "Pairs"); a milestone
   card that fuses with a held skill ALWAYS fuses into that slot
   (`takeSkill`, no swap, `partner` picks when two fuse); a held pair is one
   more choice (`fusionChoices` / `takeFusion`); a fusion never fuses again;

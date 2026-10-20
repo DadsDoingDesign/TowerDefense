@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { lookVar, railText } from '../channels'
 import { BUMP_LABEL, BUMP_STATS, BUMP_WHAT, skillById, skillHeadline, skillLevelLabel, type BumpStat, type FusedSkill } from '../../game/data/skills'
 import { computeCombat } from '../../game/engine/combat'
-import { cardFusions, fuseSkills } from '../../game/run/fusion'
-import { bumpAmount, bumpOffered, fusionChoices, MAX_SKILLS, pendingMilestone, skillOffer, slotsFull } from '../../game/run/skills'
+import { cardFusions, fuseSkills, type CardFusion } from '../../game/run/fusion'
+import { bumpAmount, bumpOffered, FUSION_FROM_LEVEL, fusionChoices, fusionOpen, MAX_SKILLS, offerFusions, pendingMilestone, skillOffer, slotsFull } from '../../game/run/skills'
 import type { Sentinel } from '../../game/types'
 import { useGameStore } from '../../state/gameStore'
 import { useSettingsStore } from '../../state/settingsStore'
@@ -89,8 +89,11 @@ function SkillChoice({ hero, onDone }: { hero: Sentinel; onDone?: () => void }) 
   const held = have.map((id) => skillById(id)).filter((k) => !!k)
   const hue = lookVar(hero)
   // Fusion: what each card fuses with (path a), and the pairs held (path b).
-  const fuses = cardFusions(hero, offer)
+  const fuses = offerFusions(hero, offer)
   const pairs = fusionChoices(hero)
+  // Before fusion opens (level 10): a card that would pair with a held skill
+  // is taken as itself, and says so — the pair can fuse at the next milestone.
+  const later = fusionOpen(hero) ? new Map<string, CardFusion[]>() : cardFusions(hero, offer)
 
   // Pick one, then read (October 2026): the offer is a strip of tokens — the
   // skill's lead effect as a picture and a word, the stat boost as one more —
@@ -179,12 +182,17 @@ function SkillChoice({ hero, onDone }: { hero: Sentinel; onDone?: () => void }) 
     ...offer.map((k) => {
       const h = skillHeadline(k)
       const w = fuses.get(k.id)?.[0]
+      const p = later.get(k.id)?.[0]
       return {
         id: `skill:${k.id}`,
-        art: w ? <FusingArt icon={h.icon} into={w.into} tag="Fuses" /> : <Icon name={h.icon} lg />,
+        art: w ? <FusingArt icon={h.icon} into={w.into} tag="Fuses" /> : p ? <FusingArt icon={h.icon} into={p.into} tag="Pairs" /> : <Icon name={h.icon} lg />,
         label: h.label,
         value: h.value,
-        name: w ? `${k.name}: fuses with ${skillById(w.with)?.name} into ${w.into.name}` : `${k.name}: ${k.desc}`,
+        name: w
+          ? `${k.name}: fuses with ${skillById(w.with)?.name} into ${w.into.name}`
+          : p
+            ? `${k.name}: ${k.desc} Pairs with ${skillById(p.with)?.name}: they can fuse from level ${FUSION_FROM_LEVEL}`
+            : `${k.name}: ${k.desc}`,
       }
     }),
     ...(bump ? [{ id: 'bump', art: <Icon name="boon" lg />, label: 'Stat', value: `+${amount}`, name: `Or a stat boost: plus ${amount} to one stat` }] : []),
@@ -285,6 +293,11 @@ function SkillChoice({ hero, onDone }: { hero: Sentinel; onDone?: () => void }) 
                   </div>
                 )}
                 {held.length > 0 && !full && <p className="pk-sec-v">Has: {held.map((k) => k.name).join(' · ')}</p>}
+                {later.get(chosen.id)?.[0] && (
+                  <p className="sh-line note">
+                    Pairs with {skillById(later.get(chosen.id)![0].with)?.name}: they can fuse from level {FUSION_FROM_LEVEL}.
+                  </p>
+                )}
               </PickCard>
             ) : (
               <PickCard kicker="Instead of a skill" name={`+${amount} to one stat`} index={at} count={focusList.length} onStep={step} noun="choice" style={{ borderLeft: `3px solid ${hue}` }}>

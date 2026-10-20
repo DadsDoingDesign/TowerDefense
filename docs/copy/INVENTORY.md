@@ -9,7 +9,7 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 |---|---|---:|---:|
 | Relics | Say what a relic does to the team, in a number, and that relics stack and reach new hires (once, as a note). | 27 | 41 |
 | Boons and pacts (stat cards) | Say the gain and, for a pact, its bill: numbers and what they touch. | 39 | 18 |
-| Skills | Say what a skill does to its hero, in numbers, so two can be compared at a glance. | 172 | 31 |
+| Skills | Say what a skill does to its hero, in numbers, so two can be compared at a glance. | 174 | 31 |
 | Items and gear | Name the item and say what it does in the hand: its numbers, its quirk. | 307 | 36 |
 | Mutations | Say how a mutation changes one hero's attack, and its cost. | 27 | 31 |
 | Enemies | Name the goblin and the one thing about it that changes how you fight it. | 82 | 31 |
@@ -131,7 +131,7 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 - L85: Reaches 20% farther; crit chance +10%, crit damage +50%.
 - L86: Crits bounce to 1 more enemy for 60%.
 - L97: Hits 15% harder, and 30% harder on held enemies.
-- L98: Each hit on an enemy makes its next on it 12% harder, to +60%.
+- L98: Each hit on an enemy makes its next on it 25% harder, up to double.
 - L109: Attacks 15% faster, and 60% faster for the first 15s of each wave.
 - L110: Its first hit on each enemy deals 50% more.
 - L121: Hits 15% harder, and every hit strikes enemies within 14 of its target.
@@ -139,7 +139,7 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 - L133: Every hit poisons 10/s for 3s and jumps to 1 more enemy for 45%.
 - L134: Its jumps poison what they hit.
 - L145: Every hit slows 25% for 1.5s; crit chance +10%, crit damage +50%.
-- L146: Crits on slowed enemies deal 60% more and freeze them for 1.5s.
+- L146: +12% crit on slowed enemies; those crits deal 40% more and freeze 1.5s.
 - L157: Holds 1 more enemy, and hits 30% harder on held enemies.
 - L158: A held enemy that dies bursts for 40% of its hit within 50.
 - L170: Every hit poisons 10/s for 3s; every 3rd poisons the 3 nearest 12/s.
@@ -265,44 +265,46 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 
 ### `src/ui/shell/LevelUpPanel.tsx`
 
-- L126: {hero.name} holds {MAX_SKILLS} skills. {canFuse ? `Swap a ${leve}
-- L132: After this wave
-- L134: Take +{amount} {BUMP_LABEL[stat]}
-- L134: Choose a stat
-- L137: Fuse into {into.name}
-- L139: Choose one to swap out
-- L142: Swap {skillById(drop)?.name} for {chosen.name}
-- L146: Learn {chosen.name}
-- L148: Choose a skill
-- L175: DPS
-- L175: {Math.round(before.dps)} → {Math.round(after.dps)}
-- L176: Reach
-- L176: {Math.round(before.range)} → {Math.round(after.range)}
-- L190: Stat
-- L194: Fuse
-- L211: Level
-- L220: Opens when the wave is over.
-- L225: {level} skills
-- L228: Fusion · {skillLevelLabel(into.lev}
-- L236: 3px solid {hue}
-- L248: Fuse with
-- L249: Fuse with:
-- L256: Fuse with {skillById(w.with)?.name} into {w.into.name}
-- L264: Frees a slot.
-- L264: Takes no new slot.
-- L267: Skill · {level}
-- L267: 3px solid {hue}
-- L270: Swap out
-- L271: Swap out one of
-- L271: &rsquo;s skills:
-- L284: It leaves when you swap.
-- L287: Has:
-- L290: Instead of a skill
-- L290: 3px solid {hue}
-- L291: Which stat
-- L305: {BUMP_LABEL[stat]} raises {BUMP_WHAT[stat]}.
-- L305: STR raises physical damage, DEX attack speed and crit, INT magic damage.
-- L318: Later
+- L129: {hero.name} holds {MAX_SKILLS} skills. {canFuse ? `Swap a ${leve}
+- L135: After this wave
+- L137: Take +{amount} {BUMP_LABEL[stat]}
+- L137: Choose a stat
+- L140: Fuse into {into.name}
+- L142: Choose one to swap out
+- L145: Swap {skillById(drop)?.name} for {chosen.name}
+- L149: Learn {chosen.name}
+- L151: Choose a skill
+- L178: DPS
+- L178: {Math.round(before.dps)} → {Math.round(after.dps)}
+- L179: Reach
+- L179: {Math.round(before.range)} → {Math.round(after.range)}
+- L198: Stat
+- L202: Fuse
+- L219: Level
+- L228: Opens when the wave is over.
+- L233: {level} skills
+- L236: Fusion · {skillLevelLabel(into.lev}
+- L244: 3px solid {hue}
+- L256: Fuse with
+- L257: Fuse with:
+- L264: Fuse with {skillById(w.with)?.name} into {w.into.name}
+- L272: Frees a slot.
+- L272: Takes no new slot.
+- L275: Skill · {level}
+- L275: 3px solid {hue}
+- L278: Swap out
+- L279: Swap out one of
+- L279: &rsquo;s skills:
+- L292: It leaves when you swap.
+- L295: Has:
+- L298: Pairs with
+- L298: : they can fuse from level
+- L303: Instead of a skill
+- L303: 3px solid {hue}
+- L304: Which stat
+- L318: {BUMP_LABEL[stat]} raises {BUMP_WHAT[stat]}.
+- L318: STR raises physical damage, DEX attack speed and crit, INT magic damage.
+- L331: Later
 
 ### `src/ui/shell/SkillCards.tsx`
 
@@ -373,7 +375,7 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 - L137: crits bounce to 1 more enemy for {pct(m.ricochet)}
 - L138: a kill's excess damage carries {pct(m.overkill)} to the nearest enemy
 - L139: its arcs carry its burn and slow
-- L140: crits on slowed enemies deal {pct(m.critFreeze.bonus)} more and freeze them {m.critFreeze.dur}s
+- L140: +{pct(m.critFreeze.chance)} crit on slowed enemies; those crits deal {pct(m.critFreeze.bonus)} more and freeze them {m.critFreeze.dur}s
 - L141: each hit on an enemy makes the next on it +{pct(m.focusStack.step)}, to +{pct(m.focusStack.cap)}
 - L142: a held enemy that dies bursts {pct(m.heldBurst.frac)} of its hit around it
 - L143: its first hit on each enemy deals {pct(m.firstHit)} more

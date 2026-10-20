@@ -70,7 +70,7 @@ export interface FusionDef {
 }
 
 export const FUSIONS: readonly FusionDef[] = [
-  // ---- Level 1 + Level 1: met at the first milestone (level 5) -------------
+  // ---- Level 1 + Level 1: paired at level 5, fused as a held pair from level 10 -
   // Every one pairs a card that standing or a delivery unlocks: no two Level 1
   // starters fuse. (They did, three ways, and every first-timer's hero fused at
   // level 5 — the zero-meta escort went 15% → 30% and the first-timer line
@@ -95,8 +95,8 @@ export const FUSIONS: readonly FusionDef[] = [
     level: 1,
     company: 'silk',
     desc: 'Hits 15% harder, and 30% harder on held enemies.',
-    twist: 'Each hit on an enemy makes its next on it 12% harder, to +60%.',
-    mods: { focusStack: { step: 0.12, cap: 0.6 } },
+    twist: 'Each hit on an enemy makes its next on it 25% harder, up to double.',
+    mods: { focusStack: { step: 0.25, cap: 1 } },
     icon: 'damage',
     element: 'blood',
   },
@@ -143,8 +143,8 @@ export const FUSIONS: readonly FusionDef[] = [
     level: 1,
     company: 'scrolls',
     desc: 'Every hit slows 25% for 1.5s; crit chance +10%, crit damage +50%.',
-    twist: 'Crits on slowed enemies deal 60% more and freeze them for 1.5s.',
-    mods: { critFreeze: { dur: 1.5, bonus: 0.6 } },
+    twist: '+12% crit on slowed enemies; those crits deal 40% more and freeze 1.5s.',
+    mods: { critFreeze: { dur: 1.5, bonus: 0.4, chance: 0.12 } },
     icon: 'chill',
     element: 'frost',
   },
@@ -160,7 +160,7 @@ export const FUSIONS: readonly FusionDef[] = [
     icon: 'block',
     element: 'steel',
   },
-  // ---- Level 1 + Level 2: met at the second milestone (level 10) -----------
+  // ---- Level 1 + Level 2: met at the second milestone (level 10) ---------
   {
     id: 'fz_plaguebearer',
     name: 'Plaguebearer',

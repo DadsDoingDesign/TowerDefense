@@ -40,6 +40,27 @@ export const SKILL_MILESTONES = [5, 10, 15] as const
 export const MAX_SKILLS = 3
 /** Skills on one offer. */
 export const OFFER_SIZE = 3
+/**
+ * Skill fusion opens at the level-10 milestone (`docs/SKILL_FUSION.md` § 7).
+ * At level 5 the offer is dealt and taken as it always was — a card that
+ * pairs with a held skill is taken as itself (the panel says it pairs), and
+ * the pair can fuse from level 10. Fused at level 5, the freed slot filled
+ * twice more and a veteran ended its runs with four skills' worth: its escort
+ * read 47% and its 8-crate stake 18%, past both bands, and nothing else moved
+ * them (one fusion a hero, three recipes fewer, the twists switched off).
+ */
+export const FUSION_FROM_LEVEL = 10
+
+/** Whether the hero's owed milestone may fuse (it is level 10's or later). */
+export const fusionOpen = (hero: Pick<Sentinel, 'level' | 'skillPicks'>): boolean => (pendingMilestone(hero)?.level ?? 0) >= FUSION_FROM_LEVEL
+
+/**
+ * Path (a), at the owed milestone: what each offer card fuses with (`fusion.cardFusions`),
+ * or nothing before {@link FUSION_FROM_LEVEL}. The panel and `takeSkill` read this.
+ */
+export function offerFusions(hero: Grower, offer: readonly Pick<Skill, 'id'>[]): ReturnType<typeof cardFusions> {
+  return fusionOpen(hero) ? cardFusions(hero, offer) : new Map()
+}
 
 export interface Milestone {
   /** 0, 1 or 2 — how many milestones the hero has already settled. */
@@ -133,7 +154,7 @@ export const bumpAmount = (m: Pick<Milestone, 'tier'>): number => BUMP_AMOUNT[m.
  * skill is not on its offer, or the hero is full and `drop` names none of its
  * skills. A full hero swaps: `drop` leaves, the new skill takes its place.
  *
- * A card that FUSES with a skill the hero holds (`fusion.cardFusions`) always
+ * A card that FUSES with a skill the hero holds (`offerFusions`, from level 10) always
  * fuses: the held skill's slot becomes the fusion and the card takes no slot,
  * so `drop` is not needed (and is ignored). `partner` picks which held skill
  * when the card fuses with two; otherwise the first in slot order.
@@ -149,7 +170,7 @@ export function takeSkill<T extends Grower>(
   const offer = skillOffer(hero, pool, runSeed)
   if (!offer.some((k) => k.id === skillId)) return null
   const have = hero.skills ?? []
-  const ways = cardFusions(hero, offer).get(skillId)
+  const ways = offerFusions(hero, offer).get(skillId)
   if (ways) {
     const way = ways.find((w) => w.with === partner) ?? ways[0]
     return { ...hero, skills: fuseSkills(have, way.with, skillId, way.into.id), skillPicks: done(hero) + 1 }
@@ -169,7 +190,7 @@ export function takeSkill<T extends Grower>(
  * milestone is owed. Beside the offer and the bump, never instead of them.
  */
 export function fusionChoices(hero: Grower): ReturnType<typeof heldFusions> {
-  return pendingMilestone(hero) ? heldFusions(hero) : []
+  return fusionOpen(hero) ? heldFusions(hero) : []
 }
 
 /**

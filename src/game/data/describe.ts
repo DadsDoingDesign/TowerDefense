@@ -137,7 +137,7 @@ export function describeMods(m: EffectMods): string[] {
   if (m.ricochet) out.push(`crits bounce to 1 more enemy for ${pct(m.ricochet)}`)
   if (m.overkill) out.push(`a kill's excess damage carries ${pct(m.overkill)} to the nearest enemy`)
   if (m.arcCarry) out.push('its arcs carry its burn and slow')
-  if (m.critFreeze) out.push(`crits on slowed enemies deal ${pct(m.critFreeze.bonus)} more and freeze them ${m.critFreeze.dur}s`)
+  if (m.critFreeze) out.push(`+${pct(m.critFreeze.chance)} crit on slowed enemies; those crits deal ${pct(m.critFreeze.bonus)} more and freeze them ${m.critFreeze.dur}s`)
   if (m.focusStack) out.push(`each hit on an enemy makes the next on it +${pct(m.focusStack.step)}, to +${pct(m.focusStack.cap)}`)
   if (m.heldBurst) out.push(`a held enemy that dies bursts ${pct(m.heldBurst.frac)} of its hit around it`)
   if (m.firstHit) out.push(`its first hit on each enemy deals ${pct(m.firstHit)} more`)

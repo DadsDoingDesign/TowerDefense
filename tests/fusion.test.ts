@@ -21,8 +21,8 @@ import { generateEncounter } from '../src/game/data/waves'
 import { computeCombat } from '../src/game/engine/combat'
 import { GameEngine, TICK } from '../src/game/engine/engine'
 import { applyXp, xpToReach } from '../src/game/engine/leveling'
-import { cardFusions, fusedParts, heldFusions, recipeFor, recipesWith } from '../src/game/run/fusion'
-import { fusionChoices, MAX_SKILLS, skillOffer, slotsFull, takeFusion, takeSkill } from '../src/game/run/skills'
+import { cardFusions, fusedParts, fuseSkills, heldFusions, recipeFor, recipesWith } from '../src/game/run/fusion'
+import { FUSION_FROM_LEVEL, fusionChoices, MAX_SKILLS, offerFusions, skillOffer, slotsFull, takeFusion, takeSkill } from '../src/game/run/skills'
 import { migrateMeta, META_VERSION } from '../src/state/metaStore'
 import type { EffectMods, Sentinel, WaveDef } from '../src/game/types'
 
@@ -34,7 +34,7 @@ import type { EffectMods, Sentinel, WaveDef } from '../src/game/types'
 const hero = (skills: string[], level = 5, skillPicks = 0): Sentinel => ({ ...classicHero('rogue'), id: 'h-fz', level, skills, skillPicks })
 /** A pool that is the whole library, so any offer can hold any card. */
 const POOL = ALL_SKILLS.map((k) => k.id)
-/** A seed whose level-5 offer, for a hero holding `held`, includes `want` (searched, deterministic). */
+/** A seed whose owed offer, for hero `h`, includes `want` (searched, deterministic). */
 function seedOffering(h: Sentinel, want: string, pool: readonly string[] = POOL): number {
   for (let seed = 1; seed < 5000; seed++) if (skillOffer(h, pool, seed).some((k) => k.id === want)) return seed
   throw new Error(`no seed offers ${want}`)
@@ -148,45 +148,52 @@ describe('recipe lookup (run/fusion.ts)', () => {
 })
 
 describe('the milestone (run/skills.ts)', () => {
-  it('(a) annotates a card that fuses with a held skill, and leaves the offer dealt as it was', () => {
+  it('fusion opens at the level-10 milestone: at level 5 a card that pairs is taken as itself', () => {
+    expect(FUSION_FROM_LEVEL).toBe(10)
     const h = hero(['long_reach'])
     const seed = seedOffering(h, 'keen_eye')
     const offer = skillOffer(h, POOL, seed)
-    const notes = cardFusions(h, offer)
-    expect(notes.get('keen_eye')).toEqual([{ with: 'long_reach', into: skillById('fz_thousand_cuts') }])
-    for (const k of offer) if (k.id !== 'keen_eye' && !recipeFor('long_reach', k.id)) expect(notes.has(k.id)).toBe(false)
+    // The pair is there (the panel says "Pairs"), but nothing fuses yet.
+    expect(cardFusions(h, offer).get('keen_eye')?.[0].into.id).toBe('fz_thousand_cuts')
+    expect(offerFusions(h, offer).size).toBe(0)
+    const at5 = takeSkill(h, 'keen_eye', POOL, seed)!
+    expect(at5.skills).toEqual(['long_reach', 'keen_eye'])
+    expect(fusionChoices(at5)).toEqual([])
+    // At level 10 the pair is a choice beside the cards.
+    expect(fusionChoices({ ...at5, level: 10 }).map((f) => f.into.id)).toEqual(['fz_thousand_cuts'])
+  })
+
+  it('(a) annotates a card that fuses with a held skill, and leaves the offer dealt as it was', () => {
+    const h = hero(['poison_tips'], 10, 1)
+    const seed = seedOffering(h, 'venom_spit')
+    const offer = skillOffer(h, POOL, seed)
+    const notes = offerFusions(h, offer)
+    expect(notes.get('venom_spit')).toEqual([{ with: 'poison_tips', into: skillById('fz_plaguebearer') }])
+    for (const k of offer) if (k.id !== 'venom_spit' && !recipeFor('poison_tips', k.id)) expect(notes.has(k.id)).toBe(false)
   })
 
   it('(a) taking a card that fuses fuses at once: the held slot becomes the fusion, the card takes none', () => {
-    const h = hero(['long_reach'])
-    const seed = seedOffering(h, 'keen_eye')
-    const next = takeSkill(h, 'keen_eye', POOL, seed)!
-    expect(next.skills).toEqual(['fz_thousand_cuts'])
-    expect(next.skillPicks).toBe(1)
+    const h = hero(['poison_tips', 'bounty'], 10, 1)
+    const seed = seedOffering(h, 'venom_spit')
+    const next = takeSkill(h, 'venom_spit', POOL, seed)!
+    expect(next.skills).toEqual(['fz_plaguebearer', 'bounty'])
+    expect(next.skillPicks).toBe(2)
   })
 
   it('(a) works when the slots are full: no swap, the drop is ignored', () => {
-    // Three held, a fourth that fuses with the second.
-    const h = hero(['bounty', 'long_reach', 'cleave'], 15, 2)
-    expect(slotsFull(h)).toBe(true)
-    // Level 3 offer: Berserk fuses with Bloodrush — use a held pair that meets Level 3.
     const r = hero(['bounty', 'bloodrush', 'cleave'], 15, 2)
+    expect(slotsFull(r)).toBe(true)
     const seed = seedOffering(r, 'berserk')
     const next = takeSkill(r, 'berserk', POOL, seed, 'bounty')!
     expect(next.skills).toEqual(['bounty', 'fz_red_mist', 'cleave'])
     expect(next.skills!.length).toBe(MAX_SKILLS)
-    expect(h.skills!.length).toBe(MAX_SKILLS)
   })
 
-  it('(a) a card that fuses with two held skills fuses with the partner chosen (the first by default)', () => {
-    // Hard Hitter fuses with Pin Down (Relentless) and with Cleave (Sunder).
-    const h = hero(['pin_down', 'cleave'], 5, 0)
-    const seed = seedOffering(h, 'hard_hitter')
-    expect(cardFusions(h, skillOffer(h, POOL, seed)).get('hard_hitter')!.map((w) => w.into.id)).toEqual(['fz_relentless', 'fz_sunder'])
-    expect(takeSkill(h, 'hard_hitter', POOL, seed)!.skills).toEqual(['fz_relentless', 'cleave'])
-    expect(takeSkill(h, 'hard_hitter', POOL, seed, null, 'cleave')!.skills).toEqual(['pin_down', 'fz_sunder'])
-    // An unknown partner falls back to the first.
-    expect(takeSkill(h, 'hard_hitter', POOL, seed, null, 'bulwark')!.skills).toEqual(['fz_relentless', 'cleave'])
+  it('a card that would fuse with two held skills names both (the first is the default partner)', () => {
+    // Hard Hitter pairs with Pin Down (Relentless) and with Cleave (Sunder).
+    const ways = cardFusions({ skills: ['pin_down', 'cleave'] }, [{ id: 'hard_hitter' }]).get('hard_hitter')!
+    expect(ways.map((w) => w.into.id)).toEqual(['fz_relentless', 'fz_sunder'])
+    expect(fuseSkills(['pin_down', 'cleave'], 'cleave', 'hard_hitter', 'fz_sunder')).toEqual(['pin_down', 'fz_sunder'])
   })
 
   it('(b) a pair already held is offered as a fuse, which settles the milestone and frees a slot', () => {
@@ -198,8 +205,9 @@ describe('the milestone (run/skills.ts)', () => {
     expect(slotsFull(next)).toBe(false)
   })
 
-  it('(b) is refused with no milestone owed, a pair not held, or a junk id', () => {
+  it('(b) is refused with no milestone owed, before level 10, a pair not held, or a junk id', () => {
     expect(takeFusion(hero(['poison_tips', 'venom_spit'], 9, 1), 'fz_plaguebearer')).toBeNull()
+    expect(takeFusion(hero(['poison_tips', 'venom_spit'], 5, 0), 'fz_plaguebearer')).toBeNull()
     expect(takeFusion(hero(['poison_tips', 'bounty'], 10, 1), 'fz_plaguebearer')).toBeNull()
     expect(takeFusion(hero(['poison_tips', 'venom_spit'], 10, 1), 'nonsense')).toBeNull()
     expect(fusionChoices(hero(['poison_tips', 'venom_spit'], 9, 1))).toEqual([])
@@ -222,13 +230,13 @@ describe('the milestone (run/skills.ts)', () => {
   })
 
   it('a fused hero frees a slot that the next milestone fills', () => {
-    const h = hero(['long_reach'])
-    const at5 = takeSkill(h, 'keen_eye', POOL, seedOffering(h, 'keen_eye'))!
-    expect(at5.skills!.length).toBe(1)
-    const at10 = { ...at5, level: 10 }
-    const card = skillOffer(at10, POOL, 7).find((k) => !cardFusions(at10, [k]).size)!
-    const after = takeSkill(at10, card.id, POOL, 7)!
-    expect(after.skills).toEqual(['fz_thousand_cuts', card.id])
+    const h = hero(['poison_tips', 'bounty'], 10, 1)
+    const at10 = takeSkill(h, 'venom_spit', POOL, seedOffering(h, 'venom_spit'))!
+    expect(at10.skills!.length).toBe(2)
+    const at15 = { ...at10, level: 15 }
+    const card = skillOffer(at15, POOL, 7).find((k) => !offerFusions(at15, [k]).size)!
+    const after = takeSkill(at15, card.id, POOL, 7)!
+    expect(after.skills).toEqual(['fz_plaguebearer', 'bounty', card.id])
   })
 })
 
