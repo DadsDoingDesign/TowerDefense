@@ -14,10 +14,10 @@ import { PEOPLE_KINDS, peopleIconKey } from './peopleKinds'
 import type { Item } from '../types'
 
 /**
- * The 187 cells of `public/assets/ui/fw-icons.png`, IN CELL ORDER.
+ * The 257 cells of `public/assets/ui/fw-icons.png`, IN CELL ORDER.
  *
  * The list is authored twice on purpose — here and in `scripts/fw-icons.ts` —
- * because a PNG cannot carry its own index and a silently-shifted atlas is 187
+ * because a PNG cannot carry its own index and a silently-shifted atlas is 257
  * wrong pictures rather than one visible error. The generator refuses to write
  * the file unless this array matches it exactly, and `npm run build` runs the
  * same check without writing, so the duplication is checked rather than
@@ -107,6 +107,21 @@ export const ICON_ORDER = [
   // rows 22 (cont.) – 23 — the HQ castle's quality tiers (Oct 2026, `run/hq.castleTier`):
   // the home bar's HQ plate shows the castle's material
   'hqTimber', 'hqStone', 'hqFortified', 'hqGrand',
+  // rows 23 (cont.) – 29 — every library skill's own picture (Oct 2026, the merge
+  // art pass): `skillArt.SKILL_ART`, baked through `skillIcons.ts` in its own
+  // element's colours, in `skills.ALL_SKILLS` order. Keys are `skillArt.skillArtKey`.
+  'skQuickHands', 'skHardHitter', 'skKeenEye', 'skHoldFast', 'skCharge', 'skBloodrush', 'skPoisonTips', 'skArcSpark',
+  'skFrostbite', 'skLongReach', 'skCleave', 'skBounty', 'skPinDown', 'skRiposte', 'skHeavyBlows', 'skLongShot',
+  'skFinisher', 'skShieldWall', 'skAnchor', 'skStunningBash', 'skSnare', 'skWildfire', 'skBlessing', 'skGateSiphon',
+  'skKillingSpree', 'skColdSnap', 'skFirebrand', 'skSplitShot', 'skDeadeye', 'skPepperfire', 'skGiltFrame', 'skOreSense',
+  'skVelvetToll', 'skMoonwake', 'skBolderBash', 'skBannerBearer', 'skVenomSpit', 'skOvergrowth', 'skBerserk', 'skWeaponmaster',
+  'skVolley', 'skBulwark', 'skReaper', 'skRally', 'skMomentum', 'skLastRites', 'skWardenOfAsh', 'skHexblade',
+  'skStormcaller', 'skTinkersSpark',
+  // rows 29 (cont.) – 32 — the twenty named merges, hand-drawn (`skillArtNamed.ts`),
+  // with the named marker (gold corner brackets), in `fusions.FUSIONS` order.
+  'fzThousandCuts', 'fzRelentless', 'fzBushwhack', 'fzSunder', 'fzPlagueSpark', 'fzRimecut', 'fzCrushingGrip', 'fzPlaguebearer',
+  'fzCinderburst', 'fzHailOfArrows', 'fzCoupDeGrace', 'fzShatterglass', 'fzRallyingStandard', 'fzAnvilfall', 'fzRedMist', 'fzSkyfall',
+  'fzBlackDeath', 'fzGlassStorm', 'fzForgefire', 'fzWarBanner',
 ] as const
 
 export type IconKey = (typeof ICON_ORDER)[number]
@@ -120,7 +135,7 @@ export type IconKey = (typeof ICON_ORDER)[number]
  * every cell in the atlas with nothing anywhere to notice (M13).
  */
 export const ICON_COLS = 8
-export const ICON_ROWS = 24
+export const ICON_ROWS = 33
 
 /**
  * Where an icon sits in the sheet, as (column, row).

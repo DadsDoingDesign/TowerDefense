@@ -352,34 +352,38 @@ describe('skill headlines (the pick-one strip\'s tokens)', () => {
   })
 
   it('carries a number only where the mod is the number', () => {
-    expect(skillHeadline(skillById('quick_hands')!)).toEqual({ icon: 'haste', label: 'Speed', value: '+15%' })
-    expect(skillHeadline(skillById('hard_hitter')!)).toEqual({ icon: 'damage', label: 'Dmg', value: '+15%' })
+    expect(skillHeadline(skillById('quick_hands')!)).toEqual({ icon: 'skQuickHands', label: 'Speed', value: '+15%' })
+    expect(skillHeadline(skillById('hard_hitter')!)).toEqual({ icon: 'skHardHitter', label: 'Dmg', value: '+15%' })
   })
 
-  it('pictures what the sentence says first, not the first multiplier', () => {
-    const lead = (id: string) => skillHeadline(skillById(id)!).icon
+  it('pictures every skill by its own drawing (the merge art pass)', () => {
+    for (const k of ALL_SKILLS) expect(skillHeadline(k).icon, k.id).toBe(`sk${k.id.split('_').map((w) => w[0].toUpperCase() + w.slice(1)).join('')}`)
+  })
+
+  it('says what the sentence says first, not the first multiplier', () => {
+    const lead = (id: string) => skillHeadline(skillById(id)!).label
     // "Hits 25% harder and attacks 10% faster."
-    expect(lead('heavy_blows')).toBe('damage')
-    expect(lead('berserk')).toBe('damage')
+    expect(lead('heavy_blows')).toBe('Dmg')
+    expect(lead('berserk')).toBe('Dmg')
     // "Holds 1 more enemy, slows …" / "Holds 3 more enemies and slows …"
-    expect(lead('anchor')).toBe('block')
-    expect(lead('bulwark')).toBe('block')
-    expect(lead('ore_sense')).toBe('block')
+    expect(lead('anchor')).toBe('Hold')
+    expect(lead('bulwark')).toBe('Hold')
+    expect(lead('ore_sense')).toBe('Hold')
     // "Lays a snare on the path …"
-    expect(lead('snare')).toBe('trap')
+    expect(lead('snare')).toBe('Trap')
     // "Kills enemies under N% health outright …"
-    expect(lead('finisher')).toBe('execute')
-    expect(lead('reaper')).toBe('execute')
+    expect(lead('finisher')).toBe('Execute')
+    expect(lead('reaper')).toBe('Execute')
     // "Every hit has an N% chance to stun …"
-    expect(lead('stunning_bash')).toBe('stun')
-    expect(lead('hexblade')).toBe('stun')
+    expect(lead('stunning_bash')).toBe('Stun')
+    expect(lead('hexblade')).toBe('Stun')
     // "Every hit jumps to N more enemies …"
-    expect(lead('stormcaller')).toBe('shock')
-    expect(lead('moonwake')).toBe('shock')
+    expect(lead('stormcaller')).toBe('Shock')
+    expect(lead('moonwake')).toBe('Shock')
     // "Every hit burns …, and it attacks 15% faster." / "Each kill pays 4 more gold, and …"
-    expect(lead('pepperfire')).toBe('burn')
-    expect(lead('velvet_toll')).toBe('gold')
+    expect(lead('pepperfire')).toBe('Burn')
+    expect(lead('velvet_toll')).toBe('Bounty')
     // "Every 2nd attack pierces its whole path; reaches 15% farther."
-    expect(lead('volley')).toBe('projectile')
+    expect(lead('volley')).toBe('Volley')
   })
 })

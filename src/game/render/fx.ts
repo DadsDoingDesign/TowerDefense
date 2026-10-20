@@ -265,6 +265,8 @@ interface Arc {
   t: number
   life: number
   seed: number
+  /** A carried status's ink (`attackLook.arcInk`): Frozen Arc Spark's arcs are cold. */
+  ink?: EffectInk
 }
 const arcs: Arc[] = []
 
@@ -1104,16 +1106,16 @@ export function fxBaseFrac(frac: number): void {
 }
 
 /** One chain-lightning arc, from the struck enemy to a chained one. */
-export function fxArc(x0: number, y0: number, x1: number, y1: number): void {
+export function fxArc(x0: number, y0: number, x1: number, y1: number, ink?: EffectInk): void {
   fxStats.arcsMade++
   if (arcs.length >= MAX_ARCS) arcs.shift()
-  arcs.push({ x0, y0, x1, y1, t: 0, life: 0.24, seed: (Math.random() * 65535) | 0 })
+  arcs.push({ x0, y0, x1, y1, t: 0, life: 0.24, seed: (Math.random() * 65535) | 0, ...(ink ? { ink } : {}) })
   if (reducedMotion) return
   for (let i = 0; i < degrade(3); i++) {
     const p = take()
     if (!p) break
     const a = rnd(0, Math.PI * 2)
-    init(p, SPARK, x1, y1, Math.cos(a) * rnd(30, 90), Math.sin(a) * rnd(30, 90), rnd(0.12, 0.24), 1.6, 0, '#bfe9ff')
+    init(p, SPARK, x1, y1, Math.cos(a) * rnd(30, 90), Math.sin(a) * rnd(30, 90), rnd(0.12, 0.24), 1.6, 0, ink?.spark ?? '#bfe9ff')
     p.d = 5
   }
 }
@@ -1507,16 +1509,17 @@ function drawBolt(ctx: CanvasRenderingContext2D, a: Arc, fade: number): void {
   ctx.lineTo(a.x1, a.y1)
   ctx.lineCap = 'round'
   ctx.lineJoin = 'round'
+  // A carried status tints the halo and the core (its own ink); the shape stays the bolt's.
   ctx.globalAlpha = fade * 0.45
-  ctx.strokeStyle = '#4aa8e0'
+  ctx.strokeStyle = a.ink?.glow ?? '#4aa8e0'
   ctx.lineWidth = 4.5
   ctx.stroke()
   ctx.globalAlpha = fade
-  ctx.strokeStyle = '#eaf8ff'
+  ctx.strokeStyle = a.ink?.core ?? '#eaf8ff'
   ctx.lineWidth = 1.4
   ctx.stroke()
   ctx.globalAlpha = fade * 0.8
-  ctx.fillStyle = '#eaf8ff'
+  ctx.fillStyle = a.ink?.core ?? '#eaf8ff'
   ctx.beginPath()
   ctx.arc(a.x1, a.y1, 3.2 * fade + 1, 0, Math.PI * 2)
   ctx.fill()

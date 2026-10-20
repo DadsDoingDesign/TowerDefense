@@ -2,7 +2,7 @@ import { canUpgrade, HERO_SLOT_LABEL, RARITY, raiseAdds, raisedBase, upgradeCost
 import { computeCombat, type CombatProfile } from '../../game/engine/combat'
 import { MAX_LEVEL } from '../../game/engine/leveling'
 import { MAX_SKILLS, nextMilestone, pendingMilestone, SKILL_MILESTONES, type Milestone } from '../../game/run/skills'
-import { mergedById, skillById, skillHeadline, type MergedSkill, type Skill } from '../../game/data/skills'
+import { mergedById, skillById, type MergedSkill, type Skill } from '../../game/data/skills'
 import { buildsInto } from '../../game/run/fusion'
 import type { HeroSlot, Item, Sentinel } from '../../game/types'
 import type { IconKey } from '../channels'
@@ -68,7 +68,6 @@ export type SkillSlot =
   | {
       kind: 'held'
       skill: Skill
-      icon: IconKey
       level: number
       /** A merged skill: its record, with its slot's skills' names, base first. */
       fused?: { skill: MergedSkill; parts: readonly string[] }
@@ -93,7 +92,7 @@ export function skillSlots(hero: Pick<Sentinel, 'level' | 'skills' | 'skillPicks
     const f = mergedById(skill.id)
     const fused = f ? { skill: f, parts: f.chain.map((id) => skillById(id)?.name ?? id) } : undefined
     const builds = buildsInto(skill.id).map((r) => ({ name: r.name, needs: skillById(r.parts[1])?.name ?? r.parts[1] }))
-    return { kind: 'held', skill, icon: skillHeadline(skill).icon, level: skill.level, ...(fused ? { fused } : {}), ...(builds.length ? { builds } : {}) }
+    return { kind: 'held', skill, level: skill.level, ...(fused ? { fused } : {}), ...(builds.length ? { builds } : {}) }
   })
   const owed = pendingMilestone(hero)
   if (owed && slots.length < MAX_SKILLS) slots.push({ kind: 'owed', milestone: owed })

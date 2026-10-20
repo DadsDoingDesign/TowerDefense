@@ -10,6 +10,7 @@ import type { Sentinel } from '../../game/types'
 import { useGameStore } from '../../state/gameStore'
 import { useSettingsStore } from '../../state/settingsStore'
 import { Icon } from '../Icon'
+import { SkillIcon } from '../SkillIcon'
 import { elementVar, playFuseBeat } from './fuseBeat'
 import { putOff, rewardInPlace, useLevelUps, waveLive } from './levelUps'
 import { PickCard, PickStrip, type PickFact, type PickTokenSpec } from './PickStrip'
@@ -284,6 +285,7 @@ function SkillChoice({ hero, onDone }: { hero: Sentinel; onDone?: () => void }) 
             <SlotRow hero={hero} targets={dragTargets ?? targets} chosen={drag ? null : target} over={drag?.over ?? null} onChoose={setTarget} />
             {chosen && into ? (
               <PickCard
+                art={<SkillIcon id={into.id} lg />}
                 kicker={`${into.named ? 'Named merge' : 'Merge'} · ${skillLevelLabel(into.level)}`}
                 name={into.name}
                 index={at}
@@ -295,16 +297,20 @@ function SkillChoice({ hero, onDone }: { hero: Sentinel; onDone?: () => void }) 
                 style={{ borderLeft: `3px solid ${hue}`, ...elementVar(into) }}
               >
                 <p className="fz-recipe">
-                  <span className="field-v">{aim!.held}</span>
+                  <span className="field-v">
+                    <SkillIcon id={aim!.drop!.base!} /> {aim!.held}
+                  </span>
                   <span className="fz-plus" aria-label="with">
                     ←
                   </span>
-                  <span className="field-v">{chosen.name}</span>
+                  <span className="field-v">
+                    <SkillIcon id={chosen.id} /> {chosen.name}
+                  </span>
                 </p>
                 <p className="pk-does">{into.desc}</p>
                 {into.lines.map((l, i) => (
                   <p key={i} className={`pk-does${i === into.lines.length - 1 && into.twist ? ' fz-twist' : ' fz-line'}`}>
-                    {i === into.lines.length - 1 && into.twist && <Icon name={into.icon} />} {l}
+                    {l}
                   </p>
                 ))}
               </PickCard>
@@ -409,12 +415,18 @@ function SlotRow({
             onClick={() => onChoose(i)}
           >
             <span className="sk-slot-held" aria-hidden="true">
-              {held ? <Icon name={skillHeadline(held).icon} /> : <span className="sk-slot-dot" />}
+              {held ? <SkillIcon id={held.id} /> : <span className="sk-slot-dot" />}
               <span className="sk-slot-name">{held?.name ?? 'Empty'}</span>
             </span>
             {t && t.kind !== 'full' && (
               <span className="sk-slot-to" aria-hidden="true">
-                {t.kind === 'empty' ? 'Learn as is' : `→ ${t.makes}`}
+                {t.kind === 'empty' ? (
+                  'Learn as is'
+                ) : (
+                  <>
+                    → {t.drop && <SkillIcon id={t.drop.into} className="sk-slot-made" />} {t.makes}
+                  </>
+                )}
                 {t.kind === 'named' && <span className="sk-star"> ★</span>}
               </span>
             )}

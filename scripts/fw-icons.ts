@@ -60,6 +60,10 @@ import { fileURLToPath } from 'node:url'
 import sharp from 'sharp'
 import { isArt, PALETTE as PEOPLES_PALETTE, PEOPLES } from './peoples-art'
 import { peopleIconKey } from '../src/game/data/peopleKinds'
+import { ALL_SKILLS } from '../src/game/data/skills'
+import { FUSIONS } from '../src/game/data/fusions'
+import { skillArtKey } from '../src/game/data/skillArt'
+import { ICON_N, skillIconPixels } from '../src/game/data/skillIcons'
 
 const OUT = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'assets', 'ui')
 
@@ -2620,10 +2624,32 @@ icon('hqGrand', [
   '................',
 ])
 
+/*
+ * ---------------------------------------------------------------------------
+ * Skill pictures (Oct 2026, the merge art pass) — rows 23 (cont.) to 32
+ * ---------------------------------------------------------------------------
+ * Every library skill's own drawing (`game/data/skillArt.ts`) in its own
+ * element's colours, then the twenty named merges (`skillArtNamed.ts`) with
+ * their gold marker. They are not authored in this file's letters: the
+ * runtime composes the 2,437 plain merges from the same drawings and ramps
+ * (`ui/SkillIcon.tsx`), so the pixels come from THE composer
+ * (`skillIcons.skillIconPixels`), already inked by the same 1 px rule, and a
+ * baked cell can never drift from what a merge is built on.
+ */
+const BAKED: [string, Uint8ClampedArray][] = [...ALL_SKILLS.map((k) => k.id), ...FUSIONS.map((f) => f.id)].map((id) => {
+  const px = skillIconPixels(id)
+  if (!px || px.length !== N * N * 4 || ICON_N !== N) throw new Error(`skill picture ${id}: the composer drew nothing`)
+  return [skillArtKey(id), px]
+})
+
 /* ========================================================================= */
 
 const assert = () => {
   const seen = new Set<string>()
+  for (const [key] of BAKED) {
+    if (seen.has(key)) throw new Error(`duplicate icon key ${key}`)
+    seen.add(key)
+  }
   for (const [key, art] of ICONS) {
     if (seen.has(key)) throw new Error(`duplicate icon key ${key}`)
     seen.add(key)
@@ -2694,8 +2720,8 @@ const SRC = (...p: string[]) => resolve(dirname(fileURLToPath(import.meta.url)),
  */
 const checkConsumers = async () => {
   const { readFile } = await import('node:fs/promises')
-  const rows = Math.ceil(ICONS.length / COLS)
-  const mine = ICONS.map(([k]) => k)
+  const rows = Math.ceil((ICONS.length + BAKED.length) / COLS)
+  const mine = [...ICONS.map(([k]) => k), ...BAKED.map(([k]) => k)]
 
   // The order lives in `game/data/iconAtlas.ts` (the canvas draws gear from the
   // sheet too); `channels.ts` re-exports it.
@@ -2732,7 +2758,7 @@ const checkConsumers = async () => {
 async function main() {
   assert()
   await checkConsumers()
-  const rows = Math.ceil(ICONS.length / COLS)
+  const rows = Math.ceil((ICONS.length + BAKED.length) / COLS)
   const W = COLS * N
   const H = rows * N
   const buf = Buffer.alloc(W * H * 4, 0)
@@ -2753,6 +2779,13 @@ async function main() {
         buf[o + 3] = 255
       }
     }
+  })
+  // The skill pictures, after the authored cells: already inked RGBA.
+  BAKED.forEach(([, px], j) => {
+    const i = ICONS.length + j
+    const ox = (i % COLS) * N
+    const oy = Math.floor(i / COLS) * N
+    for (let y = 0; y < N; y++) buf.set(px.subarray(y * N * 4, (y + 1) * N * 4), ((oy + y) * W + ox) * 4)
   })
 
   /*
@@ -2795,20 +2828,20 @@ async function main() {
         `public/assets/ui/fw-icons.png is stale (${on_disk.length}B on disk, ${png.length}B from source) — run \`npm run fw-icons\``,
       )
     }
-    console.log(`fw-icons.png is current  ${W}x${H}  ${ICONS.length} icons  ${(png.length / 1024).toFixed(1)} KB`)
+    console.log(`fw-icons.png is current  ${W}x${H}  ${ICONS.length + BAKED.length} icons  ${(png.length / 1024).toFixed(1)} KB`)
     return
   }
   await writeFile(target, png)
 
   // The key order IS the cell order; print it so `channels.ts` can be checked
   // against the atlas by eye rather than by trust.
-  console.log(`fw-icons.png  ${W}x${H}  ${ICONS.length} icons  ${(png.length / 1024).toFixed(1)} KB`)
-  ICONS.forEach(([k], i) => {
+  console.log(`fw-icons.png  ${W}x${H}  ${ICONS.length + BAKED.length} icons  ${(png.length / 1024).toFixed(1)} KB`)
+  ;[...ICONS, ...BAKED].forEach(([k], i) => {
     const c = i % COLS
     const r = Math.floor(i / COLS)
     process.stdout.write(`${String(i).padStart(2)} ${k.padEnd(12)} (${c},${r})${c === COLS - 1 ? '\n' : '  '}`)
   })
-  if (ICONS.length % COLS) process.stdout.write('\n')
+  if ((ICONS.length + BAKED.length) % COLS) process.stdout.write('\n')
 
   // A 6x contact sheet for the render-and-measure loop. Scratch output, not
   // shipped — it is written next to the atlas only when --sheet is passed.

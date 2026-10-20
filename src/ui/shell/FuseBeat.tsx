@@ -1,8 +1,9 @@
 import { useEffect, type CSSProperties } from 'react'
-import { mergedById, skillById, skillHeadline } from '../../game/data/skills'
+import { mergedById, skillById } from '../../game/data/skills'
+import { mergeLayers } from '../../game/data/skillIcons'
 import { fxLevel } from '../../game/render/fxQuality'
 import { sfxFusion } from '../../audio/audio'
-import { Icon } from '../Icon'
+import { PixelIcon, pixelsUrl, SkillIcon } from '../SkillIcon'
 import { elementVar, endFuseBeat, fuseBeatPlan, useFuseBeat } from './fuseBeat'
 import '../../styles/fusion.css'
 
@@ -15,6 +16,13 @@ import '../../styles/fusion.css'
  * card, where the merge sits in its slot. A tap skips it. Timings are `fuseBeat.fuseBeatPlan`: lighter on
  * the Light effects setting, and still — no motion at all — under reduced
  * motion. The cue (`audio.sfxFusion`) lands on the slam.
+ *
+ * Inside the settling card the picture MAKES itself (the merge art pass,
+ * `skillIcons.mergeLayers`): the base's picture stands, the card's motif
+ * flies onto its corner, and the base's colours pour over into the card's
+ * element as it lands — exactly the composite the slot will hold. A named
+ * merge: the card flies into the base and the new hand-drawn picture comes
+ * in. Under reduced motion only the finished picture shows.
  *
  * Its one job (DESIGN_SYSTEM § 8): to say "this poured into that made this". It
  * holds no choice and no control but the skip.
@@ -40,22 +48,26 @@ export function FuseBeat() {
     '--fz-slide': `${plan.slideMs}ms`,
     '--fz-flash': `${plan.flashMs}ms`,
     '--fz-settle': `${plan.settleMs}ms`,
+    '--fz-fly-at': `${plan.flyAtMs}ms`,
+    '--fz-fly': `${plan.flyMs}ms`,
+    '--fz-swap-at': `${plan.swapAtMs}ms`,
+    '--fz-swap': `${plan.swapMs}ms`,
   } as CSSProperties
   return (
     <div className="sh-context fz-beat" data-fz={level} style={vars} onClick={endFuseBeat} role="status" aria-live="polite">
       <div className="fz-stage">
         <div className="fz-part a" aria-hidden="true">
-          <Icon name={skillHeadline(a).icon} lg />
+          <SkillIcon id={a.id} lg />
           <b>{a.name}</b>
         </div>
         <div className="fz-part b" aria-hidden="true">
-          <Icon name={skillHeadline(b).icon} lg />
+          <SkillIcon id={b.id} lg />
           <b>{b.name}</b>
         </div>
         {plan.flashMs > 0 && <div className="fz-flash" aria-hidden="true" />}
         <div className="fz-result">
           <span className="fz-result-art" aria-hidden="true">
-            <Icon name={into.icon} lg />
+            {plan.moves ? <MergeArt id={into.id} /> : <SkillIcon id={into.id} lg />}
           </span>
           <span className="fz-result-text">
             <span className="fz-kicker">
@@ -70,5 +82,25 @@ export function FuseBeat() {
         </div>
       </div>
     </div>
+  )
+}
+
+/**
+ * The merge's picture as it makes itself: three stacked 32 px layers that end
+ * as the merged picture (`to` with `fly` over it is it, pixel for pixel).
+ * Falls back to the finished picture where there is no canvas.
+ */
+function MergeArt({ id }: { id: string }) {
+  const layers = mergeLayers(id)
+  const from = layers && pixelsUrl(`${id}:from`, () => layers.from)
+  const to = layers && pixelsUrl(`${id}:to`, () => layers.to)
+  const fly = layers && pixelsUrl(`${id}:fly`, () => layers.fly)
+  if (!layers || !from || !to || !fly) return <SkillIcon id={id} lg />
+  return (
+    <span className={`fz-morph${layers.named ? ' named' : ''}`} data-skill={id}>
+      <PixelIcon url={from} lg className="fz-l-from" />
+      <PixelIcon url={to} lg className="fz-l-to" />
+      <PixelIcon url={fly} lg className="fz-l-fly" />
+    </span>
   )
 }

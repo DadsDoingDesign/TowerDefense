@@ -457,3 +457,17 @@ describe('a melee source never yields a projectile draw', () => {
     expect(swingSpan(96) * 96).toBeCloseTo(52)
   })
 })
+
+describe('a chain that carries its status (the merge art pass)', () => {
+  it('draws its arcs in the carried status’s ink, and only then', async () => {
+    const { arcInk, EFFECT_INK } = await import('../src/game/render/attackLook')
+    const { mergedById } = await import('../src/game/data/skills')
+    const fold = (id: string) => Object.assign({}, ...mergedById(id)!.expanded)
+    expect(arcInk({ shock: { chains: 1, dmgFrac: 0.45 } })).toBeNull()
+    expect(arcInk({ arcCarry: true, shock: { chains: 1, dmgFrac: 0.45 } })).toBeNull()
+    // Frozen Arc Spark: its jumps slow, so its arcs are cold.
+    expect(arcInk(fold('mx.arc_spark.frostbite'))).toBe(EFFECT_INK.chill)
+    // Blazing Arc Spark: its jumps burn.
+    expect(arcInk(fold('mx.arc_spark.wildfire'))).toBe(EFFECT_INK.burn)
+  })
+})

@@ -132,6 +132,20 @@ export const EFFECT_INK: Readonly<Record<HitEffect, EffectInk>> = {
   execute: { core: '#ffd0d0', glow: '#ff5d5d', spark: '#ff5d5d' },
 }
 
+/**
+ * The ink a chain's ARCS take (the merge art pass, Oct 2026): a hero whose
+ * jumps carry its status (`EffectMods.arcCarry` — Frozen Arc Spark, Sparking
+ * Frostbite, Plague Spark) draws its chain in that status's ink, so the arc
+ * that slows looks cold and the one that burns looks hot. Null: the plain
+ * shock arc. Presentation only — the engine resolves the carry on its own.
+ */
+export function arcInk(mods: EffectMods): EffectInk | null {
+  if (!mods.arcCarry) return null
+  if (mods.burn && mods.burn.dps > 0) return EFFECT_INK.burn
+  if (mods.chill && mods.chill.slow > 0) return EFFECT_INK.chill
+  return null
+}
+
 /** The plain inks, for a hit that carries no effect. */
 export const STEEL_INK: EffectInk = { core: '#fffaf0', glow: '#d9e2ea', spark: '#fff3d6' }
 export const MAGIC_INK: EffectInk = { core: '#f4e8ff', glow: '#a970ff', spark: '#d4b8ff' }
