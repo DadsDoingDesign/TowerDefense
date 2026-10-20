@@ -15,7 +15,10 @@
  * fw-icons.png`, drawn in the Tiny Swords hand with its `#161C2E` outline):
  *
  *  - **in its fists** ({@link Rig}): the weapon's grip in the right fist, the
- *    off-hand piece in the left, measured off the idle strips;
+ *    off-hand piece in the left, measured off the idle strips — and held
+ *    there FRAME BY FRAME ({@link heldGripsFor}): each fist is tracked off
+ *    the art by `npm run anchors` (`heldGrips.generated.ts`), so the item
+ *    breathes and sways with the hand instead of hanging still beside it;
  *  - **the painted weapon where it stands in, never a cell beside it**: a
  *    hero holding what the art paints keeps the painted one — and the
  *    knight's painted sword stands in for EVERY melee weapon (axe,
@@ -63,6 +66,7 @@ import { EFFECT_INK, leadEffect, type HitEffect } from './attackLook'
 import { mergeMods } from '../data/archetypeTree'
 import { isBodyKey, type BodyKey, type BodyStyle } from './bodyLayer'
 import { SHIELD_FILL } from './shieldFill.generated'
+import { HELD_GRIPS } from './heldGrips.generated'
 
 /** What a hero carries, as atlas cells, plus the glint its weapon wears. */
 export interface HeroGear {
@@ -141,7 +145,10 @@ interface Rect {
  * y = +8, `drawSentinel`), except `unpaint`, which is in the strip CELL's own
  * px (every frame of the idle strip gets the same cut).
  *
- *  - `fistR` / `fistL`: where a held item's GRIP goes ({@link GRIP});
+ *  - `fistR` / `fistL`: where a held item's GRIP goes ({@link GRIP}) on idle
+ *    frame 0 — the seed `npm run anchors` tracks each fist from, frame by
+ *    frame ({@link heldGripsFor}); used as they are only where nothing was
+ *    measured;
  *  - `paintedMain` / `paintedOff`: the weapon / off-hand the art already holds
  *    (the armoured look's sword and shield, the hooded look's bow). When the
  *    hero carries THAT, the painted one is the picture and no mark is added;
@@ -259,6 +266,35 @@ const GENERIC: Rig = { measured: false, fistR: { x: 18, y: -16 }, fistL: { x: -1
 
 /** The rig for a pack's look. Only Tiny Swords (the default theme) is measured. */
 export const rigFor = (pack: string | undefined, look: Archetype): Rig => (pack === 'tinyswords' ? TINY_SWORDS[look] : GENERIC)
+
+/** One hand's place on one frame, in logical px from the hero's origin. */
+export type HeldGrip = readonly [number, number]
+/**
+ * Where the hands are on every frame of one strip (`heldGrips.generated.ts`,
+ * baked by `npm run anchors` from the art itself — `scripts/held-grips-lib.ts`):
+ * `r` the weapon hand, `l` the off hand. The rig's `fistR` / `fistL` are idle
+ * frame 0 of it; the rest is the hand's own motion, so a held mark moves with
+ * the fist that holds it.
+ */
+export interface HeldStrip {
+  r: readonly HeldGrip[]
+  l: readonly HeldGrip[]
+}
+export type HeldGrips = Readonly<Record<string, Readonly<Record<string, HeldStrip>>>>
+
+/** The hands on every frame of a pack's strip (`fighter_idle`, …), or null (not measured: the rig's fixed fists). */
+export const heldGripsFor = (pack: string | undefined, strip: string): HeldStrip | null => (pack ? HELD_GRIPS[pack]?.[strip] ?? null : null)
+
+/** One frame's two hands, as points — the rig's own fists where nothing was measured. */
+export interface Hands {
+  r: Pt
+  l: Pt
+}
+export function handsAt(rig: Rig, held: HeldStrip | null | undefined, frame: number): Hands {
+  const r = held?.r[frame]
+  const l = held?.l[frame]
+  return { r: r ? { x: r[0], y: r[1] } : rig.fistR, l: l ? { x: l[0], y: l[1] } : rig.fistL }
+}
 
 /**
  * Where each picture is HELD, in its 16 px cell: the hilt of a blade, the
@@ -666,14 +702,24 @@ function hold(ctx: CanvasRenderingContext2D, key: IconKey | null, gx: number, gy
 /**
  * Draw the off-hand mark in the left fist — after the body, so it is held in
  * front — unless the art already paints that very thing there (the armoured
- * look's shield). The context is at the hero's origin.
+ * look's shield). The context is at the hero's origin. The fist is this
+ * frame's (`hand`, from `heldGrips.generated.ts`), so the piece moves with the
+ * hand that holds it; the rebuilt knight's own per-frame grip (`grip`) wins.
  */
-export function drawOffHand(ctx: CanvasRenderingContext2D, rig: Rig, gear: HeroGear, grip?: StripFill['grips'][number]): void {
+export function drawOffHand(
+  ctx: CanvasRenderingContext2D,
+  rig: Rig,
+  gear: HeroGear,
+  grip?: StripFill['grips'][number],
+  /** This frame's off hand (`handsAt`); the rig's fixed `fistL` when not given. */
+  hand?: Pt,
+): void {
   const art = gear.art?.off
   const key = art ? null : gear.off
   if (!art && (!key || key === rig.paintedOff)) return
   if (!grip) {
-    hold(ctx, key, rig.fistL.x, rig.fistL.y, art)
+    const at = hand ?? rig.fistL
+    hold(ctx, key, at.x, at.y, art)
     return
   }
   if (holdOf(key, gear) === 'hand') {
@@ -731,8 +777,9 @@ export function holdOf(key: IconKey | null, gear: Pick<HeroGear, 'hold' | 'art'>
 }
 
 /**
- * Draw the weapon mark in the right fist, `lunge` logical px toward the aim
- * (a swing's reach — 0 at rest), and its enchantment glint. When the art
+ * Draw the weapon mark in the right fist — this frame's (`hand`), so it moves
+ * with the hand — `lunge` logical px toward the aim (a swing's reach — 0 at
+ * rest) on top, and its enchantment glint. When the art
  * already paints this very weapon (a knight's sword, an archer's bow) no mark
  * is added and the glint goes on the painted point instead.
  */
@@ -746,16 +793,20 @@ export function drawMainHand(
   still: boolean,
   /** The art's own attack strip is playing: its painted weapon is mid-swing, away from `tip`. */
   attacking = false,
+  /** This frame's weapon hand (`handsAt`); the rig's fixed `fistR` when not given. */
+  hand?: Pt,
 ): void {
   const art = gear.art?.main
   if (!gear.main && !art) return
+  const fist = hand ?? rig.fistR
   if (paintsMain(rig, gear)) {
-    if (gear.glint && rig.tip && !attacking) drawGlint(ctx, gear.glint, rig.tip.x, rig.tip.y, now, still)
+    // The painted weapon moves with the fist that holds it, and so does its point.
+    if (gear.glint && rig.tip && !attacking) drawGlint(ctx, gear.glint, rig.tip.x + fist.x - rig.fistR.x, rig.tip.y + fist.y - rig.fistR.y, now, still)
     return
   }
   // A cell that would not read in this look's fist is not drawn at all (`Rig.markMain`).
   if (!art && !rig.markMain) return
-  const at = hold(ctx, gear.main, rig.fistR.x + lungeX, rig.fistR.y + lungeY, art)
+  const at = hold(ctx, gear.main, fist.x + lungeX, fist.y + lungeY, art)
   if (at && gear.glint) drawGlint(ctx, gear.glint, at.x + SIDE - 6, at.y + 6, now, still)
 }
 
