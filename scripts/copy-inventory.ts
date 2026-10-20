@@ -29,7 +29,7 @@ interface Surface {
 export const SURFACES: Surface[] = [
   { name: 'Relics', job: 'Say what a relic does to the team, in a number, and that relics stack and reach new hires (once, as a note).', files: /game\/data\/relics\.ts$|ui\/shell\/relicOffers\.ts$|game\/run\/relics\.ts$/ },
   { name: 'Boons and pacts (stat cards)', job: 'Say the gain and, for a pact, its bill: numbers and what they touch.', files: /game\/data\/rewards\.ts$|game\/run\/rewards\.ts$/ },
-  { name: 'Skills', job: 'Say what a skill does to its hero, in numbers, so two can be compared at a glance.', files: /game\/data\/skills\.ts$|game\/run\/skills\.ts$|ui\/shell\/(SkillCards|SkillPanel|LevelUpPanel)\.tsx$|ui\/shell\/levelUps\.ts$/ },
+  { name: 'Skills', job: 'Say what a skill does to its hero, in numbers, so two can be compared at a glance.', files: /game\/data\/(skills|fusions)\.ts$|game\/run\/(skills|fusion)\.ts$|ui\/shell\/(SkillCards|SkillPanel|LevelUpPanel|FuseBeat)\.tsx$|ui\/shell\/(levelUps|fuseBeat)\.ts$/ },
   { name: 'Items and gear', job: 'Name the item and say what it does in the hand: its numbers, its quirk.', files: /game\/data\/(items|itemKinds|peopleKinds|gear|describe)\.ts$|game\/run\/inventory\.ts$|ui\/shell\/(PackStrip|gearPlan)\.tsx?$/ },
   { name: 'Mutations', job: 'Say how a mutation changes one hero\'s attack, and its cost.', files: /game\/data\/mutations\.ts$/ },
   { name: 'Enemies', job: 'Name the goblin and the one thing about it that changes how you fight it.', files: /game\/data\/(enemies|enemyKnowledge|behaviours)\.ts$|ui\/shell\/(EnemyCard|EnemyPortrait|enemyFacts|enemyQueue|BossPlate|WaveQueue)\.tsx?$/ },

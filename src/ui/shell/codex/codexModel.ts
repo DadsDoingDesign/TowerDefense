@@ -197,8 +197,10 @@ function skillsTab(v: CodexView): CodexTab {
 
 /** The Fusions section's hue: the house accent (a fusion is no one level). */
 export const FUSION_HUE = 'var(--accent)'
-/** What an undiscovered fusion's card says: how to find it, never what it is. */
-export const fusionHow = (a: string, b: string): string => `Fuse ${a} and ${b} on one hero to find out.`
+/** What an undiscovered fusion's card says under its recipe: how to find it, never what it is. */
+export const FUSION_HOW = 'Fuse these two on one hero at a level-up to find out.'
+/** What a found one's says. */
+export const FUSION_FOUND = 'Found. Fuse these two on one hero at a level-up.'
 
 /**
  * Skill fusion (Oct 2026, `docs/SKILL_FUSION.md` § 4): every recipe as a tile.
@@ -215,7 +217,6 @@ function fusionsSection(v: CodexView): CodexSection {
         const k = skillById(id)!
         return { name: k.name, icon: skillHeadline(k).icon }
       })
-      const names = parts.map((p) => p.name)
       return {
         id: `fusion:${f.id}`,
         name: has ? f.name : '???',
@@ -227,7 +228,7 @@ function fusionsSection(v: CodexView): CodexSection {
         company: has ? f.company : undefined,
         chips: has ? [`Fusion · ${LEVEL_NAME[f.level]}`, companyById(f.company).name] : ['Fusion'],
         does: has ? f.desc : '',
-        how: has ? `Found. A hero holding ${names.join(' and ')} can fuse them at a level-up.` : fusionHow(names[0], names[1]),
+        how: has ? FUSION_FOUND : FUSION_HOW,
         fusion: { parts, ...(has ? { twist: f.twist } : {}) },
       }
     }),

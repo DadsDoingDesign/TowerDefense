@@ -400,7 +400,7 @@ describe('the twists (engine)', () => {
 
 describe('discovery and the beat (UI models)', () => {
   it('the Codex lists every recipe: its parts and a "?" until made, then its name and twist', async () => {
-    const { codexModel, fusionHow } = await import('../src/ui/shell/codex/codexModel')
+    const { codexModel, FUSION_FOUND, FUSION_HOW } = await import('../src/ui/shell/codex/codexModel')
     const codex = { enemies: [], relics: [], felled: {}, fusions: ['fz_sunder'] }
     const skills = codexModel({ achievements: {}, codex, skills: [], staged: false })[1]
     const sec = skills.sections.find((s) => s.title === 'Fusions')!
@@ -416,7 +416,8 @@ describe('discovery and the beat (UI models)', () => {
     expect(cuts.does).toBe('')
     expect(cuts.fusion?.twist).toBeUndefined()
     expect(cuts.fusion?.parts.map((p) => p.name)).toEqual(['Quick Hands', 'Keen Eye'])
-    expect(cuts.how).toBe(fusionHow('Quick Hands', 'Keen Eye'))
+    expect(cuts.how).toBe(FUSION_HOW)
+    expect(sunder.how).toBe(FUSION_FOUND)
     // Never a spoiler: no locked card names its result.
     for (const e of sec.entries.filter((x) => x.locked)) for (const f of FUSIONS) expect(e.how.includes(f.name)).toBe(false)
   })

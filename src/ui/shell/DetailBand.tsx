@@ -63,6 +63,8 @@ import { EffectLine } from './EffectLine'
 import { HeroCard } from './HeroCard'
 import { TeamPanel } from './TeamPanel'
 import { openUpgrade, UpgradePanel } from './UpgradePanel'
+import { FuseBeat } from './FuseBeat'
+import { useFuseBeat } from './fuseBeat'
 import { canSpend, heroUpgrades, placementsCount, upgradeButtonName, upgradeWaiting } from './heroCard'
 import { fieldConflicts, fieldStanding, gearLocked } from '../../state/game/selectors'
 import { useRunClan } from './useRunClan'
@@ -583,8 +585,11 @@ function ContextPanel({ offers }: { offers: Offer[] }) {
   const screen = useGameStore((s) => s.screen)
   const focusedNode = useMapFocus((s) => s.nodeId)
   const heroTab = useGameStore((s) => s.heroTab)
+  // Skill fusion: for a moment after a fusion the panel IS the fuse beat.
+  const fusing = useFuseBeat((s) => !!s.show)
 
   if (stranded) return <StrandedPanel />
+  if (fusing) return <FuseBeat />
   // A focused map node takes the panel whatever else is selected: it is the
   // decision in front of the player, and it must be readable BEFORE the march
   // is committed (Wave 1).

@@ -16,6 +16,8 @@ import { cardFields, levelWords, skillSlots, type SkillSlot } from './heroCard'
 import { waveLive } from './levelUps'
 import { heroLookArt } from './offers'
 import { openUpgrade } from './UpgradePanel'
+import { elementVar } from './fuseBeat'
+import '../../styles/fusion.css'
 
 /**
  * The focused hero, as one structured card (the battle band, Oct 2026).
@@ -167,7 +169,8 @@ export function HeroCard({ hero }: { hero: Sentinel }) {
           <p className="sh-line sh-hcard-skillread" role="note" ref={readRef}>
             {reading.kind === 'held' ? (
               <>
-                <b>{reading.skill.name}</b> · {skillLevelLabel(reading.level)} — {reading.skill.desc}
+                <b>{reading.skill.name}</b> · {reading.fused ? `Fusion of ${reading.fused.parts.join(' + ')}` : skillLevelLabel(reading.level)} — {reading.skill.desc}
+                {reading.fused && <> {reading.fused.skill.twist}</>}
               </>
             ) : reading.kind === 'owed' ? (
               `A ${skillLevelLabel(reading.milestone.tier)} skill to choose when this wave is over.`
@@ -211,10 +214,15 @@ function SkillSlotButton({ slot, open, live, onRead, onChoose }: { slot: SkillSl
     return (
       <button
         type="button"
-        className="sh-sk held"
+        className={`sh-sk held${slot.fused ? ' fused' : ''}`}
         data-sfx="toggle"
         aria-expanded={open}
-        aria-label={`${slot.skill.name}, ${skillLevelLabel(slot.level)}: ${slot.skill.desc}`}
+        aria-label={
+          slot.fused
+            ? `${slot.skill.name}, fusion of ${slot.fused.parts.join(' and ')}: ${slot.skill.desc} ${slot.fused.skill.twist}`
+            : `${slot.skill.name}, ${skillLevelLabel(slot.level)}: ${slot.skill.desc}`
+        }
+        style={slot.fused ? elementVar(slot.fused.skill) : undefined}
         onClick={onRead}
       >
         <Icon name={slot.icon} lg />
