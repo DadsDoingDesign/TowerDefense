@@ -576,9 +576,9 @@ prints the same table, faster.
 | Thousand Cuts | Sword & Shield | — | +13% | +22% | +5.6pt |
 | Thousand Cuts | Dagger | +97% | +42% | +49% | +23.9pt |
 | Thousand Cuts | Wand | +25% | +20% | +4% | +5.8pt |
-| Relentless | Sword & Shield | — | +10% | +13% | +2.1pt |
-| Relentless | Dagger | +1% | +32% | +24% | +7.6pt |
-| Relentless | Wand | −1% | +7% | +0% | +2.7pt |
+| Relentless | Sword & Shield | — | +25% | +21% | +5.8pt |
+| Relentless | Dagger | +7% | +55% | +32% | +12.7pt |
+| Relentless | Wand | −1% | +21% | +0% | +4.4pt |
 | Bushwhack | Sword & Shield | +50% | +15% | +19% | +6.7pt |
 | Bushwhack | Dagger | +25% | +10% | +10% | +6.8pt |
 | Bushwhack | Wand | +25% | +16% | +49% | +13.4pt |
@@ -588,9 +588,9 @@ prints the same table, faster.
 | Plague Spark | Sword & Shield | +33% | +19% | +10% | +5.3pt |
 | Plague Spark | Dagger | +7% | +7% | +7% | +3.7pt |
 | Plague Spark | Wand | +23% | +0% | +10% | +4.3pt |
-| Rimecut | Sword & Shield | — | +3% | +6% | +1.1pt |
-| Rimecut | Dagger | +0% | +31% | +35% | +10.5pt |
-| Rimecut | Wand | −2% | +9% | +7% | +4.1pt |
+| Rimecut | Sword & Shield | — | +5% | +11% | +1.8pt |
+| Rimecut | Dagger | +14% | +42% | +40% | +12.1pt |
+| Rimecut | Wand | −2% | +29% | +20% | +7.6pt |
 | Crushing Grip | Sword & Shield | — | +50% | +32% | +18.4pt |
 | Crushing Grip | Dagger | +48% | +2% | +2% | +7.0pt |
 | Crushing Grip | Wand | +26% | +5% | +4% | +13.4pt |
@@ -622,11 +622,11 @@ prints the same table, faster.
 | Fusion | Parts | Median | Best kit | Cells priced |
 |---|---|--:|---|--:|
 | Thousand Cuts | Long Reach + Keen Eye | **+23%** | +49% (Dagger) | 8/9 |
-| Relentless | Hard Hitter + Pin Down | **+8%** | +24% (Dagger) | 8/9 |
+| Relentless | Hard Hitter + Pin Down | **+21%** | +32% (Dagger) | 8/9 |
 | Bushwhack | Quick Hands + Charge | **+19%** | +25% (Wand) | 9/9 |
 | Sunder | Hard Hitter + Cleave | **+10%** | +13% (Wand) | 9/9 |
 | Plague Spark | Poisoned Tips + Arc Spark | **+10%** | +19% (Sword & Shield) | 9/9 |
-| Rimecut | Frostbite + Keen Eye | **+6%** | +31% (Dagger) | 8/9 |
+| Rimecut | Frostbite + Keen Eye | **+17%** | +40% (Dagger) | 8/9 |
 | Crushing Grip | Hold Fast + Pin Down | **+16%** | +41% (Sword & Shield) | 8/9 |
 | Plaguebearer | Poisoned Tips + Venom Spit | **+13%** | +19% (Wand) | 8/9 |
 | Cinderburst | Cleave + Wildfire | **+12%** | +39% (Sword & Shield) | 9/9 |
@@ -639,7 +639,7 @@ prints the same table, faster.
 
 **Invariants.** No fusion is worth less than its parts (median ≥ +0% of damage), and none is
 solved (median ≤ +40%). The target is +10–25% — the freed slot is the main reward —
-and **11 of 15** sit in it (reported, not gated: a twist that reads one kit only, a crit
+and **13 of 15** sit in it (reported, not gated: a twist that reads one kit only, a crit
 or a hold, sits lower on the median and higher on its kit).
 
 ## 8. Mutation tradeoffs (measured, not asserted)
@@ -775,7 +775,7 @@ its XP, gold and card — and nothing else.
 | Variant | Runs | Win rate | Avg nodes cleared | Battles fought | Avg roster | Run-ending node | Share it ends |
 |---|--:|--:|--:|--:|--:|--:|--:|
 | Strict floor — 10 forced battles, no shops, no hires, random card | 240 | **0%** | 5.6 | 6.6 | 1.0 | depth 7 | 35% |
-| Strict floor + 2 free level-1 hires (the two cities: before depths 5 and 9) | 240 | **0%** | 6.8 | 7.8 | 2.4 | depth 7 | 35% |
+| Strict floor + 2 free level-1 hires (the two cities: before depths 5 and 9) | 240 | **0%** | 6.8 | 7.8 | 2.4 | depth 7 | 33% |
 | route: specials-first (the shipped heuristic) | 240 | **13%** | 9.4 | 5.1 | 2.9 | depth 10 | 33% |
 | route: battles-first | 240 | **12%** | 8.8 | 8.6 | 2.8 | depth 9 | 30% |
 | route: battles, the fire before the shop | 240 | **11%** | 8.8 | 8.5 | 2.8 | depth 9 | 30% |
@@ -798,7 +798,7 @@ Survival curve — share of fresh runs that clear each node:
 | Depth | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 |
 |---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
 | Strict floor | 100% | 100% | 99% | 96% | 84% | 50% | 14% | 12% | 4% | 1% | 0% | 0% |
-| Strict + 2 hires | 100% | 100% | 99% | 96% | 90% | 80% | 45% | 43% | 17% | 4% | 1% | 0% |
+| Strict + 2 hires | 100% | 100% | 99% | 96% | 90% | 80% | 47% | 45% | 18% | 4% | 1% | 0% |
 | specials | 100% | 100% | 100% | 100% | 100% | 98% | 89% | 87% | 78% | 45% | 30% | 13% |
 | battles | 100% | 100% | 100% | 100% | 98% | 95% | 86% | 85% | 55% | 30% | 19% | 12% |
 | recruits | 100% | 100% | 100% | 100% | 98% | 94% | 86% | 85% | 55% | 30% | 19% | 11% |
@@ -1045,19 +1045,19 @@ stake elite stands where the map leaves a way round it: what a crate costs the v
 
 | Crates | Delivered (press on) | ±1σ | Contract pay (policy) | Bank net (policy) |
 |--:|--:|--:|--:|--:|
-| 0 | 47% | 2.0pt | 200.3 | 681.1 |
-| 1 | 40% | 2.0pt | 246.5 | 699.4 |
-| 2 | 42% | 2.0pt | 422.1 | 881.2 |
-| 3 | 39% | 2.0pt | 458.6 | 906.9 |
-| 4 | 34% | 1.9pt | 490.7 | 907.5 |
-| 5 | 28% | 1.8pt | 507.8 | 893.7 |
-| 6 | 27% | 1.8pt | 572.0 | 945.1 |
-| 7 | 22% | 1.7pt | 586.4 | 928.1 |
-| 8 | 18% | 1.6pt | 632.3 | 947.8 |
+| 0 | 45% | 2.0pt | 194.6 | 660.7 |
+| 1 | 39% | 2.0pt | 242.9 | 688.4 |
+| 2 | 40% | 2.0pt | 408.5 | 853.4 |
+| 3 | 35% | 1.9pt | 430.4 | 852.3 |
+| 4 | 30% | 1.9pt | 463.2 | 854.8 |
+| 5 | 28% | 1.8pt | 500.4 | 878.4 |
+| 6 | 25% | 1.8pt | 550.8 | 907.3 |
+| 7 | 20% | 1.6pt | 572.6 | 903.5 |
+| 8 | 16% | 1.5pt | 610.8 | 911.7 |
 
-**Veteran escort: 47%** against 30%–45% — **outside the band**. **Max stake (8 crates): 18%** against 8%–16% — **outside the band**. The veteran's escort leads the zero-meta escort by +31.5pt: what the meta layer and the player's read are worth.
+**Veteran escort: 45%** against 30%–45% — inside the band, **within 1σ of its edge**. **Max stake (8 crates): 16%** against 8%–16% — inside the band, **within 1σ of its edge**. The veteran's escort leads the zero-meta escort by +29.3pt: what the meta layer and the player's read are worth.
 
-**Veteran's ladder: each crate costs 10% of the tier below's delivery** on the fit (±0.7pt, 1σ; floor 8%). Step by step: 1c +6.8pt ±2.1 · 2c −1.2pt ±1.8 · 3c +2.7pt ±1.6 · 4c +5.2pt ±1.6 · 5c +5.2pt ±1.3 · 6c +1.5pt ±1.2 · 7c +5.0pt ±1.1 · 8c +4.2pt ±1.0 (a cost per crate, paired 1σ).
+**Veteran's ladder: each crate costs 11% of the tier below's delivery** on the fit (±0.7pt, 1σ; floor 8%). Step by step: 1c +5.7pt ±2.1 · 2c −0.2pt ±1.8 · 3c +4.7pt ±1.6 · 4c +4.8pt ±1.5 · 5c +2.5pt ±1.4 · 6c +3.0pt ±1.0 · 7c +4.2pt ±1.1 · 8c +4.8pt ±1.0 (a cost per crate, paired 1σ).
 
 ### 13b. The routes — each company's ground, as an escort
 
@@ -1496,28 +1496,22 @@ opens the door — §13c's **veteran**, who reads its skill offers (`build: 'bes
 
 | Road | Delivered | Bank net a run (gold) |
 |---|--:|--:|
-| Escort on Rosethread's road (for scale) | 46% | 670 |
-| 4 crates on Rosethread's road (a good run, for scale) | 31% | 873 |
-| **Sovereign Route** · no Sovereign item owned | 47% | 7591 |
-| **Sovereign Route** · all five Sovereign items owned | 51% | 8758 |
-| Sovereign Route without its ground (fire, lakes, boulders, curses) | 47% | 7590 |
-| Sovereign Route without Rosethread's double prices | 49% | 8059 |
-| Sovereign Route without the muster (the usual clan ramp, raiders at full strength ×1) | 50% | 8463 |
+| Escort on Rosethread's road (for scale) | 42% | 640 |
+| 4 crates on Rosethread's road (a good run, for scale) | 26% | 801 |
+| **Sovereign Route** · no Sovereign item owned | 44% | 6712 |
+| **Sovereign Route** · all five Sovereign items owned | 50% | 8319 |
+| Sovereign Route without its ground (fire, lakes, boulders, curses) | 45% | 7004 |
+| Sovereign Route without Rosethread's double prices | 45% | 6890 |
+| Sovereign Route without the muster (the usual clan ramp, raiders at full strength ×1) | 47% | 7445 |
 
-**The charter's delivery rate for this company: 47%** (51% once all five Sovereign items are owned). The payout is 4× the fee, so the charter breaks even at a 23% delivery rate; measured, a charter is worth **+7591 gold** to the bank on average (the fee and the road's share included; the advance is the company's).
+**The charter's delivery rate for this company: 44%** (50% once all five Sovereign items are owned). The payout is 4× the fee, so the charter breaks even at a 23% delivery rate; measured, a charter is worth **+6712 gold** to the bank on average (the fee and the road's share included; the advance is the company's).
 
-**The fee against savings.** The same company banks 670 gold net from an escort and 873 from a 4-crate contract (cash-out line), so the 7,000 fee is about **8.0 good runs** of savings.
+**The fee against savings.** The same company banks 640 gold net from an escort and 801 from a 4-crate contract (cash-out line), so the 7,000 fee is about **8.7 good runs** of savings.
 
-**Each condition, lifted one at a time** (delivery against the full charter's 47%): without the ground 47% (+0.0pt), without the double prices 49% (+1.4pt), without the muster 50% (+2.9pt). A positive delta is what that condition costs; a negative one means the charter is easier with it than without — at 210 runs a row the paired noise is several points, so read the signs, not the decimals.
+**Each condition, lifted one at a time** (delivery against the full charter's 44%): without the ground 45% (+1.0pt), without the double prices 45% (+0.5pt), without the muster 47% (+2.4pt). A positive delta is what that condition costs; a negative one means the charter is easier with it than without — at 210 runs a row the paired noise is several points, so read the signs, not the decimals.
 
-_Tuned in the tuning pass: the fee 5,000 → 7,000, the payout 20,000 → 35,000 and the muster's strength (×1.07, which the clans alone did not have); in the merged tuning pass the payout 35,000 → 30,000, so a charter nets about 1.5–3× this company's escort (+7591 against +670: 11.3×) and breaks even within a few points of its delivery rate. The five conditions are the designer's and are as built._
+_Tuned in the tuning pass: the fee 5,000 → 7,000, the payout 20,000 → 35,000 and the muster's strength (×1.07, which the clans alone did not have); in the merged tuning pass the payout 35,000 → 30,000, so a charter nets about 1.5–3× this company's escort (+6712 against +640: 10.5×) and breaks even within a few points of its delivery rate. The five conditions are the designer's and are as built._
 
 ## Verdict
 
-❌ **2 balance issue(s) detected:**
-
-- A veteran's escort delivers 47%, outside its 30%–45% band.
-- A veteran's max stake (8 crates) delivers 18%, outside its 8%–16% band.
-
-_Several of these are expected to be red: they are the findings this rebuild was
-written to surface. They are deliberately **not** tuned to pass._
+✅ **All balance invariants passed.**

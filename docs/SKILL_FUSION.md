@@ -22,9 +22,12 @@ has. Fusing frees a slot, and the next milestone can fill it.
   company is one of its parts'.
 - **One level only.** A fused skill never fuses again: it is not a part of
   any recipe, and the recipe check reads plain skills only.
-- **When.** Only at a skill milestone (5, 10, 15), only between waves, and
-  only by the player's choice. Two ways, both pure functions of what the hero
-  holds and the offer it is already shown:
+- **When.** Only at a skill milestone from level 10 on (`skills.FUSION_FROM_LEVEL`:
+  the milestones at 10 and 15), only between waves, and only by the player's
+  choice. At level 5 the offer is taken as it always was; a card there that
+  pairs with a held skill wears a quiet "Pairs" tag and its card says "Pairs
+  with A: they can fuse from level 10." Two ways, both pure functions of what
+  the hero holds and the offer it is already shown:
   - **(a) A card that fuses.** The hero holds A, and B is on the offer: B's
     card says "Fuses with A → Name". Taking it fuses at once — A's slot
     becomes the fusion and B takes no slot, so a full hero needs no swap.
@@ -57,11 +60,11 @@ second sentence.
 | # | Parts | Fusion | Co. | Lv | Twist (the new mechanic, tuned) |
 |--:|---|---|---|--:|---|
 | 1 | Long Reach + Keen Eye | Thousand Cuts | Rosethread | 1 | **Ricochet** — crits bounce to 1 more enemy for 60% |
-| 2 | Hard Hitter + Pin Down | Relentless | Rosethread | 1 | **Focus** — each hit on an enemy makes its next on it 12% harder, to +60% |
+| 2 | Hard Hitter + Pin Down | Relentless | Rosethread | 1 | **Focus** — each hit on an enemy makes its next on it 25% harder, up to double |
 | 3 | Quick Hands + Charge | Bushwhack | Peppercorn | 1 | **First strike** — its first hit on each enemy deals 50% more |
 | 4 | Hard Hitter + Cleave | Sunder | Ironvein | 1 | **Overkill** — a killing hit's excess rolls on to the next enemy, up to 3 more |
 | 5 | Poisoned Tips + Arc Spark | Plague Spark | Greenvial | 1 | **Arc carry** — its jumps poison (and chill) what they hit |
-| 6 | Frostbite + Keen Eye | Rimecut | Greenvial | 1 | **Freeze** — crits on slowed enemies deal 60% more and freeze them for 1.5s |
+| 6 | Frostbite + Keen Eye | Rimecut | Greenvial | 1 | **Freeze** — +12% crit on slowed enemies; those crits deal 40% more and freeze 1.5s |
 | 7 | Hold Fast + Pin Down | Crushing Grip | Peppercorn | 1 | **Held burst** — a held enemy that dies bursts for 40% of its hit within 50 |
 | 8 | Poisoned Tips + Venom Spit | Plaguebearer | Butcherblock | 2 | **Contagion** — enemies dying of its poison pass it, fresh, to 4 near them |
 | 9 | Cleave + Wildfire | Cinderburst | Ironvein | 2 | **Death burst** — enemies it set burning burst for 50% of its hit when they die |
@@ -102,8 +105,8 @@ over the enemies.
 | `ricochet` | share | A crit that lands bounces to the nearest enemy it did not touch, for this share of the hit | `impact` |
 | `overkill` | share | A hit that kills carries this share of its excess to the nearest living enemy within 70; an excess that kills again rolls on, up to `OVERKILL_HOPS` (3) more | `applyHit` → end of `impact` |
 | `arcCarry` | flag | Its chain arcs also write its burn and its chill on what they jump to | `impact` (chains) |
-| `critFreeze` | `{ dur, bonus }` | A crit on a frost-chilled enemy deals `bonus` more and stops it `dur` s; not again for `FREEZE_REST` (2s) after | `applyHit` |
-| `focusStack` | `{ step, cap }` | Each hit on the target it hit last is `step` harder, to `cap` | `fire` |
+| `critFreeze` | `{ dur, bonus, chance }` | Its crit bar is `chance` higher against a frost-chilled target (the bar, never the draw); a crit on one deals `bonus` more and stops it `dur` s, not again for `FREEZE_REST` (2s) after | `fire`, `applyHit` |
+| `focusStack` | `{ step, cap }` | Each shot it has already aimed at an enemy (this wave) makes its next on it `step` harder, to `cap`; a retarget keeps the marks | `fire` |
 | `heldBurst` | `{ frac, radius }` | An enemy it was holding that dies bursts for `frac` of its hit on enemies within `radius` | `onDeath` → `flushPending` |
 | `firstHit` | share | Its first hit on each enemy deals this much more | `applyHit` |
 | `contagion` | `{ count, radius }` | An enemy dying of its poison spreads the poison, at its full length, to `count` within `radius` (beside the Ember Urn's team rule; the larger count wins) | `onDeath` |
@@ -176,8 +179,8 @@ interval.
 
 The tuned figures (§7b of `balance/REPORT.md`, the damage-equivalent of the
 twist over the parts, median over the kit × bench cells that price it):
-Thousand Cuts +23%, Relentless +8% (+24% on a dagger), Bushwhack +19%, Sunder +10%, Plague
-Spark +10%, Rimecut +6% (+31% on a dagger: a crit twist), Crushing Grip +16%
+Thousand Cuts +23%, Relentless +21%, Bushwhack +19%, Sunder +10%, Plague
+Spark +10%, Rimecut +17% (+40% on a dagger: a crit twist), Crushing Grip +16%
 (+41% on a sword and shield: a hold twist), Plaguebearer +13%, Cinderburst
 +12%, Hail of Arrows +21%, Coup de Grâce +17%, Shatterglass +19%, Rallying
 Standard +17%, Anvilfall +24%, Red Mist +25%.
@@ -190,10 +193,13 @@ fusion's stop rate into the damage the parts' hero would need to match it,
 drops the benches damage cannot move at all, and takes the median.
 
 Tuning moves (each from that bench): Relentless's focus counts marks per
-enemy (a retarget keeps them), at 12% to +60% — it read +0–4% while a new
-target reset it; Bushwhack ×2 → +50%; Sunder's overkill now rolls
-on (it read +3%); Rimecut's freeze became freeze-and-crack (+60%) — freezing
-alone read +0% on every bench, which do not price control; Crushing Grip 100%
+enemy (a retarget keeps them) — it read +0–4% while a new target reset it,
++8% at 12% to +60%, and +21% at 25% up to double; Bushwhack ×2 → +50%; Sunder's overkill now rolls
+on (it read +3%); Rimecut's freeze became freeze-and-crack — freezing alone
+read +0% on every bench, which do not price control, and the crack alone
+(+60% on its crits) +6%, held down by the kits that rarely crit — and then
+a priced edge: +12% crit chance against a frost-chilled target (the bar, not
+the draw), those crits +40% (+17%); Crushing Grip 100%
 → 40%; Plaguebearer 2 → 4 bodies, passed on fresh; Hail of Arrows every 3rd
 at 60% → every 4th at 40%; Shatterglass 35% → 50% → 35% within 45; Coup de
 Grâce gained the 22% line (executions at 15% were too rare to refund).
@@ -233,28 +239,42 @@ The run models fuse as the UI does, so the run-level sections read runs that
 fuse. Every other section (§1–§10, §14, §16, §17) is unchanged to the
 digit: the engine fights a non-fusion battle exactly as before.
 
-| Line | Before | After |
+| Line | Before fusion | First build | Shipped |
+|---|--:|--:|--:|
+| First-timer (zero meta, 1 hero; gate 12–25%) | 12% | 28% | 13% |
+| Zero-meta escort (gate 12–20%) | 15% | 30% | 16% |
+| Veteran escort (gate 30–45%) | 45% | 49% | 45% |
+| Veteran, 8 crates (gate 8–16%) | 14% | 20% | 16% |
+| Opening deal 5 (+ Level 2 skill) | +15pt | +22pt | +17pt |
+| Sovereign Route delivered | 44% | 47% | 44% |
+
+Every gate passes. The two moves that got here:
+
+1. **No two Level 1 starters fuse** (§ 2). The first build fused every
+   first-timer's hero at level 5.
+2. **Fusion opens at level 10** (`skills.FUSION_FROM_LEVEL`). With the
+   starter pairs gone the veteran still read 47% / 18%, and the levers were
+   ablated on the veteran's own 600 seeds a tier (`simulateRun`, the §13c
+   model, paired):
+
+| Lever | Escort | 8 crates |
 |---|--:|--:|
-| First-timer (zero meta, 1 hero) | 12% | 13% |
-| Zero-meta escort (gate 12–20%) | 15% | 16% |
-| Veteran escort (gate 30–45%) | 45% | **47%** |
-| Veteran, 8 crates (gate 8–16%) | 14% | **18%** |
-| Opening deal 5 (+ Level 2 skill) | +15pt | +17pt |
-| Sovereign Route delivered | 44% | 47% |
+| No fusion at all | 44.7% | 14.0% |
+| As built (15 recipes) | 47.3% | 17.5% |
+| (a) a hero holds at most one fusion | 47.5% | 17.5% |
+| (b) 12 recipes (Plague Spark, Sunder, Bushwhack cut) | 47% | 17% |
+| (a) + (b) | 47% | 17% |
+| No held-pair fusion (path b) | 47.3% | 17.5% |
+| A full hero's card does not fuse | 47.7% | 16.7% |
+| No fusion at level 15 | 47.8% | 16.7% |
+| **No fusion at level 5** (shipped) | **45.0%** | **15.5%** |
 
-The first build (the three Level 1 starters fusing each other) read the
-first-timer line 28% and the zero-meta escort 30%; an ablation with every
-twist switched off still read 22% / 25%, so most of it was the SLOT (a
-level-15 hero that fused takes its Level 3 card into a free slot instead of
-swapping one out or taking the bump), and almost all of that came from the
-starter triangle, which fused every first-timer's hero at level 5. With no
-starter pair (the shipped recipes) the zero-meta lines are back in band.
-
-**Two gates are red, by 2pt and 2pt:** the veteran's escort (47%, ceiling
-45%) and its 8-crate stake (18%, ceiling 16%). A veteran holds the whole
-library, so it meets a recipe at most milestones, and the freed slot is the
-reward the brief asked for; switching the twists off moves these lines by
-about 1pt, so trimming twists cannot close them. Closing them is a tuning
-call for the designer: re-anchor the veteran's bands (fusion is a power the
-veteran now has), or lift the late stakes' Threat — neither is a change a
-fusion pass should make on its own, since both move non-fusion runs.
+   The veteran's gain was never the count of fusions or recipes: a veteran
+   fuses about once whatever the rule, and one fusion at level 5 frees a
+   slot that levels 10 and 15 both fill — four skills' worth for the whole
+   run. Opened at level 10, the pair is still there (the level-5 card says
+   it pairs, and level 10 offers to fuse it beside the cards), but fusing it
+   costs that milestone's Level 2 card, a real choice; a card that fuses at
+   10 or 15 still fuses at once, into a full hero too. No recipe was cut
+   and no difficulty number moved. The veteran lines sit on their bands'
+   edges (45%, 16%), so a later change that adds veteran power will show.

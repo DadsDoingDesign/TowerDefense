@@ -5330,11 +5330,13 @@ Every colour is a token (the element is `--fighter` / `--info` / `--rogue`
 accent button beside Start Wave, the screen's one primary.
 
 Balance (`balance/REPORT.md` §7b, and `docs/SKILL_FUSION.md` § 7): the
-twists sit at +6–25% damage-equivalent over their parts. The first recipe
+twists sit at +10–25% damage-equivalent over their parts. The first recipe
 set let the three Level 1 starters fuse each other, and whole runs read the
 first-timer line 12% → 28%: fixed by pairing every Level 1 recipe with a
-card the collection unlocks. Two veteran contract gates stay red by 2pt (the
-freed slot, not the twists) — a tuning call left to the designer.
+card the collection unlocks. The veteran still read 47% / 18%, past its
+bands, until fusion opened at level 10 (a level-5 fusion's freed slot filled
+twice); every gate passes. Re-shot: the level-5 card now wears "Pairs" and
+says when they can fuse.
 
 ### 2026-10-20 — the run map's header: quiet context, the selection leads
 
