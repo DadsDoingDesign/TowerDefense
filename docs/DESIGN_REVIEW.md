@@ -5346,3 +5346,41 @@ row). At 320 px Ironvein's "Metals & Stones road" still cuts to "Metals &
 Stones r…" beside two long counts. An at-end ask (cargo) shows a full mark
 at 100% before it is judged, as the old bar did. Card:
 `docs/ui-audit-2026-10/map-header/before-after.png`.
+
+## 2026-10-20 — Held gear moves with the hand
+
+The designer: "When an item is equipped the animation on the map doesn't move
+the item, it stays still while the character moves which looks odd." Cause:
+`gearMarks.drawMainHand` / `drawOffHand` held every atlas cell at the rig's
+ONE fist point per look (`Rig.fistR` / `fistL`, measured on idle frame 0),
+while the strip under it bobs and sways 1–3 px a frame — so on the robed look
+the wand or staff hung still while the fist rode out from under its handle,
+and a tome, quiver or shield in a rogue's or caster's off hand did the same
+(the knight's rebuilt off hand already had per-frame grips). The painted
+weapons are part of the strip and moved; their enchantment glint did not.
+
+- **Fix.** `npm run anchors` now tracks each fist off the real strips
+  (`scripts/held-grips-lib.ts`): the fist on idle frame 0 at the rig's point
+  (its skin and ink ring) is found near-exactly in every frame of the idle
+  and attack strips, nearest the last place; a hand hidden behind the body
+  (the archer's near hand through the draw) follows the tunic's measured
+  motion. Written to `heldGrips.generated.ts` (a marker pack's own grips too);
+  `anchors:check` fails when stale. `units.heroFigure` carries the strip's
+  table, `drawHeldGear` holds each mark at this frame's fist (`handsAt`), the
+  lunge on top, the painted weapon's glint shifted with its fist. Whole px,
+  render only; idle frame 0 is the rig's fist exactly, so the portraits and
+  every still frame are pixel for pixel what they were (diffed).
+- **Checked** in `harness/kit.html?held=1` (every kit through every frame it
+  draws over), before and after: the staff and wand cover the fist on all six
+  frames (before: the fist peeked out on 2–4); the caster's tome and the
+  archer's quiver ride the near hand; the caster's tome swings out with its
+  fist through the hammer blow; the knight is unchanged. No jitter: each
+  tracked idle point is the fist itself, every step ≤ the art's own (3 px at
+  most). Tests `tests/heldGrips.test.ts`.
+
+Weak spots: in the attack strip the caster's tome travels 18 px with the
+fist's counter-swing — held, but big; the archer's near hand is never seen
+in its draw, so the quiver follows the tunic, not a hand. Under reduced
+motion the figure still plays its idle (unchanged), and the item now rides
+it rather than standing apart. Cards: `docs/ui-audit-2026-10/held-gear/`
+(`scripts/held-gear-shots.mjs`, `scripts/held-gear-cards.ts`).

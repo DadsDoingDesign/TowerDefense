@@ -7,7 +7,8 @@
  *       (`?scale=2` for the field's phone density, `?frames=1` for every frame,
  *       `?shield=1` for the knight's off hands over its rebuilt body,
  *       `?weapons=1` for every weapon on its look, `?shipped=1` for the
- *       knight as it ships, `?peoples=1` for the peoples' new kinds)
+ *       knight as it ships, `?peoples=1` for the peoples' new kinds,
+ *       `?held=1` for every held mark through every frame it is drawn over)
  */
 import '../src/styles/global.css'
 import { drawSentinel, setPresentationTime, type DrawSentinel } from '../src/game/render/renderer'
@@ -28,7 +29,7 @@ const SCALE = Number(q.get('scale') ?? 3)
 const out = document.getElementById('out')!
 const GRASS = '#5a9b43'
 /** The figure's box, in logical px; the shield review's is wide enough for the swing. */
-const BOX = q.get('shield') || q.get('shipped') ? { w: 136, h: 128, ox: 64, oy: 112 } : { w: 104, h: 112, ox: 46, oy: 96 }
+const BOX = q.get('shield') || q.get('shipped') || q.get('held') ? { w: 136, h: 128, ox: 64, oy: 112 } : { w: 104, h: 112, ox: 46, oy: 96 }
 
 const BODY_KIND: Record<string, string> = {
   mail: 'Mail',
@@ -245,7 +246,68 @@ function buildShipped(): void {
   }
 }
 
+/**
+ * `?held=1` — every held mark through every frame of the strip it is drawn
+ * over (`gearMarks.heldGripFor`, `heldGrips.generated.ts`): the six idle
+ * frames side by side, then the attack strip where the art's own swing plays
+ * with a mark in a hand. A row per kit; each cell one frame (`&only=` filters).
+ */
+const HELD: { title: string; look: Archetype; main: string | null; off: string | null; atk: boolean }[] = [
+  { title: 'Caster · Staff', look: 'mystic', main: 'Staff', off: null, atk: false },
+  { title: 'Caster · Wand', look: 'mystic', main: 'Wand', off: null, atk: false },
+  { title: 'Caster · Wand + Tome', look: 'mystic', main: 'Wand', off: 'Tome', atk: false },
+  { title: 'Caster · no weapon + Tome', look: 'mystic', main: null, off: 'Tome', atk: true },
+  { title: 'Archer · Bow + Quiver', look: 'rogue', main: 'Bow', off: 'Quiver', atk: true },
+  { title: 'Archer · Bow + Tome', look: 'rogue', main: 'Bow', off: 'Tome', atk: true },
+  { title: 'Knight · Sword + Tome', look: 'fighter', main: 'Sword', off: 'Tome', atk: true },
+]
+const ATK_FRAMES: Record<Archetype, number> = { fighter: 6, rogue: 8, mystic: 6 }
+
+function heldFig(look: Archetype, e: Equipment, label: string, fire: number, t: number): HTMLElement {
+  const wrap = document.createElement('figure')
+  const c = document.createElement('canvas')
+  c.width = BOX.w * SCALE
+  c.height = BOX.h * SCALE
+  const g = c.getContext('2d')!
+  g.imageSmoothingEnabled = false
+  g.fillStyle = GRASS
+  g.fillRect(0, 0, c.width, c.height)
+  g.scale(SCALE, SCALE)
+  g.translate(BOX.ox, BOX.oy)
+  setPresentationTime(t)
+  drawSentinel(g, sentinel(look, e, fire))
+  const cap = document.createElement('figcaption')
+  cap.textContent = label
+  wrap.append(c, cap)
+  return wrap
+}
+
+function buildHeld(): void {
+  out.textContent = ''
+  const only = q.get('only')
+  for (const h of HELD) {
+    if (only && !h.title.toLowerCase().includes(only.toLowerCase())) continue
+    const e = eq(h.main, h.off, null)
+    const row = document.createElement('section')
+    row.dataset.held = h.title
+    row.innerHTML = `<h2>${h.title}</h2>`
+    const idle = document.createElement('div')
+    idle.className = 'row idle'
+    for (let f = 0; f < 6; f++) idle.append(heldFig(h.look, e, `idle ${f}`, 0, f / 6 + 0.01))
+    row.append(idle)
+    if (h.atk) {
+      const atk = document.createElement('div')
+      atk.className = 'row atk'
+      const n = ATK_FRAMES[h.look]
+      for (let f = 0; f < n; f++) atk.append(heldFig(h.look, e, `atk ${f}`, 1 - (f + 0.5) / n, 0.01))
+      row.append(atk)
+    }
+    out.append(row)
+  }
+}
+
 function build(): void {
+  if (q.get('held')) return buildHeld()
   if (q.get('shield')) return buildShield()
   if (q.get('shipped')) return buildShipped()
   if (q.get('weapons')) return buildWeapons()
