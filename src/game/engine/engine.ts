@@ -309,9 +309,8 @@ export interface RtSentinel {
   groundMult: number
   /** Crit aura (`critAura`): the crit chance the auras covering it add this step (0 = none). */
   critBuff: number
-  /** Focus (`focusStack`): the enemy it hit last, and how many hits in a row. */
-  focusId?: string | null
-  focusN?: number
+  /** Focus (`focusStack`): how many shots it has already aimed at each enemy this wave. */
+  marks?: Map<string, number>
   /** First strike (`firstHit`): the enemies it has already struck this wave. */
   struck?: Set<string>
 }
@@ -1481,11 +1480,13 @@ export class GameEngine {
     // Twin Knives: every Nth attack strikes twice — double the hit, no roll.
     const twice = m.doubleEvery && s.shots % m.doubleEvery === 0 ? 2 : 1
     let damage = s.profile.damage * (isCrit ? s.profile.critMult : 1) * s.buffMult * twice
-    // Focus (Relentless): each hit in a row on the same enemy lands harder.
+    // Focus (Relentless): every shot it has already aimed at this enemy marks
+    // it, and each mark makes the next land harder (a retarget keeps them).
     if (m.focusStack) {
-      s.focusN = s.focusId === target.id ? (s.focusN ?? 0) + 1 : 0
-      s.focusId = target.id
-      damage *= 1 + Math.min(m.focusStack.cap, m.focusStack.step * s.focusN)
+      s.marks ??= new Map()
+      const n = s.marks.get(target.id) ?? 0
+      s.marks.set(target.id, n + 1)
+      damage *= 1 + Math.min(m.focusStack.cap, m.focusStack.step * n)
     }
     const volley = m.volley && s.shots % m.volley.every === 0 ? m.volley.pierce : 0
     // Tinker's Spark: every Nth attack also jumps — this shot carries the

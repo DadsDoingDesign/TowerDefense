@@ -71,15 +71,18 @@ export interface FusionDef {
 
 export const FUSIONS: readonly FusionDef[] = [
   // ---- Level 1 + Level 1: met at the first milestone (level 5) -------------
-  // The three Level 1 starters pair three ways, so a first run's hero, holding
-  // one, is offered the other two — and both fuse.
+  // Every one pairs a card that standing or a delivery unlocks: no two Level 1
+  // starters fuse. (They did, three ways, and every first-timer's hero fused at
+  // level 5 — the zero-meta escort went 15% → 30% and the first-timer line
+  // 12% → 28%, past both bands. §7b, docs/SKILL_FUSION.md § 7.) A first run
+  // meets a fusion only in Anvilfall, two starters met at level 15.
   {
     id: 'fz_thousand_cuts',
     name: 'Thousand Cuts',
-    parts: ['quick_hands', 'keen_eye'],
+    parts: ['long_reach', 'keen_eye'],
     level: 1,
     company: 'silk',
-    desc: 'Attacks 15% faster; crit chance +10%, crit damage +50%.',
+    desc: 'Reaches 20% farther; crit chance +10%, crit damage +50%.',
     twist: 'Crits bounce to 1 more enemy for 60%.',
     mods: { ricochet: 0.6 },
     icon: 'crit',
@@ -88,11 +91,11 @@ export const FUSIONS: readonly FusionDef[] = [
   {
     id: 'fz_relentless',
     name: 'Relentless',
-    parts: ['quick_hands', 'hard_hitter'],
+    parts: ['hard_hitter', 'pin_down'],
     level: 1,
     company: 'silk',
-    desc: 'Attacks 15% faster and hits 15% harder.',
-    twist: 'Each hit on the same enemy is 12% harder, to +60%.',
+    desc: 'Hits 15% harder, and 30% harder on held enemies.',
+    twist: 'Each hit on an enemy makes its next on it 12% harder, to +60%.',
     mods: { focusStack: { step: 0.12, cap: 0.6 } },
     icon: 'damage',
     element: 'blood',
@@ -100,10 +103,10 @@ export const FUSIONS: readonly FusionDef[] = [
   {
     id: 'fz_bushwhack',
     name: 'Bushwhack',
-    parts: ['hard_hitter', 'keen_eye'],
+    parts: ['quick_hands', 'charge'],
     level: 1,
     company: 'spice',
-    desc: 'Hits 15% harder; crit chance +10%, crit damage +50%.',
+    desc: 'Attacks 15% faster, and 60% faster for the first 15s of each wave.',
     twist: 'Its first hit on each enemy deals 50% more.',
     mods: { firstHit: 0.5 },
     icon: 'blade',

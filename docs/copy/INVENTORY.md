@@ -9,7 +9,7 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 |---|---|---:|---:|
 | Relics | Say what a relic does to the team, in a number, and that relics stack and reach new hires (once, as a note). | 27 | 41 |
 | Boons and pacts (stat cards) | Say the gain and, for a pact, its bill: numbers and what they touch. | 39 | 18 |
-| Skills | Say what a skill does to its hero, in numbers, so two can be compared at a glance. | 172 | 30 |
+| Skills | Say what a skill does to its hero, in numbers, so two can be compared at a glance. | 172 | 31 |
 | Items and gear | Name the item and say what it does in the hand: its numbers, its quirk. | 307 | 36 |
 | Mutations | Say how a mutation changes one hero's attack, and its cost. | 27 | 31 |
 | Enemies | Name the goblin and the one thing about it that changes how you fight it. | 82 | 31 |
@@ -34,7 +34,7 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 | Glossary and shared labels | One name and one short meaning per term, shared by every surface. | 108 | 46 |
 | Settings and system | Say what a setting changes; system notices say what happened and what to do. | 32 | 27 |
 | Recruits and heroes | Name the hero and what it holds. | 117 | 18 |
-| Other | — | 295 | 20 |
+| Other | — | 296 | 20 |
 
 ## Relics
 
@@ -128,36 +128,36 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 
 ### `src/game/data/fusions.ts`
 
-- L82: Attacks 15% faster; crit chance +10%, crit damage +50%.
-- L83: Crits bounce to 1 more enemy for 60%.
-- L94: Attacks 15% faster and hits 15% harder.
-- L95: Each hit on the same enemy is 12% harder, to +60%.
-- L106: Hits 15% harder; crit chance +10%, crit damage +50%.
-- L107: Its first hit on each enemy deals 50% more.
-- L118: Hits 15% harder, and every hit strikes enemies within 14 of its target.
-- L119: A killing hit’s excess rolls on to the next enemy, up to 3 more.
-- L130: Every hit poisons 10/s for 3s and jumps to 1 more enemy for 45%.
-- L131: Its jumps poison what they hit.
-- L142: Every hit slows 25% for 1.5s; crit chance +10%, crit damage +50%.
-- L143: Crits on slowed enemies deal 60% more and freeze them for 1.5s.
-- L154: Holds 1 more enemy, and hits 30% harder on held enemies.
-- L155: A held enemy that dies bursts for 40% of its hit within 50.
-- L167: Every hit poisons 10/s for 3s; every 3rd poisons the 3 nearest 12/s.
-- L168: Enemies dying of its poison pass it, fresh, to 4 near them.
-- L179: Every hit burns 12/s for 3s and splashes 29 wider.
-- L180: Enemies it set burning burst for 50% of its hit when they die.
-- L191: Reaches 80% farther, and every shot pierces 1 extra enemy.
-- L192: Every 4th attack also shoots 2 more enemies for 40%.
-- L203: Kills under 15% health outright; +60% speed for 15s; +10% crit, +10% damage.
-- L204: Kills under 22% outright, and each execution readies its next attack.
-- L215: Every hit slows 25% for 1.5s, and hits 25% harder on slowed enemies.
-- L216: Hits on slowed enemies splinter 35% to enemies within 45.
-- L227: Holds 1 more enemy; heroes near it attack 20% faster.
-- L228: Heroes near it crit 10% more often.
-- L240: Hits 50% harder, attacks 10% faster; +20% crit chance, +60% crit damage.
-- L241: Every 4th attack shakes enemies within 60 of its target for 60%.
-- L252: Hits 40% harder, attacks 25% faster; each kill +25% speed for 1.5s.
-- L253: Each kill this wave adds 4% attack speed, to +40%.
+- L85: Reaches 20% farther; crit chance +10%, crit damage +50%.
+- L86: Crits bounce to 1 more enemy for 60%.
+- L97: Hits 15% harder, and 30% harder on held enemies.
+- L98: Each hit on an enemy makes its next on it 12% harder, to +60%.
+- L109: Attacks 15% faster, and 60% faster for the first 15s of each wave.
+- L110: Its first hit on each enemy deals 50% more.
+- L121: Hits 15% harder, and every hit strikes enemies within 14 of its target.
+- L122: A killing hit’s excess rolls on to the next enemy, up to 3 more.
+- L133: Every hit poisons 10/s for 3s and jumps to 1 more enemy for 45%.
+- L134: Its jumps poison what they hit.
+- L145: Every hit slows 25% for 1.5s; crit chance +10%, crit damage +50%.
+- L146: Crits on slowed enemies deal 60% more and freeze them for 1.5s.
+- L157: Holds 1 more enemy, and hits 30% harder on held enemies.
+- L158: A held enemy that dies bursts for 40% of its hit within 50.
+- L170: Every hit poisons 10/s for 3s; every 3rd poisons the 3 nearest 12/s.
+- L171: Enemies dying of its poison pass it, fresh, to 4 near them.
+- L182: Every hit burns 12/s for 3s and splashes 29 wider.
+- L183: Enemies it set burning burst for 50% of its hit when they die.
+- L194: Reaches 80% farther, and every shot pierces 1 extra enemy.
+- L195: Every 4th attack also shoots 2 more enemies for 40%.
+- L206: Kills under 15% health outright; +60% speed for 15s; +10% crit, +10% damage.
+- L207: Kills under 22% outright, and each execution readies its next attack.
+- L218: Every hit slows 25% for 1.5s, and hits 25% harder on slowed enemies.
+- L219: Hits on slowed enemies splinter 35% to enemies within 45.
+- L230: Holds 1 more enemy; heroes near it attack 20% faster.
+- L231: Heroes near it crit 10% more often.
+- L243: Hits 50% harder, attacks 10% faster; +20% crit chance, +60% crit damage.
+- L244: Every 4th attack shakes enemies within 60 of its target for 60%.
+- L255: Hits 40% harder, attacks 25% faster; each kill +25% speed for 1.5s.
+- L256: Each kill this wave adds 4% attack speed, to +40%.
 
 ### `src/game/data/skills.ts`
 
@@ -374,7 +374,7 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 - L138: a kill's excess damage carries {pct(m.overkill)} to the nearest enemy
 - L139: its arcs carry its burn and slow
 - L140: crits on slowed enemies deal {pct(m.critFreeze.bonus)} more and freeze them {m.critFreeze.dur}s
-- L141: each hit on the same enemy +{pct(m.focusStack.step)}, to +{pct(m.focusStack.cap)}
+- L141: each hit on an enemy makes the next on it +{pct(m.focusStack.step)}, to +{pct(m.focusStack.cap)}
 - L142: a held enemy that dies bursts {pct(m.heldBurst.frac)} of its hit around it
 - L143: its first hit on each enemy deals {pct(m.firstHit)} more
 - L144: poisoned enemies spread it to {m.contagion.count} near when they die
@@ -3381,36 +3381,37 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 - L161: All stats
 - L162: Fewer stats
 - L162: All stats
-- L172: Fusion of {reading.fused.parts.join}
-- L176: A {skillLevelLabel(reading.} skill to choose when this wave is over.
-- L178: The next skill choice comes at level {reading.level}.
-- L180: Every skill choice is made.
-- L197: Undeploy {hero.name} — back to the bench
-- L203: Undeploy
-- L244: A {skillLevelLabel(slot.mil} skill to choose when this wave is over
-- L244: Choose a {skillLevelLabel(slot.mil} skill
-- L260: Empty skill slot — the next choice comes at level {slot.level}
-- L260: Empty skill slot
-- L264: Lv {slot.level}
-- L295: STR
-- L295: Strength {Math.round(t.str)}
-- L296: DEX
-- L296: Dexterity {Math.round(t.dex)}
-- L297: INT
-- L297: Intelligence {Math.round(t.int)}
-- L299: Patience
-- L301: Patience {Math.round(p.patience)}
-- L302: Every {PATIENCE_INTERVAL_S} s of a wave: +{Math.round(PATIENCE_PER_}% STR, DEX and INT, up to {cap} times (+{Math.round(cap * PATIENC}%). Every 5 Patience adds one more.
-- L304: Crit
-- L304: {Math.round(p.critChance }% · ×{p.critMult.toFixed(1)}
-- L304: Crit chance {Math.round(p.critChance }%, crit damage times {p.critMult.toFixed(1)}
-- L307: Holds
-- L307: Holds {p.mods.block!.count} enemies
-- L308: Thorns
-- L308: Thorns {Math.round(p.thorns)}
-- L323: What {r.k} does
-- L330: Abilities
-- L331: How effects stack
+- L175: {reading.fused.parts.join} — {reading.fused.skill.twis}
+- L175: {skillLevelLabel(reading.} — {reading.skill.desc}
+- L178: A {skillLevelLabel(reading.} skill to choose when this wave is over.
+- L180: The next skill choice comes at level {reading.level}.
+- L182: Every skill choice is made.
+- L199: Undeploy {hero.name} — back to the bench
+- L205: Undeploy
+- L246: A {skillLevelLabel(slot.mil} skill to choose when this wave is over
+- L246: Choose a {skillLevelLabel(slot.mil} skill
+- L262: Empty skill slot — the next choice comes at level {slot.level}
+- L262: Empty skill slot
+- L266: Lv {slot.level}
+- L297: STR
+- L297: Strength {Math.round(t.str)}
+- L298: DEX
+- L298: Dexterity {Math.round(t.dex)}
+- L299: INT
+- L299: Intelligence {Math.round(t.int)}
+- L301: Patience
+- L303: Patience {Math.round(p.patience)}
+- L304: Every {PATIENCE_INTERVAL_S} s of a wave: +{Math.round(PATIENCE_PER_}% STR, DEX and INT, up to {cap} times (+{Math.round(cap * PATIENC}%). Every 5 Patience adds one more.
+- L306: Crit
+- L306: {Math.round(p.critChance }% · ×{p.critMult.toFixed(1)}
+- L306: Crit chance {Math.round(p.critChance }%, crit damage times {p.critMult.toFixed(1)}
+- L309: Holds
+- L309: Holds {p.mods.block!.count} enemies
+- L310: Thorns
+- L310: Thorns {Math.round(p.thorns)}
+- L325: What {r.k} does
+- L332: Abilities
+- L333: How effects stack
 
 ### `src/ui/shell/Money.tsx`
 

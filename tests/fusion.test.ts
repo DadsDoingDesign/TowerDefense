@@ -80,10 +80,13 @@ describe('the recipes (data/fusions.ts)', () => {
     for (const c of COMPANY_IDS) expect(FUSIONS.filter((f) => f.company === c).length, c).toBe(3)
   })
 
-  it('the three Level 1 starters pair three ways: a first run meets a fusion at its first milestone', () => {
+  it('no two Level 1 starters fuse (a first-timer is not handed one at level 5), and a first run can still meet one', () => {
     const l1 = STARTER_SKILLS.filter((id) => skillById(id)!.level === 1)
     expect(l1.length).toBe(3)
-    for (let i = 0; i < 3; i++) for (let j = i + 1; j < 3; j++) expect(recipeFor(l1[i], l1[j]), `${l1[i]} + ${l1[j]}`).toBeDefined()
+    for (let i = 0; i < 3; i++) for (let j = i + 1; j < 3; j++) expect(recipeFor(l1[i], l1[j]), `${l1[i]} + ${l1[j]}`).toBeUndefined()
+    // Two starters, met at levels 10 and 15: Anvilfall.
+    const starterOnly = FUSIONS.filter((f) => f.parts.every((p) => STARTER_SKILLS.includes(p)))
+    expect(starterOnly.map((f) => f.id)).toEqual(['fz_anvilfall'])
   })
 
   it('every twist is a different rule (a fusion is a new skill type, not bigger numbers)', () => {
@@ -113,11 +116,11 @@ describe('the recipes (data/fusions.ts)', () => {
 
 describe('recipe lookup (run/fusion.ts)', () => {
   it('finds a recipe in either order, and nothing else', () => {
-    expect(recipeFor('quick_hands', 'keen_eye')?.id).toBe('fz_thousand_cuts')
-    expect(recipeFor('keen_eye', 'quick_hands')?.id).toBe('fz_thousand_cuts')
-    expect(recipeFor('quick_hands', 'quick_hands')).toBeUndefined()
-    expect(recipeFor('quick_hands', 'bulwark')).toBeUndefined()
-    expect(recipeFor('quick_hands', 'nonsense')).toBeUndefined()
+    expect(recipeFor('long_reach', 'keen_eye')?.id).toBe('fz_thousand_cuts')
+    expect(recipeFor('keen_eye', 'long_reach')?.id).toBe('fz_thousand_cuts')
+    expect(recipeFor('long_reach', 'long_reach')).toBeUndefined()
+    expect(recipeFor('long_reach', 'bulwark')).toBeUndefined()
+    expect(recipeFor('long_reach', 'nonsense')).toBeUndefined()
   })
 
   it('no fusion of fusions: a fused skill is never a part', () => {
@@ -132,9 +135,9 @@ describe('recipe lookup (run/fusion.ts)', () => {
 
   it('a fused skill is its two parts and then its twist (skillModsOf)', () => {
     const f = FUSED_SKILLS.find((x) => x.id === 'fz_thousand_cuts')!
-    expect(skillModsOf({ skills: [f.id] })).toEqual([skillById('quick_hands')!.mods, skillById('keen_eye')!.mods, f.mods])
+    expect(skillModsOf({ skills: [f.id] })).toEqual([skillById('long_reach')!.mods, skillById('keen_eye')!.mods, f.mods])
     // So the hero's numbers are the parts' to the decimal.
-    const parts = computeCombat(hero(['quick_hands', 'keen_eye']))
+    const parts = computeCombat(hero(['long_reach', 'keen_eye']))
     const fused = computeCombat(hero([f.id]))
     expect(fused.dps).toBeCloseTo(parts.dps, 9)
     expect(fused.range).toBeCloseTo(parts.range, 9)
@@ -146,16 +149,16 @@ describe('recipe lookup (run/fusion.ts)', () => {
 
 describe('the milestone (run/skills.ts)', () => {
   it('(a) annotates a card that fuses with a held skill, and leaves the offer dealt as it was', () => {
-    const h = hero(['quick_hands'])
+    const h = hero(['long_reach'])
     const seed = seedOffering(h, 'keen_eye')
     const offer = skillOffer(h, POOL, seed)
     const notes = cardFusions(h, offer)
-    expect(notes.get('keen_eye')).toEqual([{ with: 'quick_hands', into: skillById('fz_thousand_cuts') }])
-    for (const k of offer) if (k.id !== 'keen_eye' && !recipeFor('quick_hands', k.id)) expect(notes.has(k.id)).toBe(false)
+    expect(notes.get('keen_eye')).toEqual([{ with: 'long_reach', into: skillById('fz_thousand_cuts') }])
+    for (const k of offer) if (k.id !== 'keen_eye' && !recipeFor('long_reach', k.id)) expect(notes.has(k.id)).toBe(false)
   })
 
   it('(a) taking a card that fuses fuses at once: the held slot becomes the fusion, the card takes none', () => {
-    const h = hero(['quick_hands'])
+    const h = hero(['long_reach'])
     const seed = seedOffering(h, 'keen_eye')
     const next = takeSkill(h, 'keen_eye', POOL, seed)!
     expect(next.skills).toEqual(['fz_thousand_cuts'])
@@ -164,7 +167,7 @@ describe('the milestone (run/skills.ts)', () => {
 
   it('(a) works when the slots are full: no swap, the drop is ignored', () => {
     // Three held, a fourth that fuses with the second.
-    const h = hero(['bounty', 'quick_hands', 'cleave'], 15, 2)
+    const h = hero(['bounty', 'long_reach', 'cleave'], 15, 2)
     expect(slotsFull(h)).toBe(true)
     // Level 3 offer: Berserk fuses with Bloodrush — use a held pair that meets Level 3.
     const r = hero(['bounty', 'bloodrush', 'cleave'], 15, 2)
@@ -176,12 +179,12 @@ describe('the milestone (run/skills.ts)', () => {
   })
 
   it('(a) a card that fuses with two held skills fuses with the partner chosen (the first by default)', () => {
-    // Hard Hitter fuses with Quick Hands (Relentless) and with Cleave (Sunder).
-    const h = hero(['quick_hands', 'cleave'], 5, 0)
+    // Hard Hitter fuses with Pin Down (Relentless) and with Cleave (Sunder).
+    const h = hero(['pin_down', 'cleave'], 5, 0)
     const seed = seedOffering(h, 'hard_hitter')
     expect(cardFusions(h, skillOffer(h, POOL, seed)).get('hard_hitter')!.map((w) => w.into.id)).toEqual(['fz_relentless', 'fz_sunder'])
     expect(takeSkill(h, 'hard_hitter', POOL, seed)!.skills).toEqual(['fz_relentless', 'cleave'])
-    expect(takeSkill(h, 'hard_hitter', POOL, seed, null, 'cleave')!.skills).toEqual(['quick_hands', 'fz_sunder'])
+    expect(takeSkill(h, 'hard_hitter', POOL, seed, null, 'cleave')!.skills).toEqual(['pin_down', 'fz_sunder'])
     // An unknown partner falls back to the first.
     expect(takeSkill(h, 'hard_hitter', POOL, seed, null, 'bulwark')!.skills).toEqual(['fz_relentless', 'cleave'])
   })
@@ -204,10 +207,10 @@ describe('the milestone (run/skills.ts)', () => {
 
   it('a hero holding a fusion is never dealt its parts again; every other hero is dealt exactly as before', () => {
     const fused = hero(['fz_thousand_cuts'], 10, 1)
-    expect(fusedParts(fused)).toEqual(['quick_hands', 'keen_eye'])
+    expect(fusedParts(fused)).toEqual(['long_reach', 'keen_eye'])
     for (let seed = 1; seed < 200; seed++) {
       const ids = skillOffer({ ...fused, level: 5, skillPicks: 0 }, POOL, seed).map((k) => k.id)
-      expect(ids).not.toContain('quick_hands')
+      expect(ids).not.toContain('long_reach')
       expect(ids).not.toContain('keen_eye')
     }
     // A plain hero's offer: the same as the hash always dealt (spot-check vs the raw draw).
@@ -219,7 +222,7 @@ describe('the milestone (run/skills.ts)', () => {
   })
 
   it('a fused hero frees a slot that the next milestone fills', () => {
-    const h = hero(['quick_hands'])
+    const h = hero(['long_reach'])
     const at5 = takeSkill(h, 'keen_eye', POOL, seedOffering(h, 'keen_eye'))!
     expect(at5.skills!.length).toBe(1)
     const at10 = { ...at5, level: 10 }
@@ -415,7 +418,7 @@ describe('discovery and the beat (UI models)', () => {
     expect(cuts.name).toBe('???')
     expect(cuts.does).toBe('')
     expect(cuts.fusion?.twist).toBeUndefined()
-    expect(cuts.fusion?.parts.map((p) => p.name)).toEqual(['Quick Hands', 'Keen Eye'])
+    expect(cuts.fusion?.parts.map((p) => p.name)).toEqual(['Long Reach', 'Keen Eye'])
     expect(cuts.how).toBe(FUSION_HOW)
     expect(sunder.how).toBe(FUSION_FOUND)
     // Never a spoiler: no locked card names its result.

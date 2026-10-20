@@ -169,8 +169,10 @@ export function HeroCard({ hero }: { hero: Sentinel }) {
           <p className="sh-line sh-hcard-skillread" role="note" ref={readRef}>
             {reading.kind === 'held' ? (
               <>
-                <b>{reading.skill.name}</b> · {reading.fused ? `Fusion of ${reading.fused.parts.join(' + ')}` : skillLevelLabel(reading.level)} — {reading.skill.desc}
-                {reading.fused && <> {reading.fused.skill.twist}</>}
+                {/* A fusion reads as its parts and its twist: the parts' own numbers
+                    are their names (the full sentence is in "All stats"), so the
+                    line stays short enough to keep the slot row in view. */}
+                <b>{reading.skill.name}</b> · {reading.fused ? `${reading.fused.parts.join(' + ')} — ${reading.fused.skill.twist}` : `${skillLevelLabel(reading.level)} — ${reading.skill.desc}`}
               </>
             ) : reading.kind === 'owed' ? (
               `A ${skillLevelLabel(reading.milestone.tier)} skill to choose when this wave is over.`

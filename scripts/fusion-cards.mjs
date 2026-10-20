@@ -92,7 +92,7 @@ const img = (f) => {
   return fs.existsSync(p) ? `data:image/png;base64,${fs.readFileSync(p).toString('base64')}` : ''
 }
 const steps = [
-  ['02-offer-fuses-p390.png', '1 · A card that fuses', 'At level 5 the hero holds Quick Hands; a card that fuses with it wears “Fuses”, and its card is the fusion’s.'],
+  ['02-offer-fuses-p390.png', '1 · A card that fuses', 'At level 5 the hero holds Keen Eye; a card that fuses with it wears “Fuses”, and its card is the fusion’s.'],
   ['03-beat-b-p390.png', '2 · The fuse beat', 'The two cards slam together in the fusion’s colour. Under a second; still under reduced motion.'],
   ['04-hero-card-p390.png', '3 · One slot, two skills', 'The fusion sits in one slot; the next two milestones fill the others. Its read line names its parts.'],
   ['05-held-pair-p390.png', '4 · A pair already held', 'A hero holding both parts gets “Fuse” beside the cards: it frees a slot.'],

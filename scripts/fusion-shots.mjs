@@ -104,9 +104,9 @@ for (const view of VIEW_ARG ?? Object.keys(VIEWS)) {
   await cta(p) // sign → pick
   await cta(p, 2500) // march → the opening fight
 
-  // (a) A level-5 offer where cards fuse with the Quick Hands it holds.
-  const pool = ['quick_hands', 'hard_hitter', 'keen_eye', 'bounty', 'charge', 'heavy_blows', 'long_shot', 'finisher', 'berserk', 'weaponmaster', 'volley', 'venom_spit', 'shield_wall', 'blessing']
-  await owe(p, 5, ['quick_hands'], 0, pool)
+  // (a) A level-5 offer where cards fuse with the Keen Eye it holds.
+  const pool = ['quick_hands', 'keen_eye', 'long_reach', 'frostbite', 'bounty', 'heavy_blows', 'long_shot', 'finisher', 'berserk', 'weaponmaster', 'volley', 'venom_spit', 'shield_wall', 'blessing']
+  await owe(p, 5, ['keen_eye'], 0, pool)
   await p.shot('01-offer')
   const fusing = p.page.locator('.pk-tok:has(.fz-tag)').first()
   if (await fusing.count()) await fusing.click()

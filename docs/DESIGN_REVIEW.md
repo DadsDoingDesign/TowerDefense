@@ -5313,6 +5313,11 @@ Scored against the checklist, and fixed on the way:
 - **The Codex silhouetted what is known.** A recipe's parts are a goal, not
   a secret: the locked tile shows them (dimmed) and a "?" for the result; the
   silhouette rule is overridden for those tiles only.
+- **The hero card scrolled its own slots away.** A fused skill's read line
+  said its parts' sentence and its twist (four lines on a phone), and the
+  card scrolled the slot row half out of view to show it. It now reads
+  "Rimecut · Frostbite + Keen Eye — Crits on slowed …": the parts by name,
+  the twist in full; the parts' numbers are in "All stats".
 
 Benchmark: Hades' duo boons (two gods' boons meet in one new one, announced
 on the offer) and Slay the Spire's card synergies — the "Fuses" tag is the
@@ -5323,3 +5328,10 @@ effects on the field reuse existing telegraphs (spread ring, floaters).
 Every colour is a token (the element is `--fighter` / `--info` / `--rogue`
 …); no frame inside the Context panel's frame; the commit stays the plain
 accent button beside Start Wave, the screen's one primary.
+
+Balance (`balance/REPORT.md` §7b, and `docs/SKILL_FUSION.md` § 7): the
+twists sit at +6–25% damage-equivalent over their parts. The first recipe
+set let the three Level 1 starters fuse each other, and whole runs read the
+first-timer line 12% → 28%: fixed by pairing every Level 1 recipe with a
+card the collection unlocks. Two veteran contract gates stay red by 2pt (the
+freed slot, not the twists) — a tuning call left to the designer.
