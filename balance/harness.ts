@@ -44,7 +44,7 @@ import {
   STARTER_SKILLS,
   type BumpStat,
 } from '../src/game/data/skills'
-import { MAX_SKILLS, pendingMilestone, poolFor, SKILL_MILESTONES, skillOffer, slotsFull, takeBump, takeSkill } from '../src/game/run/skills'
+import { fusionChoices, MAX_SKILLS, pendingMilestone, poolFor, SKILL_MILESTONES, skillOffer, slotsFull, takeBump, takeFusion, takeSkill } from '../src/game/run/skills'
 import type {
   Archetype,
   EffectMods,
@@ -1147,6 +1147,8 @@ const mainStat = (s: Sentinel): BumpStat => MAIN_STAT[heroStyle(s) ?? 'swing']
  * Every way a hero can settle its owed milestone (SK1): each skill on its
  * offer (with each held skill as the one it replaces, when full), and each
  * stat bump when one is on the table. Exactly the choices the store accepts.
+ * Skill fusion (Oct 2026): a card that fuses always fuses (`takeSkill` ignores
+ * the drop for it), and a held pair that fuses is one more move.
  */
 function milestoneMoves(s: Sentinel, pool: readonly string[], seed: number): Sentinel[] {
   const out: Sentinel[] = []
@@ -1165,13 +1167,20 @@ function milestoneMoves(s: Sentinel, pool: readonly string[], seed: number): Sen
     const t = takeBump(s, st, pool, seed)
     if (t) out.push(t)
   }
+  for (const f of fusionChoices(s)) {
+    const t = takeFusion(s, f.into.id)
+    if (t) out.push(t)
+  }
   return out
 }
 
 /**
  * The coin-flipper (SK1): at every milestone it owes, a random skill from the
  * offer while it has a free slot; once full, half the time a random swap and
- * half the time the bump on its class's main stat. Every gate reads this — it
+ * half the time the bump on its class's main stat. A card it picks that fuses
+ * fuses, as the game's does (skill fusion: `takeSkill`; its drop draw is still
+ * made, so the model's stream is drawn as it always was). It never takes the
+ * held-pair choice, which no draw here reaches. Every gate reads this — it
  * prices the skill LEVEL, not a player's read of it. `seed` is the run seed
  * the offers are hashed from (`run/skills.skillOffer`), `rng` the model's.
  */

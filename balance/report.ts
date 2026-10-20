@@ -44,7 +44,10 @@ import { CHARTER_FEE, CHARTER_PAYOUT, MUSTER_PCT, TRADE_OFFS } from '../src/game
 import type { Archetype, EffectMods, Enchantment, Item, ItemRarity, Sentinel, WaveDef } from '../src/game/types'
 import { generateRunMap } from '../src/game/data/runmap'
 import { allMutations } from '../src/game/data/mutations'
-import { ALL_SKILLS } from '../src/game/data/skills'
+import { ALL_SKILLS, FUSED_SKILLS } from '../src/game/data/skills'
+import { BLIND_PT as FUSION_BLIND_PT, EQ_CAP as FUSION_EQ_CAP, fusionBench, fusionSummary, KIT_NAME as FUSION_KIT_NAME } from './fusion-eval'
+/** §7b: a fusion's twist may be worth at most this much damage over its parts on the median (solved past it). */
+const FUSION_CEILING = 0.4
 import { recruitSkill, withFirstSkill } from '../src/game/run/skills'
 import {
   encounterSeed,
@@ -1539,6 +1542,49 @@ if (want(7)) {
   }
   for (const p of skillPointSummary) {
     if (p.gap > SKILL_GAP_CEILING) failures.push(`Skills at ${p.point} are solved: ${p.measured} leads the runner-up by ${pp(p.gap)} on the three-bench mean (ceiling ${pp(SKILL_GAP_CEILING)}).`)
+  }
+
+  // ---- 7b. Fusions (skill fusion, Oct 2026, docs/SKILL_FUSION.md § 7) ------
+  line('### 7b. Fusions (is a twist worth its slot, and is any one solved?)')
+  line('')
+  line('Two skills a hero holds can fuse into one fused skill in one slot: both parts\' effects')
+  line('exactly, plus a **twist** only the fusion has (`data/fusions.ts`). So a fusion is graded')
+  line('against the same hero holding BOTH its parts — the only thing it adds is the twist. On')
+  line('§7\'s benches for its level and on each kit, the waves are scaled so the parts\' hero stops')
+  line('about half, and read over a band of pressures around that point; the fusion\'s stop rate')
+  line('there is turned into a **damage-equivalent** — how much harder the parts\' hero would have')
+  line('to hit to stop as much (+20%: the twist is worth hitting 20% harder). A bench on which')
+  line(`doubling the parts' damage moves the stop rate by less than ${pp(FUSION_BLIND_PT)} cannot price anything in`)
+  line('damage and is left out (—); a twist that out-holds the parts at ×3 damage reads +200%+.')
+  line('Each fusion\'s figure is the median over the cells that price it. `balance/fusion-eval.ts`')
+  line('prints the same table, faster.')
+  line('')
+  const fusionRows = fusionBench()
+  const fusionSums = fusionSummary(fusionRows)
+  const eqCell = (x: number | null) => (x == null ? '—' : x >= FUSION_EQ_CAP ? `+${(FUSION_EQ_CAP * 100).toFixed(0)}%+` : `${x >= 0 ? '+' : '−'}${Math.abs(x * 100).toFixed(0)}%`)
+  line('| Fusion | Kit | `swarm` | `armour` | `line` | stop added (mean) |')
+  line('|---|---|--:|--:|--:|--:|')
+  for (const r of fusionRows) {
+    line(`| ${r.name} | ${FUSION_KIT_NAME[r.kit]} | ${eqCell(r.eq.swarm)} | ${eqCell(r.eq.armour)} | ${eqCell(r.eq.line)} | ${pp(mean([r.stop.swarm, r.stop.armour, r.stop.line]))} |`)
+  }
+  line('')
+  line('| Fusion | Parts | Median | Best kit | Cells priced |')
+  line('|---|---|--:|---|--:|')
+  for (const s of fusionSums) {
+    const f = FUSED_SKILLS.find((x) => x.id === s.id)!
+    const partNames = f.parts.map((id) => ALL_SKILLS.find((k) => k.id === id)!.name).join(' + ')
+    line(`| ${s.name} | ${partNames} | **${eqCell(s.median)}** | ${eqCell(s.best)} (${FUSION_KIT_NAME[s.bestKit]}) | ${s.cells}/9 |`)
+  }
+  line('')
+  const inBand = fusionSums.filter((s) => s.median >= 0.1 && s.median <= 0.25).length
+  line("**Invariants.** No fusion is worth less than its parts (median ≥ +0% of damage), and none is")
+  line(`solved (median ≤ +${(FUSION_CEILING * 100).toFixed(0)}%). The target is +10–25% — the freed slot is the main reward —`)
+  line(`and **${inBand} of ${fusionSums.length}** sit in it (reported, not gated: a twist that reads one kit only, a crit`)
+  line('or a hold, sits lower on the median and higher on its kit).')
+  line('')
+  for (const s of fusionSums) {
+    if (!(s.median >= 0)) failures.push(`Fusion "${s.name}" is worth less than its parts: median ${eqCell(s.median)} of damage.`)
+    if (s.median > FUSION_CEILING) failures.push(`Fusion "${s.name}" is solved: median ${eqCell(s.median)} of damage over its parts (ceiling +${(FUSION_CEILING * 100).toFixed(0)}%).`)
   }
 }
 

@@ -56,9 +56,9 @@ second sentence.
 
 | # | Parts | Fusion | Co. | Lv | Twist (the new mechanic, tuned) |
 |--:|---|---|---|--:|---|
-| 1 | Quick Hands + Keen Eye | Thousand Cuts | Rosethread | 1 | **Ricochet** — crits bounce to 1 more enemy for 60% |
-| 2 | Quick Hands + Hard Hitter | Relentless | Rosethread | 1 | **Focus** — each hit on the same enemy is 12% harder, to +60% |
-| 3 | Hard Hitter + Keen Eye | Bushwhack | Peppercorn | 1 | **First strike** — its first hit on each enemy deals 50% more |
+| 1 | Long Reach + Keen Eye | Thousand Cuts | Rosethread | 1 | **Ricochet** — crits bounce to 1 more enemy for 60% |
+| 2 | Hard Hitter + Pin Down | Relentless | Rosethread | 1 | **Focus** — each hit on an enemy makes its next on it 12% harder, to +60% |
+| 3 | Quick Hands + Charge | Bushwhack | Peppercorn | 1 | **First strike** — its first hit on each enemy deals 50% more |
 | 4 | Hard Hitter + Cleave | Sunder | Ironvein | 1 | **Overkill** — a killing hit's excess rolls on to the next enemy, up to 3 more |
 | 5 | Poisoned Tips + Arc Spark | Plague Spark | Greenvial | 1 | **Arc carry** — its jumps poison (and chill) what they hit |
 | 6 | Frostbite + Keen Eye | Rimecut | Greenvial | 1 | **Freeze** — crits on slowed enemies deal 60% more and freeze them for 1.5s |
@@ -72,12 +72,16 @@ second sentence.
 | 14 | Heavy Blows + Weaponmaster | Anvilfall | Ironvein | 3 | **Quake** — every 4th attack shakes enemies within 60 of its target for 60% |
 | 15 | Bloodrush + Berserk | Red Mist | Butcherblock | 3 | **Frenzy** — each kill this wave adds 4% attack speed, to +40% |
 
-The three Level 1 starters pair three ways (1, 2, 3), so a first run meets a
-fusion at its first milestone: a fresh player's hero holds one of them and is
-offered the other two, and both fuse.
+No two Level 1 starters fuse. The first build paired all three (Quick Hands
++ Keen Eye, + Hard Hitter, Hard Hitter + Keen Eye), so every first-timer's
+hero fused at level 5 — and the balance run read the zero-meta escort 15% →
+30% and the first-timer line 12% → 28%, past both bands (§ 7). Every Level 1
+recipe now pairs a card standing or a delivery unlocks, so fusion arrives with
+the collection; a first run can still meet one, Anvilfall (Heavy Blows and
+Weaponmaster, two starters met at levels 10 and 15).
 
-Use counts: Hard Hitter, Keen Eye 3; Quick Hands, Poisoned Tips, Cleave,
-Frostbite, Hold Fast 2; every other part 1.
+Use counts: Hard Hitter, Keen Eye, Long Reach, Pin Down, Charge, Poisoned
+Tips, Cleave, Frostbite, Hold Fast 2; every other part 1.
 
 The final numbers are the tuned ones in `data/fusions.ts`; §7b of
 `balance/REPORT.md` measures each.
@@ -135,7 +139,7 @@ interval.
 - **The offer.** A card that fuses wears a small "Fuses" tag in its token's
   corner (on the fusion's element colour — no frame, no glow).
   Focused, its `PickCard` is the *fusion's*: kicker "Fusion · Level 2", the
-  fusion's name, the line "Quick Hands + Keen Eye", what it does, and its
+  fusion's name, the line "Long Reach + Keen Eye", what it does, and its
   twist; the CTA reads "Fuse into Thousand Cuts". With two partners a chip
   row picks which. Nothing about the card's place in the strip moves.
 - **The held pair.** One more token after the cards and the bump (its mark:
@@ -172,7 +176,7 @@ interval.
 
 The tuned figures (§7b of `balance/REPORT.md`, the damage-equivalent of the
 twist over the parts, median over the kit × bench cells that price it):
-Thousand Cuts +24%, Relentless +12%, Bushwhack +25%, Sunder +10%, Plague
+Thousand Cuts +23%, Relentless +8% (+24% on a dagger), Bushwhack +19%, Sunder +10%, Plague
 Spark +10%, Rimecut +6% (+31% on a dagger: a crit twist), Crushing Grip +16%
 (+41% on a sword and shield: a hold twist), Plaguebearer +13%, Cinderburst
 +12%, Hail of Arrows +21%, Coup de Grâce +17%, Shatterglass +19%, Rallying
@@ -185,8 +189,9 @@ now reads a band of pressures around the parts' break point, turns the
 fusion's stop rate into the damage the parts' hero would need to match it,
 drops the benches damage cannot move at all, and takes the median.
 
-Tuning moves (each from that bench): Relentless 8%/40% → 12%/60% (the focus
-resets on every new target); Bushwhack ×2 → +50%; Sunder's overkill now rolls
+Tuning moves (each from that bench): Relentless's focus counts marks per
+enemy (a retarget keeps them), at 12% to +60% — it read +0–4% while a new
+target reset it; Bushwhack ×2 → +50%; Sunder's overkill now rolls
 on (it read +3%); Rimecut's freeze became freeze-and-crack (+60%) — freezing
 alone read +0% on every bench, which do not price control; Crushing Grip 100%
 → 40%; Plaguebearer 2 → 4 bodies, passed on fresh; Hail of Arrows every 3rd
@@ -221,3 +226,35 @@ with it; the report notes the shift.
 - **The offer skips a held fusion's parts.** Otherwise Thousand Cuts could
   be dealt Keen Eye again, and the two copies would stack.
 - **No meta version bump.** `codex.fusions` is optional and defaults empty.
+
+### What the whole runs say (the report's §11–§13, §18)
+
+The run models fuse as the UI does, so the run-level sections read runs that
+fuse. Every other section (§1–§10, §14, §16, §17) is unchanged to the
+digit: the engine fights a non-fusion battle exactly as before.
+
+| Line | Before | After |
+|---|--:|--:|
+| First-timer (zero meta, 1 hero) | 12% | 13% |
+| Zero-meta escort (gate 12–20%) | 15% | 16% |
+| Veteran escort (gate 30–45%) | 45% | **47%** |
+| Veteran, 8 crates (gate 8–16%) | 14% | **18%** |
+| Opening deal 5 (+ Level 2 skill) | +15pt | +17pt |
+| Sovereign Route delivered | 44% | 47% |
+
+The first build (the three Level 1 starters fusing each other) read the
+first-timer line 28% and the zero-meta escort 30%; an ablation with every
+twist switched off still read 22% / 25%, so most of it was the SLOT (a
+level-15 hero that fused takes its Level 3 card into a free slot instead of
+swapping one out or taking the bump), and almost all of that came from the
+starter triangle, which fused every first-timer's hero at level 5. With no
+starter pair (the shipped recipes) the zero-meta lines are back in band.
+
+**Two gates are red, by 2pt and 2pt:** the veteran's escort (47%, ceiling
+45%) and its 8-crate stake (18%, ceiling 16%). A veteran holds the whole
+library, so it meets a recipe at most milestones, and the freed slot is the
+reward the brief asked for; switching the twists off moves these lines by
+about 1pt, so trimming twists cannot close them. Closing them is a tuning
+call for the designer: re-anchor the veteran's bands (fusion is a power the
+veteran now has), or lift the late stakes' Threat — neither is a change a
+fusion pass should make on its own, since both move non-fusion runs.
