@@ -167,6 +167,26 @@ result. Append a short note to the review log when you're done.
   `src/game/run/skills.ts`; the generic unlock roll (`rollFromPool`)
   `src/game/run/watch.ts`. Every skill roll is a fresh RNG hashed from (run
   seed, purpose, hero id) — never a draw on a run stream.
+  Skill fusion (Oct 2026, spec `docs/SKILL_FUSION.md`): two skills a hero
+  holds fuse into ONE fused skill in one slot — both parts' mods plus a
+  twist only it has. Recipes and twists `src/game/data/fusions.ts` (fifteen;
+  fused ids `fz_*`, in `FUSED_SKILLS`, never in `ALL_SKILLS` or any pool,
+  unlock, crate or track); `skills.skillModsOf` expands a fusion into its
+  parts then its twist; `isSkillId` takes fused ids, `isCardId` library
+  cards only. Rules `src/game/run/fusion.ts` + `run/skills.ts`: a milestone
+  card that fuses with a held skill ALWAYS fuses into that slot
+  (`takeSkill`, no swap, `partner` picks when two fuse); a held pair is one
+  more choice (`fusionChoices` / `takeFusion`); a fusion never fuses again;
+  the offer is dealt as before except that a held fusion's parts are not
+  dealt again. The fifteen twists are `EffectMods` fields at the end of
+  `types.ts`, each read in one place in the engine, inert unless granted,
+  drawing nothing. Discoveries are `codex.fusions` (metaStore, recorded by
+  `chooseSkill` / `chooseFusion`); the Codex's Fusions section shows every
+  recipe ("A + B → ?" until made). UI: the "Fuses" tag and the fusion's
+  `PickCard` in `LevelUpPanel`, the fuse beat (`FuseBeat.tsx`, timings
+  `fuseBeat.ts`, cue `audio.sfxFusion`), the fused slot (`.sh-sk.fused`);
+  styles `src/styles/fusion.css`. Balance §7b (`balance/fusion-eval.ts`).
+  Tests `tests/fusion.test.ts`; shots `scripts/fusion-shots.mjs`.
 - The mercenary company (spec: `docs/MERCENARY_COMPANY.md`): gold is the only
   currency (purse for the run, bank at home, `metaStore.bank`). Companies
   `src/game/data/companies.ts`; contracts, stakes, city pay and cash-out

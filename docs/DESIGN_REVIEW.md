@@ -5281,3 +5281,45 @@ the mark colours. `tests/nodeTitle.test.ts` holds every node's name to
 4.5:1 on bg, bg-2 and the three panels, in every theme and under high
 contrast. Reverting the boss entry fails it at 3.7:1. Checked in the running
 app at 390 px (art, spice, neutral): the head reads `rgb(239, 131, 104)`.
+
+### Skill fusion (Oct 2026)
+
+The designer: "It's also kinda boring having my skills replace each other.
+Can they merge and fuse into new combos and new types of skills." Spec
+`docs/SKILL_FUSION.md`. Two skills a hero holds fuse into one fused skill in
+one slot — both parts' effects plus a twist only the fusion has — so the
+level-15 swap becomes a combo to chase. Fifteen recipes, fifteen new engine
+twists, the offer annotated (never re-dealt), discoveries in the Codex.
+
+Rendered in the running app (`scripts/fusion-shots.mjs`, 390 × 844 at DPR 2
+and 1280 desk; Full, Light and reduced motion), cards by
+`scripts/fusion-cards.mjs`: `docs/ui-audit-2026-10/fusion/fusion.png` (the
+flow), `recipes.png` (every recipe and its twist), `fuse-beat.webp`.
+
+Scored against the checklist, and fixed on the way:
+- **The beat's first frames were wrong.** The flash was filled `both`, so it
+  glowed between the two cards before they met; it is `forwards` now (it is
+  not there until the slam). The part labels overlapped the rising result
+  for 120 ms; the parts now vanish in 70 ms and the result rises 50 ms after
+  the slam. Light drops the flash and the thump; reduced motion shows the
+  fused card still (checked frame by frame by seeking the animations, since a
+  screenshot is slower than a frame).
+- **Said twice.** The held pair's token wore a "Fuse" tag over the label
+  "Fuse" (tag dropped); the Codex's locked card named the parts in the recipe
+  and again in its how-line (now "Fuse these two on one hero at a level-up to
+  find out.").
+- **The tag sat on the picture.** "Fuses" now rides the token's corner,
+  clear of the icon, in the fusion's element colour.
+- **The Codex silhouetted what is known.** A recipe's parts are a goal, not
+  a secret: the locked tile shows them (dimmed) and a "?" for the result; the
+  silhouette rule is overridden for those tiles only.
+
+Benchmark: Hades' duo boons (two gods' boons meet in one new one, announced
+on the offer) and Slay the Spire's card synergies — the "Fuses" tag is the
+duo-boon frame done quietly, and the Codex's "A + B → ?" is the Hades
+codex's chase. Short of them: the beat is a panel moment, not a field one —
+nothing on the battlefield shows a fusion was made — and the twists' own
+effects on the field reuse existing telegraphs (spread ring, floaters).
+Every colour is a token (the element is `--fighter` / `--info` / `--rogue`
+…); no frame inside the Context panel's frame; the commit stays the plain
+accent button beside Start Wave, the screen's one primary.
