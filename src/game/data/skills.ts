@@ -3,6 +3,7 @@ import type { CoreStats, EffectMods } from '../types'
 import type { IconKey } from './iconAtlas'
 import { FUSIONS, type FusionDef, type FusionElement } from './fusions'
 import { deliveryOf, INFUSIONS, reexpress, TAG_ELEMENT } from './infusions'
+import { skillArtKey } from './skillArt'
 
 /**
  * ---------------------------------------------------------------------------
@@ -372,7 +373,9 @@ function buildMerged(id: string): MergedSkill | null {
     chain: [...baseChain, cardId],
     lines: [...baseLines, inf.line, ...(twist ? [twist] : [])],
     named,
-    icon: named?.icon ?? skillHeadline(root).icon,
+    // Its picture: a named merge's own; a plain merge is pictured by its base's
+    // drawing (`skillIcons.ts` composes the merge itself; this is its atlas cell).
+    icon: named?.icon ?? (base as Partial<MergedSkill>).icon ?? (skillArtKey(baseId) as IconKey),
     element: named?.element ?? TAG_ELEMENT[inf.tag],
     expanded: [...baseExpanded, share, ...(Object.keys(extra).length ? [extra] : [])],
   }
@@ -571,19 +574,27 @@ export const EVOLUTION_TO_SKILL: Readonly<Record<string, string>> = {
 }
 
 /**
- * A skill's lead effect as a picture and a word or two — the pick-one strip's
- * token (`ui/shell/PickStrip.tsx`), which carries no name: "Speed +15%",
- * "Burn", "Hold". Read off the mods in a fixed order, so a skill with several
- * leads with the one its sentence leads with: the named effects first (an
- * execute, a snare, a stun, chains, a hold, a volley, burn, gold), then the
- * plain multipliers, damage before speed. (It was multipliers first, and 18
- * skills' marks contradicted their own first words — Heavy Blows "Hits 25%
- * harder" drew the speed chevrons, Snare and Anchor the chill flake, Finisher
- * and Reaper the damage slashes; `tests/skills.test.ts` pins them.) It is the
- * skill's icon everywhere a skill is pictured (`channels.skillIcon`, the Codex
- * tile, the hero card's slots). A number rides only where the
- * mod IS the number (the three plain multipliers); everything else is the word,
- * and the card under the strip says the rest.
+ * A skill as the pick-one strip's token shows it (`ui/shell/PickStrip.tsx`),
+ * which carries no name: its PICTURE and its lead effect in a word or two —
+ * "Speed +15%", "Burn", "Hold".
+ *
+ * The picture is the skill's own (Oct 2026, the merge art pass): every
+ * library skill has a drawing of its own (`skillArt.ts`, baked into the atlas
+ * as `sk*`), and a named merge its hand-drawn `fz*` cell. Before it, the
+ * picture was the lead effect's mark, so five Rush skills shared one chevron
+ * and a merge looked exactly like its base. A plain merge's atlas cell is its
+ * base's drawing; its real picture is composed (`skillIcons.ts`,
+ * `ui/SkillIcon.tsx`).
+ *
+ * The WORD is read off the mods in a fixed order, so a skill with several
+ * effects leads with the one its sentence leads with: the named effects first
+ * (an execute, a snare, a stun, chains, a hold, a volley, burn, gold), then
+ * the plain multipliers, damage before speed. (It was multipliers first, and
+ * 18 skills' marks contradicted their own first words — Heavy Blows "Hits 25%
+ * harder" said Speed, Snare and Anchor Chill; `tests/skills.test.ts` pins
+ * them.) A number rides only where the mod IS the number (the three plain
+ * multipliers); everything else is the word, and the card under the strip
+ * says the rest.
  */
 export interface SkillHeadline {
   icon: IconKey
@@ -593,57 +604,59 @@ export interface SkillHeadline {
 
 const pct = (mult: number) => `+${Math.round((mult - 1) * 100)}%`
 
-const HEADLINES: readonly [keyof EffectMods, (m: EffectMods) => SkillHeadline][] = [
-  ['execute', () => ({ icon: 'execute', label: 'Execute' })],
-  ['trap', () => ({ icon: 'trap', label: 'Trap' })],
-  ['stunChance', () => ({ icon: 'stun', label: 'Stun' })],
-  ['shock', () => ({ icon: 'shock', label: 'Shock' })],
-  ['block', () => ({ icon: 'block', label: 'Hold' })],
-  ['holdAdd', () => ({ icon: 'block', label: 'Hold' })],
-  ['holdRadius', () => ({ icon: 'block', label: 'Hold' })],
-  ['volley', () => ({ icon: 'projectile', label: 'Volley' })],
-  ['burn', () => ({ icon: 'burn', label: 'Burn' })],
-  ['goldPerKill', () => ({ icon: 'gold', label: 'Bounty' })],
-  ['damageMult', (m) => ({ icon: 'damage', label: 'Dmg', value: pct(m.damageMult!) })],
-  ['rateMult', (m) => ({ icon: 'haste', label: 'Speed', value: pct(m.rateMult!) })],
-  ['rangeMult', (m) => ({ icon: 'range', label: 'Reach', value: pct(m.rangeMult!) })],
-  ['critChanceAdd', () => ({ icon: 'crit', label: 'Crit' })],
-  ['critMultAdd', () => ({ icon: 'crit', label: 'Crit' })],
-  ['critEvery', () => ({ icon: 'crit', label: 'Crit' })],
-  ['chill', () => ({ icon: 'chill', label: 'Chill' })],
-  ['lifedrain', () => ({ icon: 'lifedrain', label: 'Drain' })],
-  ['splashAdd', () => ({ icon: 'splash', label: 'Splash' })],
-  ['pierce', () => ({ icon: 'pierce', label: 'Pierce' })],
-  ['projSpeedMult', () => ({ icon: 'projectile', label: 'Shots' })],
-  ['thornsMult', () => ({ icon: 'thorns', label: 'Thorns' })],
-  ['thornsIgnite', () => ({ icon: 'thorns', label: 'Thorns' })],
-  ['buffAura', () => ({ icon: 'auraBuff', label: 'Aura' })],
-  ['killRush', () => ({ icon: 'haste', label: 'Rush' })],
-  ['openingRush', () => ({ icon: 'haste', label: 'Rush' })],
-  ['leakWard', () => ({ icon: 'hp', label: 'Ward' })],
-  ['vsHeld', () => ({ icon: 'damage', label: 'Vs held' })],
-  ['vsSlowed', () => ({ icon: 'chill', label: 'Vs slowed' })],
-  ['thornsBurn', () => ({ icon: 'thorns', label: 'Thorns' })],
-  ['rushPerHeld', () => ({ icon: 'haste', label: 'Rush' })],
-  ['killMend', () => ({ icon: 'hp', label: 'Mend' })],
+type Lead = Omit<SkillHeadline, 'icon'>
+const HEADLINES: readonly [keyof EffectMods, (m: EffectMods) => Lead][] = [
+  ['execute', () => ({ label: 'Execute' })],
+  ['trap', () => ({ label: 'Trap' })],
+  ['stunChance', () => ({ label: 'Stun' })],
+  ['shock', () => ({ label: 'Shock' })],
+  ['block', () => ({ label: 'Hold' })],
+  ['holdAdd', () => ({ label: 'Hold' })],
+  ['holdRadius', () => ({ label: 'Hold' })],
+  ['volley', () => ({ label: 'Volley' })],
+  ['burn', () => ({ label: 'Burn' })],
+  ['goldPerKill', () => ({ label: 'Bounty' })],
+  ['damageMult', (m) => ({ label: 'Dmg', value: pct(m.damageMult!) })],
+  ['rateMult', (m) => ({ label: 'Speed', value: pct(m.rateMult!) })],
+  ['rangeMult', (m) => ({ label: 'Reach', value: pct(m.rangeMult!) })],
+  ['critChanceAdd', () => ({ label: 'Crit' })],
+  ['critMultAdd', () => ({ label: 'Crit' })],
+  ['critEvery', () => ({ label: 'Crit' })],
+  ['chill', () => ({ label: 'Chill' })],
+  ['lifedrain', () => ({ label: 'Drain' })],
+  ['splashAdd', () => ({ label: 'Splash' })],
+  ['pierce', () => ({ label: 'Pierce' })],
+  ['projSpeedMult', () => ({ label: 'Shots' })],
+  ['thornsMult', () => ({ label: 'Thorns' })],
+  ['thornsIgnite', () => ({ label: 'Thorns' })],
+  ['buffAura', () => ({ label: 'Aura' })],
+  ['killRush', () => ({ label: 'Rush' })],
+  ['openingRush', () => ({ label: 'Rush' })],
+  ['leakWard', () => ({ label: 'Ward' })],
+  ['vsHeld', () => ({ label: 'Vs held' })],
+  ['vsSlowed', () => ({ label: 'Vs slowed' })],
+  ['thornsBurn', () => ({ label: 'Thorns' })],
+  ['rushPerHeld', () => ({ label: 'Rush' })],
+  ['killMend', () => ({ label: 'Mend' })],
   // The peoples' kit (Oct 2026).
-  ['rateAura', () => ({ icon: 'auraBuff', label: 'Aura' })],
-  ['chainEvery', () => ({ icon: 'shock', label: 'Shock' })],
-  ['spitEvery', () => ({ icon: 'burn', label: 'Poison' })],
-  ['root', () => ({ icon: 'trap', label: 'Roots' })],
-  ['critBurn', () => ({ icon: 'burn', label: 'Burn' })],
-  ['doubleEvery', () => ({ icon: 'damage', label: 'Twice' })],
-  ['killReady', () => ({ icon: 'haste', label: 'Ready' })],
-  ['vsPlated', () => ({ icon: 'armour', label: 'Vs plated' })],
-  ['vsWarded', () => ({ icon: 'armour', label: 'Vs warded' })],
+  ['rateAura', () => ({ label: 'Aura' })],
+  ['chainEvery', () => ({ label: 'Shock' })],
+  ['spitEvery', () => ({ label: 'Poison' })],
+  ['root', () => ({ label: 'Roots' })],
+  ['critBurn', () => ({ label: 'Burn' })],
+  ['doubleEvery', () => ({ label: 'Twice' })],
+  ['killReady', () => ({ label: 'Ready' })],
+  ['vsPlated', () => ({ label: 'Vs plated' })],
+  ['vsWarded', () => ({ label: 'Vs warded' })],
 ]
 
 export function skillHeadline(skill: Pick<Skill, 'mods'> & { id?: string }): SkillHeadline {
-  // A merged skill is pictured by its root base (a named merge by its own mark).
+  // A merged skill: a named merge's own cell, a plain one's base drawing.
   const f = skill.id && !BY_ID.has(skill.id) ? mergedById(skill.id) : undefined
   if (f) return { icon: f.icon, label: 'Merge' }
-  for (const [key, read] of HEADLINES) if (skill.mods[key] != null) return read(skill.mods)
-  return { icon: 'boon', label: 'Skill' }
+  const icon: IconKey = skill.id && BY_ID.has(skill.id) ? (skillArtKey(skill.id) as IconKey) : 'boon'
+  for (const [key, read] of HEADLINES) if (skill.mods[key] != null) return { icon, ...read(skill.mods) }
+  return { icon, label: 'Skill' }
 }
 
 /**

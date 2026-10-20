@@ -473,7 +473,7 @@ button:disabled {
   --fw-i-size: 16px;
   /* The sheet's grid. Checked against the atlas by `npm run fw-icons:check`. */
   --fw-i-cols: 8;
-  --fw-i-rows: 24;
+  --fw-i-rows: 33;
   display: inline-block;
   flex: 0 0 auto;
   width: var(--fw-i-size);
@@ -488,6 +488,13 @@ button:disabled {
 .fw-i.lg {
   --fw-i-size: 32px;
   vertical-align: -6px;
+}
+/* A composed skill picture (`ui/SkillIcon.tsx`: a plain merge, drawn once
+   into its own 16 × 16 PNG): the same box and the same whole-pixel scales as
+   an atlas cell, its own image instead of a cell of the sheet. */
+.fw-i.sk-px {
+  background-size: 100% 100%;
+  background-position: 0 0;
 }
 
 /* There is deliberately NO visually-hidden text utility here.

@@ -150,7 +150,9 @@ describe('every ordered pair merges into something distinct', () => {
     expect(m.name).toBe('Frozen Arc Spark')
     expect(m.desc).toBe(skillById('arc_spark')!.desc)
     expect(m.company).toBe('scrolls')
+    // Its atlas cell is its base's drawing (its real picture is composed: `tests/skillIcons.test.ts`).
     expect(skillHeadline(m).icon).toBe(skillHeadline(skillById('arc_spark')!).icon)
+    expect(m.icon).toBe('skArcSpark')
     expect(m.element).toBe('frost')
   })
 })
@@ -299,7 +301,7 @@ describe('the named merges (data/fusions.ts)', () => {
     expect(f.expanded).toEqual([skillById('frostbite')!.mods, INFUSIONS.keen_eye.mods, FUSIONS.find((x) => x.id === 'fz_rimecut')!.mods])
     // Against the plain merge of its order: the same base and share, the rule instead.
     expect(plainExtra('frostbite', 'keen_eye')[0]).toEqual(INFUSIONS.keen_eye.mods)
-    expect(skillHeadline(f)).toEqual({ icon: 'chill', label: 'Merge' })
+    expect(skillHeadline(f)).toEqual({ icon: 'fzRimecut', label: 'Merge' })
     // A greater keeps its tier-1 twist and adds its capstone.
     const g = mergedById('fz_skyfall')!
     expect(g.expanded.slice(0, 3)).toEqual(mergedById('fz_hail_of_arrows')!.expanded)

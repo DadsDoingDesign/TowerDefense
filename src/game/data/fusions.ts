@@ -64,7 +64,7 @@ export interface FusionDef {
   twist: string
   /** The twist alone; the base and the share are added by `skills.skillModsOf`. */
   mods: EffectMods
-  /** Its picture everywhere a skill is pictured (the token, the slot, the Codex). */
+  /** Its picture everywhere a skill is pictured (the token, the slot, the Codex): its own hand-drawn cell (`skillArtNamed.ts`). */
   icon: IconKey
   element: FusionElement
 }
@@ -85,7 +85,7 @@ export const FUSIONS: readonly FusionDef[] = [
     company: 'silk',
     twist: 'Crits bounce to 1 more enemy for 60%.',
     mods: { ricochet: 0.6 },
-    icon: 'crit',
+    icon: 'fzThousandCuts',
     element: 'wind',
   },
   {
@@ -97,7 +97,7 @@ export const FUSIONS: readonly FusionDef[] = [
     company: 'spice',
     twist: 'Each hit on an enemy makes its next on it 25% harder, up to double.',
     mods: { focusStack: { step: 0.25, cap: 1 } },
-    icon: 'damage',
+    icon: 'fzRelentless',
     element: 'blood',
   },
   {
@@ -109,7 +109,7 @@ export const FUSIONS: readonly FusionDef[] = [
     company: 'silk',
     twist: 'Its first hit on each enemy deals 50% more.',
     mods: { firstHit: 0.5 },
-    icon: 'blade',
+    icon: 'fzBushwhack',
     element: 'wind',
   },
   {
@@ -121,7 +121,7 @@ export const FUSIONS: readonly FusionDef[] = [
     company: 'spice',
     twist: 'A killing hit’s excess rolls on to the next enemy, up to 3 more.',
     mods: { overkill: 1 },
-    icon: 'axe',
+    icon: 'fzSunder',
     element: 'steel',
   },
   {
@@ -133,7 +133,7 @@ export const FUSIONS: readonly FusionDef[] = [
     company: 'scrolls',
     twist: 'Every 2nd attack jumps to 1 more enemy, and its jumps poison what they hit.',
     mods: { arcCarry: true, chainEvery: { every: 2, chains: 1, dmgFrac: 0.45 } },
-    icon: 'shock',
+    icon: 'fzPlagueSpark',
     element: 'storm',
   },
   {
@@ -145,7 +145,7 @@ export const FUSIONS: readonly FusionDef[] = [
     company: 'scrolls',
     twist: '+18% crit on slowed enemies; those crits deal 60% more and freeze 2s.',
     mods: { critFreeze: { dur: 2, bonus: 0.6, chance: 0.18 } },
-    icon: 'chill',
+    icon: 'fzRimecut',
     element: 'frost',
   },
   {
@@ -157,7 +157,7 @@ export const FUSIONS: readonly FusionDef[] = [
     company: 'spice',
     twist: 'A held enemy that dies bursts for 40% of its hit within 50.',
     mods: { heldBurst: { frac: 0.4, radius: 50 } },
-    icon: 'block',
+    icon: 'fzCrushingGrip',
     element: 'steel',
   },
   // ---- Tier 1, a Level 2 card onto a Level 1 skill (level 10) -------------
@@ -170,7 +170,7 @@ export const FUSIONS: readonly FusionDef[] = [
     company: 'art',
     twist: 'Enemies dying of its poison pass it, fresh, to 4 near them.',
     mods: { contagion: { count: 4, radius: 90 } },
-    icon: 'curse',
+    icon: 'fzPlaguebearer',
     element: 'poison',
   },
   {
@@ -182,7 +182,7 @@ export const FUSIONS: readonly FusionDef[] = [
     company: 'metals',
     twist: 'Enemies it set burning burst for 50% of its hit when they die.',
     mods: { deathBurst: { frac: 0.5, radius: 45 } },
-    icon: 'burn',
+    icon: 'fzCinderburst',
     element: 'fire',
   },
   {
@@ -194,7 +194,7 @@ export const FUSIONS: readonly FusionDef[] = [
     company: 'silk',
     twist: 'Every 4th attack also shoots 2 more enemies for 40%.',
     mods: { fanEvery: { every: 4, count: 2, frac: 0.4 } },
-    icon: 'bow',
+    icon: 'fzHailOfArrows',
     element: 'wind',
   },
   {
@@ -206,7 +206,7 @@ export const FUSIONS: readonly FusionDef[] = [
     company: 'spice',
     twist: 'Executes under 22% instead, and each execution readies its next attack.',
     mods: { executeReady: true, execute: 0.22 },
-    icon: 'execute',
+    icon: 'fzCoupDeGrace',
     element: 'blood',
   },
   {
@@ -218,7 +218,7 @@ export const FUSIONS: readonly FusionDef[] = [
     company: 'scrolls',
     twist: 'Hits on slowed enemies splinter 35% to enemies within 45.',
     mods: { frostSplash: { frac: 0.35, radius: 45 } },
-    icon: 'splash',
+    icon: 'fzShatterglass',
     element: 'frost',
   },
   {
@@ -230,7 +230,7 @@ export const FUSIONS: readonly FusionDef[] = [
     company: 'spice',
     twist: 'Heroes near it crit 15% more often.',
     mods: { critAura: { add: 0.15, radius: 130 } },
-    icon: 'banner',
+    icon: 'fzRallyingStandard',
     element: 'banner',
   },
   // ---- Tier 1, a Level 3 card (level 15) -----------------------------------
@@ -243,7 +243,7 @@ export const FUSIONS: readonly FusionDef[] = [
     company: 'metals',
     twist: 'Every 3rd attack shakes enemies within 60 of its target for 60%.',
     mods: { quakeEvery: { every: 3, frac: 0.6, radius: 60 } },
-    icon: 'hammer',
+    icon: 'fzAnvilfall',
     element: 'steel',
   },
   {
@@ -255,7 +255,7 @@ export const FUSIONS: readonly FusionDef[] = [
     company: 'art',
     twist: 'Each kill this wave adds 2.5% attack speed, to +25%.',
     mods: { frenzy: { rate: 0.025, cap: 0.25 } },
-    icon: 'haste',
+    icon: 'fzRedMist',
     element: 'blood',
   },
   // ---- Greater: a Level 3 card onto a tier-1 named merge (level 15) -------
@@ -270,7 +270,7 @@ export const FUSIONS: readonly FusionDef[] = [
     company: 'silk',
     twist: 'Every 2nd attack shakes enemies within 55 of its target for 50%.',
     mods: { quakeEvery: { every: 2, frac: 0.5, radius: 55 } },
-    icon: 'bow',
+    icon: 'fzSkyfall',
     element: 'wind',
   },
   {
@@ -282,7 +282,7 @@ export const FUSIONS: readonly FusionDef[] = [
     company: 'art',
     twist: 'Enemies dying of its poison burst for 40% of its hit within 50.',
     mods: { deathBurst: { frac: 0.4, radius: 50 } },
-    icon: 'curse',
+    icon: 'fzBlackDeath',
     element: 'poison',
   },
   {
@@ -294,7 +294,7 @@ export const FUSIONS: readonly FusionDef[] = [
     company: 'scrolls',
     twist: '+30% crit on slowed enemies; those crits deal 80% more and freeze 1.5s.',
     mods: { critFreeze: { dur: 1.5, bonus: 0.8, chance: 0.3 } },
-    icon: 'chill',
+    icon: 'fzGlassStorm',
     element: 'frost',
   },
   {
@@ -306,7 +306,7 @@ export const FUSIONS: readonly FusionDef[] = [
     company: 'metals',
     twist: 'Crits bounce on in full, and a kill’s excess rolls on at 50%.',
     mods: { ricochet: 1, overkill: 0.5 },
-    icon: 'burn',
+    icon: 'fzForgefire',
     element: 'fire',
   },
   {
@@ -318,7 +318,7 @@ export const FUSIONS: readonly FusionDef[] = [
     company: 'spice',
     twist: 'Each kill this wave adds 4% attack speed, to +40%.',
     mods: { frenzy: { rate: 0.04, cap: 0.4 } },
-    icon: 'banner',
+    icon: 'fzWarBanner',
     element: 'banner',
   },
 ]
