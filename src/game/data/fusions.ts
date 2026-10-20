@@ -4,36 +4,36 @@ import type { EffectMods } from '../types'
 
 /**
  * ---------------------------------------------------------------------------
- * Skill fusion (Oct 2026) — `docs/SKILL_FUSION.md`
+ * Named merges (Oct 2026) — `docs/SKILL_FUSION.md`
  * ---------------------------------------------------------------------------
  *
- * The designer: "It's also kinda boring having my skills replace each other.
- * Can they merge and fuse into new combos and new types of skills. I want real
- * variety and fun."
+ * The designer: "the merging should be possible with any combination in any
+ * order, but order does matter and affects what's made."
  *
- * A recipe is two library skills (`data/skills.ts`) and the fused skill they
- * make. A fused skill holds ONE slot: its effect is its two parts' mods and
- * then its own `mods` — the TWIST, a rule only a fusion has (the fifteen new
- * `EffectMods` fields at the end of `types.ts`). `skills.skillModsOf` does
- * the expanding, so a fusion is worth exactly what holding both parts was,
- * plus the twist. The rules — when a card fuses, the held pair's choice, the
- * offer — are `run/fusion.ts`.
+ * Any card dropped on any held skill merges (`run/fusion.ts`): the held skill
+ * is the BASE and keeps itself, the card is the INFUSION and lends its share
+ * (`data/infusions.ts`) and one re-expression rule. A NAMED merge is the
+ * special for ONE ordered pair: the same base and the same share, and in place
+ * of the rule a stronger twist only it has (the fifteen `EffectMods` fields at
+ * the end of `types.ts`). The other order of the same two skills is a plain
+ * merge — A onto B is never B onto A.
  *
- * Pure data: no import of `skills.ts` (it imports this). `level` is the higher
- * part's and `company` one of its parts' — `tests/fusion.test.ts` holds both,
- * and that every part is a starter or a common unlock (never a signature or a
- * feat card) in at most three recipes, and that the five companies have three
- * each.
+ * Two tiers. A tier-1 recipe's base is a library skill; a GREATER recipe's
+ * base is a tier-1 named merge, so it is three skills in one slot (the depth
+ * cap, `fusion.MAX_DEPTH`) and keeps the tier-1 twist beside its own capstone.
  *
- * Every `desc` says the parts' numbers in one sentence and `twist` the new
- * rule with its number (COPY.md's skill line, 80 characters each).
+ * `parts` is the order: [base, infusion]. Pure data: no import of `skills.ts`
+ * (it imports this). `tests/merge.test.ts` holds the shape — every infusion a
+ * library card that is not a signature or a feat card; no two Level 1
+ * starters; each skill in at most three recipes; one greater per company —
+ * and every twist line to COPY.md's 80 characters.
  *
  * The twists' numbers are the tuned ones: §7b of `balance/REPORT.md` grades
- * each fusion against the same hero holding both its parts, aiming at +10–25%
- * (the freed slot is the main reward).
+ * each named merge against the plain merge of the same order (the same base
+ * and share, the rule in place of the twist), aiming at +10–25%.
  */
 
-/** What a fusion looks like when it lands: the flash and its tag take this colour (a design token). */
+/** What a merge looks like when it lands: the flash and its tag take this colour (a design token). */
 export type FusionElement = 'fire' | 'poison' | 'frost' | 'storm' | 'blood' | 'steel' | 'wind' | 'banner'
 
 /** The token each element flashes in (`global.css`; no new colour). */
@@ -49,20 +49,20 @@ export const ELEMENT_TOKEN: Readonly<Record<FusionElement, string>> = {
 }
 
 export interface FusionDef {
-  /** `fz_<name>`: never a library id, so a save can tell them apart. */
+  /** `fz_<name>`: never a library id or a plain merge's, so a save can tell them apart. */
   id: string
   name: string
-  /** The two library skills it is made of, in the order its sentence reads them. */
+  /** The order that makes it: [base, infusion]. The base is a library skill (tier 1) or a tier-1 named merge (greater). */
   parts: readonly [string, string]
-  /** The higher part's level. */
+  /** 1: two skills; 2 (greater): a tier-1 named merge and one more. */
+  tier: 1 | 2
+  /** The highest level among its skills. */
   level: 1 | 2 | 3
-  /** One of its parts' companies. */
+  /** Its base's company. */
   company: CompanyId
-  /** The parts' numbers, in one sentence. */
-  desc: string
-  /** The twist: the rule only the fusion has, with its number. */
+  /** The twist: the rule only it has, with its number. */
   twist: string
-  /** The twist alone; the parts' mods are added by `skillModsOf`. */
+  /** The twist alone; the base and the share are added by `skills.skillModsOf`. */
   mods: EffectMods
   /** Its picture everywhere a skill is pictured (the token, the slot, the Codex). */
   icon: IconKey
@@ -70,19 +70,19 @@ export interface FusionDef {
 }
 
 export const FUSIONS: readonly FusionDef[] = [
-  // ---- Level 1 + Level 1: paired at level 5, fused as a held pair from level 10 -
+  // ---- Tier 1, Level 1 onto Level 1: the level-5 card onto the starting skill -
   // Every one pairs a card that standing or a delivery unlocks: no two Level 1
-  // starters fuse. (They did, three ways, and every first-timer's hero fused at
-  // level 5 — the zero-meta escort went 15% → 30% and the first-timer line
-  // 12% → 28%, past both bands. §7b, docs/SKILL_FUSION.md § 7.) A first run
-  // meets a fusion only in Anvilfall, two starters met at level 15.
+  // starters make one. (When fusion was unordered they did, three ways, and
+  // every first-timer's hero fused at level 5 — the zero-meta escort went
+  // 15% → 30%. docs/SKILL_FUSION.md § 7.) A first run meets a named merge
+  // only in Anvilfall, two starters met at level 15.
   {
     id: 'fz_thousand_cuts',
     name: 'Thousand Cuts',
-    parts: ['long_reach', 'keen_eye'],
+    parts: ['keen_eye', 'long_reach'],
+    tier: 1,
     level: 1,
     company: 'silk',
-    desc: 'Reaches 20% farther; crit chance +10%, crit damage +50%.',
     twist: 'Crits bounce to 1 more enemy for 60%.',
     mods: { ricochet: 0.6 },
     icon: 'crit',
@@ -92,9 +92,9 @@ export const FUSIONS: readonly FusionDef[] = [
     id: 'fz_relentless',
     name: 'Relentless',
     parts: ['hard_hitter', 'pin_down'],
+    tier: 1,
     level: 1,
-    company: 'silk',
-    desc: 'Hits 15% harder, and 30% harder on held enemies.',
+    company: 'spice',
     twist: 'Each hit on an enemy makes its next on it 25% harder, up to double.',
     mods: { focusStack: { step: 0.25, cap: 1 } },
     icon: 'damage',
@@ -104,9 +104,9 @@ export const FUSIONS: readonly FusionDef[] = [
     id: 'fz_bushwhack',
     name: 'Bushwhack',
     parts: ['quick_hands', 'charge'],
+    tier: 1,
     level: 1,
-    company: 'spice',
-    desc: 'Attacks 15% faster, and 60% faster for the first 15s of each wave.',
+    company: 'silk',
     twist: 'Its first hit on each enemy deals 50% more.',
     mods: { firstHit: 0.5 },
     icon: 'blade',
@@ -116,9 +116,9 @@ export const FUSIONS: readonly FusionDef[] = [
     id: 'fz_sunder',
     name: 'Sunder',
     parts: ['hard_hitter', 'cleave'],
+    tier: 1,
     level: 1,
-    company: 'metals',
-    desc: 'Hits 15% harder, and every hit strikes enemies within 14 of its target.',
+    company: 'spice',
     twist: 'A killing hit’s excess rolls on to the next enemy, up to 3 more.',
     mods: { overkill: 1 },
     icon: 'axe',
@@ -127,12 +127,12 @@ export const FUSIONS: readonly FusionDef[] = [
   {
     id: 'fz_plague_spark',
     name: 'Plague Spark',
-    parts: ['poison_tips', 'arc_spark'],
+    parts: ['arc_spark', 'poison_tips'],
+    tier: 1,
     level: 1,
     company: 'scrolls',
-    desc: 'Every hit poisons 10/s for 3s and jumps to 1 more enemy for 45%.',
-    twist: 'Its jumps poison what they hit.',
-    mods: { arcCarry: true },
+    twist: 'Every 2nd attack jumps to 1 more enemy, and its jumps poison what they hit.',
+    mods: { arcCarry: true, chainEvery: { every: 2, chains: 1, dmgFrac: 0.45 } },
     icon: 'shock',
     element: 'storm',
   },
@@ -140,11 +140,11 @@ export const FUSIONS: readonly FusionDef[] = [
     id: 'fz_rimecut',
     name: 'Rimecut',
     parts: ['frostbite', 'keen_eye'],
+    tier: 1,
     level: 1,
     company: 'scrolls',
-    desc: 'Every hit slows 25% for 1.5s; crit chance +10%, crit damage +50%.',
-    twist: '+12% crit on slowed enemies; those crits deal 40% more and freeze 1.5s.',
-    mods: { critFreeze: { dur: 1.5, bonus: 0.4, chance: 0.12 } },
+    twist: '+18% crit on slowed enemies; those crits deal 60% more and freeze 2s.',
+    mods: { critFreeze: { dur: 2, bonus: 0.6, chance: 0.18 } },
     icon: 'chill',
     element: 'frost',
   },
@@ -152,22 +152,22 @@ export const FUSIONS: readonly FusionDef[] = [
     id: 'fz_crushing_grip',
     name: 'Crushing Grip',
     parts: ['hold_fast', 'pin_down'],
+    tier: 1,
     level: 1,
     company: 'spice',
-    desc: 'Holds 1 more enemy, and hits 30% harder on held enemies.',
     twist: 'A held enemy that dies bursts for 40% of its hit within 50.',
     mods: { heldBurst: { frac: 0.4, radius: 50 } },
     icon: 'block',
     element: 'steel',
   },
-  // ---- Level 1 + Level 2: met at the second milestone (level 10) ---------
+  // ---- Tier 1, a Level 2 card onto a Level 1 skill (level 10) -------------
   {
     id: 'fz_plaguebearer',
     name: 'Plaguebearer',
     parts: ['poison_tips', 'venom_spit'],
+    tier: 1,
     level: 2,
     company: 'art',
-    desc: 'Every hit poisons 10/s for 3s; every 3rd poisons the 3 nearest 12/s.',
     twist: 'Enemies dying of its poison pass it, fresh, to 4 near them.',
     mods: { contagion: { count: 4, radius: 90 } },
     icon: 'curse',
@@ -177,9 +177,9 @@ export const FUSIONS: readonly FusionDef[] = [
     id: 'fz_cinderburst',
     name: 'Cinderburst',
     parts: ['cleave', 'wildfire'],
+    tier: 1,
     level: 2,
     company: 'metals',
-    desc: 'Every hit burns 12/s for 3s and splashes 29 wider.',
     twist: 'Enemies it set burning burst for 50% of its hit when they die.',
     mods: { deathBurst: { frac: 0.5, radius: 45 } },
     icon: 'burn',
@@ -189,9 +189,9 @@ export const FUSIONS: readonly FusionDef[] = [
     id: 'fz_hail_of_arrows',
     name: 'Hail of Arrows',
     parts: ['long_reach', 'long_shot'],
+    tier: 1,
     level: 2,
     company: 'silk',
-    desc: 'Reaches 80% farther, and every shot pierces 1 extra enemy.',
     twist: 'Every 4th attack also shoots 2 more enemies for 40%.',
     mods: { fanEvery: { every: 4, count: 2, frac: 0.4 } },
     icon: 'bow',
@@ -201,10 +201,10 @@ export const FUSIONS: readonly FusionDef[] = [
     id: 'fz_coup_de_grace',
     name: 'Coup de Grâce',
     parts: ['charge', 'finisher'],
+    tier: 1,
     level: 2,
-    company: 'art',
-    desc: 'Kills under 15% health outright; +60% speed for 15s; +10% crit, +10% damage.',
-    twist: 'Kills under 22% outright, and each execution readies its next attack.',
+    company: 'spice',
+    twist: 'Executes under 22% instead, and each execution readies its next attack.',
     mods: { executeReady: true, execute: 0.22 },
     icon: 'execute',
     element: 'blood',
@@ -213,9 +213,9 @@ export const FUSIONS: readonly FusionDef[] = [
     id: 'fz_shatterglass',
     name: 'Shatterglass',
     parts: ['frostbite', 'cold_snap'],
+    tier: 1,
     level: 2,
     company: 'scrolls',
-    desc: 'Every hit slows 25% for 1.5s, and hits 25% harder on slowed enemies.',
     twist: 'Hits on slowed enemies splinter 35% to enemies within 45.',
     mods: { frostSplash: { frac: 0.35, radius: 45 } },
     icon: 'splash',
@@ -225,24 +225,24 @@ export const FUSIONS: readonly FusionDef[] = [
     id: 'fz_rallying_standard',
     name: 'Rallying Standard',
     parts: ['hold_fast', 'banner_bearer'],
+    tier: 1,
     level: 2,
     company: 'spice',
-    desc: 'Holds 1 more enemy; heroes near it attack 20% faster.',
-    twist: 'Heroes near it crit 10% more often.',
-    mods: { critAura: { add: 0.1, radius: 130 } },
+    twist: 'Heroes near it crit 15% more often.',
+    mods: { critAura: { add: 0.15, radius: 130 } },
     icon: 'banner',
     element: 'banner',
   },
-  // ---- Level 2 / Level 1 + Level 3: met at the last milestone (level 15) ---
+  // ---- Tier 1, a Level 3 card (level 15) -----------------------------------
   {
     id: 'fz_anvilfall',
     name: 'Anvilfall',
     parts: ['heavy_blows', 'weaponmaster'],
+    tier: 1,
     level: 3,
     company: 'metals',
-    desc: 'Hits 50% harder, attacks 10% faster; +20% crit chance, +60% crit damage.',
-    twist: 'Every 4th attack shakes enemies within 60 of its target for 60%.',
-    mods: { quakeEvery: { every: 4, frac: 0.6, radius: 60 } },
+    twist: 'Every 3rd attack shakes enemies within 60 of its target for 60%.',
+    mods: { quakeEvery: { every: 3, frac: 0.6, radius: 60 } },
     icon: 'hammer',
     element: 'steel',
   },
@@ -250,12 +250,75 @@ export const FUSIONS: readonly FusionDef[] = [
     id: 'fz_red_mist',
     name: 'Red Mist',
     parts: ['bloodrush', 'berserk'],
+    tier: 1,
     level: 3,
     company: 'art',
-    desc: 'Hits 40% harder, attacks 25% faster; each kill +25% speed for 1.5s.',
-    twist: 'Each kill this wave adds 4% attack speed, to +40%.',
-    mods: { frenzy: { rate: 0.04, cap: 0.4 } },
+    twist: 'Each kill this wave adds 2.5% attack speed, to +25%.',
+    mods: { frenzy: { rate: 0.025, cap: 0.25 } },
     icon: 'haste',
     element: 'blood',
+  },
+  // ---- Greater: a Level 3 card onto a tier-1 named merge (level 15) -------
+  // Three skills in one slot, the depth cap. Each keeps its tier-1 twist and
+  // adds a capstone; one per company.
+  {
+    id: 'fz_skyfall',
+    name: 'Skyfall',
+    parts: ['fz_hail_of_arrows', 'volley'],
+    tier: 2,
+    level: 3,
+    company: 'silk',
+    twist: 'Every 2nd attack shakes enemies within 55 of its target for 50%.',
+    mods: { quakeEvery: { every: 2, frac: 0.5, radius: 55 } },
+    icon: 'bow',
+    element: 'wind',
+  },
+  {
+    id: 'fz_black_death',
+    name: 'Black Death',
+    parts: ['fz_plaguebearer', 'reaper'],
+    tier: 2,
+    level: 3,
+    company: 'art',
+    twist: 'Enemies dying of its poison burst for 40% of its hit within 50.',
+    mods: { deathBurst: { frac: 0.4, radius: 50 } },
+    icon: 'curse',
+    element: 'poison',
+  },
+  {
+    id: 'fz_glass_storm',
+    name: 'Glass Storm',
+    parts: ['fz_shatterglass', 'tinkers_spark'],
+    tier: 2,
+    level: 3,
+    company: 'scrolls',
+    twist: '+30% crit on slowed enemies; those crits deal 80% more and freeze 1.5s.',
+    mods: { critFreeze: { dur: 1.5, bonus: 0.8, chance: 0.3 } },
+    icon: 'chill',
+    element: 'frost',
+  },
+  {
+    id: 'fz_forgefire',
+    name: 'Forgefire',
+    parts: ['fz_cinderburst', 'weaponmaster'],
+    tier: 2,
+    level: 3,
+    company: 'metals',
+    twist: 'Crits bounce on in full, and a kill’s excess rolls on at 50%.',
+    mods: { ricochet: 1, overkill: 0.5 },
+    icon: 'burn',
+    element: 'fire',
+  },
+  {
+    id: 'fz_war_banner',
+    name: 'War Banner',
+    parts: ['fz_rallying_standard', 'rally'],
+    tier: 2,
+    level: 3,
+    company: 'spice',
+    twist: 'Each kill this wave adds 4% attack speed, to +40%.',
+    mods: { frenzy: { rate: 0.04, cap: 0.4 } },
+    icon: 'banner',
+    element: 'banner',
   },
 ]

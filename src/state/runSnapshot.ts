@@ -29,7 +29,7 @@
  *   reload, and without it a freshly generated item could collide with the id of
  *   a restored one.
  */
-import { fusedById, isCardId, isSkillId, STARTER_SKILLS } from '../game/data/skills'
+import { chainOf, isCardId, isSkillId, STARTER_SKILLS } from '../game/data/skills'
 import { BASIC_ITEM_KINDS, CLASSIC_ITEM_KINDS, isItemKind } from '../game/data/itemKinds'
 import { canonicalKind, renamedItemName } from '../game/data/peopleKinds'
 import { gripOf, type HeroStyle } from '../game/data/items'
@@ -1036,11 +1036,20 @@ const legacyShield = (heroId: string): Item => ({
 
 function normaliseSkills(s: Sentinel): void {
   // Any hero may hold any skill (no classes): known ids, each once, at most three.
-  // A fused skill (`data/fusions.ts`) is a known id; a loose copy of one of a
-  // held fusion's parts is dropped (the fusion already carries it).
+  // A merged skill (`run/fusion.ts`: a named `fz_*` or a plain `mx.…` id the
+  // resolver can read) is a known id. No library skill is held twice: a slot
+  // whose skills another slot before it already holds is dropped (a loose
+  // copy of a merge's part, or two merges sharing one).
   const ids = [...new Set(s.skills ?? [])].filter((id) => isSkillId(id))
-  const parts = new Set(ids.flatMap((id) => fusedById(id)?.parts ?? []))
-  const kept = ids.filter((id) => !parts.has(id)).slice(0, MAX_SKILLS)
+  const held = new Set<string>()
+  const kept = ids
+    .filter((id) => {
+      const chain = chainOf(id)
+      if (chain.some((c) => held.has(c))) return false
+      for (const c of chain) held.add(c)
+      return true
+    })
+    .slice(0, MAX_SKILLS)
   if (kept.length) s.skills = kept
   else delete s.skills
   const picks = Math.max(0, Math.min(SKILL_MILESTONES.length, Math.floor(num(s.skillPicks, 0))))

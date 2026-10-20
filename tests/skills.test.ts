@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   ALL_SKILLS,
-  FUSED_SKILLS,
+  NAMED_MERGES,
   EVOLUTION_TO_SKILL,
   FEAT_SKILLS,
   PERK_TO_SKILL,
@@ -22,9 +22,8 @@ import {
   recruitSkill,
   skillOffer,
   takeBump,
-  takeSkill,
+  dropSkill,
 } from '../src/game/run/skills'
-import { cardFusions, recipeFor } from '../src/game/run/fusion'
 import { difficultyRules, LAST_LEG, legMult, MAX_DIFFICULTY, rollUnlock, skillPoolFor, watchLevelFor, watchXpToReach } from '../src/game/run/watch'
 import { standingXpFor } from '../src/game/run/standing'
 import { classicHero } from '../src/game/data/sentinels'
@@ -138,23 +137,23 @@ describe('milestones and offers', () => {
     expect(bumpOffered(full, ALL_POOL, seed)).toBe(true)
   })
 
-  it('takes a skill into a free slot, and swaps one out when full', () => {
+  it('learns a skill dropped on a free slot as itself, and merges one dropped on a held skill (no swap)', () => {
     const h = at('fighter', 5, { skills: ['quick_hands'] })
-    // A card that does not fuse with Quick Hands (one that does fuses instead: tests/fusion.test.ts).
-    const pick = skillOffer(h, ALL_POOL, seed).find((k) => !recipeFor('quick_hands', k.id))!.id
-    const t = takeSkill(h, pick, ALL_POOL, seed)!
+    const pick = skillOffer(h, ALL_POOL, seed)[0].id
+    const t = dropSkill(h, pick, 1, ALL_POOL, seed)!
     expect(t.skills).toEqual(['quick_hands', pick])
     expect(t.skillPicks).toBe(1)
-    expect(takeSkill(h, 'berserk', ALL_POOL, seed)).toBeNull()
+    expect(dropSkill(h, 'berserk', 1, ALL_POOL, seed)).toBeNull()
 
     const full = at('fighter', 15, { skills: ['quick_hands', 'hard_hitter', 'heavy_blows'], skillPicks: 2 })
     const l3 = skillOffer(full, ALL_POOL, seed)[0].id
-    expect(takeSkill(full, l3, ALL_POOL, seed)).toBeNull()
-    expect(takeSkill(full, l3, ALL_POOL, seed, 'not_held')).toBeNull()
-    expect(cardFusions(full, [{ id: l3 }]).size).toBe(0)
-    const sw = takeSkill(full, l3, ALL_POOL, seed, 'hard_hitter')!
-    expect(sw.skills).toEqual(['quick_hands', l3, 'heavy_blows'])
-    expect(sw.skillPicks).toBe(3)
+    // A full hero has no empty slot: the card must merge into a held one.
+    expect(dropSkill(full, l3, 3, ALL_POOL, seed)).toBeNull()
+    const m = dropSkill(full, l3, 1, ALL_POOL, seed)!
+    expect(m.skills![0]).toBe('quick_hands')
+    expect(m.skills![2]).toBe('heavy_blows')
+    expect(skillById(m.skills![1])!.parts).toEqual(['hard_hitter', l3])
+    expect(m.skillPicks).toBe(3)
   })
 
   it('pays the bump by the milestone level, on the stat chosen', () => {
@@ -289,11 +288,11 @@ describe('the Codex collection (items and skills)', () => {
     expect(tabs.map((t) => t.label)).toEqual(['Items', 'Skills', 'Goblins', 'Relics', 'Feats'])
     const [items, skills] = tabs
     const itemTiles = items.sections.flatMap((s) => s.entries)
-    // The library's tiles; the Fusions section's are held in tests/fusion.test.ts.
-    const skillTiles = skills.sections.filter((s) => s.title !== 'Fusions').flatMap((s) => s.entries)
+    // The library's tiles; the Merges section's are held in tests/fusion.test.ts.
+    const skillTiles = skills.sections.filter((s) => s.title !== 'Merges').flatMap((s) => s.entries)
     expect(itemTiles).toHaveLength(ITEM_KINDS.length)
     expect(skillTiles).toHaveLength(ALL_SKILLS.length)
-    expect(`${skills.have}/${skills.total}`).toBe(`${STARTER_SKILLS.length + 1}/${ALL_SKILLS.length + FUSED_SKILLS.length}`)
+    expect(`${skills.have}/${skills.total}`).toBe(`${STARTER_SKILLS.length + 1}/${ALL_SKILLS.length + NAMED_MERGES.length}`)
     expect(`${items.have}/${items.total}`).toBe(`${BASIC_ITEM_KINDS.length + 1}/${ITEM_KINDS.length}`)
     // A locked kind says how it opens: by playing, or — the Sovereign tier — by a delivered Sovereign Route.
     const sovereign = items.sections.find((s) => s.title === 'Sovereign')!
@@ -309,7 +308,7 @@ describe('the Codex collection (items and skills)', () => {
       expect(e.does).toBe('')
       expect(ALL_SKILLS.some((k) => e.how.includes(k.desc))).toBe(false)
     }
-    expect(skills.sections.map((s) => s.title)).toEqual(['Level 1', 'Level 2', 'Level 3', 'Fusions'])
+    expect(skills.sections.map((s) => s.title)).toEqual(['Level 1', 'Level 2', 'Level 3', 'Merges'])
     // Every tile has a picture from the atlas.
     for (const e of [...itemTiles, ...skillTiles]) expect(ICON_ORDER as readonly string[], e.id).toContain(e.icon)
   })

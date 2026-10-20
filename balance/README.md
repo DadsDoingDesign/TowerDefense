@@ -182,17 +182,20 @@ marked ± are multi-seed (mean ± population σ), never a single roll.
    stop rate on `swarm` / `armour` / `line`, each wave first scaled so the bare
    hero stops about half. Gates: no perk is dead (best bench ≥ +2pt) and no
    pair of open options is more than 20pt apart on the mean (none is solved).
-   **7b. Fusions** (skill fusion, Oct 2026, `docs/SKILL_FUSION.md`): each fused
-   skill against the same hero holding both its parts — a fusion is exactly its
-   parts plus a twist, so this prices the twist — on §7's benches for its level
-   and every kit, read over a band of pressures around the parts' break point
-   and turned into a **damage-equivalent** (how much harder the parts' hero
-   would have to hit to stop as much). Damage-blind benches are left out; the
-   figure is the median. Gates: no fusion below its parts (≥ +0%), none solved
-   (≤ +40%); target +10–25%, reported. `npx tsx balance/fusion-eval.ts [seeds]
-   [ids]` prints it alone in a minute or two. The run models fuse as the UI does
-   (a card that fuses is taken as the fusion; `harness.randomSkills`), so §6 and
-   §11–§13 read runs that fuse.
+   **7b. Merges** (ordered merges, Oct 2026, `docs/SKILL_FUSION.md`): each
+   NAMED merge against the PLAIN merge of the same order (the same base and
+   share, the re-expression rule instead of the twist, `skills.plainExtra`),
+   so this prices the twist; and a sample of plain merges (both orders of
+   three pairs) against their base alone — on §7's benches for its level and
+   every kit, read over a band of pressures around the reference's break
+   point and turned into a **damage-equivalent** (how much harder the
+   reference would have to hit to stop as much). Damage-blind benches are left
+   out; the figure is the median. Gates: no named merge below its plain merge
+   and no plain merge below its base (≥ +0%), none solved (≤ +40%); target
+   +10–25%, reported. `npx tsx balance/fusion-eval.ts [seeds] [ids]` prints it
+   alone in a few minutes. The run models drop as the UI does (an empty slot
+   first; a full hero merges or takes the bump; `harness.randomSkills`,
+   `bestSkills`), so §11–§13 read runs that merge.
 8. **Mutation tradeoffs** — each mutation measured by stop rate on three waves
    loading different axes (`swarm` / `armour` / `line`). A mutation is a real
    tradeoff only if it is clearly better in one and clearly worse in another.

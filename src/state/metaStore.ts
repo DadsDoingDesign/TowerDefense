@@ -6,7 +6,7 @@ import { ACHIEVEMENTS, newlyEarned, type RunFacts } from '../game/data/achieveme
 import { addFelled, sanitizeFelled } from '../game/data/enemyKnowledge'
 import { readMet, type IdeaId } from './staging'
 import { rollItemUnlock, rollUnlock, watchLevelFor } from '../game/run/watch'
-import { isFusedId, RANDOM_UNLOCK_SKILLS, SIGNATURE_SKILLS } from '../game/data/skills'
+import { isNamedId, RANDOM_UNLOCK_SKILLS, SIGNATURE_SKILLS } from '../game/data/skills'
 import { SOVEREIGN_ITEM_KINDS, UNLOCK_ITEM_KINDS } from '../game/data/itemKinds'
 import { rollSovereign } from '../game/run/charter'
 import { COMPANY_IDS, isCompanyId, type CompanyId } from '../game/data/companies'
@@ -113,7 +113,7 @@ function migrateCodex(raw: unknown, standing?: Record<CompanyId, number>): Codex
   const clans = Array.isArray(o.clans)
     ? strList(o.clans).filter(isClanId)
     : COMPANY_IDS.filter((c) => (standing?.[c] ?? 0) > 0).map((c) => CLAN_OF_COMPANY[c])
-  return { enemies: strList(o.enemies), relics: strList(o.relics), felled: sanitizeFelled(o.felled), clans, fusions: strList(o.fusions).filter(isFusedId) }
+  return { enemies: strList(o.enemies), relics: strList(o.relics), felled: sanitizeFelled(o.felled), clans, fusions: strList(o.fusions).filter(isNamedId) }
 }
 function migrateAchievements(raw: unknown): Record<string, number> {
   const out: Record<string, number> = {}
@@ -757,7 +757,7 @@ export const useMetaStore = create<MetaState>()(
         const clans = merge(prevClans, seen.clans)
         // Fusions found: known fused ids only.
         const prevFusions = cur.fusions ?? []
-        const fusions = merge(prevFusions, seen.fusions?.filter(isFusedId))
+        const fusions = merge(prevFusions, seen.fusions?.filter(isNamedId))
         const next: Codex = { enemies: merge(cur.enemies, seen.enemies), relics: merge(cur.relics, seen.relics), felled: cur.felled, clans, fusions }
         if (next.enemies !== cur.enemies || next.relics !== cur.relics || clans !== prevClans || fusions !== prevFusions) set({ codex: next })
       },

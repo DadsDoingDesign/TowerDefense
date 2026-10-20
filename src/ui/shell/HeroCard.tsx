@@ -169,10 +169,21 @@ export function HeroCard({ hero }: { hero: Sentinel }) {
           <p className="sh-line sh-hcard-skillread" role="note" ref={readRef}>
             {reading.kind === 'held' ? (
               <>
-                {/* A fusion reads as its parts and its twist: the parts' own numbers
-                    are their names (the full sentence is in "All stats"), so the
-                    line stays short enough to keep the slot row in view. */}
-                <b>{reading.skill.name}</b> · {reading.fused ? `${reading.fused.parts.join(' + ')} — ${reading.fused.skill.twist}` : `${skillLevelLabel(reading.level)} — ${reading.skill.desc}`}
+                {/* A merge reads as its slot (base ← what was poured in) and its
+                    last rule: the parts' own numbers are their names (the full
+                    sentences are in "All stats"), so the line stays short
+                    enough to keep the slot row in view. A plain skill that a
+                    named merge builds from says which, and with what. */}
+                <b>{reading.skill.name}</b> ·{' '}
+                {reading.fused
+                  ? `${reading.fused.parts.join(' ← ')} — ${reading.fused.skill.twist || reading.fused.skill.lines[reading.fused.skill.lines.length - 1]}`
+                  : `${skillLevelLabel(reading.level)} — ${reading.skill.desc}`}
+                {!reading.fused && reading.builds && (
+                  <span className="fz-builds">
+                    {' '}
+                    Builds into <b>{reading.builds[0].name}</b> ← {reading.builds[0].needs}.
+                  </span>
+                )}
               </>
             ) : reading.kind === 'owed' ? (
               `A ${skillLevelLabel(reading.milestone.tier)} skill to choose when this wave is over.`
@@ -221,7 +232,7 @@ function SkillSlotButton({ slot, open, live, onRead, onChoose }: { slot: SkillSl
         aria-expanded={open}
         aria-label={
           slot.fused
-            ? `${slot.skill.name}, fusion of ${slot.fused.parts.join(' and ')}: ${slot.skill.desc} ${slot.fused.skill.twist}`
+            ? `${slot.skill.name}, ${slot.fused.parts.join(' with ')} merged: ${slot.skill.desc} ${slot.fused.skill.lines.join(' ')}`
             : `${slot.skill.name}, ${skillLevelLabel(slot.level)}: ${slot.skill.desc}`
         }
         style={slot.fused ? elementVar(slot.fused.skill) : undefined}

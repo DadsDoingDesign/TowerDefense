@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { lookVar, railText } from '../channels'
-import { BUMP_LABEL, BUMP_STATS, BUMP_WHAT, skillById, skillHeadline, skillLevelLabel, type BumpStat, type FusedSkill } from '../../game/data/skills'
+import { BUMP_LABEL, BUMP_STATS, BUMP_WHAT, mergedById, skillById, skillHeadline, skillLevelLabel, type BumpStat, type MergedSkill } from '../../game/data/skills'
 import { computeCombat } from '../../game/engine/combat'
-import { cardFusions, fuseSkills, type CardFusion } from '../../game/run/fusion'
-import { bumpAmount, bumpOffered, FUSION_FROM_LEVEL, fusionChoices, fusionOpen, MAX_SKILLS, offerFusions, pendingMilestone, skillOffer, slotsFull } from '../../game/run/skills'
+import { fxLevel } from '../../game/render/fxQuality'
+import { afterDrop, buildsInto } from '../../game/run/fusion'
+import { bumpAmount, bumpOffered, MAX_SKILLS, pendingMilestone, skillOffer, slotsFull } from '../../game/run/skills'
 import type { Sentinel } from '../../game/types'
 import { useGameStore } from '../../state/gameStore'
 import { useSettingsStore } from '../../state/settingsStore'
@@ -11,6 +13,8 @@ import { Icon } from '../Icon'
 import { elementVar, playFuseBeat } from './fuseBeat'
 import { putOff, rewardInPlace, useLevelUps, waveLive } from './levelUps'
 import { PickCard, PickStrip, type PickFact, type PickTokenSpec } from './PickStrip'
+import { travelOf } from './press'
+import { defaultTarget, dropCta, isDrag, slotTargets, type SlotTarget } from './skillDrop'
 import '../../styles/fusion.css'
 
 /**
@@ -18,24 +22,27 @@ import '../../styles/fusion.css'
  * rather than a blocking modal. Reached by tapping a hero whose roster card
  * wears the badge (`levelUps.ts`).
  *
- * One panel, one job: pick ONE of three skills of the milestone's level
- * (level 5 → Level 1, 10 → Level 2, 15 → Level 3). A hero holds three; once
- * all three are taken the panel asks which one the new skill replaces — or the
- * hero takes +N to one stat instead. The stat bump also fills an offer the
- * pool cannot: there are always three things to choose from.
+ * One panel, one job: put ONE of three skills of the milestone's level
+ * (level 5 → Level 1, 10 → Level 2, 15 → Level 3) into one of the hero's
+ * three slots — or take +N to one stat instead.
  *
- * Skill fusion (Oct 2026, `docs/SKILL_FUSION.md`): a card that fuses with a
- * skill the hero holds wears a "Fuses" tag on its token, and its card is the
- * FUSION's — its name, its two parts, what it does and its twist — with "Fuse
- * into …" on the commit; it never asks for a swap (the card takes no slot).
- * A pair the hero already holds is one more token, "Fuse", after the bump.
- * Committing a fusion plays the fuse beat (`FuseBeat`) in the panel.
+ * The drop (Oct 2026; the designer: "If into an empty slot then it's kept as
+ * is, but if all slots are full you are forced to merge in", and "order does
+ * matter"): the hero's slots stand under the strip as targets. A card dragged
+ * (a finger or a mouse, pointer events) or tapped-then-placed onto an EMPTY
+ * slot is learned as itself; onto a HELD skill it merges in — the held skill
+ * is the base and keeps itself, the card lends its share and a rule
+ * (`run/fusion.ts`). There is no swap: a full hero merges. While a card is
+ * focused (or dragged) every slot says exactly what it would make there
+ * ("→ Frozen Arc Spark"; a named merge is starred). The keyboard: the strip's
+ * arrows focus a card, Tab reaches the slots, Enter places it; each slot's
+ * name says what it makes.
  *
- * Pick one, then read (October 2026): the three skills and the stat boost sit
- * as tokens in a strip, and the focused one's card says what it does and what
- * it does to the hero's numbers. Focus, THEN confirm — a token never commits;
- * the CTA names the pick. Never during a live wave: the commit waits for the
- * wave (and its sub-waves) to end.
+ * Pick one, then read (October 2026): the release (or the tap on a slot)
+ * only CHOOSES the slot; the card below says what it makes and the CTA, which
+ * names it, commits. Never during a live wave. Committing a merge plays the
+ * fuse beat (`FuseBeat`) in the panel. Under reduced motion the dragged card
+ * neither lifts nor eases: it is a still copy under the finger.
  */
 export function LevelUpPanel({ hero, onDone }: { hero: Sentinel; onDone?: () => void }) {
   const m = pendingMilestone(hero)
@@ -44,8 +51,8 @@ export function LevelUpPanel({ hero, onDone }: { hero: Sentinel; onDone?: () => 
   return <SkillChoice key={`${hero.id}:${m.level}`} hero={hero} onDone={onDone} />
 }
 
-/** The focused token: one of the offered skills, the stat boost, or a held pair to fuse. */
-type Focus = { kind: 'skill'; id: string } | { kind: 'bump' } | { kind: 'fuse'; id: string }
+/** The focused token: one of the offered skills, or the stat boost. */
+type Focus = { kind: 'skill'; id: string } | { kind: 'bump' }
 
 /** Dealt with: hand back to the reward card that was showing, if there is one. */
 function handBack() {
@@ -56,12 +63,11 @@ function handBack() {
   }
 }
 
-const tokenId = (f: Focus) => (f.kind === 'bump' ? 'bump' : `${f.kind}:${f.id}`)
-const focusOf = (id: string): Focus =>
-  id === 'bump' ? { kind: 'bump' } : id.startsWith('fuse:') ? { kind: 'fuse', id: id.slice('fuse:'.length) } : { kind: 'skill', id: id.slice('skill:'.length) }
+const tokenId = (f: Focus) => (f.kind === 'bump' ? 'bump' : `skill:${f.id}`)
+const focusOf = (id: string): Focus => (id === 'bump' ? { kind: 'bump' } : { kind: 'skill', id: id.slice('skill:'.length) })
 
-/** The token's picture with the quiet "Fuses" tag in its corner (no frame, no glow); none where the label says it. */
-function FusingArt({ icon, into, tag }: { icon: Parameters<typeof Icon>[0]['name']; into: FusedSkill; tag?: string }) {
+/** The token's picture with the quiet ★ in its corner when it makes a named merge on a held skill. */
+function FusingArt({ icon, into, tag }: { icon: Parameters<typeof Icon>[0]['name']; into: Pick<MergedSkill, 'element'>; tag?: string }) {
   return (
     <span className="fz-tok" style={elementVar(into)}>
       <Icon name={icon} lg />
@@ -70,13 +76,76 @@ function FusingArt({ icon, into, tag }: { icon: Parameters<typeof Icon>[0]['name
   )
 }
 
+/** The card being dragged: where it is, and the slot under it. */
+interface DragNow {
+  card: string
+  x: number
+  y: number
+  over: number | null
+}
+
+/**
+ * The drag: a press on a skill token that travels past the tap's slop picks
+ * the card up; a copy follows the pointer (a portal, clear of every panel's
+ * clip) and the slot under it lights; letting go over a slot that takes it
+ * chooses that slot. A press that never travels is the strip's own tap.
+ */
+function useSkillDrag(onDrop: (card: string, slot: number) => void, onLift: (card: string) => void) {
+  const [drag, setDrag] = useState<DragNow | null>(null)
+  const press = useRef<{ card: string; x: number; y: number; id: number; lifted: boolean } | null>(null)
+  const now = useRef<DragNow | null>(null)
+  const drop = useRef(onDrop)
+  const lift = useRef(onLift)
+  drop.current = onDrop
+  lift.current = onLift
+  useEffect(() => {
+    const move = (e: PointerEvent) => {
+      const p = press.current
+      if (!p || e.pointerId !== p.id) return
+      if (!p.lifted) {
+        if (!isDrag(travelOf(p, { x: e.clientX, y: e.clientY }))) return
+        p.lifted = true
+        lift.current(p.card)
+      }
+      const el = document.elementFromPoint(e.clientX, e.clientY)?.closest<HTMLButtonElement>('[data-slot]')
+      const over = el && !el.disabled ? Number(el.dataset.slot) : null
+      now.current = { card: p.card, x: e.clientX, y: e.clientY, over }
+      setDrag(now.current)
+    }
+    const end = (e: PointerEvent) => {
+      const p = press.current
+      if (!p || e.pointerId !== p.id) return
+      press.current = null
+      const d = now.current
+      now.current = null
+      setDrag(null)
+      if (e.type === 'pointerup' && d && d.over != null) drop.current(d.card, d.over)
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', end)
+    window.addEventListener('pointercancel', end)
+    return () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', end)
+      window.removeEventListener('pointercancel', end)
+    }
+  }, [])
+  /** On the strip: a press on a skill token may become a drag. */
+  const onPointerDown = (e: ReactPointerEvent) => {
+    if (e.button !== 0) return
+    const tok = (e.target as HTMLElement).closest<HTMLElement>('[data-pick^="skill:"]')
+    if (!tok) return
+    press.current = { card: tok.dataset.pick!.slice('skill:'.length), x: e.clientX, y: e.clientY, id: e.pointerId, lifted: false }
+  }
+  return { drag, onPointerDown }
+}
+
 function SkillChoice({ hero, onDone }: { hero: Sentinel; onDone?: () => void }) {
   const m = pendingMilestone(hero)!
   const pool = useGameStore((s) => s.skillPool)
   const runSeed = useGameStore((s) => s.runSeed)
   const live = useGameStore(waveLive)
-  const chooseSkill = useGameStore((s) => s.chooseSkill)
-  const chooseFusion = useGameStore((s) => s.chooseFusion)
+  const dropSkill = useGameStore((s) => s.dropSkill)
   const chooseStatBump = useGameStore((s) => s.chooseStatBump)
   const taught = useSettingsStore((s) => s.taught.skill)
   const markTaught = useSettingsStore((s) => s.markTaught)
@@ -86,48 +155,45 @@ function SkillChoice({ hero, onDone }: { hero: Sentinel; onDone?: () => void }) 
   const full = slotsFull(hero)
   const amount = bumpAmount(m)
   const have = hero.skills ?? []
-  const held = have.map((id) => skillById(id)).filter((k) => !!k)
   const hue = lookVar(hero)
-  // Fusion: what each card fuses with (path a), and the pairs held (path b).
-  const fuses = offerFusions(hero, offer)
-  const pairs = fusionChoices(hero)
-  // Before fusion opens (level 10): a card that would pair with a held skill
-  // is taken as itself, and says so — the pair can fuse at the next milestone.
-  const later = fusionOpen(hero) ? new Map<string, CardFusion[]>() : cardFusions(hero, offer)
+  const still = fxLevel() === 'off'
 
-  // Pick one, then read (October 2026): the offer is a strip of tokens — the
-  // skill's lead effect as a picture and a word, the stat boost as one more —
-  // and the focused one's card below. The first is focused as the panel opens,
-  // so the card is never empty; nothing is learned until the CTA, which names it.
-  const focusList: Focus[] = [
-    ...offer.map((k) => ({ kind: 'skill' as const, id: k.id })),
-    ...(bump ? [{ kind: 'bump' as const }] : []),
-    ...pairs.map((p) => ({ kind: 'fuse' as const, id: p.into.id })),
-  ]
-  const [focus, setFocus] = useState<Focus | null>(focusList[0] ?? null)
+  // Pick one, then read: the offer is a strip of tokens — the skill's lead
+  // effect as a picture and a word, the stat boost as one more — and the
+  // focused one's card below. The first is focused as the panel opens, so the
+  // card is never empty; nothing is learned until the CTA, which names it.
+  const focusList: Focus[] = [...offer.map((k) => ({ kind: 'skill' as const, id: k.id })), ...(bump ? [{ kind: 'bump' as const }] : [])]
+  const first = focusList[0] ?? null
+  const [focus, setFocus] = useState<Focus | null>(first)
   const [stat, setStat] = useState<BumpStat | null>(null)
-  const [drop, setDrop] = useState<string | null>(null)
-  const [partner, setPartner] = useState<string | null>(null)
+  const [target, setTarget] = useState<number | null>(() => (first?.kind === 'skill' ? defaultTarget(slotTargets(hero, first.id)) : null))
   const chosen = focus?.kind === 'skill' ? skillById(focus.id) : undefined
-  // The fusion the focus would make, and the skills it leaves the hero holding.
-  const ways = chosen ? fuses.get(chosen.id) : undefined
-  const way = ways ? (ways.find((w) => w.with === partner) ?? ways[0]) : undefined
-  const pair = focus?.kind === 'fuse' ? pairs.find((p) => p.into.id === focus.id) : undefined
-  const into = way?.into ?? pair?.into
-  const parts = way ? ([way.with, chosen!.id] as const) : pair ? ([pair.a, pair.b] as const) : null
+  const targets: SlotTarget[] | null = chosen ? slotTargets(hero, chosen.id) : null
+  const aim = targets && target != null ? targets[target] : null
+  const into = aim?.drop?.base != null ? mergedById(aim.drop.into) : undefined
 
-  // The panel is ~150px of body on a phone: a swap or stat row brings itself
-  // into view when it opens. The commit is pinned below.
+  const refocus = (id: string, slot?: number) => {
+    const f = focusOf(id)
+    setFocus(f)
+    setTarget(slot ?? (f.kind === 'skill' ? defaultTarget(slotTargets(hero, f.id)) : null))
+  }
+  const { drag, onPointerDown } = useSkillDrag(
+    (card, slot) => refocus(`skill:${card}`, slot),
+    (card) => focus?.kind === 'skill' && focus.id === card ? undefined : refocus(`skill:${card}`),
+  )
+  const dragTargets = drag ? slotTargets(hero, drag.card) : null
+
+  // The panel is ~150px of body on a phone: the stat row brings itself into
+  // view when it opens. The commit is pinned below.
   const bodyRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    bodyRef.current?.querySelector<HTMLElement>('.sh-lvl-swap, .sh-lvl-bump')?.scrollIntoView({ block: 'nearest' })
-  }, [focus, drop, stat])
+    bodyRef.current?.querySelector<HTMLElement>('.sh-lvl-bump')?.scrollIntoView({ block: 'nearest' })
+  }, [focus, stat])
 
   const level = skillLevelLabel(m.tier)
-  const canFuse = fuses.size > 0 || pairs.length > 0
   const kicker = full
-    ? `${hero.name} holds ${MAX_SKILLS} skills. ${canFuse ? `Swap a ${level} skill in, or fuse.` : `Pick a ${level} skill to swap in.`}`
-    : `Pick a ${level} skill${taught ? '.' : ` — ${hero.name} keeps it, and holds up to ${MAX_SKILLS}.`}`
+    ? `${hero.name} holds ${MAX_SKILLS} skills. Drop a ${level} skill on one to merge it in.`
+    : `Drop a ${level} skill on a slot${taught ? '.' : ': an empty one keeps it as it is, a skill merges it in.'}`
 
   let label: string
   let name: string | undefined
@@ -136,18 +202,11 @@ function SkillChoice({ hero, onDone }: { hero: Sentinel; onDone?: () => void }) 
   else if (focus?.kind === 'bump') {
     label = stat ? `Take +${amount} ${BUMP_LABEL[stat]}` : 'Choose a stat'
     ready = !!stat
-  } else if (into) {
-    label = `Fuse into ${into.name}`
-    ready = true
-  } else if (chosen && full && !drop) label = 'Choose one to swap out'
-  else if (chosen && full && drop) {
-    // The commit names both halves of the swap: what leaves, what arrives.
-    label = `Swap ${skillById(drop)?.name} for ${chosen.name}`
-    name = label
-    ready = true
   } else if (chosen) {
-    label = `Learn ${chosen.name}`
-    ready = true
+    const cta = dropCta(chosen.id, aim, full)
+    label = cta.label
+    ready = cta.ready
+    if (aim?.drop?.base != null) name = `${label}: ${chosen.name} onto ${aim.held}`
   } else label = 'Choose a skill'
 
   const commit = () => {
@@ -155,25 +214,20 @@ function SkillChoice({ hero, onDone }: { hero: Sentinel; onDone?: () => void }) 
     markTaught('skill')
     if (focus.kind === 'bump') {
       if (stat) chooseStatBump(hero.id, stat)
-    } else if (focus.kind === 'fuse') chooseFusion(hero.id, focus.id)
-    else chooseSkill(hero.id, focus.id, into ? null : drop, way?.with ?? null)
-    // The fusion is in the store now; the beat only shows it.
-    if (into && parts) playFuseBeat(hero.id, into.id, parts)
+    } else if (aim?.drop) {
+      dropSkill(hero.id, focus.id, aim.slot)
+      // The merge is in the store now; the beat only shows it.
+      if (aim.drop.base != null) playFuseBeat(hero.id, aim.drop.into, [aim.drop.base, focus.id])
+    }
     handBack()
     // From the Upgrade panel: back to the hero's card, where the new skill sits in its slot.
     onDone?.()
   }
-  const refocus = (id: string) => {
-    setFocus(focusOf(id))
-    setDrop(null)
-    setPartner(null)
-  }
 
-  // What the focused skill does to the numbers a hero is read by — shown only
-  // where it moves them (a burn or a hold says so in its sentence instead).
+  // What the drop does to the numbers a hero is read by — shown only where it
+  // moves them (a burn or a hold says so in its sentence instead).
   const before = computeCombat(hero)
-  const afterSkills = into && parts ? fuseSkills(have, parts[0], parts[1], into.id) : chosen ? [...have.filter((id) => id !== drop), chosen.id] : have
-  const after = afterSkills !== have ? computeCombat({ ...hero, skills: afterSkills }) : before
+  const after = aim?.drop ? computeCombat({ ...hero, skills: afterDrop(have, aim.drop) }) : before
   const facts: PickFact[] = []
   if (Math.round(after.dps) !== Math.round(before.dps)) facts.push({ label: 'DPS', value: `${Math.round(before.dps)} → ${Math.round(after.dps)}`, tone: after.dps > before.dps ? 'good' : 'bad' })
   if (Math.round(after.range) !== Math.round(before.range)) facts.push({ label: 'Reach', value: `${Math.round(before.range)} → ${Math.round(after.range)}`, tone: after.range > before.range ? 'good' : 'bad' })
@@ -181,33 +235,27 @@ function SkillChoice({ hero, onDone }: { hero: Sentinel; onDone?: () => void }) 
   const tokens: PickTokenSpec[] = [
     ...offer.map((k) => {
       const h = skillHeadline(k)
-      const w = fuses.get(k.id)?.[0]
-      const p = later.get(k.id)?.[0]
+      const star = slotTargets(hero, k.id).find((t) => t.kind === 'named')
+      const made = star ? mergedById(star.drop!.into) : undefined
       return {
         id: `skill:${k.id}`,
-        art: w ? <FusingArt icon={h.icon} into={w.into} tag="Fuses" /> : p ? <FusingArt icon={h.icon} into={p.into} tag="Pairs" /> : <Icon name={h.icon} lg />,
+        art: made ? <FusingArt icon={h.icon} into={made} tag="★" /> : <Icon name={h.icon} lg />,
         label: h.label,
         value: h.value,
-        name: w
-          ? `${k.name}: fuses with ${skillById(w.with)?.name} into ${w.into.name}`
-          : p
-            ? `${k.name}: ${k.desc} Pairs with ${skillById(p.with)?.name}: they can fuse from level ${FUSION_FROM_LEVEL}`
-            : `${k.name}: ${k.desc}`,
+        name: `${k.name}: ${k.desc}${star ? ` Onto ${star.held} it makes ${star.makes}, a named merge.` : ''}`,
       }
     }),
     ...(bump ? [{ id: 'bump', art: <Icon name="boon" lg />, label: 'Stat', value: `+${amount}`, name: `Or a stat boost: plus ${amount} to one stat` }] : []),
-    ...pairs.map((p) => ({
-      id: `fuse:${p.into.id}`,
-      art: <FusingArt icon={p.into.icon} into={p.into} />,
-      label: 'Fuse',
-      name: `Fuse ${skillById(p.a)?.name} and ${skillById(p.b)?.name} into ${p.into.name}`,
-    })),
   ]
   const at = focus ? focusList.findIndex((f) => tokenId(f) === tokenId(focus)) : -1
   const step = (d: number) => {
     const next = focusList[(at + d + focusList.length) % focusList.length]
     if (next) refocus(tokenId(next))
   }
+  // The note under a plain card: the named merge it makes on a held slot, or
+  // the one it can become later (a build to aim at). One quiet line.
+  const star = targets?.find((t) => t.kind === 'named')
+  const later = chosen && !star ? buildsInto(chosen.id)[0] : undefined
 
   return (
     <div className="sh-context sh-lvl" role="group" aria-labelledby="sh-lvl-head">
@@ -230,10 +278,13 @@ function SkillChoice({ hero, onDone }: { hero: Sentinel; onDone?: () => void }) 
         )}
         {focus && (
           <div className="pk compact">
-            <PickStrip label={`${level} skills`} tokens={tokens} focused={tokenId(focus)} onFocus={refocus} />
-            {into && parts ? (
+            <div className={`sk-strip${drag ? ' dragging' : ''}`} onPointerDown={onPointerDown}>
+              <PickStrip label={`${level} skills`} tokens={tokens} focused={tokenId(focus)} onFocus={(id) => refocus(id)} />
+            </div>
+            <SlotRow hero={hero} targets={dragTargets ?? targets} chosen={drag ? null : target} over={drag?.over ?? null} onChoose={setTarget} />
+            {chosen && into ? (
               <PickCard
-                kicker={`Fusion · ${skillLevelLabel(into.level)}`}
+                kicker={`${into.named ? 'Named merge' : 'Merge'} · ${skillLevelLabel(into.level)}`}
                 name={into.name}
                 index={at}
                 count={focusList.length}
@@ -244,60 +295,31 @@ function SkillChoice({ hero, onDone }: { hero: Sentinel; onDone?: () => void }) 
                 style={{ borderLeft: `3px solid ${hue}`, ...elementVar(into) }}
               >
                 <p className="fz-recipe">
-                  <span className="field-v">{skillById(parts[0])?.name}</span>
-                  <span className="fz-plus" aria-hidden="true">+</span>
-                  <span className="field-v">{skillById(parts[1])?.name}</span>
+                  <span className="field-v">{aim!.held}</span>
+                  <span className="fz-plus" aria-label="with">
+                    ←
+                  </span>
+                  <span className="field-v">{chosen.name}</span>
                 </p>
                 <p className="pk-does">{into.desc}</p>
-                <p className="pk-does fz-twist">
-                  <Icon name={into.icon} /> {into.twist}
-                </p>
-                {ways && ways.length > 1 && (
-                  <div className="sh-lvl-swap" role="group" aria-label="Fuse with">
-                    <p className="sh-line muted">Fuse with:</p>
-                    {ways.map((w) => (
-                      <button
-                        key={w.with}
-                        className="sh-lvl-chip"
-                        aria-pressed={way?.with === w.with}
-                        data-sfx="toggle"
-                        aria-label={`Fuse with ${skillById(w.with)?.name} into ${w.into.name}`}
-                        onClick={() => setPartner(w.with)}
-                      >
-                        {skillById(w.with)?.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                <p className="sh-line note">{pair ? 'Frees a slot.' : 'Takes no new slot.'}</p>
+                {into.lines.map((l, i) => (
+                  <p key={i} className={`pk-does${i === into.lines.length - 1 && into.twist ? ' fz-twist' : ' fz-line'}`}>
+                    {i === into.lines.length - 1 && into.twist && <Icon name={into.icon} />} {l}
+                  </p>
+                ))}
               </PickCard>
             ) : chosen ? (
               <PickCard kicker={`Skill · ${level}`} name={chosen.name} index={at} count={focusList.length} onStep={step} facts={facts} noun="choice" style={{ borderLeft: `3px solid ${hue}` }}>
                 <p className="pk-does">{chosen.desc}</p>
-                {full && (
-                  <div className="sh-lvl-swap" role="group" aria-label="Swap out">
-                    <p className="sh-line muted">Swap out one of {hero.name}&rsquo;s skills:</p>
-                    {held.map((k) => (
-                      <button
-                        key={k.id}
-                        className="sh-lvl-chip"
-                        aria-pressed={drop === k.id}
-                        data-sfx="toggle"
-                        aria-label={`Swap out ${k.name}: ${k.desc}`}
-                        onClick={() => setDrop(k.id)}
-                      >
-                        {k.name}
-                      </button>
-                    ))}
-                    {drop && <p className="sh-line muted">{skillById(drop)?.name} — {skillById(drop)?.desc} It leaves when you swap.</p>}
-                  </div>
-                )}
-                {held.length > 0 && !full && <p className="pk-sec-v">Has: {held.map((k) => k.name).join(' · ')}</p>}
-                {later.get(chosen.id)?.[0] && (
+                {star ? (
                   <p className="sh-line note">
-                    Pairs with {skillById(later.get(chosen.id)![0].with)?.name}: they can fuse from level {FUSION_FROM_LEVEL}.
+                    Onto {star.held}: <b>{star.makes}</b> ★
                   </p>
-                )}
+                ) : later ? (
+                  <p className="sh-line note">
+                    Builds into {later.name} with {skillById(later.parts[1])?.name}.
+                  </p>
+                ) : null}
               </PickCard>
             ) : (
               <PickCard kicker="Instead of a skill" name={`+${amount} to one stat`} index={at} count={focusList.length} onStep={step} noun="choice" style={{ borderLeft: `3px solid ${hue}` }}>
@@ -334,6 +356,76 @@ function SkillChoice({ hero, onDone }: { hero: Sentinel; onDone?: () => void }) 
           {label}
         </button>
       </div>
+      {drag &&
+        createPortal(
+          <div className={`sk-ghost${still ? ' still' : ''}`} style={{ transform: `translate(${drag.x}px, ${drag.y}px)` }} aria-hidden="true">
+            <Icon name={skillHeadline(skillById(drag.card)!).icon} lg />
+            <b>{skillById(drag.card)?.name}</b>
+          </div>,
+          document.body,
+        )}
+    </div>
+  )
+}
+
+/**
+ * The hero's three slots as drop targets: what each holds and, for the card
+ * in hand, what it makes there — "Learn as is" on an empty slot, "→ Frozen
+ * Arc Spark" on a held skill (★ for a named merge), nothing on a slot at the
+ * depth cap. A tap (or Enter) on one chooses it, as a release over it does.
+ */
+function SlotRow({
+  hero,
+  targets,
+  chosen,
+  over,
+  onChoose,
+}: {
+  hero: Sentinel
+  targets: SlotTarget[] | null
+  chosen: number | null
+  over: number | null
+  onChoose: (slot: number) => void
+}) {
+  const have = hero.skills ?? []
+  return (
+    <div className="sk-slots" role="group" aria-label={`${hero.name}'s skill slots`}>
+      {Array.from({ length: MAX_SKILLS }, (_, i) => {
+        const held = have[i] ? skillById(have[i]) : undefined
+        const t = targets?.[i]
+        const merged = held ? mergedById(held.id) : undefined
+        const takes = !!t && t.kind !== 'full'
+        return (
+          <button
+            key={i}
+            type="button"
+            data-slot={i}
+            className={`sk-slot ${t?.kind ?? 'idle'}${chosen === i ? ' on' : ''}${over === i ? ' over' : ''}${merged ? ' fused' : ''}`}
+            style={merged ? elementVar(merged) : undefined}
+            disabled={!takes}
+            aria-pressed={takes ? chosen === i : undefined}
+            aria-label={t?.aria ?? (held ? `Slot ${i + 1}: ${held.name}` : `Slot ${i + 1}: empty`)}
+            data-sfx="toggle"
+            onClick={() => onChoose(i)}
+          >
+            <span className="sk-slot-held" aria-hidden="true">
+              {held ? <Icon name={skillHeadline(held).icon} /> : <span className="sk-slot-dot" />}
+              <span className="sk-slot-name">{held?.name ?? 'Empty'}</span>
+            </span>
+            {t && t.kind !== 'full' && (
+              <span className="sk-slot-to" aria-hidden="true">
+                {t.kind === 'empty' ? 'Learn as is' : `→ ${t.makes}`}
+                {t.kind === 'named' && <span className="sk-star"> ★</span>}
+              </span>
+            )}
+            {t?.kind === 'full' && (
+              <span className="sk-slot-to muted" aria-hidden="true">
+                Full
+              </span>
+            )}
+          </button>
+        )
+      })}
     </div>
   )
 }

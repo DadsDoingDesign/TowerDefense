@@ -1,7 +1,7 @@
 /**
  * Skills as the run applies them (SK1). Pure: a hero (and the run's seed and
  * skill pool) in, the choice it owes — or the hero after choosing — out. The
- * data is `data/skills.ts`; the store's `chooseSkill` / `chooseStatBump`, the
+ * data is `data/skills.ts`; the store's `dropSkill` / `chooseStatBump`, the
  * hero pick, the recruit stops and the balance harness all call these, so a
  * skill the UI offers is a skill the store accepts.
  *
@@ -32,35 +32,14 @@ import {
   type SkillLevel,
 } from '../data/skills'
 import type { Archetype, CoreStats, Sentinel } from '../types'
-import { cardFusions, fusedParts, fuseSkills, heldFusions } from './fusion'
+import { afterDrop, dropOnto, heldCards, SLOTS, type Drop } from './fusion'
 
 /** The hero levels a skill offer arrives at; the tier offered is the index + 1. */
 export const SKILL_MILESTONES = [5, 10, 15] as const
 /** A hero equips at most this many skills. */
-export const MAX_SKILLS = 3
+export const MAX_SKILLS = SLOTS
 /** Skills on one offer. */
 export const OFFER_SIZE = 3
-/**
- * Skill fusion opens at the level-10 milestone (`docs/SKILL_FUSION.md` § 7).
- * At level 5 the offer is dealt and taken as it always was — a card that
- * pairs with a held skill is taken as itself (the panel says it pairs), and
- * the pair can fuse from level 10. Fused at level 5, the freed slot filled
- * twice more and a veteran ended its runs with four skills' worth: its escort
- * read 47% and its 8-crate stake 18%, past both bands, and nothing else moved
- * them (one fusion a hero, three recipes fewer, the twists switched off).
- */
-export const FUSION_FROM_LEVEL = 10
-
-/** Whether the hero's owed milestone may fuse (it is level 10's or later). */
-export const fusionOpen = (hero: Pick<Sentinel, 'level' | 'skillPicks'>): boolean => (pendingMilestone(hero)?.level ?? 0) >= FUSION_FROM_LEVEL
-
-/**
- * Path (a), at the owed milestone: what each offer card fuses with (`fusion.cardFusions`),
- * or nothing before {@link FUSION_FROM_LEVEL}. The panel and `takeSkill` read this.
- */
-export function offerFusions(hero: Grower, offer: readonly Pick<Skill, 'id'>[]): ReturnType<typeof cardFusions> {
-  return fusionOpen(hero) ? cardFusions(hero, offer) : new Map()
-}
 
 export interface Milestone {
   /** 0, 1 or 2 — how many milestones the hero has already settled. */
@@ -121,24 +100,24 @@ export function poolFor(pool: readonly string[], tier: SkillLevel, except: reado
 /**
  * The skills a hero is offered at its owed milestone: up to three of that
  * milestone's level, from the run's pool, that it does not already hold.
- * Empty when nothing is owed. A fused skill's parts count as held (fusion,
- * `run/fusion.ts`): a hero holding Thousand Cuts is not dealt Keen Eye again.
- * Only a hero holding a fusion is dealt any differently.
+ * Empty when nothing is owed. Every skill in a merged slot counts as held
+ * (`run/fusion.ts`): a hero holding Frozen Arc Spark is not dealt Frostbite
+ * again. Only a hero holding a merge is dealt any differently.
  */
 export function skillOffer(hero: Grower, pool: readonly string[], runSeed: number): Skill[] {
   const m = pendingMilestone(hero)
   if (!m) return []
-  const parts = fusedParts(hero)
-  const cands = poolFor(pool, m.tier, parts.length ? [...(hero.skills ?? []), ...parts] : (hero.skills ?? []))
+  const held = heldCards(hero)
+  const cands = poolFor(pool, m.tier, held.length !== (hero.skills ?? []).length ? held : (hero.skills ?? []))
   return drawDistinct(new RNG(hashSeed(runSeed, 'skills', hero.id, m.level)), cands, OFFER_SIZE)
 }
 
-/** True when the hero's skill slots are all taken: a new skill must replace one. */
+/** True when the hero's skill slots are all taken: a new skill must merge into one. */
 export const slotsFull = (hero: Pick<Sentinel, 'skills'>): boolean => (hero.skills?.length ?? 0) >= MAX_SKILLS
 
 /**
  * Whether the stat bump is on the table at this milestone. It is the full
- * hero's alternative to a swap (the spec), and it also fills an offer the pool
+ * hero's alternative to a merge (the spec), and it also fills an offer the pool
  * cannot: a milestone always has three things to choose from.
  */
 export function bumpOffered(hero: Grower, pool: readonly string[], runSeed: number): boolean {
@@ -150,58 +129,27 @@ export function bumpOffered(hero: Grower, pool: readonly string[], runSeed: numb
 export const bumpAmount = (m: Pick<Milestone, 'tier'>): number => BUMP_AMOUNT[m.tier]
 
 /**
- * The hero after taking `skillId` at its owed milestone — or null when that
- * skill is not on its offer, or the hero is full and `drop` names none of its
- * skills. A full hero swaps: `drop` leaves, the new skill takes its place.
- *
- * A card that FUSES with a skill the hero holds (`offerFusions`, from level 10) always
- * fuses: the held skill's slot becomes the fusion and the card takes no slot,
- * so `drop` is not needed (and is ignored). `partner` picks which held skill
- * when the card fuses with two; otherwise the first in slot order.
+ * What dropping `skillId` on slot `slot` would make at the hero's owed
+ * milestone (`fusion.dropOnto`), or null when it cannot: nothing is owed, the
+ * card is not on the offer the hero is shown, or it cannot land on that slot.
+ * The panel previews every slot with this; `dropSkill` commits it.
  */
-export function takeSkill<T extends Grower>(
-  hero: T,
-  skillId: string,
-  pool: readonly string[],
-  runSeed: number,
-  drop?: string | null,
-  partner?: string | null,
-): T | null {
-  const offer = skillOffer(hero, pool, runSeed)
-  if (!offer.some((k) => k.id === skillId)) return null
-  const have = hero.skills ?? []
-  const ways = offerFusions(hero, offer).get(skillId)
-  if (ways) {
-    const way = ways.find((w) => w.with === partner) ?? ways[0]
-    return { ...hero, skills: fuseSkills(have, way.with, skillId, way.into.id), skillPicks: done(hero) + 1 }
-  }
-  let skills: string[]
-  if (slotsFull(hero)) {
-    if (!drop || !have.includes(drop)) return null
-    skills = have.map((id) => (id === drop ? skillId : id))
-  } else {
-    skills = [...have, skillId]
-  }
-  return { ...hero, skills, skillPicks: done(hero) + 1 }
+export function dropPreview(hero: Grower, skillId: string, slot: number, pool: readonly string[], runSeed: number): Drop | null {
+  if (!skillOffer(hero, pool, runSeed).some((k) => k.id === skillId)) return null
+  return dropOnto(hero.skills ?? [], skillId, slot)
 }
 
 /**
- * The held pairs that may fuse at the owed milestone (path b) — empty when no
- * milestone is owed. Beside the offer and the bump, never instead of them.
+ * The hero after dropping `skillId` on slot `slot` at its owed milestone —
+ * the one way a skill is taken (the drag-and-drop pass, Oct 2026). Onto an
+ * empty slot the card is learned as itself; onto a held skill it merges in,
+ * the held skill as the base (`run/fusion.ts`). No skill ever leaves: there is
+ * no swap. Null when `dropPreview` is.
  */
-export function fusionChoices(hero: Grower): ReturnType<typeof heldFusions> {
-  return fusionOpen(hero) ? heldFusions(hero) : []
-}
-
-/**
- * The hero after fusing a pair it holds at its owed milestone (path b): the
- * first part's slot becomes `fusionId`, the second leaves, and the milestone
- * is settled. Null when nothing is owed, or the hero does not hold both parts.
- */
-export function takeFusion<T extends Grower>(hero: T, fusionId: string): T | null {
-  const pair = fusionChoices(hero).find((f) => f.into.id === fusionId)
-  if (!pair) return null
-  return { ...hero, skills: fuseSkills(hero.skills ?? [], pair.a, pair.b, pair.into.id), skillPicks: done(hero) + 1 }
+export function dropSkill<T extends Grower>(hero: T, skillId: string, slot: number, pool: readonly string[], runSeed: number): T | null {
+  const d = dropPreview(hero, skillId, slot, pool, runSeed)
+  if (!d) return null
+  return { ...hero, skills: afterDrop(hero.skills ?? [], d), skillPicks: done(hero) + 1 }
 }
 
 /** The hero after taking the stat bump at its owed milestone, or null when it is not offered. */

@@ -9,7 +9,7 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 |---|---|---:|---:|
 | Relics | Say what a relic does to the team, in a number, and that relics stack and reach new hires (once, as a note). | 27 | 41 |
 | Boons and pacts (stat cards) | Say the gain and, for a pact, its bill: numbers and what they touch. | 39 | 18 |
-| Skills | Say what a skill does to its hero, in numbers, so two can be compared at a glance. | 174 | 31 |
+| Skills | Say what a skill does to its hero, in numbers, so two can be compared at a glance. | 285 | 29 |
 | Items and gear | Name the item and say what it does in the hand: its numbers, its quirk. | 307 | 36 |
 | Mutations | Say how a mutation changes one hero's attack, and its cost. | 27 | 31 |
 | Enemies | Name the goblin and the one thing about it that changes how you fight it. | 82 | 31 |
@@ -21,7 +21,7 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 | Home (map, dock, card) | Say what the focused road is like and what its next level pays; the CTA opens its terms. | 77 | 25 |
 | Militia and the Sovereign Route | Found and dress your militia; say what the Sovereign Route costs and opens. | 256 | 15 |
 | HQ and crates | Say what a building does and costs, and what a crate holds. | 115 | 25 |
-| Codex | Name every entry and say what it does; a locked one says how it opens. | 78 | 20 |
+| Codex | Name every entry and say what it does; a locked one says how it opens. | 82 | 21 |
 | Stops (merchant, campfire, shrine) | Say what each offer gives and costs; the keeper says one line. | 56 | 28 |
 | Liaisons (spoken) | Character voice: one spoken line, 40 characters at most. | 81 | 32 |
 | Run map and node preview | Say what a stop is and what it risks or pays, so a road can be chosen. | 34 | 23 |
@@ -34,7 +34,7 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 | Glossary and shared labels | One name and one short meaning per term, shared by every surface. | 108 | 46 |
 | Settings and system | Say what a setting changes; system notices say what happened and what to do. | 32 | 27 |
 | Recruits and heroes | Name the hero and what it holds. | 117 | 18 |
-| Other | — | 296 | 20 |
+| Other | — | 297 | 20 |
 
 ## Relics
 
@@ -128,189 +128,306 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 
 ### `src/game/data/fusions.ts`
 
-- L85: Reaches 20% farther; crit chance +10%, crit damage +50%.
 - L86: Crits bounce to 1 more enemy for 60%.
-- L97: Hits 15% harder, and 30% harder on held enemies.
 - L98: Each hit on an enemy makes its next on it 25% harder, up to double.
-- L109: Attacks 15% faster, and 60% faster for the first 15s of each wave.
 - L110: Its first hit on each enemy deals 50% more.
-- L121: Hits 15% harder, and every hit strikes enemies within 14 of its target.
 - L122: A killing hit’s excess rolls on to the next enemy, up to 3 more.
-- L133: Every hit poisons 10/s for 3s and jumps to 1 more enemy for 45%.
-- L134: Its jumps poison what they hit.
-- L145: Every hit slows 25% for 1.5s; crit chance +10%, crit damage +50%.
-- L146: +12% crit on slowed enemies; those crits deal 40% more and freeze 1.5s.
-- L157: Holds 1 more enemy, and hits 30% harder on held enemies.
+- L134: Every 2nd attack jumps to 1 more enemy, and its jumps poison what they hit.
+- L146: +18% crit on slowed enemies; those crits deal 60% more and freeze 2s.
 - L158: A held enemy that dies bursts for 40% of its hit within 50.
-- L170: Every hit poisons 10/s for 3s; every 3rd poisons the 3 nearest 12/s.
 - L171: Enemies dying of its poison pass it, fresh, to 4 near them.
-- L182: Every hit burns 12/s for 3s and splashes 29 wider.
 - L183: Enemies it set burning burst for 50% of its hit when they die.
-- L194: Reaches 80% farther, and every shot pierces 1 extra enemy.
 - L195: Every 4th attack also shoots 2 more enemies for 40%.
-- L206: Kills under 15% health outright; +60% speed for 15s; +10% crit, +10% damage.
-- L207: Kills under 22% outright, and each execution readies its next attack.
-- L218: Every hit slows 25% for 1.5s, and hits 25% harder on slowed enemies.
+- L207: Executes under 22% instead, and each execution readies its next attack.
 - L219: Hits on slowed enemies splinter 35% to enemies within 45.
-- L230: Holds 1 more enemy; heroes near it attack 20% faster.
-- L231: Heroes near it crit 10% more often.
-- L243: Hits 50% harder, attacks 10% faster; +20% crit chance, +60% crit damage.
-- L244: Every 4th attack shakes enemies within 60 of its target for 60%.
-- L255: Hits 40% harder, attacks 25% faster; each kill +25% speed for 1.5s.
-- L256: Each kill this wave adds 4% attack speed, to +40%.
+- L231: Heroes near it crit 15% more often.
+- L244: Every 3rd attack shakes enemies within 60 of its target for 60%.
+- L256: Each kill this wave adds 2.5% attack speed, to +25%.
+- L271: Every 2nd attack shakes enemies within 55 of its target for 50%.
+- L283: Enemies dying of its poison burst for 40% of its hit within 50.
+- L295: +30% crit on slowed enemies; those crits deal 80% more and freeze 1.5s.
+- L307: Crits bounce on in full, and a kill’s excess rolls on at 50%.
+- L319: Each kill this wave adds 4% attack speed, to +40%.
+
+### `src/game/data/infusions.ts`
+
+- L90: Quick
+- L90: Attacks 6% faster.
+- L91: Hard
+- L91: Hits 6% harder.
+- L92: Keen
+- L92: Crit chance +4%, crit damage +20%.
+- L93: Steadfast
+- L93: Hits 8% harder on held enemies.
+- L94: Charging
+- L94: Attacks 25% faster for the first 15s of each wave.
+- L95: Bloodied
+- L95: Each kill makes it attack 10% faster for 1.5s.
+- L96: Venomous
+- L96: Hits poison 4/s for 3s.
+- L97: Sparking
+- L97: Hits jump to 1 more enemy for 18%.
+- L98: Frozen
+- L98: Hits slow 10% for 1.5s.
+- L99: Reaching
+- L99: Reaches 8% farther.
+- L100: Cleaving
+- L100: Hits also strike enemies within 6.
+- L101: Gilded
+- L101: Each kill pays 1 more gold.
+- L102: Pinning
+- L102: Hits 12% harder on held enemies.
+- L103: Barbed
+- L103: Thorns +30%.
+- L105: Mighty
+- L105: Hits 10% harder and attacks 4% faster.
+- L106: Farshot
+- L106: Reaches 15% farther.
+- L107: Merciless
+- L107: Kills under 6% health outright; hits 4% harder.
+- L108: Walled
+- L108: Holds 1 more enemy.
+- L109: Anchored
+- L109: Hits slow 12% for 1.4s; thorns +50%.
+- L110: Stunning
+- L110: Hits have a 7% chance to stun for 0.7s.
+- L111: Snaring
+- L111: Lays a snare on the path that burns 6/s and slows 12%.
+- L112: Blazing
+- L112: Hits burn 5/s for 3s and splash 6 wider.
+- L113: Blessed
+- L113: Heroes near it hit 15% harder.
+- L114: Siphoning
+- L114: Hits 18% harder; every 100 damage wins back 1% cargo.
+- L115: Frenzied
+- L115: Each kill makes it attack 18% faster for 2s.
+- L116: Brittle
+- L116: Hits 10% harder on slowed enemies.
+- L117: Branded
+- L117: Its thorns burn what it holds 5/s for 3s.
+- L118: Splitting
+- L118: Every 3rd attack passes through 1 more enemy.
+- L119: Sighted
+- L119: Every 8th attack crits; crit damage +10%.
+- L120: Peppered
+- L120: Hits burn 4/s for 3s; attacks 6% faster.
+- L121: Starlit
+- L121: Reaches 10% farther; crit chance +6%, crit damage +10%.
+- L122: Veined
+- L122: Hits 8% harder.
+- L123: Tolled
+- L123: Each kill pays 1 more gold; hits slow 10% for 1.5s.
+- L124: Blooming
+- L124: Hits jump to 1 more enemy for 20% and slow 10% for 1.5s.
+- L125: Bold
+- L125: Hits 8% harder and splash 8 wider.
+- L126: Bannered
+- L126: Heroes near it attack 8% faster.
+- L127: Spitting
+- L127: Every 5th attack poisons the 2 nearest enemies 8/s for 3s.
+- L128: Overgrown
+- L128: Grows roots on the path that slow 16% and sting 3/s.
+- L130: Berserk
+- L130: Hits 16% harder and attacks 10% faster.
+- L131: Masterful
+- L131: Hits 8% harder; crit chance +8%, crit damage +24%.
+- L132: Volleying
+- L132: Every 4th attack pierces its whole path.
+- L133: Bulwarked
+- L133: Holds 1 more enemy; hits slow 18% for 2s.
+- L134: Reaping
+- L134: Kills under 11% health outright; hits 8% harder.
+- L135: Rallying
+- L135: Heroes near it hit 20% harder.
+- L136: Rolling
+- L136: Attacks 6% faster per enemy it holds.
+- L137: Hallowed
+- L137: Every 12th kill wins back 5% cargo.
+- L138: Ashen
+- L138: Thorns +60%; hits burn 10/s for 3s.
+- L139: Hexed
+- L139: Hits have an 8% chance to stun for 0.7s, and slow 18%.
+- L140: Thundering
+- L140: Hits jump to 1 more enemy for 20%; hits 14% harder.
+- L141: Tinkered
+- L141: Every 5th attack jumps to 2 more enemies for 50%; hits 10% harder.
+- L212: Its jumps {st.verb} what they hit.
+- L215: Its jumps carry its {b?.noun ?? 'poison'}.
+- L218: Hits on slowed enemies splinter 15% to enemies within 40.
+- L219: Enemies dying of its {STATUS_WORD[baseTag]?.no} burst for 25% within 40.
+- L222: Its splash {st.verb}s all it strikes.
+- L222: Its piercing shots {st.verb} all they pass.
+- L224: Crits bounce to 1 more enemy for 30%.
+- L225: +5% crit on slowed enemies; those crits deal 20% more and freeze 1s.
+- L226: Heroes near it crit 5% more often.
+- L227: A held enemy that dies bursts for 20% of its hit within 45.
+- L228: Each hit on an enemy makes its next on it 5% harder, to +15%.
+- L229: A killing hit’s excess rolls on at 50%, up to 3 more.
+- L230: Every 6th attack also shoots 1 more enemy for 30%.
+- L231: Each kill this wave adds 2% attack speed, to +20%.
+- L234: Crits bounce to 1 more enemy for 20%.
+- L235: Enemies dying of its poison pass it to 2 near them.
+- L236: Enemies dying of its burn burst for 15% within 35.
+- L237: Hits on slowed enemies splinter 10% to enemies within 35.
+- L238: Each kill this wave adds 1% attack speed, to +10%.
+- L239: Its first hit on each enemy deals 15% more.
 
 ### `src/game/data/skills.ts`
 
-- L93: Attacks 15% faster.
-- L94: Hits 15% harder.
-- L99: Crit chance +10%, crit damage +50%.
-- L101: Holds 1 more enemy.
-- L102: Attacks 60% faster for the first 15s of each wave.
-- L103: Each kill makes it attack 25% faster for 1.5s.
-- L104: Every hit poisons 10/s for 3s.
-- L105: Every hit jumps to 1 more enemy for 45% of its damage.
-- L106: Every hit slows 25% for 1.5s.
-- L107: Reaches 20% farther.
-- L108: Every hit also strikes enemies within 14 of its target.
-- L110: Each kill pays 3 more gold.
-- L111: Hits 30% harder on held enemies.
-- L112: Enemies it holds take 80% more thorn damage.
-- L117: Hits 25% harder and attacks 10% faster.
-- L118: Reaches 50% farther, and every shot pierces 1 extra enemy.
-- L122: Kills enemies under 15% health outright; +10% crit chance, +10% damage.
-- L124: Holds 2 more enemies, in a wider circle.
-- L129: Holds 1 more enemy, slows what it hits 30% for 1.4s, and thorns ×3.
-- L132: Every hit has an 18% chance to stun for 0.7s, and hits 10% harder.
-- L133: Lays a snare on the path that burns 14/s and slows 30%; its hits slow 20%.
-- L134: Every hit burns 12/s for 3s and splashes 15 wider.
-- L149: Heroes near it hit 40% harder.
-- L150: Hits 50% harder; every 100 damage wins back 2% cargo.
-- L151: Each kill makes it attack 45% faster for 2s.
-- L152: Hits 25% harder on slowed enemies.
-- L153: Its thorns burn what it holds 12/s for 3s.
-- L154: Its attacks pass through 1 more enemy.
-- L155: Every 4th attack crits; +25% crit damage.
-- L163: Every hit burns 10/s for 3s, and it attacks 15% faster.
-- L164: Reaches 25% farther; +15% crit chance, +25% crit damage.
-- L165: Holds 1 more enemy, and hits 20% harder.
-- L166: Each kill pays 4 more gold, and its hits slow 25% for 1.5s.
-- L167: Every hit jumps to 1 more enemy for 50% and slows 25% for 1.5s.
-- L172: Hits 20% harder, and every hit splashes 20 wider.
-- L173: Heroes near it attack 20% faster.
-- L174: Every 3rd attack poisons the 3 nearest enemies 12/s for 3s.
-- L175: Grows roots on the path beside it that slow 40% and sting 8/s.
-- L180: Hits 40% harder and attacks 25% faster.
-- L181: Hits 20% harder; +20% crit chance, +60% crit damage.
-- L182: Every 2nd attack pierces its whole path; reaches 15% farther.
-- L184: Holds 3 more enemies and slows what it hits 45% for 2s.
-- L185: Kills enemies under 28% health outright, and hits 20% harder.
-- L189: Heroes near it hit 50% harder.
-- L190: Attacks 15% faster per enemy it holds.
-- L191: Every 5th kill wins back 5% cargo.
-- L193: Holds 2 more enemies, thorns ×3, and its hits and thorns burn 26/s.
-- L194: Every hit has a 20% chance to stun for 0.7s, and slows 45% for 1.6s.
-- L202: Every hit jumps to 2 more enemies for 45%, and hits 35% harder.
-- L204: Every 5th attack jumps to 3 more enemies in full; hits 25% harder.
-- L266: Level {level}
-- L305: STR
-- L305: DEX
-- L305: INT
-- L308: physical damage
-- L309: attack speed and crit
-- L310: magic damage
-- L416: +{Math.round((mult - 1) * }%
-- L419: Execute
-- L420: Trap
-- L421: Stun
-- L422: Shock
-- L423: Hold
-- L424: Hold
-- L425: Hold
-- L426: Volley
-- L427: Burn
-- L428: Bounty
-- L429: Dmg
-- L430: Speed
-- L431: Reach
-- L432: Crit
-- L433: Crit
-- L434: Crit
-- L435: Chill
-- L436: Drain
-- L437: Splash
-- L438: Pierce
-- L439: Shots
-- L440: Thorns
-- L441: Thorns
-- L442: Aura
-- L443: Rush
-- L444: Rush
-- L445: Ward
-- L446: Vs held
-- L447: Vs slowed
-- L448: Thorns
-- L449: Rush
-- L450: Mend
-- L452: Aura
-- L453: Shock
-- L454: Poison
-- L455: Roots
-- L456: Burn
-- L457: Twice
-- L458: Ready
-- L459: Vs plated
-- L460: Vs warded
-- L466: Fusion
-- L468: Skill
+- L115: Attacks 15% faster.
+- L116: Hits 15% harder.
+- L121: Crit chance +10%, crit damage +50%.
+- L123: Holds 1 more enemy.
+- L124: Attacks 60% faster for the first 15s of each wave.
+- L125: Each kill makes it attack 25% faster for 1.5s.
+- L126: Every hit poisons 10/s for 3s.
+- L127: Every hit jumps to 1 more enemy for 45% of its damage.
+- L128: Every hit slows 25% for 1.5s.
+- L129: Reaches 20% farther.
+- L130: Every hit also strikes enemies within 14 of its target.
+- L132: Each kill pays 3 more gold.
+- L133: Hits 30% harder on held enemies.
+- L134: Enemies it holds take 80% more thorn damage.
+- L139: Hits 25% harder and attacks 10% faster.
+- L140: Reaches 50% farther, and every shot pierces 1 extra enemy.
+- L144: Kills enemies under 15% health outright; +10% crit chance, +10% damage.
+- L146: Holds 2 more enemies, in a wider circle.
+- L151: Holds 1 more enemy, slows what it hits 30% for 1.4s, and thorns ×3.
+- L154: Every hit has an 18% chance to stun for 0.7s, and hits 10% harder.
+- L155: Lays a snare on the path that burns 14/s and slows 30%; its hits slow 20%.
+- L156: Every hit burns 12/s for 3s and splashes 15 wider.
+- L171: Heroes near it hit 40% harder.
+- L172: Hits 50% harder; every 100 damage wins back 2% cargo.
+- L173: Each kill makes it attack 45% faster for 2s.
+- L174: Hits 25% harder on slowed enemies.
+- L175: Its thorns burn what it holds 12/s for 3s.
+- L176: Its attacks pass through 1 more enemy.
+- L177: Every 4th attack crits; +25% crit damage.
+- L185: Every hit burns 10/s for 3s, and it attacks 15% faster.
+- L186: Reaches 25% farther; +15% crit chance, +25% crit damage.
+- L187: Holds 1 more enemy, and hits 20% harder.
+- L188: Each kill pays 4 more gold, and its hits slow 25% for 1.5s.
+- L189: Every hit jumps to 1 more enemy for 50% and slows 25% for 1.5s.
+- L194: Hits 20% harder, and every hit splashes 20 wider.
+- L195: Heroes near it attack 20% faster.
+- L196: Every 3rd attack poisons the 3 nearest enemies 12/s for 3s.
+- L197: Grows roots on the path beside it that slow 40% and sting 8/s.
+- L202: Hits 40% harder and attacks 25% faster.
+- L203: Hits 20% harder; +20% crit chance, +60% crit damage.
+- L204: Every 2nd attack pierces its whole path; reaches 15% farther.
+- L206: Holds 3 more enemies and slows what it hits 45% for 2s.
+- L207: Kills enemies under 28% health outright, and hits 20% harder.
+- L211: Heroes near it hit 50% harder.
+- L212: Attacks 15% faster per enemy it holds.
+- L213: Every 5th kill wins back 5% cargo.
+- L215: Holds 2 more enemies, thorns ×3, and its hits and thorns burn 26/s.
+- L216: Every hit has a 20% chance to stun for 0.7s, and slows 45% for 1.6s.
+- L224: Every hit jumps to 2 more enemies for 45%, and hits 35% harder.
+- L226: Every 5th attack jumps to 3 more enemies in full; hits 25% harder.
+- L364: {inf.adj} {base.name}
+- L457: Level {level}
+- L483: STR
+- L483: DEX
+- L483: INT
+- L486: physical damage
+- L487: attack speed and crit
+- L488: magic damage
+- L594: +{Math.round((mult - 1) * }%
+- L597: Execute
+- L598: Trap
+- L599: Stun
+- L600: Shock
+- L601: Hold
+- L602: Hold
+- L603: Hold
+- L604: Volley
+- L605: Burn
+- L606: Bounty
+- L607: Dmg
+- L608: Speed
+- L609: Reach
+- L610: Crit
+- L611: Crit
+- L612: Crit
+- L613: Chill
+- L614: Drain
+- L615: Splash
+- L616: Pierce
+- L617: Shots
+- L618: Thorns
+- L619: Thorns
+- L620: Aura
+- L621: Rush
+- L622: Rush
+- L623: Ward
+- L624: Vs held
+- L625: Vs slowed
+- L626: Thorns
+- L627: Rush
+- L628: Mend
+- L630: Aura
+- L631: Shock
+- L632: Poison
+- L633: Roots
+- L634: Burn
+- L635: Twice
+- L636: Ready
+- L637: Vs plated
+- L638: Vs warded
+- L644: Merge
+- L646: Skill
 
 ### `src/ui/shell/LevelUpPanel.tsx`
 
-- L129: {hero.name} holds {MAX_SKILLS} skills. {canFuse ? `Swap a ${leve}
-- L135: After this wave
-- L137: Take +{amount} {BUMP_LABEL[stat]}
-- L137: Choose a stat
-- L140: Fuse into {into.name}
-- L142: Choose one to swap out
-- L145: Swap {skillById(drop)?.name} for {chosen.name}
-- L149: Learn {chosen.name}
-- L151: Choose a skill
-- L178: DPS
-- L178: {Math.round(before.dps)} → {Math.round(after.dps)}
-- L179: Reach
-- L179: {Math.round(before.range)} → {Math.round(after.range)}
-- L198: Stat
-- L202: Fuse
-- L219: Level
-- L228: Opens when the wave is over.
-- L233: {level} skills
-- L236: Fusion · {skillLevelLabel(into.lev}
-- L244: 3px solid {hue}
-- L256: Fuse with
-- L257: Fuse with:
-- L264: Fuse with {skillById(w.with)?.name} into {w.into.name}
-- L272: Frees a slot.
-- L272: Takes no new slot.
-- L275: Skill · {level}
-- L275: 3px solid {hue}
-- L278: Swap out
-- L279: Swap out one of
-- L279: &rsquo;s skills:
-- L292: It leaves when you swap.
-- L295: Has:
-- L298: Pairs with
-- L298: : they can fuse from level
-- L303: Instead of a skill
-- L303: 3px solid {hue}
-- L304: Which stat
-- L318: {BUMP_LABEL[stat]} raises {BUMP_WHAT[stat]}.
-- L318: STR raises physical damage, DEX attack speed and crit, INT magic damage.
-- L331: Later
+- L195: {hero.name} holds {MAX_SKILLS} skills. Drop a {level} skill on one to merge it in.
+- L201: After this wave
+- L203: Take +{amount} {BUMP_LABEL[stat]}
+- L203: Choose a stat
+- L210: Choose a skill
+- L232: DPS
+- L232: {Math.round(before.dps)} → {Math.round(after.dps)}
+- L233: Reach
+- L233: {Math.round(before.range)} → {Math.round(after.range)}
+- L248: Stat
+- L267: Level
+- L276: Opens when the wave is over.
+- L282: {level} skills
+- L287: {into.named ? 'Named merg} · {skillLevelLabel(into.lev}
+- L295: 3px solid {hue}
+- L312: Skill · {level}
+- L312: 3px solid {hue}
+- L316: Onto
+- L320: Builds into
+- L325: Instead of a skill
+- L325: 3px solid {hue}
+- L326: Which stat
+- L340: {BUMP_LABEL[stat]} raises {BUMP_WHAT[stat]}.
+- L340: STR raises physical damage, DEX attack speed and crit, INT magic damage.
+- L353: Later
+- L361: translate({drag.x}px, {drag.y}px)
+- L392: {hero.name}'s skill slots
+- L407: Slot {i + 1}: empty
+- L413: Empty
+- L417: Learn as is
+- L417: → {t.makes}
+- L423: Full
 
 ### `src/ui/shell/SkillCards.tsx`
 
 - L23: Collection
 - L65: {g}: {open} of {of.length} unlocked
 - L106: Skill
+
+### `src/ui/shell/skillDrop.ts`
+
+- L38: Slot {slot + 1}: {held}. It holds 3 skills: {name} cannot merge in.
+- L39: Slot {slot + 1}: empty. Drop {name} here to learn it as it is.
+- L48: Slot {slot + 1}: {held}. Drop {name} here to merge it in: makes {makes}{d.named ? ', a named mer}.
+- L56: Choose a skill to merge into
+- L56: Choose a slot
+- L57: Learn {name}
+- L58: Make {target.makes}
+- L58: Merge into {target.makes}
 
 ## Items and gear
 
@@ -1898,77 +2015,81 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 - L90: : every
 - L90: your heroes can be dealt, and how to unlock the rest.
 - L96: {s.title}, {s.have} of {s.entries.length}
-- L115: Detail
-- L125: Glossary
-- L145: Codex
-- L203: Locked. {e.chips[0] ?? ''}
-- L210: NEW
-- L237: Close
-- L245: Undiscovered
-- L245: Not yet yours
-- L259: Previous
-- L265: Next
-- L277: Feats, {tab.have} of {tab.total}
-- L279: Feats
-- L294: Opens:
-- L297: Earned
-- L311: Close
-- L314: Glossary
-- L323: more to meet on the road.
+- L111: Named merges that build into a greater one
+- L143: Detail
+- L153: Glossary
+- L173: Codex
+- L231: Locked. {e.chips[0] ?? ''}
+- L238: NEW
+- L265: Close
+- L273: Undiscovered
+- L273: Not yet yours
+- L287: Previous
+- L293: Next
+- L305: Feats, {tab.have} of {tab.total}
+- L307: Feats
+- L322: Opens:
+- L325: Earned
+- L339: Close
+- L342: Glossary
+- L351: more to meet on the road.
 
 ### `src/ui/shell/codex/codexModel.ts`
 
-- L106: Unlocks as your standing rises, or for a delivered contract.
-- L108: Unlocks with a delivered Sovereign Route, one each time.
-- L110: Opens after your first run
-- L114: Level 1
-- L114: Level 2
-- L114: Level 3
-- L114: Sovereign
-- L122: Common
-- L122: Rare
-- L122: Epic
-- L122: Legendary
-- L122: Mythic
-- L124: Weapons
-- L124: Weapons
-- L124: Off hand
-- L124: Body
-- L127: More often on {companyById(company).nam}’s road.
-- L151: {k.basic ? 'Yours from th} Dealt on any road.{roadLine(k.company)}
-- L157: Weapons
-- L157: Off hand
-- L157: Body
-- L160: Sovereign
-- L162: Items
-- L184: {k.starter ? 'Yours from } Dealt at the hero pick, a city’s hire or a level-up.{roadLine(k.company)}
-- L186: Opens with the feat {feat.name}: {feat.feat.replace(/\.$/,}.
-- L195: Skills
-- L201: Fuse these two on one hero at a level-up to find out.
-- L203: Found. Fuse these two on one hero at a level-up.
-- L213: Fusions
-- L229: Fusion · {LEVEL_NAME[f.level]}
-- L229: Fusion
-- L240: Signature
-- L242: {companyById(company).nam}’s signature: opens at Standing {SIGNATURE_LEVEL}.
-- L283: Torch
-- L283: Powder
-- L283: Barrel
-- L307: {d.tricks.map((x) => `${x}
-- L312: T{tier}
-- L316: Clan boss
-- L316: Tier {tier}
-- L317: {t.baseHp} HP at full strength.{tricks}
-- L320: Studied: {knowledge.felled} felled.
-- L321: Felled {knowledge.felled}. {knowledge.need - knowled} more to learn its tricks.
-- L323: Not met yet.
-- L324: Raids {company.name}’s road.
-- L330: Goblins
-- L346: Opens with the feat {featName(r.unlock!)}.
-- L346: Not taken yet.
-- L349: Relics
-- L349: Relics
-- L354: Feats
+- L115: Unlocks as your standing rises, or for a delivered contract.
+- L117: Unlocks with a delivered Sovereign Route, one each time.
+- L119: Opens after your first run
+- L123: Level 1
+- L123: Level 2
+- L123: Level 3
+- L123: Sovereign
+- L131: Common
+- L131: Rare
+- L131: Epic
+- L131: Legendary
+- L131: Mythic
+- L133: Weapons
+- L133: Weapons
+- L133: Off hand
+- L133: Body
+- L136: More often on {companyById(company).nam}’s road.
+- L160: {k.basic ? 'Yours from th} Dealt on any road.{roadLine(k.company)}
+- L166: Weapons
+- L166: Off hand
+- L166: Body
+- L169: Sovereign
+- L171: Items
+- L193: {k.starter ? 'Yours from } Dealt at the hero pick, a city’s hire or a level-up.{roadLine(k.company)}
+- L195: Opens with the feat {feat.name}: {feat.feat.replace(/\.$/,}.
+- L204: Skills
+- L210: Drop a card on a held skill to merge it in. The skill in the slot leads: order matters.
+- L212: Made {n} of {of} named merges.
+- L214: Drop {card} on {base} at a level-up to find out.
+- L216: Found. Drop {card} on {base} at a level-up.
+- L247: {named.tier === 2 ? 'Grea} · {LEVEL_NAME[f.level]}
+- L247: Greater
+- L247: Named
+- L261: Merges
+- L266: Signature
+- L268: {companyById(company).nam}’s signature: opens at Standing {SIGNATURE_LEVEL}.
+- L309: Torch
+- L309: Powder
+- L309: Barrel
+- L333: {d.tricks.map((x) => `${x}
+- L338: T{tier}
+- L342: Clan boss
+- L342: Tier {tier}
+- L343: {t.baseHp} HP at full strength.{tricks}
+- L346: Studied: {knowledge.felled} felled.
+- L347: Felled {knowledge.felled}. {knowledge.need - knowled} more to learn its tricks.
+- L349: Not met yet.
+- L350: Raids {company.name}’s road.
+- L356: Goblins
+- L372: Opens with the feat {featName(r.unlock!)}.
+- L372: Not taken yet.
+- L375: Relics
+- L375: Relics
+- L380: Feats
 
 ## Stops (merchant, campfire, shrine)
 
@@ -3384,37 +3505,38 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 - L161: All stats
 - L162: Fewer stats
 - L162: All stats
-- L175: {reading.fused.parts.join} — {reading.fused.skill.twis}
-- L175: {skillLevelLabel(reading.} — {reading.skill.desc}
-- L178: A {skillLevelLabel(reading.} skill to choose when this wave is over.
-- L180: The next skill choice comes at level {reading.level}.
-- L182: Every skill choice is made.
-- L199: Undeploy {hero.name} — back to the bench
-- L205: Undeploy
-- L246: A {skillLevelLabel(slot.mil} skill to choose when this wave is over
-- L246: Choose a {skillLevelLabel(slot.mil} skill
-- L262: Empty skill slot — the next choice comes at level {slot.level}
-- L262: Empty skill slot
-- L266: Lv {slot.level}
-- L297: STR
-- L297: Strength {Math.round(t.str)}
-- L298: DEX
-- L298: Dexterity {Math.round(t.dex)}
-- L299: INT
-- L299: Intelligence {Math.round(t.int)}
-- L301: Patience
-- L303: Patience {Math.round(p.patience)}
-- L304: Every {PATIENCE_INTERVAL_S} s of a wave: +{Math.round(PATIENCE_PER_}% STR, DEX and INT, up to {cap} times (+{Math.round(cap * PATIENC}%). Every 5 Patience adds one more.
-- L306: Crit
-- L306: {Math.round(p.critChance }% · ×{p.critMult.toFixed(1)}
-- L306: Crit chance {Math.round(p.critChance }%, crit damage times {p.critMult.toFixed(1)}
-- L309: Holds
-- L309: Holds {p.mods.block!.count} enemies
-- L310: Thorns
-- L310: Thorns {Math.round(p.thorns)}
-- L325: What {r.k} does
-- L332: Abilities
-- L333: How effects stack
+- L179: {reading.fused.parts.join} — {reading.fused.skill.twis}
+- L180: {skillLevelLabel(reading.} — {reading.skill.desc}
+- L184: Builds into
+- L189: A {skillLevelLabel(reading.} skill to choose when this wave is over.
+- L191: The next skill choice comes at level {reading.level}.
+- L193: Every skill choice is made.
+- L210: Undeploy {hero.name} — back to the bench
+- L216: Undeploy
+- L257: A {skillLevelLabel(slot.mil} skill to choose when this wave is over
+- L257: Choose a {skillLevelLabel(slot.mil} skill
+- L273: Empty skill slot — the next choice comes at level {slot.level}
+- L273: Empty skill slot
+- L277: Lv {slot.level}
+- L308: STR
+- L308: Strength {Math.round(t.str)}
+- L309: DEX
+- L309: Dexterity {Math.round(t.dex)}
+- L310: INT
+- L310: Intelligence {Math.round(t.int)}
+- L312: Patience
+- L314: Patience {Math.round(p.patience)}
+- L315: Every {PATIENCE_INTERVAL_S} s of a wave: +{Math.round(PATIENCE_PER_}% STR, DEX and INT, up to {cap} times (+{Math.round(cap * PATIENC}%). Every 5 Patience adds one more.
+- L317: Crit
+- L317: {Math.round(p.critChance }% · ×{p.critMult.toFixed(1)}
+- L317: Crit chance {Math.round(p.critChance }%, crit damage times {p.critMult.toFixed(1)}
+- L320: Holds
+- L320: Holds {p.mods.block!.count} enemies
+- L321: Thorns
+- L321: Thorns {Math.round(p.thorns)}
+- L336: What {r.k} does
+- L343: Abilities
+- L344: How effects stack
 
 ### `src/ui/shell/Money.tsx`
 
@@ -3477,25 +3599,25 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 
 ### `src/ui/shell/heroCard.ts`
 
-- L33: Area
-- L33: everything in a small area
-- L35: 1+{pierce} pierce
-- L35: one, and pierces {pierce} more
-- L37: 1+{chains} chain
-- L37: one, and chains to {chains} more
-- L38: one at a time
-- L48: Reach
-- L48: Reach {reach}
-- L49: Targets
-- L50: Damage
-- L50: Magic
-- L50: Physical
-- L50: {magic ? 'Magic' : 'Physi} damage
-- L51: Speed
-- L51: {rate} attacks a second
-- L57: Level {level}, the top level
-- L58: Level {level} of {MAX_LEVEL}, {Math.round(progress * 10}% of the way to {level + 1}
-- L192: a skill to choose
-- L193: {raises} piece{raises === 1 ? '' : 's'} to raise
-- L194: Upgrade {heroName}{parts.length ? ` — ${par}
+- L34: Area
+- L34: everything in a small area
+- L36: 1+{pierce} pierce
+- L36: one, and pierces {pierce} more
+- L38: 1+{chains} chain
+- L38: one, and chains to {chains} more
+- L39: one at a time
+- L49: Reach
+- L49: Reach {reach}
+- L50: Targets
+- L51: Damage
+- L51: Magic
+- L51: Physical
+- L51: {magic ? 'Magic' : 'Physi} damage
+- L52: Speed
+- L52: {rate} attacks a second
+- L58: Level {level}, the top level
+- L59: Level {level} of {MAX_LEVEL}, {Math.round(progress * 10}% of the way to {level + 1}
+- L196: a skill to choose
+- L197: {raises} piece{raises === 1 ? '' : 's'} to raise
+- L198: Upgrade {heroName}{parts.length ? ` — ${par}
 

@@ -1,15 +1,22 @@
 import { describe, expect, it } from 'vitest'
 import { COMPANY_IDS } from '../src/game/data/companies'
 import { FUSIONS } from '../src/game/data/fusions'
+import { deliveryOf, INFUSIONS, reexpress } from '../src/game/data/infusions'
 import { FIRST_MAP, legacyPosts } from '../src/game/data/maps'
 import { classicHero } from '../src/game/data/sentinels'
 import {
   ALL_SKILLS,
+  chainOf,
   CHARTER_SKILLS,
-  FUSED_SKILLS,
   isCardId,
-  isFusedId,
+  isMergedId,
+  isNamedId,
   isSkillId,
+  MAX_DEPTH,
+  mergedById,
+  mergeId,
+  NAMED_MERGES,
+  plainExtra,
   RANDOM_UNLOCK_SKILLS,
   SIGNATURE_SKILLS,
   skillById,
@@ -21,14 +28,14 @@ import { generateEncounter } from '../src/game/data/waves'
 import { computeCombat } from '../src/game/engine/combat'
 import { GameEngine, TICK } from '../src/game/engine/engine'
 import { applyXp, xpToReach } from '../src/game/engine/leveling'
-import { cardFusions, fusedParts, fuseSkills, heldFusions, recipeFor, recipesWith } from '../src/game/run/fusion'
-import { FUSION_FROM_LEVEL, fusionChoices, MAX_SKILLS, offerFusions, skillOffer, slotsFull, takeFusion, takeSkill } from '../src/game/run/skills'
+import { afterDrop, buildsInto, buildsWith, dropOnto, heldCards, infusionOf, recipesWith } from '../src/game/run/fusion'
+import { bumpOffered, dropPreview, dropSkill, MAX_SKILLS, skillOffer, slotsFull } from '../src/game/run/skills'
 import { migrateMeta, META_VERSION } from '../src/state/metaStore'
-import type { EffectMods, Sentinel, WaveDef } from '../src/game/types'
+import type { EffectMods, Mutation, Sentinel, WaveDef } from '../src/game/types'
 
 /**
- * Skill fusion (Oct 2026, `docs/SKILL_FUSION.md`): the recipes, the rules a
- * milestone fuses by (both paths), the saves, and every twist in the engine.
+ * Ordered merges (Oct 2026, `docs/SKILL_FUSION.md`): every ordered pair, the
+ * named recipes, the drop, the saves, and every twist in the engine.
  */
 
 const hero = (skills: string[], level = 5, skillPicks = 0): Sentinel => ({ ...classicHero('rogue'), id: 'h-fz', level, skills, skillPicks })
@@ -39,231 +46,362 @@ function seedOffering(h: Sentinel, want: string, pool: readonly string[] = POOL)
   for (let seed = 1; seed < 5000; seed++) if (skillOffer(h, pool, seed).some((k) => k.id === want)) return seed
   throw new Error(`no seed offers ${want}`)
 }
+const IDS = ALL_SKILLS.map((k) => k.id)
+const pairs = IDS.flatMap((a) => IDS.filter((b) => b !== a).map((b) => [a, b] as const))
 
-describe('the recipes (data/fusions.ts)', () => {
-  it('fifteen, each two distinct library cards, ids unique and never a library id', () => {
-    expect(FUSIONS.length).toBe(15)
+describe('every library skill has an infusion half (data/infusions.ts)', () => {
+  it('one each, a one-word adjective no other skill uses, a line of at most 80 characters', () => {
+    expect(Object.keys(INFUSIONS).sort()).toEqual([...IDS].sort())
+    const adjs = Object.values(INFUSIONS).map((i) => i.adj)
+    expect(new Set(adjs).size).toBe(adjs.length)
+    for (const [id, i] of Object.entries(INFUSIONS)) {
+      expect(i.adj, id).toMatch(/^[A-Z][a-z-]+$/)
+      expect(i.line.length, i.line).toBeLessThanOrEqual(80)
+      expect(i.line.endsWith('.'), i.line).toBe(true)
+      expect(Object.keys(i.mods).length, id).toBeGreaterThan(0)
+    }
+  })
+
+  it('a share is smaller than the skill it comes from (it lends, it does not copy)', () => {
+    for (const k of ALL_SKILLS) {
+      const s = INFUSIONS[k.id].mods
+      for (const key of ['damageMult', 'rateMult', 'rangeMult'] as const) if (s[key] != null && k.mods[key] != null) expect(s[key]!, `${k.id}.${key}`).toBeLessThan(k.mods[key]!)
+      for (const key of ['critChanceAdd', 'critMultAdd', 'execute', 'stunChance', 'goldPerKill', 'vsHeld', 'vsSlowed', 'splashAdd', 'holdAdd'] as const)
+        if (s[key] != null && k.mods[key] != null) expect(s[key]!, `${k.id}.${key}`).toBeLessThanOrEqual(k.mods[key]!)
+      if (s.burn && k.mods.burn) expect(s.burn.dps).toBeLessThan(k.mods.burn.dps)
+      if (s.chill && k.mods.chill) expect(s.chill.slow).toBeLessThan(k.mods.chill.slow)
+      if (s.shock && k.mods.shock) expect(s.shock.dmgFrac).toBeLessThan(k.mods.shock.dmgFrac)
+    }
+  })
+
+  it('the re-expression rules key on the base’s delivery: the designer’s four examples', () => {
+    // "Frostbite into Arc Spark: the chains freeze."
+    expect(mergedById(mergeId('arc_spark', 'frostbite')!)!.mods).toEqual({ arcCarry: true })
+    // "Arc Spark into Frostbite: the slows arc to a neighbour."
+    const sparking = mergedById(mergeId('frostbite', 'arc_spark')!)!
+    expect(sparking.mods).toEqual({ arcCarry: true })
+    expect(sparking.expanded.some((m) => m.shock)).toBe(true)
+    // "Poison into Cleave: the cleave poisons" (the engine strikes every splashed body with the hit's statuses).
+    const venomous = mergedById(mergeId('cleave', 'poison_tips')!)!
+    expect(venomous.twist).toBe('Its splash poisons all it strikes.')
+    expect(venomous.expanded.some((m) => m.burn)).toBe(true)
+    // "Cleave into Poison: poisoned enemies' deaths splash."
+    expect(mergedById(mergeId('poison_tips', 'cleave')!)!.mods.deathBurst).toBeTruthy()
+    expect(deliveryOf(skillById('arc_spark')!.mods)).toBe('chain')
+    expect(deliveryOf(skillById('frostbite')!.mods)).toBe('status')
+    expect(deliveryOf(skillById('keen_eye')!.mods)).toBe('strike')
+    expect(reexpress('gold', 'strike', 'steel')).toBeNull()
+  })
+
+  it('a share stacks on what the base already does (a burn onto a burn adds its damage)', () => {
+    const m = computeCombat(hero([mergeId('wildfire', 'poison_tips')!]))
+    expect(m.mods.burn!.dps).toBe(12 + 4)
+    const slow = computeCombat(hero([mergeId('frostbite', 'anchor')!]))
+    expect(slow.mods.chill!.slow).toBeCloseTo(0.25 + 0.12, 9)
+  })
+})
+
+describe('every ordered pair merges into something distinct', () => {
+  it(`all ${IDS.length * (IDS.length - 1)} ordered pairs: a valid, readable, non-empty merge; A onto B is never B onto A`, () => {
+    const ids = new Set<string>()
+    const names = new Set<string>()
+    for (const [a, b] of pairs) {
+      const id = mergeId(a, b)
+      expect(id, `${a} ← ${b}`).toBeTruthy()
+      const m = mergedById(id!)!
+      expect(m, id!).toBeTruthy()
+      expect(isSkillId(id)).toBe(true)
+      expect(isMergedId(id)).toBe(true)
+      expect(isCardId(id)).toBe(false)
+      expect(m.chain).toEqual([a, b])
+      expect(m.parts).toEqual([a, b])
+      // Non-empty: more than its base alone.
+      expect(m.expanded.length, id!).toBeGreaterThan(1)
+      expect(skillModsOf({ skills: [id!] }).slice(0, 1)).toEqual([skillById(a)!.mods])
+      ids.add(id!)
+      names.add(m.name)
+      // The other order is another skill: another id, another name, other mods.
+      const back = mergedById(mergeId(b, a)!)!
+      expect(back.id).not.toBe(m.id)
+      expect(back.name).not.toBe(m.name)
+      expect(JSON.stringify(back.expanded)).not.toBe(JSON.stringify(m.expanded))
+    }
+    expect(ids.size).toBe(pairs.length)
+    expect(names.size).toBe(pairs.length)
+    // No merge takes a library skill's name.
+    for (const k of ALL_SKILLS) expect(names.has(k.name)).toBe(false)
+  })
+
+  it('names and lines are within the copy caps (a name ≤ 34, each line one sentence ≤ 80)', () => {
+    for (const [a, b] of pairs) {
+      const m = mergedById(mergeId(a, b)!)!
+      expect(m.name.length, m.name).toBeLessThanOrEqual(34)
+      for (const l of m.lines) {
+        expect(l.length, l).toBeLessThanOrEqual(80)
+        expect(l.endsWith('.'), l).toBe(true)
+      }
+      // A plain merge is named for its infusion and its base: "Frozen Arc Spark".
+      if (!m.named) expect(m.name).toBe(`${INFUSIONS[b].adj} ${skillById(a)!.name}`)
+    }
+  })
+
+  it('the base keeps its identity: its sentence, its company, its picture', () => {
+    const m = mergedById('mx.arc_spark.frostbite')!
+    expect(m.name).toBe('Frozen Arc Spark')
+    expect(m.desc).toBe(skillById('arc_spark')!.desc)
+    expect(m.company).toBe('scrolls')
+    expect(skillHeadline(m).icon).toBe(skillHeadline(skillById('arc_spark')!).icon)
+    expect(m.element).toBe('frost')
+  })
+})
+
+describe('depth and ids', () => {
+  it(`a slot holds at most ${MAX_DEPTH} skills, never one twice`, () => {
+    expect(MAX_DEPTH).toBe(3)
+    const two = mergeId('hard_hitter', 'keen_eye')!
+    const three = mergeId(two, 'berserk')!
+    expect(three).toBe('mx.hard_hitter.keen_eye.berserk')
+    expect(chainOf(three)).toEqual(['hard_hitter', 'keen_eye', 'berserk'])
+    expect(mergeId(three, 'cleave')).toBeNull()
+    // A greater named merge is three: full.
+    expect(chainOf('fz_skyfall')).toHaveLength(3)
+    expect(mergeId('fz_skyfall', 'cleave')).toBeNull()
+    // Never the same skill twice in a slot.
+    expect(mergeId(two, 'keen_eye')).toBeNull()
+    expect(mergeId(two, 'hard_hitter')).toBeNull()
+    expect(mergeId('hard_hitter', 'hard_hitter')).toBeNull()
+    // Only a library card is ever poured in.
+    expect(mergeId('hard_hitter', 'fz_rimecut')).toBeNull()
+    expect(mergeId('hard_hitter', two)).toBeNull()
+  })
+
+  it('one id per slot: a chain whose first two make a named merge is written from it', () => {
+    expect(mergeId('frostbite', 'keen_eye')).toBe('fz_rimecut')
+    expect(isSkillId('mx.frostbite.keen_eye')).toBe(false)
+    expect(mergeId('fz_rimecut', 'anchor')).toBe('mx.fz_rimecut.anchor')
+    expect(isSkillId('mx.frostbite.keen_eye.anchor')).toBe(false)
+    expect(mergedById('mx.fz_rimecut.anchor')!.name).toBe('Anchored Rimecut')
+  })
+
+  it('junk is refused by every validator', () => {
+    for (const junk of ['mx.', 'mx.hard_hitter', 'mx.hard_hitter.nonsense', 'mx.hard_hitter.hard_hitter', 'mx.nonsense.keen_eye', 'mx.fz_nonsense.keen_eye', 'fz_', 'fz_nonsense', 'mx.a.b.c.d', '', 3, null, undefined, {}]) {
+      expect(isSkillId(junk), String(junk)).toBe(false)
+      expect(isMergedId(junk)).toBe(false)
+      expect(isNamedId(junk)).toBe(false)
+    }
+    // Depth 4 is refused even when every step is otherwise a merge.
+    expect(isSkillId('mx.hard_hitter.keen_eye.berserk.cleave')).toBe(false)
+  })
+
+  it('merged ids are plain strings that read back as themselves (the run save: tests/runSnapshot.fuzz.test.ts)', () => {
+    for (const id of ['mx.arc_spark.frostbite', 'fz_skyfall', 'mx.fz_rimecut.anchor', 'mx.hard_hitter.keen_eye.berserk']) {
+      expect(isSkillId(JSON.parse(JSON.stringify(id)))).toBe(true)
+      expect(skillById(id)!.id).toBe(id)
+    }
+  })
+
+  it('the meta save keeps library cards in its pools and named ids in its discoveries, nothing else', () => {
+    expect(migrateMeta({ skills: ['fz_thousand_cuts', 'mx.arc_spark.frostbite', 'bounty'] }, META_VERSION).skills).toEqual(['bounty'])
+    const saved = migrateMeta({ codex: { enemies: [], relics: [], felled: {}, clans: [], fusions: ['fz_sunder', 'nonsense', 'fz_sunder', 'mx.arc_spark.frostbite', 'bounty', 'fz_skyfall', 7] } }, META_VERSION)
+    expect(saved.codex.fusions).toEqual(['fz_sunder', 'fz_skyfall'])
+    const again = migrateMeta(JSON.parse(JSON.stringify(saved)), META_VERSION)
+    expect(again.codex.fusions).toEqual(['fz_sunder', 'fz_skyfall'])
+    expect(migrateMeta({ codex: { enemies: ['torch1'], relics: [], felled: {} } }, META_VERSION).codex.fusions).toEqual([])
+    expect(migrateMeta({}, 15).codex.fusions).toEqual([])
+  })
+
+  it('a merged skill would lend its root’s infusion (only cards are ever dropped in this build)', () => {
+    expect(infusionOf('mx.arc_spark.frostbite')).toBe(INFUSIONS.arc_spark)
+    expect(infusionOf('fz_skyfall')).toBe(INFUSIONS.long_reach)
+    expect(infusionOf('keen_eye')).toBe(INFUSIONS.keen_eye)
+    expect(infusionOf('nonsense')).toBeUndefined()
+  })
+})
+
+describe('the named merges (data/fusions.ts)', () => {
+  it('twenty: fifteen tier 1 and five greater, ids unique, each the one id its order writes', () => {
+    expect(FUSIONS.length).toBe(20)
+    expect(FUSIONS.filter((f) => f.tier === 1)).toHaveLength(15)
+    expect(FUSIONS.filter((f) => f.tier === 2)).toHaveLength(5)
     expect(new Set(FUSIONS.map((f) => f.id)).size).toBe(FUSIONS.length)
     for (const f of FUSIONS) {
       expect(f.id.startsWith('fz_')).toBe(true)
-      expect(isCardId(f.id)).toBe(false)
-      expect(f.parts[0]).not.toBe(f.parts[1])
-      for (const p of f.parts) expect(isCardId(p), `${f.name}: ${p}`).toBe(true)
+      expect(isCardId(f.parts[1]), f.id).toBe(true)
+      if (f.tier === 1) expect(isCardId(f.parts[0]), f.id).toBe(true)
+      else expect(FUSIONS.find((x) => x.id === f.parts[0])?.tier, f.id).toBe(1)
+      expect(mergeId(f.parts[0], f.parts[1])).toBe(f.id)
+      expect(mergedById(f.id)!.named).toBe(f)
     }
-    // No pair twice.
-    const pairs = FUSIONS.map((f) => [...f.parts].sort().join('+'))
-    expect(new Set(pairs).size).toBe(pairs.length)
+    // No ordered pair twice.
+    const orders = FUSIONS.map((f) => f.parts.join('<'))
+    expect(new Set(orders).size).toBe(orders.length)
   })
 
-  it('a fusion is its higher part’s level and one of its parts’ companies', () => {
+  it('a named merge’s order is the recipe: the other order is a plain merge', () => {
+    for (const f of FUSIONS.filter((x) => x.tier === 1)) {
+      const back = mergeId(f.parts[1], f.parts[0])!
+      expect(back.startsWith('mx.'), f.id).toBe(true)
+      expect(mergedById(back)!.named).toBeUndefined()
+    }
+  })
+
+  it('level, company, and the shape of the tree', () => {
     for (const f of FUSIONS) {
-      const [a, b] = f.parts.map((id) => skillById(id)!)
-      expect(f.level).toBe(Math.max(a.level, b.level))
-      expect([a.company, b.company]).toContain(f.company)
+      const levels = chainOf(f.id).map((id) => skillById(id)!.level)
+      expect(f.level).toBe(Math.max(...levels))
+      expect(f.company).toBe(skillById(f.parts[0])!.company)
     }
-  })
-
-  it('parts are starters or common unlocks — never a signature or a feat card — and each in at most three recipes', () => {
+    // Infusions are starters or common unlocks — never a signature or a feat card.
     const open = new Set([...STARTER_SKILLS, ...RANDOM_UNLOCK_SKILLS])
     const signatures = new Set(Object.values(SIGNATURE_SKILLS))
-    for (const f of FUSIONS) {
-      for (const p of f.parts) {
-        expect(open.has(p), p).toBe(true)
-        expect(signatures.has(p)).toBe(false)
-        expect(skillById(p)!.feat).toBeUndefined()
-      }
+    for (const f of FUSIONS) for (const p of chainOf(f.id)) {
+      expect(open.has(p), p).toBe(true)
+      expect(signatures.has(p)).toBe(false)
+      expect(skillById(p)!.feat).toBeUndefined()
     }
-    for (const k of ALL_SKILLS) expect(recipesWith(k.id).length, k.name).toBeLessThanOrEqual(3)
+    // At most three recipes build from any one skill.
+    for (const id of [...IDS, ...FUSIONS.map((f) => f.id)]) expect(recipesWith(id).length, id).toBeLessThanOrEqual(3)
+    // One greater per company, each over a tier-1 merge of its own.
+    for (const c of COMPANY_IDS) expect(FUSIONS.filter((f) => f.tier === 2 && f.company === c), c).toHaveLength(1)
+    expect(buildsInto('fz_hail_of_arrows').map((f) => f.id)).toEqual(['fz_skyfall'])
+    expect(buildsWith('volley').map((f) => f.id)).toEqual(['fz_skyfall'])
   })
 
-  it('every company has three fusions', () => {
-    for (const c of COMPANY_IDS) expect(FUSIONS.filter((f) => f.company === c).length, c).toBe(3)
-  })
-
-  it('no two Level 1 starters fuse (a first-timer is not handed one at level 5), and a first run can still meet one', () => {
+  it('no two Level 1 starters make one (a first-timer is not handed one at level 5), and a first run can still meet one', () => {
     const l1 = STARTER_SKILLS.filter((id) => skillById(id)!.level === 1)
     expect(l1.length).toBe(3)
-    for (let i = 0; i < 3; i++) for (let j = i + 1; j < 3; j++) expect(recipeFor(l1[i], l1[j]), `${l1[i]} + ${l1[j]}`).toBeUndefined()
-    // Two starters, met at levels 10 and 15: Anvilfall.
-    const starterOnly = FUSIONS.filter((f) => f.parts.every((p) => STARTER_SKILLS.includes(p)))
+    for (const a of l1) for (const b of l1) if (a !== b) expect(mergedById(mergeId(a, b)!)!.named, `${a} ← ${b}`).toBeUndefined()
+    const starterOnly = FUSIONS.filter((f) => chainOf(f.id).every((p) => STARTER_SKILLS.includes(p)))
     expect(starterOnly.map((f) => f.id)).toEqual(['fz_anvilfall'])
   })
 
-  it('every twist is a different rule (a fusion is a new skill type, not bigger numbers)', () => {
-    const keys = FUSIONS.map((f) => Object.keys(f.mods).sort().join(','))
-    expect(new Set(keys).size).toBe(FUSIONS.length)
-    // And every twist has a rule no library card grants.
+  it('every tier-1 twist is a different rule no library card grants; a capstone is a rule its tier 1 lacks', () => {
+    const t1 = FUSIONS.filter((f) => f.tier === 1)
+    const keys = t1.map((f) => Object.keys(f.mods).sort().join(','))
+    expect(new Set(keys).size).toBe(t1.length)
     const libraryKeys = new Set(ALL_SKILLS.flatMap((k) => Object.keys(k.mods)))
     for (const f of FUSIONS) expect(Object.keys(f.mods).some((k) => !libraryKeys.has(k)), f.name).toBe(true)
+    for (const g of FUSIONS.filter((f) => f.tier === 2)) {
+      const base = FUSIONS.find((f) => f.id === g.parts[0])!
+      for (const k of Object.keys(g.mods)) expect(Object.keys(base.mods), g.name).not.toContain(k)
+    }
   })
 
-  it('copy: the sentence and the twist are each one line of at most 80 characters', () => {
+  it('copy: a twist is one line of at most 80 characters', () => {
     for (const f of FUSIONS) {
-      expect(f.desc.length, f.desc).toBeLessThanOrEqual(80)
       expect(f.twist.length, f.twist).toBeLessThanOrEqual(80)
-      expect(f.desc.endsWith('.')).toBe(true)
       expect(f.twist.endsWith('.')).toBe(true)
     }
   })
 
-  it('fusions are in no pool, unlock list, starter list or signature: they come only from fusing', () => {
-    const ids = new Set(FUSIONS.map((f) => f.id))
-    for (const list of [ALL_SKILLS.map((k) => k.id), STARTER_SKILLS, RANDOM_UNLOCK_SKILLS, CHARTER_SKILLS, Object.values(SIGNATURE_SKILLS)]) {
-      expect(list.some((id) => ids.has(id))).toBe(false)
+  it('a named merge is its base, the card’s share, and its twist in place of the rule', () => {
+    const f = mergedById('fz_rimecut')!
+    expect(f.expanded).toEqual([skillById('frostbite')!.mods, INFUSIONS.keen_eye.mods, FUSIONS.find((x) => x.id === 'fz_rimecut')!.mods])
+    // Against the plain merge of its order: the same base and share, the rule instead.
+    expect(plainExtra('frostbite', 'keen_eye')[0]).toEqual(INFUSIONS.keen_eye.mods)
+    expect(skillHeadline(f)).toEqual({ icon: 'chill', label: 'Merge' })
+    // A greater keeps its tier-1 twist and adds its capstone.
+    const g = mergedById('fz_skyfall')!
+    expect(g.expanded.slice(0, 3)).toEqual(mergedById('fz_hail_of_arrows')!.expanded)
+  })
+
+  it('merges are in no pool, unlock list, starter list or signature: they come only from a drop', () => {
+    const ids = new Set(NAMED_MERGES.map((f) => f.id))
+    for (const list of [IDS, STARTER_SKILLS, RANDOM_UNLOCK_SKILLS, CHARTER_SKILLS, Object.values(SIGNATURE_SKILLS)]) {
+      expect(list.some((id) => ids.has(id) || isMergedId(id))).toBe(false)
     }
   })
 })
 
-describe('recipe lookup (run/fusion.ts)', () => {
-  it('finds a recipe in either order, and nothing else', () => {
-    expect(recipeFor('long_reach', 'keen_eye')?.id).toBe('fz_thousand_cuts')
-    expect(recipeFor('keen_eye', 'long_reach')?.id).toBe('fz_thousand_cuts')
-    expect(recipeFor('long_reach', 'long_reach')).toBeUndefined()
-    expect(recipeFor('long_reach', 'bulwark')).toBeUndefined()
-    expect(recipeFor('long_reach', 'nonsense')).toBeUndefined()
-  })
-
-  it('no fusion of fusions: a fused skill is never a part', () => {
-    for (const f of FUSED_SKILLS) {
-      for (const k of [...ALL_SKILLS, ...FUSED_SKILLS]) expect(recipeFor(f.id, k.id)).toBeUndefined()
-      expect(recipesWith(f.id)).toEqual([])
-    }
-    // A hero holding a fusion and a card is offered no fusion of the two.
-    expect(heldFusions({ skills: ['fz_thousand_cuts', 'hard_hitter'] })).toEqual([])
-    expect(cardFusions({ skills: ['fz_thousand_cuts'] }, [{ id: 'hard_hitter' }]).size).toBe(0)
-  })
-
-  it('a fused skill is its two parts and then its twist (skillModsOf)', () => {
-    const f = FUSED_SKILLS.find((x) => x.id === 'fz_thousand_cuts')!
-    expect(skillModsOf({ skills: [f.id] })).toEqual([skillById('long_reach')!.mods, skillById('keen_eye')!.mods, f.mods])
-    // So the hero's numbers are the parts' to the decimal.
-    const parts = computeCombat(hero(['long_reach', 'keen_eye']))
-    const fused = computeCombat(hero([f.id]))
-    expect(fused.dps).toBeCloseTo(parts.dps, 9)
-    expect(fused.range).toBeCloseTo(parts.range, 9)
-    expect(fused.mods.ricochet).toBe(0.6)
-    // Pictured by its twist; labelled a fusion.
-    expect(skillHeadline(f)).toEqual({ icon: 'crit', label: 'Fusion' })
-  })
-})
-
-describe('the milestone (run/skills.ts)', () => {
-  it('fusion opens at the level-10 milestone: at level 5 a card that pairs is taken as itself', () => {
-    expect(FUSION_FROM_LEVEL).toBe(10)
+describe('the drop (run/fusion.ts, run/skills.dropSkill)', () => {
+  it('onto an empty slot: learned as itself', () => {
     const h = hero(['long_reach'])
     const seed = seedOffering(h, 'keen_eye')
-    const offer = skillOffer(h, POOL, seed)
-    // The pair is there (the panel says "Pairs"), but nothing fuses yet.
-    expect(cardFusions(h, offer).get('keen_eye')?.[0].into.id).toBe('fz_thousand_cuts')
-    expect(offerFusions(h, offer).size).toBe(0)
-    const at5 = takeSkill(h, 'keen_eye', POOL, seed)!
-    expect(at5.skills).toEqual(['long_reach', 'keen_eye'])
-    expect(fusionChoices(at5)).toEqual([])
-    // At level 10 the pair is a choice beside the cards.
-    expect(fusionChoices({ ...at5, level: 10 }).map((f) => f.into.id)).toEqual(['fz_thousand_cuts'])
+    const next = dropSkill(h, 'keen_eye', 1, POOL, seed)!
+    expect(next.skills).toEqual(['long_reach', 'keen_eye'])
+    expect(next.skillPicks).toBe(1)
+    // Any empty slot takes it; skills fill in order.
+    expect(dropSkill(h, 'keen_eye', 2, POOL, seed)!.skills).toEqual(['long_reach', 'keen_eye'])
+    // Two parts of a named merge held apart stay apart (the designer's empty-slot rule).
+    expect(next.skills!.some((id) => isMergedId(id))).toBe(false)
   })
 
-  it('(a) annotates a card that fuses with a held skill, and leaves the offer dealt as it was', () => {
-    const h = hero(['poison_tips'], 10, 1)
-    const seed = seedOffering(h, 'venom_spit')
-    const offer = skillOffer(h, POOL, seed)
-    const notes = offerFusions(h, offer)
-    expect(notes.get('venom_spit')).toEqual([{ with: 'poison_tips', into: skillById('fz_plaguebearer') }])
-    for (const k of offer) if (k.id !== 'venom_spit' && !recipeFor('poison_tips', k.id)) expect(notes.has(k.id)).toBe(false)
+  it('onto a held skill, by choice: a forced or chosen merge that forms a named recipe', () => {
+    const h = hero(['frostbite'])
+    const seed = seedOffering(h, 'keen_eye')
+    const next = dropSkill(h, 'keen_eye', 0, POOL, seed)!
+    expect(next.skills).toEqual(['fz_rimecut'])
+    expect(dropPreview(h, 'keen_eye', 0, POOL, seed)?.named?.id).toBe('fz_rimecut')
   })
 
-  it('(a) taking a card that fuses fuses at once: the held slot becomes the fusion, the card takes none', () => {
-    const h = hero(['poison_tips', 'bounty'], 10, 1)
-    const seed = seedOffering(h, 'venom_spit')
-    const next = takeSkill(h, 'venom_spit', POOL, seed)!
-    expect(next.skills).toEqual(['fz_plaguebearer', 'bounty'])
-    expect(next.skillPicks).toBe(2)
-  })
-
-  it('(a) works when the slots are full: no swap, the drop is ignored', () => {
+  it('a full hero is forced to merge: no swap, no skill lost; a plain merge where no recipe is', () => {
     const r = hero(['bounty', 'bloodrush', 'cleave'], 15, 2)
     expect(slotsFull(r)).toBe(true)
+    expect(bumpOffered(r, POOL, 1)).toBe(true)
     const seed = seedOffering(r, 'berserk')
-    const next = takeSkill(r, 'berserk', POOL, seed, 'bounty')!
-    expect(next.skills).toEqual(['bounty', 'fz_red_mist', 'cleave'])
-    expect(next.skills!.length).toBe(MAX_SKILLS)
+    // A named recipe in its order (Bloodrush ← Berserk).
+    expect(dropSkill(r, 'berserk', 1, POOL, seed)!.skills).toEqual(['bounty', 'fz_red_mist', 'cleave'])
+    // A plain merge anywhere else.
+    const plain = dropSkill(r, 'berserk', 0, POOL, seed)!
+    expect(plain.skills).toEqual(['mx.bounty.berserk', 'bloodrush', 'cleave'])
+    expect(heldCards(plain).sort()).toEqual(['berserk', 'bloodrush', 'bounty', 'cleave'])
+    expect(plain.skills!.length).toBe(MAX_SKILLS)
+    // No empty slot to land on.
+    expect(dropSkill(r, 'berserk', 3, POOL, seed)).toBeNull()
   })
 
-  it('a card that would fuse with two held skills names both (the first is the default partner)', () => {
-    // Hard Hitter pairs with Pin Down (Relentless) and with Cleave (Sunder).
-    const ways = cardFusions({ skills: ['pin_down', 'cleave'] }, [{ id: 'hard_hitter' }]).get('hard_hitter')!
-    expect(ways.map((w) => w.into.id)).toEqual(['fz_relentless', 'fz_sunder'])
-    expect(fuseSkills(['pin_down', 'cleave'], 'cleave', 'hard_hitter', 'fz_sunder')).toEqual(['pin_down', 'fz_sunder'])
+  it('a junk drop is refused: not on the offer, nothing owed, a bad slot, a slot at the depth cap, an unknown card', () => {
+    const h = hero(['hard_hitter'], 10, 1)
+    const seed = seedOffering(h, 'heavy_blows')
+    const notOffered = IDS.find((id) => skillById(id)!.level === 2 && !skillOffer(h, POOL, seed).some((k) => k.id === id))!
+    expect(dropSkill(h, notOffered, 1, POOL, seed)).toBeNull()
+    expect(dropSkill({ ...h, level: 9 }, 'heavy_blows', 1, POOL, seed)).toBeNull()
+    for (const slot of [-1, 1.5, 3, NaN]) expect(dropSkill(h, 'heavy_blows', slot, POOL, seed), String(slot)).toBeNull()
+    expect(dropOnto(['fz_skyfall'], 'cleave', 0)).toBeNull()
+    expect(dropOnto(['hard_hitter'], 'nonsense', 1)).toBeNull()
+    expect(dropOnto(['hard_hitter'], 'hard_hitter', 1)).toBeNull()
+    // The card is already held inside a merge: refused everywhere.
+    expect(dropOnto(['mx.arc_spark.frostbite'], 'frostbite', 1)).toBeNull()
   })
 
-  it('(b) a pair already held is offered as a fuse, which settles the milestone and frees a slot', () => {
-    const h = hero(['poison_tips', 'venom_spit', 'bounty'], 15, 2)
-    expect(fusionChoices(h).map((f) => f.into.id)).toEqual(['fz_plaguebearer'])
-    const next = takeFusion(h, 'fz_plaguebearer')!
-    expect(next.skills).toEqual(['fz_plaguebearer', 'bounty'])
-    expect(next.skillPicks).toBe(3)
-    expect(slotsFull(next)).toBe(false)
-  })
-
-  it('(b) is refused with no milestone owed, before level 10, a pair not held, or a junk id', () => {
-    expect(takeFusion(hero(['poison_tips', 'venom_spit'], 9, 1), 'fz_plaguebearer')).toBeNull()
-    expect(takeFusion(hero(['poison_tips', 'venom_spit'], 5, 0), 'fz_plaguebearer')).toBeNull()
-    expect(takeFusion(hero(['poison_tips', 'bounty'], 10, 1), 'fz_plaguebearer')).toBeNull()
-    expect(takeFusion(hero(['poison_tips', 'venom_spit'], 10, 1), 'nonsense')).toBeNull()
-    expect(fusionChoices(hero(['poison_tips', 'venom_spit'], 9, 1))).toEqual([])
-  })
-
-  it('a hero holding a fusion is never dealt its parts again; every other hero is dealt exactly as before', () => {
-    const fused = hero(['fz_thousand_cuts'], 10, 1)
-    expect(fusedParts(fused)).toEqual(['long_reach', 'keen_eye'])
+  it('a hero holding a merge is never dealt its skills again; every other hero is dealt exactly as before', () => {
+    const m = hero(['mx.arc_spark.frostbite'], 10, 1)
     for (let seed = 1; seed < 200; seed++) {
-      const ids = skillOffer({ ...fused, level: 5, skillPicks: 0 }, POOL, seed).map((k) => k.id)
-      expect(ids).not.toContain('long_reach')
-      expect(ids).not.toContain('keen_eye')
+      const ids = skillOffer({ ...m, level: 5, skillPicks: 0 }, POOL, seed).map((k) => k.id)
+      expect(ids).not.toContain('arc_spark')
+      expect(ids).not.toContain('frostbite')
     }
-    // A plain hero's offer: the same as the hash always dealt (spot-check vs the raw draw).
     const plain = hero(['bounty'])
-    const a = skillOffer(plain, POOL, 42).map((k) => k.id)
-    const b = skillOffer({ ...plain }, POOL, 42).map((k) => k.id)
-    expect(a).toEqual(b)
-    expect(a.length).toBe(3)
+    expect(skillOffer(plain, POOL, 42).map((k) => k.id)).toEqual(skillOffer({ ...plain }, POOL, 42).map((k) => k.id))
+    expect(skillOffer(plain, POOL, 42)).toHaveLength(3)
   })
 
-  it('a fused hero frees a slot that the next milestone fills', () => {
-    const h = hero(['poison_tips', 'bounty'], 10, 1)
-    const at10 = takeSkill(h, 'venom_spit', POOL, seedOffering(h, 'venom_spit'))!
-    expect(at10.skills!.length).toBe(2)
-    const at15 = { ...at10, level: 15 }
-    const card = skillOffer(at15, POOL, 7).find((k) => !offerFusions(at15, [k]).size)!
-    const after = takeSkill(at15, card.id, POOL, 7)!
-    expect(after.skills).toEqual(['fz_plaguebearer', 'bounty', card.id])
+  it('afterDrop: an empty slot appends, a merge replaces in place', () => {
+    expect(afterDrop(['a'], { slot: 1, into: 'b' })).toEqual(['a', 'b'])
+    expect(afterDrop(['a', 'c'], { slot: 1, into: 'mx.c.b', base: 'c' })).toEqual(['a', 'mx.c.b'])
   })
 })
 
-describe('saves and validators', () => {
-  it('fused ids pass isSkillId and skillById; pools and unlocks take library cards only; junk is refused', () => {
-    for (const f of FUSED_SKILLS) {
-      expect(isSkillId(f.id)).toBe(true)
-      expect(isFusedId(f.id)).toBe(true)
-      expect(isCardId(f.id)).toBe(false)
-      expect(skillById(f.id)?.parts).toEqual(f.parts)
-    }
-    for (const junk of ['fz_', 'fz_nonsense', '', 3, null, undefined, {}]) {
-      expect(isSkillId(junk)).toBe(false)
-      expect(isFusedId(junk)).toBe(false)
-    }
-    // The meta save's unlocked cards never keep a fused id.
-    expect(migrateMeta({ skills: ['fz_thousand_cuts', 'bounty'] }, META_VERSION).skills).toEqual(['bounty'])
-  })
-
-  it('discoveries round-trip through the meta save: known fused ids, each once, in the order found', () => {
-    const saved = migrateMeta({ codex: { enemies: [], relics: [], felled: {}, clans: [], fusions: ['fz_sunder', 'nonsense', 'fz_sunder', 'bounty', 'fz_red_mist', 7] } }, META_VERSION)
-    expect(saved.codex.fusions).toEqual(['fz_sunder', 'fz_red_mist'])
-    const again = migrateMeta(JSON.parse(JSON.stringify(saved)), META_VERSION)
-    expect(again.codex.fusions).toEqual(['fz_sunder', 'fz_red_mist'])
-    // A save from before fusion: none found.
-    expect(migrateMeta({ codex: { enemies: ['torch1'], relics: [], felled: {} } }, META_VERSION).codex.fusions).toEqual([])
-    expect(migrateMeta({}, 15).codex.fusions).toEqual([])
+describe('the drop’s words (ui/shell/skillDrop.ts)', () => {
+  it('each slot says what the card makes there; a named merge is marked; the CTA names it', async () => {
+    const { slotTargets, dropCta, defaultTarget, isDrag } = await import('../src/ui/shell/skillDrop')
+    const t = slotTargets({ skills: ['frostbite', 'arc_spark'] }, 'keen_eye')
+    expect(t.map((x) => x.kind)).toEqual(['named', 'merge', 'empty'])
+    expect(t[0].makes).toBe('Rimecut')
+    expect(t[1].makes).toBe('Keen Arc Spark')
+    expect(t[2].makes).toBe('Keen Eye')
+    expect(t[0].aria).toContain('makes Rimecut, a named merge')
+    expect(defaultTarget(t)).toBe(2)
+    expect(dropCta('keen_eye', t[2], false)).toEqual({ label: 'Learn Keen Eye', ready: true })
+    expect(dropCta('keen_eye', t[0], false)).toEqual({ label: 'Make Rimecut', ready: true })
+    expect(dropCta('keen_eye', t[1], false)).toEqual({ label: 'Merge into Keen Arc Spark', ready: true })
+    // A full hero: no default — a merge is always the player's pick.
+    const full = slotTargets({ skills: ['frostbite', 'arc_spark', 'fz_skyfall'] }, 'keen_eye')
+    expect(full[2].kind).toBe('full')
+    expect(defaultTarget(full)).toBeNull()
+    expect(dropCta('keen_eye', null, true)).toEqual({ label: 'Choose a skill to merge into', ready: false })
+    expect(isDrag(3)).toBe(false)
+    expect(isDrag(20)).toBe(true)
   })
 })
 
@@ -275,7 +413,7 @@ function fight(team: { sentinel: Sentinel; slotId: string }[], wave: WaveDef, se
   for (let i = 0; i < 60 * 240 && engine.status === 'running'; i++) engine.step(TICK)
   return engine
 }
-const withMods = (s: Sentinel, mods: EffectMods): Sentinel => ({ ...s, mutations: [{ id: 'm', key: 'test', name: 'test', desc: '', rarity: 'mythic', downside: '', mods }] })
+const asMut = (mods: EffectMods, i: number): Mutation => ({ id: `m${i}`, key: 'test', name: 'test', desc: '', rarity: 'mythic', downside: '', mods })
 const grown = (look: 'fighter' | 'rogue' | 'mystic', skills: string[] = [], level = 12): Sentinel => ({ ...applyXp(classicHero(look), xpToReach(level)), skills })
 const long = () => generateEncounter(9, 'normal', { subWaves: false })
 const short = () => generateEncounter(3, 'normal', { subWaves: false })
@@ -283,23 +421,22 @@ const dealt = (e: GameEngine) => e.sentinels[0].damageDealt
 const procs = (e: GameEngine) => e.behaviourStats.fusionProcs
 const solo = (s: Sentinel) => [{ sentinel: s, slotId: P.s3 }]
 
-/** The fused hero against the same hero holding both parts: same everything else. */
+/** The named merge against the PLAIN merge of the same order (its base, its share, the rule): the twist is the difference. */
 function versus(look: 'fighter' | 'rogue' | 'mystic', fusionId: string, wave: WaveDef, hpMult = 1) {
-  const f = skillById(fusionId)!
-  const parts = fight(solo(grown(look, [...f.parts!])), wave, 3, hpMult)
+  const [base, card] = mergedById(fusionId)!.parts
+  const plain = fight(solo({ ...grown(look, [base]), mutations: plainExtra(base, card).map(asMut) }), wave, 3, hpMult)
   const fused = fight(solo(grown(look, [fusionId])), wave, 3, hpMult)
-  return { parts, fused }
+  return { parts: plain, fused }
 }
 
 describe('the twists (engine)', () => {
-  it('a hero holding both parts fights exactly as a hero whose twist is switched off', () => {
-    // The parts' mods are the fusion's minus its twist, so a fusion with no
-    // twist is the pair, shot for shot.
-    for (const f of FUSED_SKILLS) {
-      const pair = grown('rogue', [...f.parts])
-      const bare = fight(solo(pair), short())
-      const again = fight(solo(withMods(grown('rogue', [...f.parts]), {})), short())
-      expect(dealt(again)).toBe(dealt(bare))
+  it('a merge with no rule fights exactly as its base wearing the share', () => {
+    for (const [a, b] of [['hard_hitter', 'bounty'], ['keen_eye', 'snare'], ['frostbite', 'bounty']] as const) {
+      const id = mergeId(a, b)!
+      expect(mergedById(id)!.mods).toEqual({})
+      const merged = fight(solo(grown('rogue', [id])), short())
+      const worn = fight(solo({ ...grown('rogue', [a]), mutations: [asMut(INFUSIONS[b].mods, 0)] }), short())
+      expect(dealt(merged)).toBe(dealt(worn))
     }
   })
 
@@ -315,7 +452,7 @@ describe('the twists (engine)', () => {
     expect(dealt(fused)).toBeGreaterThan(dealt(parts))
   })
 
-  it('first strike (Bushwhack): the first hit on each enemy deals double', () => {
+  it('first strike (Bushwhack): the first hit on each enemy deals more', () => {
     const { parts, fused } = versus('rogue', 'fz_bushwhack', long())
     expect(dealt(fused)).toBeGreaterThan(dealt(parts))
   })
@@ -326,15 +463,14 @@ describe('the twists (engine)', () => {
     expect(procs(fused)).toBeGreaterThan(0)
   })
 
-  it('arc carry (Plague Spark): its jumps poison what they hit', () => {
+  it('arc carry and a jump every 2nd attack (Plague Spark)', () => {
     const { parts, fused } = versus('mystic', 'fz_plague_spark', long())
     expect(dealt(fused)).toBeGreaterThan(dealt(parts))
   })
 
-  it('freeze (Rimecut): crits stop slowed enemies, with no extra draw', () => {
+  it('freeze (Rimecut): more crits freeze slowed enemies than the plain merge’s, with no extra draw', () => {
     const { parts, fused } = versus('rogue', 'fz_rimecut', long())
-    expect(procs(parts)).toBe(0)
-    expect(procs(fused)).toBeGreaterThan(0)
+    expect(procs(fused)).toBeGreaterThan(procs(parts))
   })
 
   it('held burst (Crushing Grip): a held enemy that dies bursts on those near it', () => {
@@ -355,10 +491,9 @@ describe('the twists (engine)', () => {
     expect(procs(fused)).toBeGreaterThan(0)
   })
 
-  it('fan (Hail of Arrows): every 3rd attack also shoots two more', () => {
+  it('fan (Hail of Arrows): every 4th attack also shoots two more', () => {
     const { parts, fused } = versus('rogue', 'fz_hail_of_arrows', long())
     expect(dealt(fused)).toBeGreaterThan(dealt(parts))
-    // The same attacks: the fan's shots are extra arrows, not extra attacks.
     expect(fused.sentinels[0].shots).toBeGreaterThan(0)
   })
 
@@ -386,11 +521,10 @@ describe('the twists (engine)', () => {
       seed: 3,
     })
     near.step(TICK)
-    expect(near.sentinels[0].critBuff).toBeCloseTo(0.1, 9)
+    expect(near.sentinels[0].critBuff).toBeCloseTo(0.15, 9)
     const far = near.sentinels[1]
     const d = Math.hypot(far.pos.x - near.sentinels[0].pos.x, far.pos.y - near.sentinels[0].pos.y)
-    expect(far.critBuff).toBeCloseTo(d <= 130 ? 0.1 : 0, 9)
-    // A team with no aura has none.
+    expect(far.critBuff).toBeCloseTo(d <= 130 ? 0.15 : 0, 9)
     const plain = new GameEngine({ map: FIRST_MAP, wave: short(), placedSentinels: solo(grown('rogue', ['hold_fast', 'banner_bearer'])), baseHp: 50, maxBaseHp: 50, seed: 3 })
     plain.step(TICK)
     expect(plain.sentinels[0].critBuff).toBe(0)
@@ -398,7 +532,7 @@ describe('the twists (engine)', () => {
 
   it('quake (Anvilfall): every 4th attack shakes those around its target', () => {
     const { parts, fused } = versus('fighter', 'fz_anvilfall', long(), 2)
-    expect(procs(parts)).toBe(0)
+    // (Its plain merge's crits bounce — rule 14 — so it has procs of its own; the quake out-damages them.)
     expect(procs(fused)).toBeGreaterThan(0)
     expect(dealt(fused)).toBeGreaterThan(dealt(parts))
   })
@@ -407,30 +541,44 @@ describe('the twists (engine)', () => {
     const { parts, fused } = versus('rogue', 'fz_red_mist', short())
     expect(fused.sentinels[0].shots).toBeGreaterThan(parts.sentinels[0].shots)
   })
+
+  it('a greater named merge out-fights the plain merge of its order', () => {
+    for (const [id, look] of [['fz_skyfall', 'rogue'], ['fz_black_death', 'fighter'], ['fz_forgefire', 'fighter']] as const) {
+      const { parts, fused } = versus(look, id, long())
+      expect(dealt(fused), id).toBeGreaterThan(dealt(parts))
+    }
+  })
 })
 
 describe('discovery and the beat (UI models)', () => {
-  it('the Codex lists every recipe: its parts and a "?" until made, then its name and twist', async () => {
-    const { codexModel, FUSION_FOUND, FUSION_HOW } = await import('../src/ui/shell/codex/codexModel')
+  it('the Codex lists every named merge as a build tree: its order and a "?" until made, then its name and twist', async () => {
+    const { codexModel, fusionFound, fusionHow, MERGE_RULE } = await import('../src/ui/shell/codex/codexModel')
     const codex = { enemies: [], relics: [], felled: {}, fusions: ['fz_sunder'] }
     const skills = codexModel({ achievements: {}, codex, skills: [], staged: false })[1]
-    const sec = skills.sections.find((s) => s.title === 'Fusions')!
+    const sec = skills.sections.find((s) => s.title === 'Merges')!
     expect(sec.entries).toHaveLength(FUSIONS.length)
     expect(sec.have).toBe(1)
+    expect(sec.tree!.rule).toBe(MERGE_RULE)
+    expect(sec.tree!.made).toBe('Made 1 of 20 named merges.')
+    expect(sec.tree!.rows).toHaveLength(15)
+    expect(sec.tree!.rows.filter((r) => r.greater)).toHaveLength(5)
+    expect(sec.tree!.rows.find((r) => r.entry.id === 'fusion:fz_hail_of_arrows')!.greater!.id).toBe('fusion:fz_skyfall')
     const sunder = sec.entries.find((e) => e.id === 'fusion:fz_sunder')!
     expect(sunder.locked).toBe(false)
     expect(sunder.name).toBe('Sunder')
     expect(sunder.fusion?.twist).toBe(skillById('fz_sunder')!.twist)
+    expect(sunder.how).toBe(fusionFound('Hard Hitter', 'Cleave'))
     const cuts = sec.entries.find((e) => e.id === 'fusion:fz_thousand_cuts')!
     expect(cuts.locked).toBe(true)
     expect(cuts.name).toBe('???')
     expect(cuts.does).toBe('')
     expect(cuts.fusion?.twist).toBeUndefined()
-    expect(cuts.fusion?.parts.map((p) => p.name)).toEqual(['Long Reach', 'Keen Eye'])
-    expect(cuts.how).toBe(FUSION_HOW)
-    expect(sunder.how).toBe(FUSION_FOUND)
+    expect(cuts.fusion?.parts.map((p) => p.name)).toEqual(['Keen Eye', 'Long Reach'])
+    expect(cuts.how).toBe(fusionHow('Keen Eye', 'Long Reach'))
+    // A greater over an unmade tier 1 hides that one's name too.
+    expect(sec.entries.find((e) => e.id === 'fusion:fz_skyfall')!.fusion!.parts[0].name).toBe('???')
     // Never a spoiler: no locked card names its result.
-    for (const e of sec.entries.filter((x) => x.locked)) for (const f of FUSIONS) expect(e.how.includes(f.name)).toBe(false)
+    for (const e of sec.entries.filter((x) => x.locked)) for (const f of FUSIONS) expect(e.how.includes(f.name), e.how).toBe(false)
   })
 
   it('the fuse beat: about a second on Full, lighter on Light, and still under reduced motion', async () => {

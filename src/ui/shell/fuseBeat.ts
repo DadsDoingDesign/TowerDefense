@@ -4,10 +4,10 @@ import { ELEMENT_TOKEN, type FusionElement } from '../../game/data/fusions'
 import type { FxLevel } from '../../game/render/fxQuality'
 
 /**
- * The fuse beat (skill fusion, Oct 2026, `docs/SKILL_FUSION.md` § 5): the
- * moment two of a hero's skills become one. The two part cards slide in and
- * slam together, a flash in the fusion's element colour, and the fused card
- * settles — drawn by `FuseBeat.tsx` in the Context panel, with
+ * The fuse beat (merging, Oct 2026, `docs/SKILL_FUSION.md` § 5): the
+ * moment a card is poured into a held skill. The base and the card slide in
+ * and slam together, a flash in the merge's element colour, and the merged
+ * card settles — drawn by `FuseBeat.tsx` in the Context panel, with
  * `audio.sfxFusion` landing on the slam.
  *
  * Pure timings here (`tests/fuseBeat.test.ts`); view state beside them, like
@@ -40,7 +40,7 @@ export function fuseBeatPlan(level: FxLevel): FuseBeatPlan {
   return { slideMs: 260, flashMs: 140, settleMs: 360, totalMs: 920, moves: true }
 }
 
-/** What the beat shows: the hero, the fusion, and its two parts. */
+/** What the beat shows: the hero, the merge, and [the base it was dropped on, the card]. */
 export interface FuseBeatShow {
   heroId: string
   fusionId: string
@@ -51,7 +51,7 @@ export interface FuseBeatShow {
 
 export const useFuseBeat = create<{ show: FuseBeatShow | null }>(() => ({ show: null }))
 
-/** Start the beat (the Level-up panel calls this as it commits a fusion). */
+/** Start the beat (the Level-up panel calls this as it commits a merge). */
 export function playFuseBeat(heroId: string, fusionId: string, parts: readonly [string, string]): void {
   useFuseBeat.setState({ show: { heroId, fusionId, parts, at: Date.now() } })
 }

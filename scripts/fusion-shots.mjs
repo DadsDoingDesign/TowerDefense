@@ -1,8 +1,10 @@
 /**
- * fusion-shots — skill fusion (Oct 2026, `docs/SKILL_FUSION.md`) captured from
- * the RUNNING app: a milestone offer with a card that fuses, the fuse choice
- * for a pair already held, the fuse beat mid-flight, the hero card with a
- * fusion in its slot, and the Codex's Fusions (found and not).
+ * fusion-shots — ordered merges (Oct 2026, `docs/SKILL_FUSION.md`) captured
+ * from the RUNNING app: a milestone offer whose card makes a named merge on a
+ * held skill ("→ Rimecut ★"), a card mid-drag over a full hero's slot with
+ * the slot's "→ result" preview, the drop chosen and read, the fuse beat in
+ * flight, the hero card with a merge in its slot, a greater named merge, and
+ * the Codex's Merges build tree (found and not).
  *
  *   npx vite --port 5287 --strictPort &
  *   node scripts/fusion-shots.mjs <outDir> [views] [fx]
@@ -11,9 +13,11 @@
  * fx: full (default), light or off — the effects level the beat is shot at.
  * Each state is reached through the real store and controls (the dev handles
  * in `src/main.tsx`): a hero is raised to its milestone and handed the skills
- * that make the choice, as `run-shots.mjs` raises one to owe a skill.
+ * — and the run a pool — that make the choice, as `run-shots.mjs` raises one
+ * to owe a skill. The drag is a real pointer drag (down, move, hold).
  *
- * Env: SHOTS_BASE (default http://127.0.0.1:5287/), PW_CHROMIUM.
+ * Env: SHOTS_BASE (default http://127.0.0.1:5287/), PW_CHROMIUM, FRAMES=1
+ * (the beat's panel every 40 ms, for the webp).
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -59,7 +63,7 @@ async function open(view) {
   await page.reload()
   await page.waitForFunction(() => !!window.__game, null, { timeout: 30000 })
   await page.waitForTimeout(900)
-  await page.evaluate(() => window.__game.getState().focusRoad('silk'))
+  await page.evaluate(() => window.__game.getState().focusRoad('scrolls'))
   await page.waitForTimeout(300)
   const shot = async (name, wait = 450) => {
     await page.waitForTimeout(wait)
@@ -74,7 +78,7 @@ const cta = async (p, wait = 1500) => {
   await p.page.waitForTimeout(wait)
 }
 
-/** Raise the first hero to `level`, holding `skills`, its milestones before it settled; open its Upgrade. */
+/** Raise the first hero to `level`, holding `skills`, its milestones before it settled; give the run `pool`; open its Upgrade. */
 async function owe(p, level, skills, picks, pool) {
   await p.st(
     ({ level, skills, picks, pool }) => {
@@ -98,72 +102,99 @@ async function owe(p, level, skills, picks, pool) {
   await p.page.waitForTimeout(600)
 }
 
+/** Seek every running animation to `ms` (a screenshot is slower than a frame: frames are set, not waited for). */
+const seek = (p, ms) => p.st((ms) => document.getAnimations().forEach((a) => (a.pause(), (a.currentTime = ms))), ms)
+/**
+ * Hold the beat on screen (push its clock out) while it is shot. On a slow
+ * machine the beat can end before this lands: then it is shown again, as the
+ * commit showed it (`fallback`: the merge and its [base, card]).
+ */
+const holdBeat = (p, fallback) =>
+  p.st(async (fallback) => {
+    const b = await import('/src/ui/shell/fuseBeat.ts')
+    const s = b.useFuseBeat.getState().show ?? (fallback && { heroId: window.__game.getState().roster[0].id, fusionId: fallback[0], parts: fallback[1] })
+    if (s) b.useFuseBeat.setState({ show: { ...s, at: Date.now() + 1e6 } })
+  }, fallback)
+const endBeat = async (p) => {
+  await p.st(async () => (await import('/src/ui/shell/fuseBeat.ts')).endFuseBeat())
+  await p.page.waitForTimeout(600)
+}
+
 for (const view of VIEW_ARG ?? Object.keys(VIEWS)) {
   const p = await open(view)
   await cta(p) // home → terms
   await cta(p) // sign → pick
   await cta(p, 2500) // march → the opening fight
 
-  // Level 5: fusion is not open yet; a card that pairs with the Keen Eye it holds says so.
-  const pool = ['quick_hands', 'keen_eye', 'long_reach', 'frostbite', 'bounty', 'heavy_blows', 'long_shot', 'finisher', 'cold_snap', 'berserk', 'weaponmaster', 'volley', 'venom_spit', 'shield_wall', 'blessing']
-  await owe(p, 5, ['keen_eye'], 0, pool)
-  const pairs = p.page.locator('.pk-tok:has(.fz-tag)').first()
-  if (await pairs.count()) await pairs.click()
-  await p.shot('01-offer-pairs')
+  // 1. Level 5, holding Frostbite: Keen Eye is on the offer and makes Rimecut
+  //    dropped on it (★); onto the empty slot it stays as it is.
+  await owe(p, 5, ['frostbite'], 0, ['keen_eye', 'long_reach', 'quick_hands', 'heavy_blows', 'berserk'])
+  await p.page.locator('.pk-tok[data-pick="skill:keen_eye"]').first().click().catch((e) => p.log.push('tok ' + e.message.slice(0, 60)))
+  await p.shot('01-offer-builds')
 
-  // (a) A level-10 offer where a card fuses with the Poisoned Tips it holds.
-  await owe(p, 10, ['poison_tips', 'bounty'], 1, pool)
-  await p.shot('01-offer')
-  const fusing = p.page.locator('.pk-tok:has(.fz-tag)').first()
-  if (await fusing.count()) await fusing.click()
-  else p.log.push('no fusing card on this offer')
-  await p.shot('02-offer-fuses')
+  // 2. Level 15 and full: a card dragged over a held skill, the slot saying what it makes.
+  const full = ['arc_spark', 'hard_hitter', 'bounty']
+  await owe(p, 15, full, 2, ['frostbite', 'cleave', 'keen_eye', 'berserk', 'weaponmaster', 'volley', 'reaper'])
+  const tok = p.page.locator('.pk-tok[data-pick^="skill:"]').first()
+  const slot = p.page.locator('.sk-slot[data-slot="0"]').first()
+  const a = await tok.boundingBox()
+  const b = await slot.boundingBox()
+  if (a && b) {
+    await p.page.mouse.move(a.x + a.width / 2, a.y + a.height / 2)
+    await p.page.mouse.down()
+    for (let i = 1; i <= 8; i++) await p.page.mouse.move(a.x + a.width / 2 + ((b.x + b.width / 2 - a.x - a.width / 2) * i) / 8, a.y + a.height / 2 + ((b.y + b.height / 2 - a.y - a.height / 2) * i) / 8)
+    await p.shot('02-drag-over-full', 300)
+    await p.page.mouse.up()
+  } else p.log.push('no token / slot box')
+  // 3. Released over the slot: the card reads the merge; the CTA names it.
+  await p.shot('03-drop-chosen')
 
-  // The beat: commit, hold it (its clock pushed out), and seek its animations
-  // to frames in flight — a screenshot takes longer than a frame, so the
-  // frames are set, not waited for. Then let it end.
+  // 4. A named merge committed: the beat in flight.
+  await owe(p, 5, ['frostbite'], 0, ['keen_eye', 'long_reach', 'quick_hands', 'heavy_blows', 'berserk'])
+  await p.page.locator('.pk-tok[data-pick="skill:keen_eye"]').first().click().catch(() => {})
+  await p.page.locator('.sk-slot[data-slot="0"]').first().click().catch((e) => p.log.push('slot ' + e.message.slice(0, 60)))
+  await p.shot('04-named-chosen', 300)
   await p.page.locator('.sh-commit-2').first().click({ timeout: 3000 }).catch((e) => p.log.push('commit ' + e.message.slice(0, 60)))
-  await p.st(async () => {
-    const b = await import('/src/ui/shell/fuseBeat.ts')
-    const s = b.useFuseBeat.getState().show
-    if (s) b.useFuseBeat.setState({ show: { ...s, at: Date.now() + 1e6 } })
-  })
+  await holdBeat(p, ['fz_rimecut', ['frostbite', 'keen_eye']])
   for (const [tag, ms] of [['a', 120], ['b', 290], ['c', 380], ['d', 900]]) {
-    await p.st((ms) => document.getAnimations().forEach((a) => (a.pause(), (a.currentTime = ms))), ms)
+    await seek(p, ms)
     await p.page.waitForTimeout(80)
-    await p.page.screenshot({ path: path.join(OUT, `03-beat-${tag}-${view}.png`) })
+    await p.page.screenshot({ path: path.join(OUT, `05-beat-${tag}-${view}.png`) })
   }
-  // FRAMES=1: the beat's panel every 40 ms, for the webp (`ffmpeg … -c:v libwebp_anim`).
   if (process.env.FRAMES) {
     fs.mkdirSync(path.join(OUT, `frames-${view}`), { recursive: true })
     const panel = p.page.locator('.fz-beat').first()
     for (let i = 0, ms = 0; ms <= 1000; i++, ms += 40) {
-      await p.st((ms) => document.getAnimations().forEach((a) => (a.pause(), (a.currentTime = ms))), ms)
+      await seek(p, ms)
       await p.page.waitForTimeout(30)
       await panel.screenshot({ path: path.join(OUT, `frames-${view}`, `f${String(i).padStart(3, '0')}.png`) }).catch(() => {})
     }
   }
-  await p.st(async () => (await import('/src/ui/shell/fuseBeat.ts')).endFuseBeat())
-  await p.page.waitForTimeout(600)
-  // The hero card, its fusion in the first slot: read it.
+  await endBeat(p)
+  // 5. The hero card, the merge in its first slot: read it.
   await p.page.locator('.sh-sk.fused').first().click({ timeout: 3000 }).catch((e) => p.log.push('slot ' + e.message.slice(0, 60)))
-  await p.shot('04-hero-card')
+  await p.shot('06-hero-card')
 
-  // (b) A level-10 hero already holding a pair that fuses (they paired at level 5).
-  await owe(p, 10, ['keen_eye', 'frostbite'], 1, null)
-  const pair = p.page.locator('.pk-tok[aria-label^="Fuse "]').first()
-  if (await pair.count()) await pair.click()
-  else p.log.push('no held pair token')
-  await p.shot('05-held-pair')
+  // 6. A greater named merge: Volley dropped on Hail of Arrows makes Skyfall.
+  await owe(p, 15, ['fz_hail_of_arrows', 'hard_hitter'], 2, ['volley', 'berserk', 'weaponmaster'])
+  await p.page.locator('.pk-tok[data-pick="skill:volley"]').first().click().catch(() => {})
+  await p.page.locator('.sk-slot[data-slot="0"]').first().click().catch((e) => p.log.push('greater ' + e.message.slice(0, 60)))
+  await p.shot('07-greater')
+  await p.page.locator('.sh-commit-2').first().click({ timeout: 3000 }).catch(() => {})
+  await holdBeat(p, ['fz_skyfall', ['fz_hail_of_arrows', 'volley']])
+  await seek(p, 900)
+  await p.page.waitForTimeout(80)
+  await p.page.screenshot({ path: path.join(OUT, `08-greater-beat-${view}.png`) })
+  await endBeat(p)
 
   console.log(view, p.log.join(' · '))
   await p.ctx.close()
 
-  // The Codex, in a fresh save with no run on the books: three found, the rest "?".
+  // The Codex, in a fresh save with no run on the books: four found, the rest "?".
   const c = await open(view)
   await c.st(() => {
     const m = window.__meta.getState()
-    window.__meta.setState({ codex: { ...m.codex, fusions: ['fz_thousand_cuts', 'fz_plaguebearer', 'fz_cinderburst'] } })
+    window.__meta.setState({ codex: { ...m.codex, fusions: ['fz_rimecut', 'fz_hail_of_arrows', 'fz_skyfall', 'fz_cinderburst'] } })
   })
   await c.page.waitForTimeout(500)
   await codexShots(c)
@@ -176,13 +207,15 @@ async function codexShots(p) {
   await p.page.waitForTimeout(900)
   await p.page.getByRole('tab', { name: /^Skills/ }).first().click({ timeout: 3000 }).catch((e) => p.log.push('tab ' + e.message.slice(0, 60)))
   await p.page.waitForTimeout(600)
-  await p.page.locator('.cx-sec[aria-label^="Fusions"]').first().scrollIntoViewIfNeeded().catch(() => {})
-  await p.shot('06-codex')
-  await p.page.locator('.cx-sec[aria-label^="Fusions"] .cx-tile').nth(1).click({ timeout: 3000 }).catch(() => {})
-  await p.shot('07-codex-locked')
+  const sec = '.cx-sec[aria-label^="Merges"]'
+  await p.page.locator(sec).first().scrollIntoViewIfNeeded().catch(() => {})
+  await p.page.evaluate((sec) => document.querySelector(sec)?.scrollIntoView({ block: 'start' }), sec)
+  await p.shot('09-codex-tree')
+  await p.page.locator(`${sec} .cx-tile`).nth(2).click({ timeout: 3000 }).catch(() => {})
+  await p.shot('10-codex-locked')
   await p.page.keyboard.press('Escape')
   await p.page.waitForTimeout(300)
-  await p.page.locator('.cx-sec[aria-label^="Fusions"] .cx-tile').nth(0).click({ timeout: 3000 }).catch(() => {})
-  await p.shot('08-codex-found')
+  await p.page.locator(`${sec} .cx-tile[aria-label^="Skyfall"]`).first().click({ timeout: 3000 }).catch(() => {})
+  await p.shot('11-codex-found')
 }
 await browser.close()

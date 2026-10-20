@@ -2,7 +2,8 @@ import { canUpgrade, HERO_SLOT_LABEL, RARITY, raiseAdds, raisedBase, upgradeCost
 import { computeCombat, type CombatProfile } from '../../game/engine/combat'
 import { MAX_LEVEL } from '../../game/engine/leveling'
 import { MAX_SKILLS, nextMilestone, pendingMilestone, SKILL_MILESTONES, type Milestone } from '../../game/run/skills'
-import { fusedById, skillById, skillHeadline, type FusedSkill, type Skill } from '../../game/data/skills'
+import { mergedById, skillById, skillHeadline, type MergedSkill, type Skill } from '../../game/data/skills'
+import { buildsInto } from '../../game/run/fusion'
 import type { HeroSlot, Item, Sentinel } from '../../game/types'
 import type { IconKey } from '../channels'
 import { gearDeltas, type GearDelta } from './gearPlan'
@@ -69,8 +70,10 @@ export type SkillSlot =
       skill: Skill
       icon: IconKey
       level: number
-      /** A fused skill (skill fusion): its record, with its parts' names. */
-      fused?: { skill: FusedSkill; parts: readonly [string, string] }
+      /** A merged skill: its record, with its slot's skills' names, base first. */
+      fused?: { skill: MergedSkill; parts: readonly string[] }
+      /** The named merges this held skill builds into as the base, each with the card it needs. */
+      builds?: readonly { name: string; needs: string }[]
     }
   | { kind: 'owed'; milestone: Milestone }
   /** An empty slot, and the hero level the next choice comes at (null: no choice left). */
@@ -79,7 +82,7 @@ export type SkillSlot =
 /**
  * Always three slots (`MAX_SKILLS`), the same boxes for every hero: the skills
  * it holds, then the choice it is owed (when a slot is free for it — with all
- * three held, the choice is a swap and the Upgrade button's badge says so),
+ * three held, the choice is a merge and the Upgrade button's badge says so),
  * then empty slots marked with the level the next choices come at. A hero that
  * took a stat boost at a milestone settled it without a skill, so the levels
  * come from the milestones left, not from the slot count.
@@ -87,9 +90,10 @@ export type SkillSlot =
 export function skillSlots(hero: Pick<Sentinel, 'level' | 'skills' | 'skillPicks'>): SkillSlot[] {
   const held = (hero.skills ?? []).map((id) => skillById(id)).filter((k): k is Skill => !!k)
   const slots: SkillSlot[] = held.slice(0, MAX_SKILLS).map((skill) => {
-    const f = fusedById(skill.id)
-    const fused = f ? { skill: f, parts: f.parts.map((id) => skillById(id)?.name ?? id) as unknown as readonly [string, string] } : undefined
-    return { kind: 'held', skill, icon: skillHeadline(skill).icon, level: skill.level, ...(fused ? { fused } : {}) }
+    const f = mergedById(skill.id)
+    const fused = f ? { skill: f, parts: f.chain.map((id) => skillById(id)?.name ?? id) } : undefined
+    const builds = buildsInto(skill.id).map((r) => ({ name: r.name, needs: skillById(r.parts[1])?.name ?? r.parts[1] }))
+    return { kind: 'held', skill, icon: skillHeadline(skill).icon, level: skill.level, ...(fused ? { fused } : {}), ...(builds.length ? { builds } : {}) }
   })
   const owed = pendingMilestone(hero)
   if (owed && slots.length < MAX_SKILLS) slots.push({ kind: 'owed', milestone: owed })

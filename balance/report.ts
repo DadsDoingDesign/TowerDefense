@@ -44,9 +44,9 @@ import { CHARTER_FEE, CHARTER_PAYOUT, MUSTER_PCT, TRADE_OFFS } from '../src/game
 import type { Archetype, EffectMods, Enchantment, Item, ItemRarity, Sentinel, WaveDef } from '../src/game/types'
 import { generateRunMap } from '../src/game/data/runmap'
 import { allMutations } from '../src/game/data/mutations'
-import { ALL_SKILLS, FUSED_SKILLS } from '../src/game/data/skills'
+import { ALL_SKILLS, skillById } from '../src/game/data/skills'
 import { BLIND_PT as FUSION_BLIND_PT, EQ_CAP as FUSION_EQ_CAP, fusionBench, fusionSummary, KIT_NAME as FUSION_KIT_NAME } from './fusion-eval'
-/** §7b: a fusion's twist may be worth at most this much damage over its parts on the median (solved past it). */
+/** §7b: a named merge's twist may be worth at most this much damage over its plain merge on the median (solved past it). */
 const FUSION_CEILING = 0.4
 import { recruitSkill, withFirstSkill } from '../src/game/run/skills'
 import {
@@ -1544,47 +1544,55 @@ if (want(7)) {
     if (p.gap > SKILL_GAP_CEILING) failures.push(`Skills at ${p.point} are solved: ${p.measured} leads the runner-up by ${pp(p.gap)} on the three-bench mean (ceiling ${pp(SKILL_GAP_CEILING)}).`)
   }
 
-  // ---- 7b. Fusions (skill fusion, Oct 2026, docs/SKILL_FUSION.md § 7) ------
-  line('### 7b. Fusions (is a twist worth its slot, and is any one solved?)')
+  // ---- 7b. Merges (ordered merges, Oct 2026, docs/SKILL_FUSION.md § 7) -----
+  line('### 7b. Merges (is a named twist worth its recipe, and does pouring a card in pay?)')
   line('')
-  line('Two skills a hero holds can fuse into one fused skill in one slot: both parts\' effects')
-  line('exactly, plus a **twist** only the fusion has (`data/fusions.ts`). So a fusion is graded')
-  line('against the same hero holding BOTH its parts — the only thing it adds is the twist. On')
-  line('§7\'s benches for its level and on each kit, the waves are scaled so the parts\' hero stops')
-  line('about half, and read over a band of pressures around that point; the fusion\'s stop rate')
-  line('there is turned into a **damage-equivalent** — how much harder the parts\' hero would have')
-  line('to hit to stop as much (+20%: the twist is worth hitting 20% harder). A bench on which')
-  line(`doubling the parts' damage moves the stop rate by less than ${pp(FUSION_BLIND_PT)} cannot price anything in`)
-  line('damage and is left out (—); a twist that out-holds the parts at ×3 damage reads +200%+.')
-  line('Each fusion\'s figure is the median over the cells that price it. `balance/fusion-eval.ts`')
-  line('prints the same table, faster.')
+  line('Any card dropped on a held skill merges in: the held skill is the **base** and keeps itself,')
+  line('the card lends a **share** (about 40% of it) and one re-expression **rule** (`data/infusions.ts`).')
+  line('A **named** merge is the special for one ordered pair: its own **twist** in place of the rule')
+  line('(`data/fusions.ts`). So a named merge is graded against the PLAIN merge of the same order —')
+  line('the same base and share, the rule instead of the twist: the twist is all it adds. A sample of')
+  line('plain merges, both orders of each pair, is graded against its base alone. On §7\'s benches for')
+  line('its level and on each kit, the waves are scaled so the reference hero stops about half, and read')
+  line('over a band of pressures around that point; the merge\'s stop rate there is turned into a')
+  line('**damage-equivalent** — how much harder the reference would have to hit to stop as much (+20%:')
+  line(`worth hitting 20% harder). A bench on which doubling the reference's damage moves the stop rate`)
+  line(`by less than ${pp(FUSION_BLIND_PT)} cannot price anything in damage and is left out (—); a merge that out-holds`)
+  line('it at ×3 damage reads +200%+. Each figure is the median over the cells that price it.')
+  line('`balance/fusion-eval.ts` prints the same table, faster.')
   line('')
   const fusionRows = fusionBench()
   const fusionSums = fusionSummary(fusionRows)
   const eqCell = (x: number | null) => (x == null ? '—' : x >= FUSION_EQ_CAP ? `+${(FUSION_EQ_CAP * 100).toFixed(0)}%+` : `${x >= 0 ? '+' : '−'}${Math.abs(x * 100).toFixed(0)}%`)
-  line('| Fusion | Kit | `swarm` | `armour` | `line` | stop added (mean) |')
+  const order = (p: readonly [string, string]) => p.map((id) => skillById(id)?.name ?? id).join(' ← ')
+  line('| Merge | Kit | `swarm` | `armour` | `line` | stop added (mean) |')
   line('|---|---|--:|--:|--:|--:|')
   for (const r of fusionRows) {
     line(`| ${r.name} | ${FUSION_KIT_NAME[r.kit]} | ${eqCell(r.eq.swarm)} | ${eqCell(r.eq.armour)} | ${eqCell(r.eq.line)} | ${pp(mean([r.stop.swarm, r.stop.armour, r.stop.line]))} |`)
   }
   line('')
-  line('| Fusion | Parts | Median | Best kit | Cells priced |')
-  line('|---|---|--:|---|--:|')
+  line('| Merge | Kind | Order (base ← card) | Against | Median | Best kit | Cells priced |')
+  line('|---|---|---|---|--:|---|--:|')
   for (const s of fusionSums) {
-    const f = FUSED_SKILLS.find((x) => x.id === s.id)!
-    const partNames = f.parts.map((id) => ALL_SKILLS.find((k) => k.id === id)!.name).join(' + ')
-    line(`| ${s.name} | ${partNames} | **${eqCell(s.median)}** | ${eqCell(s.best)} (${FUSION_KIT_NAME[s.bestKit]}) | ${s.cells}/9 |`)
+    line(`| ${s.name} | ${s.kind} | ${order(s.parts)} | ${s.kind === 'named' ? 'its plain merge' : 'its base'} | **${eqCell(s.median)}** | ${eqCell(s.best)} (${FUSION_KIT_NAME[s.bestKit]}) | ${s.cells}/9 |`)
   }
   line('')
-  const inBand = fusionSums.filter((s) => s.median >= 0.1 && s.median <= 0.25).length
-  line("**Invariants.** No fusion is worth less than its parts (median ≥ +0% of damage), and none is")
-  line(`solved (median ≤ +${(FUSION_CEILING * 100).toFixed(0)}%). The target is +10–25% — the freed slot is the main reward —`)
-  line(`and **${inBand} of ${fusionSums.length}** sit in it (reported, not gated: a twist that reads one kit only, a crit`)
-  line('or a hold, sits lower on the median and higher on its kit).')
+  const named = fusionSums.filter((s) => s.kind === 'named')
+  const plain = fusionSums.filter((s) => s.kind === 'plain')
+  const inBand = named.filter((s) => s.median >= 0.1 && s.median <= 0.25).length
+  line('**Invariants.** No named merge is worth less than its plain merge (median ≥ +0% of damage),')
+  line(`and none is solved (median ≤ +${(FUSION_CEILING * 100).toFixed(0)}%); no plain merge is worth less than its base. The`)
+  line(`named target is +10–25% — "a bit above" — and **${inBand} of ${named.length}** sit in it (reported, not gated: a`)
+  line('twist that reads one kit only, a crit or a hold, sits lower on the median and higher on its kit).')
+  line(`The plain sample (${plain.length}, both orders of each pair) reads what a card poured in is worth, and that`)
+  line('the order changes it.')
   line('')
-  for (const s of fusionSums) {
-    if (!(s.median >= 0)) failures.push(`Fusion "${s.name}" is worth less than its parts: median ${eqCell(s.median)} of damage.`)
-    if (s.median > FUSION_CEILING) failures.push(`Fusion "${s.name}" is solved: median ${eqCell(s.median)} of damage over its parts (ceiling +${(FUSION_CEILING * 100).toFixed(0)}%).`)
+  for (const s of named) {
+    if (!(s.median >= 0)) failures.push(`Named merge "${s.name}" is worth less than its plain merge: median ${eqCell(s.median)} of damage.`)
+    if (s.median > FUSION_CEILING) failures.push(`Named merge "${s.name}" is solved: median ${eqCell(s.median)} of damage over its plain merge (ceiling +${(FUSION_CEILING * 100).toFixed(0)}%).`)
+  }
+  for (const s of plain) {
+    if (!(s.median >= 0)) failures.push(`Merge "${s.name}" (${order(s.parts)}) is worth less than its base: median ${eqCell(s.median)} of damage.`)
   }
 }
 

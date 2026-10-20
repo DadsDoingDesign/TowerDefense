@@ -1,106 +1,108 @@
 /**
- * Skill fusion as the run applies it (Oct 2026, `docs/SKILL_FUSION.md`). Pure:
- * a hero and the offer it is shown in, what can fuse — or the hero after
- * fusing — out. The data is `data/fusions.ts` (the recipes and their twists);
- * `run/skills.takeSkill` fuses a card that fuses, the store's `chooseFusion`
- * fuses a held pair, and the balance harness calls both.
+ * Merging as the run applies it (Oct 2026, `docs/SKILL_FUSION.md`). Pure: a
+ * hero's skills and the card it is dropping in, what the drop makes out. The
+ * data is `data/infusions.ts` (every skill's infusion half and the
+ * re-expression rules), `data/fusions.ts` (the named merges) and the resolver
+ * in `data/skills.ts` (`mergeId`, `mergedById`); `run/skills.dropSkill` is the
+ * one move the store, the panel and the balance harness make.
  *
- * ---- what fuses, and when --------------------------------------------------
+ * ---- the drop ---------------------------------------------------------------
  *
- * Only at an owed milestone, only by the player's choice, and two ways:
+ * The designer: "If into an empty slot then it's kept as is, but if all slots
+ * are full you are forced to merge in." And: "the merging should be possible
+ * with any combination in any order, but order does matter and affects what's
+ * made."
  *
- *  (a) a CARD that fuses — the hero holds A, and B is on the offer: taking B
- *      fuses it into A's slot, so B takes none (a full hero needs no swap);
- *  (b) a PAIR it holds — the hero holds both A and B (a hire trained past a
- *      milestone, the Opening deal's Level 2 skill, a save from before
- *      fusion): the milestone also offers "Fuse A + B".
+ *  - Onto an EMPTY slot, the card is learned as itself.
+ *  - Onto a HELD skill (always allowed; the only way once all three are
+ *    full), the card merges in: the held skill is the BASE and keeps itself,
+ *    the card is the INFUSION. Its share and one re-expression rule are
+ *    added — or, for the one ordered pair a named merge is, that merge's own
+ *    twist. A skill never leaves: there is no swap.
+ *  - A slot holds at most `MAX_DEPTH` (3) library skills, and no skill twice.
  *
- * A fused skill never fuses again: only PLAIN skills (library cards) are ever
- * a recipe's part. No RNG: the offer is dealt exactly as it always was
- * (`skills.skillOffer`), and everything here only reads it.
+ * A named merge forms only in its order, and only by a drop: two parts held in
+ * separate slots stay as they are (each at full strength — the designer's
+ * empty-slot rule), and a hire or the Opening deal never merges anything.
+ * Only cards are ever dropped, so a merged skill is only ever a base; were a
+ * merged skill ever poured in, it would lend its root's infusion (`infusionOf`).
+ *
+ * No RNG: the offer is dealt exactly as it always was (`skills.skillOffer`).
  */
 import { FUSIONS, type FusionDef } from '../data/fusions'
-import { fusedById, isCardId, isFusedId, type FusedSkill, type Skill } from '../data/skills'
+import { INFUSIONS, type Infusion } from '../data/infusions'
+import { chainOf, isCardId, isMergedId, isNamedId, mergedById, mergeId, namedById, type MergedSkill } from '../data/skills'
 import type { Sentinel } from '../types'
 
-const key = (a: string, b: string): string => (a < b ? `${a}+${b}` : `${b}+${a}`)
-const BY_PAIR = new Map(FUSIONS.map((f) => [key(f.parts[0], f.parts[1]), f]))
+/** A hero equips at most this many skills (also `skills.MAX_SKILLS`, which reads this). */
+export const SLOTS = 3
 
-/** The fusion two library skills make (in either order), or undefined. A fused skill is never a part. */
-export function recipeFor(a: string, b: string): FusedSkill | undefined {
-  if (a === b || !isCardId(a) || !isCardId(b)) return undefined
-  const f = BY_PAIR.get(key(a, b))
-  return f ? fusedById(f.id) : undefined
-}
-
-/** Every recipe a library skill is a part of, in recipe order. */
-export function recipesWith(skillId: string): FusionDef[] {
-  return FUSIONS.filter((f) => f.parts.includes(skillId))
-}
-
-/** The parts of every fused skill the hero holds: the offer never deals them again. */
-export function fusedParts(hero: Pick<Sentinel, 'skills'>): string[] {
-  return (hero.skills ?? []).flatMap((id) => fusedById(id)?.parts ?? [])
-}
-
-/** One way a card fuses: the held skill it fuses with, and what they make. */
-export interface CardFusion {
-  /** The held skill the card fuses with (its slot becomes the fusion). */
-  with: string
-  into: FusedSkill
+/** What one drop does. */
+export interface Drop {
+  /** The slot it lands in (an empty one: the first free). */
+  slot: number
+  /** The skill that slot holds after it: the card itself, or the merge. */
+  into: string
+  /** The held skill it merged into (absent: it went into an empty slot). */
+  base?: string
+  /** The named merge it made, if the order is one's. */
+  named?: FusionDef
 }
 
 /**
- * Path (a): what each offer card fuses with — for every card, the held plain
- * skills it makes a recipe with, in slot order (the first is the default
- * partner). A card with none is absent. The offer itself is not touched.
+ * What dropping `card` on slot `slot` of `skills` makes, or null when it
+ * cannot land there: not a library card, already held (in any slot), a slot
+ * index off the hero, or a slot at the depth cap. Reads the skills alone —
+ * whether the card is on the offer is `skills.dropSkill`'s check.
  */
-export function cardFusions(hero: Pick<Sentinel, 'skills'>, offer: readonly Pick<Skill, 'id'>[]): Map<string, CardFusion[]> {
-  const out = new Map<string, CardFusion[]>()
-  const held = (hero.skills ?? []).filter((id) => isCardId(id))
-  for (const card of offer) {
-    const ways = held.flatMap((h): CardFusion[] => {
-      const into = recipeFor(h, card.id)
-      return into ? [{ with: h, into }] : []
-    })
-    if (ways.length) out.set(card.id, ways)
-  }
-  return out
+export function dropOnto(skills: readonly string[], card: string, slot: number): Drop | null {
+  if (!isCardId(card) || !Number.isInteger(slot) || slot < 0 || slot >= SLOTS) return null
+  if (skills.some((id) => chainOf(id).includes(card))) return null
+  if (slot >= skills.length) return skills.length < SLOTS ? { slot: skills.length, into: card } : null
+  const base = skills[slot]
+  const into = mergeId(base, card)
+  if (!into) return null
+  return { slot, into, base, named: namedById(into) }
 }
 
-/** One pair the hero already holds that fuses (path b). */
-export interface HeldFusion {
-  /** The two held skills, in slot order: the first's slot becomes the fusion. */
-  a: string
-  b: string
-  into: FusedSkill
+/** The hero's skills after a drop. */
+export function afterDrop(skills: readonly string[], d: Drop): string[] {
+  return d.base == null ? [...skills, d.into] : skills.map((id, i) => (i === d.slot ? d.into : id))
 }
+
+/** What the card makes on each of the hero's three slots, in slot order (null: it cannot land there). */
+export function dropTargets(hero: Pick<Sentinel, 'skills'>, card: string): (Drop | null)[] {
+  const skills = hero.skills ?? []
+  return Array.from({ length: SLOTS }, (_, i) => dropOnto(skills, card, i))
+}
+
+/** Every library skill in the hero's slots, merged ones' too: the offer never deals one again. */
+export function heldCards(hero: Pick<Sentinel, 'skills'>): string[] {
+  return (hero.skills ?? []).flatMap((id) => [...chainOf(id)])
+}
+
+/** The named merges a held skill builds into as the BASE, each with the card it needs. */
+export const buildsInto = (id: string): FusionDef[] => FUSIONS.filter((f) => f.parts[0] === id)
+/** The named merges a card builds into as the INFUSION, each with the base it needs. */
+export const buildsWith = (card: string): FusionDef[] => FUSIONS.filter((f) => f.parts[1] === card)
+/** Every named merge a skill is a part of, either way, in recipe order. */
+export const recipesWith = (id: string): FusionDef[] => FUSIONS.filter((f) => f.parts.includes(id))
 
 /**
- * Path (b): every pair of plain skills the hero holds that is a recipe, in
- * slot order. Read whether or not a milestone is owed; the choice is offered
- * only at one (`run/skills.takeFusion`).
+ * What a skill lends when poured in. A library card lends its own infusion; a
+ * merged skill (never dropped in this build: only cards are) would lend its
+ * ROOT base's, so pouring a slot in is the same as pouring its base in.
  */
-export function heldFusions(hero: Pick<Sentinel, 'skills'>): HeldFusion[] {
-  const held = (hero.skills ?? []).filter((id) => isCardId(id))
-  const out: HeldFusion[] = []
-  for (let i = 0; i < held.length; i++) {
-    for (let j = i + 1; j < held.length; j++) {
-      const into = recipeFor(held[i], held[j])
-      if (into) out.push({ a: held[i], b: held[j], into })
-    }
-  }
-  return out
+export function infusionOf(id: string): Infusion | undefined {
+  if (isCardId(id)) return INFUSIONS[id]
+  const root = chainOf(id)[0]
+  return root ? INFUSIONS[root] : undefined
 }
 
-/**
- * The hero's skills after fusing `a` (held) with `b`: `a`'s slot becomes the
- * fusion and `b` leaves (if it was held) — so the slot count drops by one when
- * both were held, and stays when `b` was the card on the offer.
- */
-export function fuseSkills(skills: readonly string[], a: string, b: string, into: string): string[] {
-  return skills.flatMap((id) => (id === a ? [into] : id === b ? [] : [id]))
-}
+/** The merged skills a hero holds, in slot order. */
+export const mergedHeld = (hero: Pick<Sentinel, 'skills'>): string[] => (hero.skills ?? []).filter((id) => isMergedId(id))
+/** The named merges a hero holds, in slot order (the Codex records these). */
+export const namedHeld = (hero: Pick<Sentinel, 'skills'>): string[] => (hero.skills ?? []).filter((id) => isNamedId(id))
 
-/** The fused skills a hero holds, in slot order (the Codex reveals these). */
-export const fusedHeld = (hero: Pick<Sentinel, 'skills'>): string[] => (hero.skills ?? []).filter((id) => isFusedId(id))
+/** A held skill read as a merge, when it is one (the hero card, the beat). */
+export const asMerged = (id: string): MergedSkill | undefined => mergedById(id)
