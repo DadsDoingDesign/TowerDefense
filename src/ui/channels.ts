@@ -249,6 +249,22 @@ export const NODE_ICON: Record<string, IconKey> = {
 }
 
 /**
+ * A node's name as TEXT (the map preview's head). `NODE_META.color` is the
+ * node's mark colour — a border on the map — and the fight reds (`#c0503a`,
+ * `#d0563a`) are 2.5–3:1 on every panel, under the 4.5:1 text bar. The
+ * danger stops say their name in `--bad-text`, the start in `--teal-text`
+ * (both held to 4.5:1 on every theme's panels by `companyThemes.test.ts`);
+ * the rest keep their mark colour, which already clears it
+ * (`tests/nodeTitle.test.ts`).
+ */
+export const NODE_TEXT: Record<string, string> = {
+  start: 'var(--teal-text)',
+  elite: 'var(--bad-text)',
+  miniboss: 'var(--bad-text)',
+  boss: 'var(--bad-text)',
+}
+
+/**
  * The text an icon stands in for, where a render site has to SAY it.
  *
  * `Icon` is `aria-hidden` everywhere and the rule that makes that safe is that

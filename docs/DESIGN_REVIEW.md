@@ -5266,3 +5266,18 @@ Odile's bubble dropping into the yard (the higher of two equally near spots
 wins), a clay pot in front of Wren's body. Weak spots: Saffra's face sits
 under the counter's top in the receipt's cameo; the dock figures are small
 beside option (b)'s detail. Cards: `docs/characters/cards/liaisons/`.
+
+### The map preview's red titles (Oct 2026)
+
+The designer, on a Butcherblock run: "The red font on brown doesn't seem
+accessible." Measured: the preview head named a node in its MARK colour
+(`NODE_META.color`), and the fight reds are under the text bar on every
+theme, not only Butcherblock's: the act and final boss `#c0503a` at 2.5–2.7:1
+on the panels, the elite `#d0563a` at 2.9–3.0:1, the start's teal at 4.1:1.
+Fix: `channels.NODE_TEXT`, a node's name as text. The elite and both bosses
+use `--bad-text` (4.6–4.9:1), the start `--teal-text`, and every other node
+keeps its mark colour (already 4.5:1 or better). The map's node borders keep
+the mark colours. `tests/nodeTitle.test.ts` holds every node's name to
+4.5:1 on bg, bg-2 and the three panels, in every theme and under high
+contrast. Reverting the boss entry fails it at 3.7:1. Checked in the running
+app at 390 px (art, spice, neutral): the head reads `rgb(239, 131, 104)`.
