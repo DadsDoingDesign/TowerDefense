@@ -58,6 +58,19 @@ catch a broken Xcode project early. They never upload.
 - [ ] On an iPad (the app is iPhone-only, so iPads run it in iPhone mode):
       it opens and plays. App Review often tests on an iPad.
 
+**Seen while capturing the screenshots (440 px wide, worth fixing before release):**
+- Damage numbers pile into an unreadable smear where many hits land on one
+  spot (worst with frost + spark "SHATTER").
+- With Details open in setup, the field shrinks to a strip with wide dark
+  bars either side.
+- "Elite spoils" leaves the bottom half of a tall phone empty.
+- The run map's vertical "CLEARED / NOT CLEARED YET" labels and the bottom
+  city's name clip at the edge.
+- The party row truncates weapon names ("Greatswo…"); the HQ page leaves a
+  gap between Bank interest and its CTA.
+- A defeat receipt showed "0 kills · 38132 dmg" for one hero (maybe right for
+  Furnace Barrels, but it reads oddly).
+
 ## 4. The listing (App Store Connect → the app → App Store tab)
 
 | Field | Value |
