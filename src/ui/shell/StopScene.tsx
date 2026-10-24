@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { Icon } from '../Icon'
 import type { IconKey } from '../channels'
-import type { SceneKind } from './stopScene'
+import type { SceneKind } from './stopSceneModel'
 import { FIRE_CELL, SCENE_ANCHORS, SCENE_SIZE } from './stopScenes.generated'
 
 /**

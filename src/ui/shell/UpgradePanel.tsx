@@ -9,7 +9,7 @@ import { Icon } from '../Icon'
 import { LevelUpPanel } from './LevelUpPanel'
 import { Money } from './Money'
 import { PickCard, PickStrip, stepId, type PickFact, type PickTokenSpec } from './PickStrip'
-import { heroUpgrades, type HeroUpgrade } from './heroCard'
+import { heroUpgrades, type HeroUpgrade } from './heroCardModel'
 import { levelUpOpen, takeUp, useLevelUps, waveLive } from './levelUps'
 
 /**

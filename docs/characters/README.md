@@ -254,7 +254,7 @@ the same state the focus ring does.
 at 2× everywhere (a desk's 80 px slot has no room for 3×). The map window
 loses 16 px, and its height still depends on the viewport alone
 (`scripts/home-stability.mjs`). Which face stands in which slot is one table,
-`ui/shell/dockFace.ts` `DOCK_FACE`: Hask (Butcherblock, the `art` slot) and Wren (Greenvial,
+`ui/shell/dockFaceModel.ts` `DOCK_FACE`: Hask (Butcherblock, the `art` slot) and Wren (Greenvial,
 `scrolls`) — the companies' rename landed Oct 18. Cards:
 `docs/ui-audit-2026-10/dock-faces/` (`node scripts/dock-faces.mjs`).
 

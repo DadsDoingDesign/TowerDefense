@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isStopKind, MAX_LINE, STOP_LINES, stopLine, type StopKind } from '../src/ui/shell/stopScene'
+import { isStopKind, MAX_LINE, STOP_LINES, stopLine, type StopKind } from '../src/ui/shell/stopSceneModel'
 
 describe('what the keeper says at a stop (Oct 2026)', () => {
   const kinds: StopKind[] = ['merchant', 'campfire', 'shrine', 'recruit']

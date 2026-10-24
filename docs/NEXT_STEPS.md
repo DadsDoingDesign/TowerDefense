@@ -1,4 +1,25 @@
-# Fieldwatch — next steps (paused 2026-09-30)
+# Merchant Mercenaries (formerly Fieldwatch) — next steps (paused 2026-09-30)
+
+## Update 2026-10-24: iOS release prep
+
+The iOS branch is merged up to main and buttoned up for release: a privacy manifest (UserDefaults, no tracking, no
+data collected), no web-page long-press behaviour in the app, the two save notes that skipped the native mirror fixed
+(and a test so none can again), an unsigned compile check on PRs, privacy and support pages (`public/`), App Store
+screenshots, and the listing copy, questionnaire answers and step-by-step release guide in `docs/APP_STORE.md`.
+Open items:
+- Apple side (the designer): `docs/APP_STORE.md` § 1 (developer account, bundle ID, App Store Connect app, Admin API
+  key, the four repo secrets). Every TestFlight run so far failed only because those secrets are missing.
+- First TestFlight build, then the real-iPhone checklist in `docs/APP_STORE.md` § 3. Capacitor's `zoomEnabled`
+  defaults to off, so pinch zoom should already be off in the app (M36 kept it on the web); confirm on the phone.
+- The CC0 hash check in `docs/HANDOFF.md` § 1 before submitting.
+- Pricing and in-app purchases are not built; the app ships free with everything unlocked until they are.
+
+## Update 2026-10-06: renamed to Merchant Mercenaries, and the iOS app
+
+The game is now **Merchant Mercenaries** (see `CLAUDE.md` § Name for what changed and what deliberately did not).
+The iOS app is a Capacitor shell over the same build (`ios/`, `capacitor.config.ts`), built and sent to TestFlight by
+`.github/workflows/ios.yml` on GitHub's Macs — the local Mac can't run a current Xcode. (Its open items moved to the
+2026-10-24 update above.)
 
 ## Update 2026-10-06: the October audit
 

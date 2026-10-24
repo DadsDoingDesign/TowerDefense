@@ -2141,7 +2141,7 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 - L129: Restock
 - L133: New wares on the shelf
 
-### `src/ui/shell/stopScene.ts`
+### `src/ui/shell/stopSceneModel.ts`
 
 - L20: “Coin first. Questions after.”
 - L21: “Buy it now. The next stall’s far.”
@@ -3597,7 +3597,7 @@ filter: a few code strings slip in, and a few one-word labels slip out.
 - L73: No enemies
 - L74: in this wave
 
-### `src/ui/shell/heroCard.ts`
+### `src/ui/shell/heroCardModel.ts`
 
 - L34: Area
 - L34: everything in a small area

@@ -94,10 +94,23 @@ export function onSaveFailure(cb: (f: SaveFailure) => void): () => void {
 }
 
 /**
+ * A second, durable copy of every write — set only inside the iOS app
+ * (`src/native.ts`), where WebKit may clear localStorage when the phone is low
+ * on space. `value === null` is a removal. Must not throw.
+ */
+type Mirror = (key: string, value: string | null) => void
+let mirror: Mirror | null = null
+
+export function setStorageMirror(m: Mirror): void {
+  mirror = m
+}
+
+/**
  * Returns false when the write was refused (blocked storage, quota) — never
  * throws. A refusal is recorded for the save notice (`onSaveFailure`).
  */
 export function writeRaw(key: string, value: string): boolean {
+  mirror?.(key, value)
   try {
     const s = store()
     if (!s) {
@@ -113,6 +126,7 @@ export function writeRaw(key: string, value: string): boolean {
 }
 
 export function removeRaw(key: string): void {
+  mirror?.(key, null)
   try {
     store()?.removeItem(key)
   } catch {

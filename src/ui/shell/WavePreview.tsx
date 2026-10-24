@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useGameStore } from '../../state/gameStore'
-import { placementsCount } from './heroCard'
+import { placementsCount } from './heroCardModel'
 import { lineUp, queueFor, queueWidth } from './enemyQueue'
 import { wavePreviewShown } from './live'
 import { WaveQueue } from './WaveQueue'

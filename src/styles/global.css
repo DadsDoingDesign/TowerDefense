@@ -297,6 +297,21 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Inside the iOS app (set by src/boot.ts) a long press must not open Safari's
+   "Save Image" / "Copy" menu or start a text selection: that reads as a web
+   page, not a game. The militia name field and the sliders stay usable. */
+:root[data-native] body {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+:root[data-native] input,
+:root[data-native] textarea {
+  -webkit-touch-callout: default;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 h1,
 h2,
 h3 {

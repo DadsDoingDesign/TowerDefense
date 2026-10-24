@@ -143,7 +143,7 @@ for (const view of VIEW_ARG ?? Object.keys(VIEWS)) {
     const g = window.__game
     const { citySlate } = await import('/src/game/run/recruits.ts')
     const { recruitHub } = await import('/src/state/game/runtime.ts')
-    const { stopLine } = await import('/src/ui/shell/stopScene.ts')
+    const { stopLine } = await import('/src/ui/shell/stopSceneModel.ts')
     const s = g.getState()
     // The sergeant's line that wraps to three lines (it is fixed per node):
     // the bubble's worst case, the one that once ran off the scene's top.

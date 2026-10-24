@@ -4,7 +4,7 @@ import { mergeLayers } from '../../game/data/skillIcons'
 import { fxLevel } from '../../game/render/fxQuality'
 import { sfxFusion } from '../../audio/audio'
 import { PixelIcon, pixelsUrl, SkillIcon } from '../SkillIcon'
-import { elementVar, endFuseBeat, fuseBeatPlan, useFuseBeat } from './fuseBeat'
+import { elementVar, endFuseBeat, fuseBeatPlan, useFuseBeat } from './fuseBeatModel'
 import '../../styles/fusion.css'
 
 /**

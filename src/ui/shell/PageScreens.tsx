@@ -13,7 +13,7 @@ import { Money } from './Money'
 import { InfoCard, MenuRow, PageLayout, PortraitRow, priceNode, RarityTag, StatRow, Tile } from './Page'
 import { isShopService, ShopShelf } from './ShopFront'
 import { StopScene } from './StopScene'
-import { isStopKind, stopLine, type StopKind } from './stopScene'
+import { isStopKind, stopLine, type StopKind } from './stopSceneModel'
 import { shelfSize } from '../../game/run/relics'
 
 import { OfferPick } from './OfferPick'

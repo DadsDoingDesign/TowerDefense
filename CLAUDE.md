@@ -261,6 +261,23 @@ result. Append a short note to the review log when you're done.
   page. The precache is derived from the files the DEFAULT theme draws across
   its per-role fallback chain (`themeAssetPaths` in `sprites.ts`) plus
   whatever the emitted code names — see `planPrecache`.
+- iOS app (Capacitor 8, SPM): `capacitor.config.ts` + `ios/` wrap the same
+  `dist/`. Bundle id `com.dadsdoingdesign.merchantmercenaries` (permanent once
+  registered with Apple); home-screen name `CFBundleDisplayName` is the short
+  name, MerchMercs (`docs/BRAND.md`). Entry is `src/boot.ts`, which restores saves from native
+  Preferences (`src/native.ts`) BEFORE `main.tsx` loads — stores read storage
+  at import time. Every `writeRaw`/`removeRaw` is mirrored there, so all
+  storage must go through `state/storage.ts` (`tests/storageOnly.test.ts`
+  fails on any other localStorage call). No service worker in the app.
+  The App Store icon and launch image come from `scripts/brand.ts`. Builds run
+  only on GitHub (`.github/workflows/ios.yml`: manual or an `ios-*` tag →
+  TestFlight; a PR touching iOS files gets an unsigned compile check): the
+  local Mac can't run a current Xcode. Refresh `ios/` with `npx cap sync ios`.
+  In the app `<html data-native="ios">` is set (boot.ts); CSS under
+  `:root[data-native]` turns off web-page behaviour (long-press callout, text
+  selection). `ios/App/App/PrivacyInfo.xcprivacy` declares the UserDefaults
+  use; a new native plugin or SDK may need its own entry there. Release steps,
+  listing copy and questionnaire answers: `docs/APP_STORE.md`.
 - Run snapshot load/validation: `src/state/runSnapshot.ts` — every field a
   save can put into arithmetic is validated, and `tests/runSnapshot.fuzz.test.ts`
   mutates a real snapshot ~15k ways to prove it. Extend the validators (and the
@@ -315,7 +332,7 @@ result. Append a short note to the review log when you're done.
   desynced clock, the reaction when its slot is focused, a still shadow while
   the company is not hiring; still under reduced motion, the tic half as
   often on Light, asleep when hidden); who stands where is the one table
-  `ui/shell/dockFace.ts` `DOCK_FACE` (Hask, Butcherblock's salter, in the
+  `ui/shell/dockFaceModel.ts` `DOCK_FACE` (Hask, Butcherblock's salter, in the
   `art` slot; Wren, Greenvial's herbalist, in `scrolls`); crests stay everywhere else; the **Buy Company** slot — the Sovereign Route,
   padlocked with its progress until `charterDoor` opens — floats over the
   dock's right end, a slot's size) and the card: a FIXED FORM, the same three rows for

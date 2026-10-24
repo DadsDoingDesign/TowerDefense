@@ -26,6 +26,7 @@
  */
 
 import { onAppVisible } from './state/lifecycle'
+import { isNativeApp } from './native'
 
 /** The least time between two update checks the page asks for. */
 export const UPDATE_CHECK_MS = 30 * 60 * 1000
@@ -114,6 +115,9 @@ export function updateChecker(
 
 export function registerServiceWorker(): void {
   if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return
+  // The iOS app ships its files inside the bundle and updates through the App
+  // Store; a caching worker would only serve a stale build after an update.
+  if (isNativeApp()) return
 
   if (!import.meta.env.PROD) {
     // Returning early is not enough. `vite preview` serves the built app — sw

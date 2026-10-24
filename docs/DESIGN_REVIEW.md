@@ -3153,6 +3153,33 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   wand still reads ~54 DPS on its card beside a 160-DPS knife (its splash
   closes the gap in a fight: solo stop rate 36% against 36%). Scorecard:
   readability 4/5, hierarchy 4/5, polish 4/5.
+- **2026-10-06 — Renamed to Merchant Mercenaries (and the iOS shell).** The
+  name runs twice Fieldwatch's length, so it was checked where it is set large:
+  the menu head at 360/390/430/1440, the run header band at the same widths,
+  the boot splash (production build, script off) and the social card. The loop
+  caught three things. On one line the menu title ran into the bank chip from
+  430px phones up through tablets — it is stacked ("Merchant" over
+  "Mercenaries") at every size now, and the splash matches it line for line.
+  The social card's line, re-set from the meadow tagline to "Sellswords for
+  hire", was scaled to the old line's WIDTH and outshouted the name — it is
+  sized by height now. And the new boot entry (`src/boot.ts`) had dropped the
+  stylesheet link from `index.html`, so the splash fell back to Georgia — the
+  base stylesheet is imported by the boot entry again. The run header's
+  "MERCHANT MERCENARIES" fits its own row at 360px. Still open (designer): the
+  Watchtower mark was drawn for Fieldwatch. The short name (home-screen
+  label) is "Merch&Mercs", the designer's. Scorecard: readability 5/5, hierarchy 4/5, polish 4/5.
+- **2026-10-06 — The Dripping Seal becomes the mark.** Four rounds in Figma
+  (6, 20, 10 and 10 concepts) and three notes from the designer led to concept
+  29 refined, which the designer then adjusted by hand in Figma. Exported
+  verbatim to `src/assets/brand/seal.svg`; `scripts/brand.ts` now builds every
+  icon, the favicon, the launch image, the lockups and the social card from it.
+  Checked: the iOS 1024 master against the Figma component (same ground, seal
+  frame at 800/1024, no alpha); maskable icons keep the drips inside the 80%
+  circle; the favicon at 16px still reads as a red disc with a gold heart. The
+  loop caught one thing: Figma's export puts `fill="none"` on the `<svg>`
+  itself, so the inner coin ring filled black once unwrapped — the seal is now
+  wrapped in a `fill="none"` group. Scorecard: readability 5/5, hierarchy 4/5,
+  polish 4/5.
 
 - **2026-10-06 — A sword swings, a bow shoots, and the hero holds its gear.**
   The designer: "if a weapon is melee it shouldnt fire projectiles, and the
@@ -3289,6 +3316,17 @@ gameplay feel** — not just when something looks wrong. The goal is to catch
   readability 4/5, hierarchy 4/5, polish 4/5. Benchmark: Slay the Spire's
   card reward and Hades' boon pick both read on hover/select and commit on a
   separate, deliberate act.
+
+- **2026-10-07 — main merged into the iOS branch; main's brand wins.** Both
+  branches had rebranded in parallel. main's (merged later, PR #10) is the one
+  kept: short name MerchMercs (now also the iOS `CFBundleDisplayName`), the
+  tagline "Guard the road, bank the gold.", and `mark.svg` as the seal's
+  source. `scripts/brand.ts` keeps the iOS outputs: the 1024 App Store icon
+  (seal at 0.76 of the tile, alpha removed) and the 2732² launch image (seal at
+  0.18, centred, so every phone's aspect-fill crop keeps it). Rendered: the
+  icon at 256 and the launch image cropped to a phone's shape; the built app at
+  390×844 boots through `src/boot.ts` with no console errors. The web icons it
+  regenerates are byte-identical to main's. `seal.svg` is no longer read.
 
 - **2026-10-07 — The home is the contract board (Figma B2).** The designer
   chose option B ("the board is the selection view"), themed, with the market
