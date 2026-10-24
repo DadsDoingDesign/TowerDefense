@@ -18,6 +18,7 @@ import {
 import { companyOpen } from '../../../game/run/standing'
 import { useMetaStore } from '../../../state/metaStore'
 import { useSettingsStore } from '../../../state/settingsStore'
+import { readRaw, writeRaw } from '../../../state/storage'
 import { companyVar, moneyText } from '../../channels'
 import { Icon } from '../../Icon'
 import { Crest, Lock } from '../../pixel'
@@ -177,21 +178,12 @@ function Castle({ tier, levels, lit, className = '' }: { tier: CastleTierId; lev
 /** Remembers, on this device, the tier the castle was last seen in (a UI note, not the save). */
 const SEEN_KEY = 'mm.hq.tierSeen'
 const readSeen = (): number | null => {
-  try {
-    const v = localStorage.getItem(SEEN_KEY)
-    const n = v == null ? NaN : Number(v)
-    return Number.isFinite(n) ? n : null
-  } catch {
-    return null
-  }
+  const v = readRaw(SEEN_KEY)
+  const n = v == null ? NaN : Number(v)
+  return Number.isFinite(n) ? n : null
 }
-const writeSeen = (n: number) => {
-  try {
-    localStorage.setItem(SEEN_KEY, String(n))
-  } catch {
-    /* a private window: no celebration next time, nothing else */
-  }
-}
+// Refused in a private window: no celebration next time, nothing else.
+const writeSeen = (n: number) => void writeRaw(SEEN_KEY, String(n))
 
 /**
  * The tier's rise, once: the first time the page opens on a tier higher than
