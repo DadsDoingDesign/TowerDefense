@@ -584,7 +584,7 @@ describe('discovery and the beat (UI models)', () => {
   })
 
   it('the fuse beat: about a second on Full, lighter on Light, and still under reduced motion', async () => {
-    const { fuseBeatPlan } = await import('../src/ui/shell/fuseBeat')
+    const { fuseBeatPlan } = await import('../src/ui/shell/fuseBeatModel')
     const full = fuseBeatPlan('full')
     const light = fuseBeatPlan('light')
     const off = fuseBeatPlan('off')

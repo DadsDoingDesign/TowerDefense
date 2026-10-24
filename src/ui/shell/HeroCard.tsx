@@ -13,11 +13,11 @@ import { Icon } from '../Icon'
 import { SkillIcon } from '../SkillIcon'
 import { EffectLine } from './EffectLine'
 import { InfoToggle } from './InfoToggle'
-import { cardFields, levelWords, skillSlots, type SkillSlot } from './heroCard'
+import { cardFields, levelWords, skillSlots, type SkillSlot } from './heroCardModel'
 import { waveLive } from './levelUps'
 import { heroLookArt } from './offers'
 import { openUpgrade } from './UpgradePanel'
-import { elementVar } from './fuseBeat'
+import { elementVar } from './fuseBeatModel'
 import '../../styles/fusion.css'
 
 /**

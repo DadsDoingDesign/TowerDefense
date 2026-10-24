@@ -19,7 +19,7 @@ import {
   targetsValue,
   upgradeButtonName,
   upgradeWaiting,
-} from '../src/ui/shell/heroCard'
+} from '../src/ui/shell/heroCardModel'
 
 /**
  * The battle band (Oct 2026): the hero card's fields and skill slots, what a

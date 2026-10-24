@@ -332,7 +332,7 @@ result. Append a short note to the review log when you're done.
   desynced clock, the reaction when its slot is focused, a still shadow while
   the company is not hiring; still under reduced motion, the tic half as
   often on Light, asleep when hidden); who stands where is the one table
-  `ui/shell/dockFace.ts` `DOCK_FACE` (Hask, Butcherblock's salter, in the
+  `ui/shell/dockFaceModel.ts` `DOCK_FACE` (Hask, Butcherblock's salter, in the
   `art` slot; Wren, Greenvial's herbalist, in `scrolls`); crests stay everywhere else; the **Buy Company** slot — the Sovereign Route,
   padlocked with its progress until `charterDoor` opens — floats over the
   dock's right end, a slot's size) and the card: a FIXED FORM, the same three rows for

@@ -7,7 +7,7 @@ import type { CompanyId } from './companies'
  *
  * One person per company who speaks for it: at each city on its road, and on
  * the receipt. (The home's board line went with the map-first home, Oct 2026.) They talk the way the
- * stop keepers do (`ui/shell/stopScene.ts`): one short spoken line in a bubble
+ * stop keepers do (`ui/shell/stopSceneModel.ts`): one short spoken line in a bubble
  * over their head, in their own voice — never a rule. What a contract pays,
  * asks and risks is said by the terms, the route panel and the receipt; a
  * liaison only ever reacts to it, and promises nothing the rules do not pay

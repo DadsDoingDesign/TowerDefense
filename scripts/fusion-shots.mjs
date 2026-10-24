@@ -111,12 +111,12 @@ const seek = (p, ms) => p.st((ms) => document.getAnimations().forEach((a) => (a.
  */
 const holdBeat = (p, fallback) =>
   p.st(async (fallback) => {
-    const b = await import('/src/ui/shell/fuseBeat.ts')
+    const b = await import('/src/ui/shell/fuseBeatModel.ts')
     const s = b.useFuseBeat.getState().show ?? (fallback && { heroId: window.__game.getState().roster[0].id, fusionId: fallback[0], parts: fallback[1] })
     if (s) b.useFuseBeat.setState({ show: { ...s, at: Date.now() + 1e6 } })
   }, fallback)
 const endBeat = async (p) => {
-  await p.st(async () => (await import('/src/ui/shell/fuseBeat.ts')).endFuseBeat())
+  await p.st(async () => (await import('/src/ui/shell/fuseBeatModel.ts')).endFuseBeat())
   await p.page.waitForTimeout(600)
 }
 

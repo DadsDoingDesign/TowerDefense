@@ -18,7 +18,7 @@ import { useEffect, useRef } from 'react'
 import type { CompanyId } from '../../game/data/companies'
 import { fxLevel, onFxLevel, type FxLevel } from '../../game/render/fxQuality'
 import { MINI_H, MINI_W, miniFrame } from '../../game/render/hero/mini'
-import { DOCK_FACE_SCALE, dockFaceAt, type DockFaceState } from './dockFace'
+import { DOCK_FACE_SCALE, dockFaceAt, type DockFaceState } from './dockFaceModel'
 
 interface Face {
   draw: (t: number, level: FxLevel) => void

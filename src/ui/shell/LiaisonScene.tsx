@@ -2,7 +2,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import { companyById, type CompanyId } from '../../game/data/companies'
 import { liaisonPlate } from '../../game/run/liaison'
 import { StopScene } from './StopScene'
-import { liaisonScene } from './stopScene'
+import { liaisonScene } from './stopSceneModel'
 import { SCENE_ANCHORS, SCENE_SIZE } from './stopScenes.generated'
 
 /**

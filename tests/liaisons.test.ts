@@ -5,7 +5,7 @@ import { asksOf, freshAsks, type AskFacts, type RunAsk } from '../src/game/run/a
 import { CITY_COUNT } from '../src/game/run/contracts'
 import { cityLine, cityLines, endLine, fillLine, LIAISON_MAX_LINE, liaisonPlate } from '../src/game/run/liaison'
 import { SCENE_ANCHORS, SCENE_SIZE } from '../src/ui/shell/stopScenes.generated'
-import { liaisonScene } from '../src/ui/shell/stopScene'
+import { liaisonScene } from '../src/ui/shell/stopSceneModel'
 
 /** Every line a liaison has, raw. */
 const everyLine = (c: (typeof COMPANY_IDS)[number]): string[] => {

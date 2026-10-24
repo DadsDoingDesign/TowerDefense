@@ -3,7 +3,7 @@ import { COMPANY_IDS } from '../src/game/data/companies'
 import { INK, RAMPS, rgbOf } from '../src/game/render/hero/palette'
 import { MINI_FACES, miniFrame } from '../src/game/render/hero/mini'
 import { PERSONAS } from '../src/game/render/hero/rig'
-import { DOCK_FACE, dockFaceAt } from '../src/ui/shell/dockFace'
+import { DOCK_FACE, dockFaceAt } from '../src/ui/shell/dockFaceModel'
 
 /*
  * The home dock's company faces (October 2026): each slot shows its
