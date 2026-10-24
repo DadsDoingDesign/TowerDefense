@@ -15,8 +15,21 @@ name: iOS
 #   APPLE_TEAM_ID   the 10-character Team ID (developer.apple.com → Membership)
 # The key needs the Admin role: creating the distribution certificate the first
 # time requires it.
+#
+# A pull request that touches the iOS side only compiles the app, unsigned (no
+# secrets, nothing uploaded), so a broken Xcode project shows up in review and
+# not on release day. macOS minutes are free on a public repo.
 
 on:
+  pull_request:
+    paths:
+      - 'ios/**'
+      - 'capacitor.config.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'src/boot.ts'
+      - 'src/native.ts'
+      - '.github/workflows/ios.yml'
   push:
     tags: ['ios-*']
   workflow_dispatch:
@@ -27,12 +40,12 @@ on:
         default: true
 
 concurrency:
-  group: ios
+  group: ios-${{ github.event_name == 'pull_request' && github.ref || 'release' }}
   cancel-in-progress: false
 
 jobs:
   testflight:
-    name: Build, sign, upload
+    name: ${{ github.event_name == 'pull_request' && 'Compile check' || 'Build, sign, upload' }}
     runs-on: macos-26
     timeout-minutes: 45
     env:
@@ -55,7 +68,17 @@ jobs:
       - run: npm run build
       - run: npx cap sync ios
 
+      # Pull requests stop here: prove it compiles for a device, unsigned.
+      - name: Compile check (unsigned)
+        if: github.event_name == 'pull_request'
+        run: |
+          xcodebuild build \
+            -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+
       - name: Write the API key
+        if: github.event_name != 'pull_request'
         env:
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
         run: |
@@ -67,6 +90,7 @@ jobs:
 
       # The build number has to rise with every upload; the run number does.
       - name: Archive
+        if: github.event_name != 'pull_request'
         run: |
           xcodebuild archive \
             -project ios/App/App.xcodeproj -scheme App -configuration Release \
@@ -79,6 +103,7 @@ jobs:
             CURRENT_PROJECT_VERSION="${{ github.run_number }}"
 
       - name: Export (and upload to TestFlight unless switched off)
+        if: github.event_name != 'pull_request'
         run: |
           OPTS="$RUNNER_TEMP/ExportOptions.plist"
           cp ios/ExportOptions.plist "$OPTS"
@@ -96,5 +121,5 @@ jobs:
             -authenticationKeyIssuerID "$ASC_ISSUER_ID"
 
       - name: Remove the API key
-        if: always()
+        if: always() && github.event_name != 'pull_request'
         run: rm -f "$ASC_KEY_PATH"
