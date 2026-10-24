@@ -12,6 +12,8 @@ const config: CapacitorConfig = {
     contentInset: 'never',
     // No rubber-band bounce: the game is a fixed screen, not a page.
     scrollEnabled: false,
+    // A long press on a picture must not open a Safari-style preview.
+    allowsLinkPreview: false,
     backgroundColor: '#201711',
   },
   plugins: {

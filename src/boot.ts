@@ -9,6 +9,10 @@
  * in Crimson Text and the first paint is styled before the game chunk arrives.
  */
 import './styles/global.css'
-import { restoreNativeSaves } from './native'
+import { isNativeApp, restoreNativeSaves } from './native'
+
+// Lets the stylesheet switch off web-page behaviour inside the iOS app
+// (`:root[data-native]` in global.css).
+if (isNativeApp()) document.documentElement.dataset.native = 'ios'
 
 void restoreNativeSaves().finally(() => import('./main'))
