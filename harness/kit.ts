@@ -1,0 +1,351 @@
+/**
+ * Kit look — every body piece on every Tiny Swords look, through the real draw
+ * code (`drawSentinel` → `heroFigure`: cuts, `bodyLayer`, bake, held marks),
+ * and the portrait each one gets (`heroPortrait`), for the design review.
+ *
+ * Run:  npx vite --port 5223  →  http://localhost:5223/harness/kit.html
+ *       (`?scale=2` for the field's phone density, `?frames=1` for every frame,
+ *       `?shield=1` for the knight's off hands over its rebuilt body,
+ *       `?weapons=1` for every weapon on its look, `?shipped=1` for the
+ *       knight as it ships, `?peoples=1` for the peoples' new kinds,
+ *       `?held=1` for every held mark through every frame it is drawn over)
+ */
+import '../src/styles/global.css'
+import { drawSentinel, setPresentationTime, type DrawSentinel } from '../src/game/render/renderer'
+import { heroGear, type HeroGear, type Hold } from '../src/game/render/gearMarks'
+import { heroPortraitCanvas } from '../src/game/render/heroPortrait'
+import { BODY_KEYS } from '../src/game/render/bodyLayer'
+import { onSpritesReady, preloadPack } from '../src/game/render/sprites'
+import { setActiveTheme } from '../src/game/render/themes'
+import { lookOf } from '../src/game/data/gear'
+import { lookHue } from '../src/game/data/sentinels'
+import { generateItem } from '../src/game/data/items'
+import { PEOPLE_KINDS } from '../src/game/data/peopleKinds'
+import { RNG } from '../src/game/core/rng'
+import type { Archetype, Equipment, Item } from '../src/game/types'
+
+const q = new URLSearchParams(location.search)
+const SCALE = Number(q.get('scale') ?? 3)
+const out = document.getElementById('out')!
+const GRASS = '#5a9b43'
+/** The figure's box, in logical px; the shield review's is wide enough for the swing. */
+const BOX = q.get('shield') || q.get('shipped') || q.get('held') ? { w: 136, h: 128, ox: 64, oy: 112 } : { w: 104, h: 112, ox: 46, oy: 96 }
+
+const BODY_KIND: Record<string, string> = {
+  mail: 'Mail',
+  plate: 'Plate',
+  cloth: 'Robe',
+  cloak: 'Cloak',
+  aegis: 'Aegis',
+  ironheart: 'Ironheart Plate',
+  silkwind: 'Silkwind Cloak',
+}
+const deal = (kind: string, n = 1): Item => generateItem(new RNG(7000 + n * 13 + kind.length), { kind, rarity: 'rare', allowCurse: false })
+const plain = (kind: string): Item => ({ ...deal(kind), enchantments: [] })
+
+/** The three looks, each in the hands that pick it (`gear.lookOf`). */
+const HANDS: { title: string; main: string | null; off: string | null }[] = [
+  { title: 'Sword + Shield', main: 'Sword', off: 'Shield' },
+  { title: 'Greatsword', main: 'Greatsword', off: null },
+  { title: 'Bow', main: 'Bow', off: null },
+  { title: 'Wand + Tome', main: 'Wand', off: 'Tome' },
+]
+
+function eq(main: string | null, off: string | null, body: string | null): Equipment {
+  return { mainHand: main ? plain(main) : null, offHand: off ? plain(off) : null, body: body ? plain(body) : null }
+}
+
+/** `&hold=hand|cover` forces how the off hand holds its piece (`gearMarks.holdOf`), to compare the two. */
+const HOLD = q.get('hold') as Hold | null
+const kitGear = (e: Equipment): HeroGear => (HOLD ? { ...heroGear(e), hold: HOLD } : heroGear(e))
+
+function sentinel(look: Archetype, e: Equipment, fire = 0): DrawSentinel {
+  return {
+    id: 'kit',
+    pos: { x: 0, y: 0 },
+    archetype: look,
+    ...lookHue(look),
+    range: 96,
+    aimAngle: 0,
+    fireFlash: fire,
+    procFlash: 0,
+    patienceStacks: 0,
+    blocking: false,
+    gear: kitGear(e),
+  }
+}
+
+function fig(e: Equipment, label: string, fire = 0, t = 0): HTMLElement {
+  const wrap = document.createElement('figure')
+  const c = document.createElement('canvas')
+  c.width = BOX.w * SCALE
+  c.height = BOX.h * SCALE
+  const g = c.getContext('2d')!
+  g.imageSmoothingEnabled = false
+  g.fillStyle = GRASS
+  g.fillRect(0, 0, c.width, c.height)
+  g.scale(SCALE, SCALE)
+  g.translate(BOX.ox, BOX.oy)
+  setPresentationTime(t)
+  drawSentinel(g, sentinel(lookOf({ equipment: e }), e, fire))
+  const cap = document.createElement('figcaption')
+  cap.textContent = label
+  wrap.append(c, cap)
+  return wrap
+}
+
+function portrait(e: Equipment, label: string): HTMLElement {
+  const wrap = document.createElement('figure')
+  wrap.className = 'pt'
+  const c = heroPortraitCanvas(lookOf({ equipment: e }), kitGear(e))
+  const img = document.createElement('img')
+  if (c) img.src = c.toDataURL()
+  const sizes = [22, 30, 36, 72]
+  for (const s of sizes) {
+    const box = document.createElement('span')
+    box.className = 'pt-box'
+    box.style.width = box.style.height = `${s}px`
+    const i = img.cloneNode() as HTMLImageElement
+    box.append(i)
+    wrap.append(box)
+  }
+  const cap = document.createElement('figcaption')
+  cap.textContent = label
+  wrap.append(cap)
+  return wrap
+}
+
+/**
+ * `?shield=1` — the knight with its painted shield cut and the body under it
+ * rebuilt (`gearMarks.cutAndFill`, `shieldFill.generated.ts`): every off hand
+ * the armoured look holds, and none, each in no body piece and four of them,
+ * at rest and through the swing — beside the painted-shield knight it came
+ * from (the Shield row). `&scale=` sets the zoom.
+ */
+const OFF_HANDS: { title: string; main: string | null; off: string | null }[] = [
+  { title: 'Sword + Shield (the art as painted)', main: 'Sword', off: 'Shield' },
+  { title: 'Sword, empty off hand', main: 'Sword', off: null },
+  { title: 'Greatsword (two-hander)', main: 'Greatsword', off: null },
+  { title: 'Sword + Tome', main: 'Sword', off: 'Tome' },
+  { title: 'Sword + Quiver', main: 'Sword', off: 'Quiver' },
+  { title: 'Sword + Focus', main: 'Sword', off: 'Focus' },
+  { title: 'Sword + Buckler', main: 'Sword', off: 'Buckler' },
+  { title: 'Sword + Pavise', main: 'Sword', off: 'Pavise' },
+]
+const SHIELD_BODIES = [null, 'Mail', 'Plate', 'Robe', 'Cloak']
+
+function buildShield(): void {
+  out.textContent = ''
+  const only = q.get('only')
+  for (const h of OFF_HANDS) {
+    if (only && !h.title.toLowerCase().includes(only.toLowerCase())) continue
+    const row = document.createElement('section')
+    row.innerHTML = `<h2>${h.title}</h2>`
+    const figs = document.createElement('div')
+    figs.className = 'row'
+    for (const b of SHIELD_BODIES) {
+      const e = eq(h.main, h.off, b)
+      figs.append(fig(e, `${b ?? 'no body'} · idle`, 0, 0.01))
+      if (q.get('frames')) for (const ff of [0.95, 0.6, 0.3]) figs.append(fig(e, `${b ?? 'no body'} · atk ${ff}`, ff))
+    }
+    row.append(figs)
+    const pts = document.createElement('div')
+    pts.className = 'row'
+    for (const b of SHIELD_BODIES) pts.append(portrait(eq(h.main, h.off, b), b ?? 'no body'))
+    if (!q.get('nopt')) row.append(pts)
+    out.append(row)
+  }
+}
+
+/**
+ * `?weapons=1` — every weapon on the look it picks (`gear.lookOf`): what the
+ * figure draws in the weapon hand — the painted weapon where it stands in
+ * (`gearMarks.paintsMain`), else the item's cell — at rest and mid-swing.
+ */
+const WEAPONS: { title: string; mains: (string | null)[]; off: string | null }[] = [
+  { title: 'Knight', mains: ['Sword', 'Axe', 'Greatsword', 'Warhammer', 'Saffron Brand', null], off: 'Buckler' },
+  { title: 'Archer', mains: ['Bow', 'Dagger', null], off: null },
+  { title: 'Caster', mains: ['Wand', 'Rod', 'Sceptre', 'Staff', 'Grimoire', 'Greenvial Herbal'], off: null },
+]
+
+/**
+ * `?peoples=1` — the peoples' new kinds (Oct 2026, `data/peopleKinds.ts`) on
+ * the figure, through the real draw code with their real edges (so a burn or
+ * a chill wears its glint): every weapon on the look it picks — the casters'
+ * own cells in the robed fists, the painted sword and bow standing in for the
+ * blades and bows — and every new off-hand piece on the knight.
+ */
+function buildPeoples(): void {
+  out.textContent = ''
+  for (const people of ['humans', 'elves', 'dwarves', 'reptilians', 'gnomes'] as const) {
+    const kinds = PEOPLE_KINDS.filter((k) => k.people === people)
+    const row = document.createElement('section')
+    row.innerHTML = `<h2>${people}</h2>`
+    const figs = document.createElement('div')
+    figs.className = 'row'
+    for (const k of kinds.filter((x) => x.weapon)) {
+      const e: Equipment = { mainHand: deal(k.id), offHand: null, body: null }
+      figs.append(fig(e, k.id, 0, 0.01))
+    }
+    for (const k of kinds.filter((x) => x.slot === 'offHand')) {
+      const e: Equipment = { mainHand: plain('Sword'), offHand: deal(k.id), body: null }
+      figs.append(fig(e, `Sword + ${k.id}`, 0, 0.01))
+    }
+    row.append(figs)
+    out.append(row)
+  }
+}
+
+function buildWeapons(): void {
+  out.textContent = ''
+  for (const h of WEAPONS) {
+    const row = document.createElement('section')
+    row.innerHTML = `<h2>${h.title}</h2>`
+    const figs = document.createElement('div')
+    figs.className = 'row'
+    for (const m of h.mains) {
+      const e = eq(m, h.off, null)
+      figs.append(fig(e, `${m ?? 'no weapon'} · idle`, 0, 0.01))
+      if (q.get('frames')) figs.append(fig(e, `${m ?? 'no weapon'} · atk`, 0.6))
+    }
+    row.append(figs)
+    out.append(row)
+  }
+}
+
+/**
+ * `?shipped=1` — the knight as it ships (Oct 2026): every off hand over the
+ * rebuilt body with the painted sword standing in for each melee weapon, no
+ * body piece on the figure. Rows: the off hands; per row the Sword at rest
+ * and mid-swing, then an Axe (the painted sword again). Then the two-hander,
+ * and a shield with no weapon.
+ */
+const SHIPPED: { title: string; cells: { main: string | null; off: string | null; fire: number; label: string }[] }[] = [
+  ...[null, 'Tome', 'Quiver', 'Focus', 'Buckler', 'Pavise', 'Shield'].map((off) => ({
+    title: off ?? 'empty off hand',
+    cells: [
+      { main: 'Sword', off, fire: 0, label: 'Sword · idle' },
+      { main: 'Sword', off, fire: 0.6, label: 'Sword · swing' },
+      { main: 'Axe', off, fire: 0, label: 'Axe · idle' },
+    ],
+  })),
+  { title: 'two-hander', cells: [{ main: 'Greatsword', off: null, fire: 0, label: 'Greatsword · idle' }, { main: 'Greatsword', off: null, fire: 0.6, label: 'Greatsword · swing' }, { main: 'Warhammer', off: null, fire: 0, label: 'Warhammer · idle' }] },
+  { title: 'no weapon', cells: [{ main: null, off: 'Buckler', fire: 0, label: 'Buckler · idle' }, { main: null, off: 'Pavise', fire: 0, label: 'Pavise · idle' }, { main: null, off: 'Shield', fire: 0, label: 'Shield · idle' }] },
+]
+
+function buildShipped(): void {
+  out.textContent = ''
+  for (const r of SHIPPED) {
+    const row = document.createElement('section')
+    row.innerHTML = `<h2>${r.title}</h2>`
+    const figs = document.createElement('div')
+    figs.className = 'row'
+    for (const c of r.cells) figs.append(fig(eq(c.main, c.off, null), c.label, c.fire, 0.01))
+    row.append(figs)
+    out.append(row)
+  }
+}
+
+/**
+ * `?held=1` — every held mark through every frame of the strip it is drawn
+ * over (`gearMarks.heldGripFor`, `heldGrips.generated.ts`): the six idle
+ * frames side by side, then the attack strip where the art's own swing plays
+ * with a mark in a hand. A row per kit; each cell one frame (`&only=` filters).
+ */
+const HELD: { title: string; look: Archetype; main: string | null; off: string | null; atk: boolean }[] = [
+  { title: 'Caster · Staff', look: 'mystic', main: 'Staff', off: null, atk: false },
+  { title: 'Caster · Wand', look: 'mystic', main: 'Wand', off: null, atk: false },
+  { title: 'Caster · Wand + Tome', look: 'mystic', main: 'Wand', off: 'Tome', atk: false },
+  { title: 'Caster · no weapon + Tome', look: 'mystic', main: null, off: 'Tome', atk: true },
+  { title: 'Archer · Bow + Quiver', look: 'rogue', main: 'Bow', off: 'Quiver', atk: true },
+  { title: 'Archer · Bow + Tome', look: 'rogue', main: 'Bow', off: 'Tome', atk: true },
+  { title: 'Knight · Sword + Tome', look: 'fighter', main: 'Sword', off: 'Tome', atk: true },
+]
+const ATK_FRAMES: Record<Archetype, number> = { fighter: 6, rogue: 8, mystic: 6 }
+
+function heldFig(look: Archetype, e: Equipment, label: string, fire: number, t: number): HTMLElement {
+  const wrap = document.createElement('figure')
+  const c = document.createElement('canvas')
+  c.width = BOX.w * SCALE
+  c.height = BOX.h * SCALE
+  const g = c.getContext('2d')!
+  g.imageSmoothingEnabled = false
+  g.fillStyle = GRASS
+  g.fillRect(0, 0, c.width, c.height)
+  g.scale(SCALE, SCALE)
+  g.translate(BOX.ox, BOX.oy)
+  setPresentationTime(t)
+  drawSentinel(g, sentinel(look, e, fire))
+  const cap = document.createElement('figcaption')
+  cap.textContent = label
+  wrap.append(c, cap)
+  return wrap
+}
+
+function buildHeld(): void {
+  out.textContent = ''
+  const only = q.get('only')
+  for (const h of HELD) {
+    if (only && !h.title.toLowerCase().includes(only.toLowerCase())) continue
+    const e = eq(h.main, h.off, null)
+    const row = document.createElement('section')
+    row.dataset.held = h.title
+    row.innerHTML = `<h2>${h.title}</h2>`
+    const idle = document.createElement('div')
+    idle.className = 'row idle'
+    for (let f = 0; f < 6; f++) idle.append(heldFig(h.look, e, `idle ${f}`, 0, f / 6 + 0.01))
+    row.append(idle)
+    if (h.atk) {
+      const atk = document.createElement('div')
+      atk.className = 'row atk'
+      const n = ATK_FRAMES[h.look]
+      for (let f = 0; f < n; f++) atk.append(heldFig(h.look, e, `atk ${f}`, 1 - (f + 0.5) / n, 0.01))
+      row.append(atk)
+    }
+    out.append(row)
+  }
+}
+
+function build(): void {
+  if (q.get('held')) return buildHeld()
+  if (q.get('shield')) return buildShield()
+  if (q.get('shipped')) return buildShipped()
+  if (q.get('weapons')) return buildWeapons()
+  if (q.get('peoples')) return buildPeoples()
+  out.textContent = ''
+  for (const h of HANDS) {
+    const row = document.createElement('section')
+    row.innerHTML = `<h2>${h.title}</h2>`
+    const figs = document.createElement('div')
+    figs.className = 'row'
+    figs.append(fig(eq(h.main, h.off, null), 'no body'))
+    for (const k of BODY_KEYS) figs.append(fig(eq(h.main, h.off, BODY_KIND[k]), BODY_KIND[k]))
+    row.append(figs)
+    if (q.get('frames')) {
+      for (const k of [null, ...BODY_KEYS]) {
+        const strip = document.createElement('div')
+        strip.className = 'row'
+        const e = eq(h.main, h.off, k ? BODY_KIND[k] : null)
+        for (let f = 0; f < 6; f++) strip.append(fig(e, `${k ?? 'none'} idle ${f}`, 0, f / 6 + 0.01))
+        for (const ff of [0.95, 0.7, 0.45, 0.2]) strip.append(fig(e, `${k ?? 'none'} atk ${ff}`, ff))
+        row.append(strip)
+      }
+    }
+    const pts = document.createElement('div')
+    pts.className = 'row'
+    pts.append(portrait(eq(h.main, h.off, null), 'no body'))
+    for (const k of BODY_KEYS) pts.append(portrait(eq(h.main, h.off, BODY_KIND[k]), BODY_KIND[k]))
+    row.append(pts)
+    out.append(row)
+  }
+}
+
+setActiveTheme('tinyswords')
+preloadPack('tinyswords')
+onSpritesReady(() => {
+  build()
+  setTimeout(() => {
+    build()
+    ;(window as unknown as { __kitReady: boolean }).__kitReady = true
+  }, 600)
+})

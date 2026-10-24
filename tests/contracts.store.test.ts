@@ -6,6 +6,7 @@ import { ADVANCE, cashOutValue, cityPay, CRATE_PRICE, STAKES_OPEN_AT } from '../
 import { standingXpToReach } from '../src/game/run/standing'
 import { useSettingsStore } from '../src/state/settingsStore'
 import { setLayoutOrientation } from '../src/state/game/runtime'
+import { citySlate, SLATE_SIZE } from '../src/game/run/recruits'
 
 /** The contract in the store: signing, a city's pay, cash out, and a fall. */
 const g = () => useGameStore.getState()
@@ -23,7 +24,6 @@ function walk(stop: () => boolean, hp = 0.01) {
     if (s.event) {
       const k = s.event.kind
       if (k === 'shrine') s.declineShrine()
-      else if (k === 'recruit') s.skipRecruit()
       else if (k === 'campfire') s.campfireRest()
       else s.leaveEvent()
       continue
@@ -61,10 +61,11 @@ describe('a contract, in the store', () => {
     useMetaStore.setState({ bank: 1000, stats: { ...useMetaStore.getState().stats, runsCompleted: 3 }, standing: { spice: 0, art: 2000, metals: 0, silk: 0, scrolls: 0 } })
   })
 
-  it('the board clamps the stake to the standing cap and the bank, and signing takes nothing until the hero', () => {
+  it('the terms clamp the stake to the standing cap and the bank, and signing takes nothing until the hero', () => {
     g().openContracts({ company: 'metals', crates: 6 })
     expect(g().board!.crates).toBe(0) // standing 0 with Ironvein: escort only until standing 2
-    g().boardPick('art')
+    g().boardBack()
+    g().openContracts({ company: 'art' })
     g().setCrates(6)
     expect(g().board!.crates).toBe(6)
     g().signContract()
@@ -80,7 +81,7 @@ describe('a contract, in the store', () => {
   it('stakes open per company at standing 2 with it (the staggered reveal)', () => {
     const at = (xp: number) => {
       useMetaStore.setState({ standing: { spice: 0, art: 0, metals: xp, silk: 0, scrolls: 0 } })
-      g().openContracts({ company: 'metals' }, 'terms')
+      g().openContracts({ company: 'metals' })
       g().setCrates(2)
       return g().board!.crates
     }
@@ -90,6 +91,54 @@ describe('a contract, in the store', () => {
     useSettingsStore.setState({ showEverything: true })
     expect(at(0)).toBe(1)
     useSettingsStore.setState({ showEverything: false })
+  })
+
+  it('the menu is the board: a focused road opens its terms, and back keeps it focused', () => {
+    useMetaStore.setState({ standing: { spice: 0, art: standingXpToReach(2), metals: 0, silk: 0, scrolls: 0 } })
+    useGameStore.setState({ screen: 'hub', board: null, homeFocus: null })
+    // A road not hiring yet (the Scriptorium opens at Standing 3) can be focused; its terms cannot be opened.
+    g().focusRoad('scrolls')
+    expect(g().homeFocus).toBe('scrolls')
+    expect(g().screen).toBe('hub')
+    g().focusRoad('art')
+    g().openContracts()
+    expect(g().screen).toBe('contracts')
+    expect(g().board!.company).toBe('art')
+    g().boardBack()
+    expect(g().screen).toBe('hub')
+    expect(g().board).toBeNull()
+    expect(g().homeFocus).toBe('art')
+    // A company asked for that does not hire falls back to the focus.
+    g().openContracts({ company: 'scrolls' })
+    expect(g().board!.company).toBe('art')
+  })
+
+  it('the dock’s Buy Company slot is a focus too; the terms then open on the default road', () => {
+    useMetaStore.setState({ standing: { spice: standingXpToReach(1), art: 0, metals: 0, silk: 0, scrolls: 0 } })
+    useGameStore.setState({ screen: 'hub', board: null, homeFocus: null })
+    g().focusRoad('charter')
+    expect(g().homeFocus).toBe('charter')
+    expect(g().screen).toBe('hub')
+    // Nothing else is a focus.
+    g().focusRoad('nowhere' as never)
+    expect(g().homeFocus).toBe('charter')
+    g().openContracts()
+    expect(g().board!.company).toBe('spice')
+    g().boardBack()
+    expect(g().homeFocus).toBe('spice')
+  })
+
+  it('choosing the hero marches straight into the first layer’s middle fight', () => {
+    g().openContracts({ company: 'art' })
+    g().signContract()
+    const { runMap, reachableNodeIds } = g()
+    const first = runMap.nodes.filter((n) => reachableNodeIds.includes(n.id) && n.type === 'battle')
+    g().marchOut('pick-0')
+    expect(g().screen).toBe('battle')
+    expect(g().battlePhase).toBe('setup')
+    const at = runMap.nodes.find((n) => n.id === g().activeNodeId)!
+    expect(at.layer).toBe(1)
+    expect(Math.abs(at.ny - 0.5)).toBe(Math.min(...first.map((n) => Math.abs(n.ny - 0.5))))
   })
 
   it('an older save’s contract set up before the advance still takes its purse from the bank', () => {
@@ -106,7 +155,7 @@ describe('a contract, in the store', () => {
     g().signContract()
     g().cancelHeroPick()
     expect(g().screen).toBe('contracts')
-    expect(g().board).toMatchObject({ company: 'art', crates: 2, step: 'terms' })
+    expect(g().board).toMatchObject({ company: 'art', crates: 2 })
     expect(useMetaStore.getState().bank).toBe(1000)
   })
 
@@ -139,6 +188,45 @@ describe('a contract, in the store', () => {
     g().returnToHub()
     expect(useMetaStore.getState().bank).toBe(after)
     expect(g().victory).toBeNull()
+  })
+
+  it('a city offers a hire as the caravan arrives: the city’s own candidates, taken or turned down', () => {
+    g().beginCampaign(1234, { kind: 'standard' }, { company: 'art', crates: 0 })
+    g().pickStartingHero('pick-0')
+    useGameStore.setState({ roster: g().roster.map((h) => ({ ...h, level: 15 })) })
+    // No road stop hires: the map has no recruit node at all.
+    expect(g().runMap.nodes.some((n) => (n.type as string) === 'recruit')).toBe(false)
+    walk(() => g().contract!.pending != null)
+    expect(g().contract!.pending).toBe(0)
+    g().pressOn()
+    // The spoils, then the city's hiring yard.
+    if (g().reward) g().chooseReward(g().reward![0].id)
+    const cr = g().crossroads!
+    expect(g().screen).toBe('crossroads')
+    expect(cr.recruits).toHaveLength(SLATE_SIZE)
+    // The candidates are the city's — a hash of the run seed and the city.
+    const again = citySlate(g().runSeed, 0, g().roster, { statBonus: 0, trained: false, itemPool: g().itemPool })
+    expect(cr.recruits.map((h) => h.equipment.mainHand?.base)).toEqual(again.map((h) => h.equipment.mainHand?.base))
+    const before = g().roster.length
+    g().recruitTeammate(cr.recruits[1].id)
+    expect(g().roster).toHaveLength(before + 1)
+    expect(g().roster[before].name).toBe(cr.recruits[1].name)
+    expect(g().crossroads).toBeNull()
+    expect(g().screen).toBe('map')
+  })
+
+  it('turning the city’s hires down marches on with the heroes you have', () => {
+    g().beginCampaign(1234, { kind: 'standard' }, { company: 'art', crates: 0 })
+    g().pickStartingHero('pick-0')
+    useGameStore.setState({ roster: g().roster.map((h) => ({ ...h, level: 15 })) })
+    walk(() => g().contract!.pending != null)
+    g().pressOn()
+    if (g().reward) g().chooseReward(g().reward![0].id)
+    const before = g().roster.length
+    expect(g().crossroads?.recruits.length).toBeGreaterThan(0)
+    g().finishCrossroads()
+    expect(g().roster).toHaveLength(before)
+    expect(g().screen).toBe('map')
   })
 
   it('a delivery pays all three cities and deals the contract’s unlocks', () => {

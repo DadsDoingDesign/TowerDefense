@@ -1,49 +1,45 @@
-import { useState, type CSSProperties } from 'react'
-import { hashSeed } from '../../../game/core/rng'
-import { COMPANIES, companyById, type CompanyId } from '../../../game/data/companies'
-import { TERRAIN_RULES } from '../../../game/data/terrain'
-import { RANDOM_UNLOCK_SKILLS } from '../../../game/data/skills'
+import { type CSSProperties } from 'react'
+import { companyById, type CompanyId } from '../../../game/data/companies'
 import {
   ADVANCE,
-  CITY_COUNT,
   CRATE_PRICE,
-  contractLetter,
   contractPlan,
   crateCap,
   dangerPips,
   isMilestone,
   marketFor,
-  MARKET_MULT,
   MAX_CRATES,
   recordAt,
   STAKES_OPEN_AT,
   utcDateKey,
 } from '../../../game/run/contracts'
-import { cardFloor, companyOpen, MAX_STANDING, standingOf, standingProgress } from '../../../game/run/standing'
+import { standingOf } from '../../../game/run/standing'
 import { difficultyEffect } from '../../../game/run/watch'
 import { useGameStore } from '../../../state/gameStore'
 import { useMetaStore } from '../../../state/metaStore'
 import { useSettingsStore } from '../../../state/settingsStore'
-import { stakeCap } from '../../../state/game/contractSlice'
+import { contractSeed, stakeCap } from '../../../state/game/contractSlice'
+import { askTipMax, dealAsks } from '../../../game/run/asks'
 import { stakesShown } from '../../../state/staging'
 import { ROAD_SHARE } from '../../../game/run/hq'
 import { useReveal } from '../staging'
 import { companyVar } from '../../channels'
 import { Icon } from '../../Icon'
 import { Crate, Crest, Lock, Scroll, Sword } from '../../pixel'
-import { ContractPage, DangerPips, Gold, GroundChip, MarketTag, PageTip, Slip, SlipLine } from './parts'
-import { PickCard, PickStrip, stepId, type PickFact, type PickTokenSpec } from '../PickStrip'
+import { ContractPage, DangerPips, Gold, MarketTag, PageTip, Slip, SlipLine } from './parts'
+import { AskTerms } from './AskParts'
+import { WarTerms } from '../war/WarTerms'
+import { isDesperate } from '../../../game/run/tradeWar'
 
 /**
- * The contract board and its terms (the mercenary company; mockups
- * `trade/r3/2-contracts.png`, `3-stakes.png`, `3-stakes-free.png`).
+ * A company's terms (the mercenary company; mockups `trade/r3/3-stakes.png`,
+ * `3-stakes-free.png`): the free escort or a stake of crates, what the road
+ * pays at every city, and the company's advance for the road. Every number is
+ * read off `run/contracts.ts`; the store clamps whatever the page asks for.
  *
- * Two steps on one screen, the way the mockups draw them: pick a company (its
- * ground, today's market, your standing, its letter, what the next standing
- * level unlocks), then the terms — the free escort or a stake of crates, what
- * the road pays at every city, and the company's advance for the road. Every
- * number is read off `run/contracts.ts`; the store clamps whatever the page
- * asks for.
+ * The company is chosen on the menu (Oct 2026, Figma "B2"): the trade map's
+ * signposts are the board, and its notice's CTA opens this page. Back returns
+ * to the menu with the road still focused.
  *
  * The staggered reveal (October 2026): a company takes stakes from standing
  * {@link STAKES_OPEN_AT} with it (escort only before, and the terms say when
@@ -53,7 +49,7 @@ import { PickCard, PickStrip, stepId, type PickFact, type PickTokenSpec } from '
 export function ContractsScreen() {
   const board = useGameStore((s) => s.board)
   if (!board) return null
-  return board.step === 'terms' ? <Terms company={board.company} crates={board.crates} /> : <Board selected={board.company} seed={board.seed} />
+  return <Terms company={board.company} crates={board.crates} seed={board.seed} />
 }
 
 function BankChip() {
@@ -75,167 +71,10 @@ function Back({ label }: { label: string }) {
 }
 
 // ---------------------------------------------------------------------------
-// The board
-// ---------------------------------------------------------------------------
-
-function Board({ selected, seed }: { selected: CompanyId; seed: number }) {
-  const standing = useMetaStore((s) => s.standing)
-  const skills = useMetaStore((s) => s.skills)
-  const pick = useGameStore((s) => s.boardPick)
-  const toTerms = useGameStore((s) => s.boardTerms)
-  const taught = useSettingsStore((s) => s.taught.board)
-  const taughtMarket = useSettingsStore((s) => s.taught.market)
-  const reveal = useReveal()
-  // The focused company. A company not open yet can be focused — its card says
-  // when it opens — but never picked: the store keeps the last open one.
-  const [peek, setPeek] = useState<CompanyId>(selected)
-  const focus = (id: string) => {
-    const c = id as CompanyId
-    setPeek(c)
-    if (companyOpen(c, standing)) pick(c)
-  }
-  // The market's one tip is read once the terms are opened with it showing.
-  const terms = () => {
-    if (reveal.market) useSettingsStore.getState().markTaught('market')
-    toTerms()
-  }
-  const today = utcDateKey()
-  const co = companyById(peek)
-  const open = companyOpen(peek, standing)
-  const xp = standing[peek] ?? 0
-  const prog = standingProgress(xp)
-  const skillsLeft = RANDOM_UNLOCK_SKILLS.some((id) => !skills.includes(id))
-  const market = marketFor(peek, today, reveal.market)
-  const index = COMPANIES.findIndex((c) => c.id === peek)
-
-  const tokens: PickTokenSpec[] = COMPANIES.map((c) => {
-    const ok = companyOpen(c.id, standing)
-    const s = standingOf(standing, c.id)
-    return {
-      id: c.id,
-      art: <Crest company={c.id} locked={!ok} />,
-      label: 'Rep:',
-      value: ok ? s : '—',
-      name: ok ? `${c.name}, ${c.goods}: standing ${s}` : `${c.name}: opens at Standing ${c.opensAt} with any company`,
-      state: ok ? undefined : 'locked',
-      rail: ok ? companyVar(c.id) : undefined,
-    }
-  })
-
-  const facts: PickFact[] = open
-    ? [
-        { label: 'Rep', value: standingOf(standing, peek) },
-        ...(reveal.market ? [{ label: 'Market', value: market > 1 ? `×${market} today` : 'steady', tone: market > 1 ? ('accent' as const) : undefined }] : []),
-        { label: 'Ground', value: <GroundChip company={peek} /> },
-      ]
-    : [
-        { label: 'Rep', value: '—' },
-        { label: 'Opens at', value: `Standing ${co.opensAt}` },
-        { label: 'Ground', value: <GroundChip company={peek} /> },
-      ]
-
-  return (
-    <ContractPage
-      label="Contract board"
-      head={
-        <div className="ct-hdr">
-          <Back label="Back to the menu" />
-          <div className="ct-who">
-            <h1 className="ct-title" tabIndex={-1}>
-              Contract board
-            </h1>
-            <span>Pick a company, pick a road</span>
-          </div>
-          <BankChip />
-        </div>
-      }
-      cta={
-        open
-          ? { label: `Read ${shortName(co.name)}’s terms`, run: terms, heavy: true }
-          : { label: `Opens at Standing ${co.opensAt}`, run: () => {}, heavy: true, disabled: true }
-      }
-    >
-      {!taught && <PageTip>Each company pays your militia to guard its road. The free escort is always on offer.</PageTip>}
-      {taught && reveal.market && !taughtMarket && (
-        <PageTip>New: the market of the day. One company’s good sells for ×{MARKET_MULT} today — its crates and its completion bonus.</PageTip>
-      )}
-      <div className="pk rail">
-        <PickStrip label="Company" tokens={tokens} focused={peek} onFocus={focus} />
-        <PickCard
-          className="ct-pk"
-          style={{ '--co': companyVar(peek) } as CSSProperties}
-          art={<Crest company={peek} locked={!open} scale={3} />}
-          kicker={`${co.goods} road · ${CITY_COUNT} cities`}
-          name={co.name}
-          index={index}
-          count={COMPANIES.length}
-          onStep={(d) => focus(stepId(COMPANIES, peek, d) ?? peek)}
-          facts={facts}
-          noun="company"
-        >
-          <p className="pk-does">
-            {open ? groundLine(peek) : `Hires once you hold Standing ${co.opensAt} with any company. ${groundLine(peek)}`}
-          </p>
-          {open && (
-            <div className="ct-letter">
-              <p className="ct-letter-from">A letter from {co.name}</p>
-              <p className="ct-letter-line">“{contractLetter(peek, hashSeed(seed, 'contract', peek))}”</p>
-              <span className="ct-letter-seal">
-                <Crest company={peek} />
-              </span>
-            </div>
-          )}
-          {open && (
-            <div className="ct-next">
-              <span className="ct-next-stone" aria-hidden="true">
-                <Scroll sil="#5a4a36" />
-                <b>?</b>
-              </span>
-              <span className="ct-next-text">
-                {prog.max ? (
-                  <>
-                    <b>Standing {MAX_STANDING} with {co.name}</b>
-                    <span>The highest there is.</span>
-                  </>
-                ) : skillsLeft ? (
-                  <>
-                    <b>Next: a random skill</b>
-                    <span>
-                      at Standing {prog.standing + 1} · {prog.need - prog.into} more standing XP
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <b>Next: a Rare bonus item</b>
-                    <span>
-                      at Standing {prog.standing + 1} · every skill is unlocked · {prog.need - prog.into} more standing XP
-                    </span>
-                  </>
-                )}
-              </span>
-              {!prog.max && skillsLeft && cardFloor(prog.standing + 1) > 1 && <span className="ct-level">Level {cardFloor(prog.standing + 1)}+</span>}
-            </div>
-          )}
-        </PickCard>
-      </div>
-    </ContractPage>
-  )
-}
-
-/** "Peppercorn Co." → "Peppercorn", for a CTA that names the company. */
-const shortName = (name: string) => name.replace(/ Co\.$/, '')
-
-/** What the company's ground does to a field, in the terrain rules' own words. */
-const groundLine = (id: CompanyId) =>
-  companyById(id)
-    .ground.rules.map((r) => TERRAIN_RULES[r].blurb)
-    .join(' ')
-
-// ---------------------------------------------------------------------------
 // The terms
 // ---------------------------------------------------------------------------
 
-function Terms({ company, crates }: { company: CompanyId; crates: number }) {
+function Terms({ company, crates, seed }: { company: CompanyId; crates: number; seed: number }) {
   const meta = useMetaStore()
   const setCrates = useGameStore((s) => s.setCrates)
   const sign = useGameStore((s) => s.signContract)
@@ -245,16 +84,21 @@ function Terms({ company, crates }: { company: CompanyId; crates: number }) {
   const co = companyById(company)
   const market = marketFor(company, utcDateKey(), reveal.market)
   const standing = standingOf(meta.standing, company)
+  // The trade war (Draft 4 § D): desperate terms pay ×1.5.
+  const desperate = reveal.war && isDesperate(meta.season, company)
   const standingCap = crateCap(standing)
   // Stakes open per company at standing 2 with it (the staggered reveal).
   const stakesOpen = stakesShown(meta.standing, company, showEverything)
   const cap = stakeCap(meta, company)
-  const plan = contractPlan({ company, crates, market })
+  const plan = contractPlan({ company, crates, market, ...(desperate ? { desperate } : {}) })
   const stake = crates * CRATE_PRICE
   const rec = recordAt(meta.record, crates)
   const staked = crates > 0
   const [c1, c2, dest] = co.towns
   const sold = plan.cities.map((c) => c.sold)
+  // What the company asks of the road (Draft 4 · A): the asks the contract
+  // will be dealt, read off the very seed it is signed with.
+  const asks = dealAsks(contractSeed(seed, company), company)
 
   return (
     <ContractPage
@@ -262,7 +106,7 @@ function Terms({ company, crates }: { company: CompanyId; crates: number }) {
       heat={0.08 + crates * 0.035}
       head={
         <div className="ct-hdr">
-          <Back label="Back to the contract board" />
+          <Back label="Back to the roads" />
           <div className="ct-who">
             <Crest company={company} />
             <span className="ct-who-text">
@@ -283,7 +127,7 @@ function Terms({ company, crates }: { company: CompanyId; crates: number }) {
           <BankChip />
         </div>
       }
-      foot={<p className="ct-risk">{staked ? 'Fall, and you keep what the cities paid. Unsold cargo is lost.' : 'You keep every fee you have earned, even if you fall.'}</p>}
+      foot={<p className="ct-risk">{staked ? 'Fall, and you keep city pay; unsold cargo is lost.' : 'Fees earned are yours, even if you fall.'}</p>}
       cta={{
         label: staked ? (
           <>
@@ -328,7 +172,7 @@ function Terms({ company, crates }: { company: CompanyId; crates: number }) {
         )}
       </div>
 
-      {stakesOpen && !taught.stakes && <PageTip>Each crate costs {CRATE_PRICE} gold and makes the road harder. Delivered, every crate pays more.</PageTip>}
+      {stakesOpen && !taught.stakes && <PageTip>Each crate makes the road harder, and pays more if delivered.</PageTip>}
 
       {stakesOpen && (
       <div className="ct-ladder" style={{ '--co': companyVar(company) } as CSSProperties}>
@@ -385,7 +229,8 @@ function Terms({ company, crates }: { company: CompanyId; crates: number }) {
           </span>
           {standingCap < MAX_CRATES && (
             <span className="ct-lockline">
-              Crate {standingCap + 1} opens at Standing {standingCap} with {co.name}
+              {/* The page's head names the company: said once. */}
+              Crate {standingCap + 1} opens at Standing {standingCap}
             </span>
           )}
           {cap < standingCap && <span className="ct-lockline">Your bank covers {cap} crate{cap === 1 ? '' : 's'}.</span>}
@@ -393,10 +238,25 @@ function Terms({ company, crates }: { company: CompanyId; crates: number }) {
       </div>
       )}
 
+      <WarTerms company={company} />
+
+      <AskTerms company={company} asks={asks} />
+
       <Slip eyebrow="What it pays · in gold" className="ct-pay">
         <SlipLine label={c1} note={staked && sold[0] ? 'stake back + fee' : 'escort fee'} value={<Gold n={plan.cities[0].total} />} />
         <SlipLine label={c2} note={sold[1] ? 'fee + cargo sales' : 'escort fee'} value={<Gold n={plan.cities[1].total} />} />
         <SlipLine label={dest} note={sold[2] ? 'cargo + bonus' : 'fee + completion bonus'} value={<Gold n={plan.cities[2].total} />} />
+        {asks.length > 0 && (
+          <SlipLine
+            label={`${co.name}’s asks`}
+            note="if met"
+            value={
+              <>
+                up to <Gold n={askTipMax(asks)} />
+              </>
+            }
+          />
+        )}
         <div className="ct-ends">
           <span>
             <Sword /> {plan.items} item chance{plan.items === 1 ? '' : 's'}
@@ -406,7 +266,7 @@ function Terms({ company, crates }: { company: CompanyId; crates: number }) {
           </span>
         </div>
         <SlipLine total label={staked ? 'Profit if delivered' : 'Pay if delivered'} value={`+${plan.profit} gold`} />
-        <p className="ct-slip-note">Each city pays for the share of cargo that arrives.</p>
+        <p className="ct-slip-note">Cities pay for the cargo that arrives.</p>
       </Slip>
 
       <div className="ct-advance">
@@ -414,7 +274,7 @@ function Terms({ company, crates }: { company: CompanyId; crates: number }) {
           <b>
             {co.name} advances {ADVANCE} gold for the road
           </b>
-          <small>Not from your bank, and repaid at the end. {Math.round(ROAD_SHARE * 100)}% of the road’s gold comes home.</small>
+          <small>Not from your bank; repaid at the end. {Math.round(ROAD_SHARE * 100)}% of road gold comes home.</small>
         </span>
         <span className="ct-advance-v">
           <Gold n={ADVANCE} />

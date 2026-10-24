@@ -1577,6 +1577,64 @@ function resumeCtx(c: AudioContext): Promise<void> {
 }
 
 /**
+ * The sealed crate's opening (Oct 2026, `ui/shell/hq/CrateOpening.tsx`): the
+ * thud of its landing, a knock per tap (`strength` 1–3, higher each time) and
+ * the burst as the lid flies. Synthesised from the same voices as the rest —
+ * no sample, no new asset. Each reward's flip is the rarity sting
+ * ({@link sfxRarity}), one step up the ladder per level.
+ */
+export function sfxCrate(cue: 'thud' | 'shake' | 'burst', strength = 1): void {
+  const c = ensureCtx()
+  if (!c || vol.muted) return
+  const play = () => {
+    if (vol.muted) return
+    if (cue === 'thud') {
+      osc(74, 0.24, 0.3, { type: 'sine', to: 40, bus: 'ui' })
+      noise(0.16, 0.16, { lp: 900, lpTo: 180, bus: 'ui' })
+    } else if (cue === 'shake') {
+      const s = Math.max(1, Math.min(3, strength))
+      noise(0.08, 0.06 + 0.03 * s, { bp: 1100 + 350 * s, q: 3, bus: 'ui' })
+      osc(150 + 45 * s, 0.08, 0.07, { type: 'triangle', to: 110 + 30 * s, bus: 'ui' })
+    } else {
+      noise(0.55, 0.26, { lp: 5200, lpTo: 260, bus: 'ui', send: 0.3 })
+      osc(96, 0.38, 0.3, { type: 'sine', to: 44, bus: 'ui' })
+      osc(660, 0.28, 0.05, { type: 'triangle', to: 1320, at: 0.03, bus: 'ui', send: 0.35 })
+      duckMusic(DUCK.sting, 0.6)
+    }
+  }
+  if (asleep(c)) void resumeCtx(c).then(play)
+  else play()
+}
+
+/**
+ * The fuse beat (skill fusion, Oct 2026, `ui/shell/FuseBeat.tsx`): two quick
+ * knocks as the part cards meet, the slam at `slamS` seconds (a low thump and
+ * a bright strike), and the evolution's struck chord ringing out of it — the
+ * same voices as every other sting, no sample. With nothing moving (reduced
+ * motion) the beat passes `slamS` 0: the chord alone, at once.
+ */
+export function sfxFusion(slamS = 0.26): void {
+  const c = ensureCtx()
+  if (!c || vol.muted) return
+  const play = () => {
+    if (vol.muted) return
+    const at = Math.max(0, slamS)
+    if (at > 0.05) {
+      noise(0.05, 0.05, { bp: 1400, q: 4, bus: 'ui' })
+      noise(0.05, 0.06, { bp: 1700, q: 4, bus: 'ui', at: at * 0.55 })
+    }
+    osc(88, 0.32, 0.26, { type: 'sine', to: 42, bus: 'ui', at })
+    noise(0.22, 0.14, { lp: 6400, lpTo: 600, bus: 'ui', send: 0.35, at })
+    const n = stingDegrees('evolve', stingTiming().key)
+    n.slice(2).forEach((s, i) => pluckVoice('harp', A4_IN_BANK + s, 0.22, { at: at + 0.02 + i * 0.03, send: 0.6 }))
+    arp(n.slice(2, 6).map(a4), 0.7, 0.07, 0.03, { type: 'triangle', at: at + 0.02, send: 0.6 })
+    duckMusic(DUCK.sting, 0.9, at)
+  }
+  if (asleep(c)) void resumeCtx(c).then(play)
+  else play()
+}
+
+/**
  * Wake an EXISTING context back up — for the app's shared visibility handler
  * (see src/state/lifecycle.ts). Deliberately does not create a context: with no
  * gesture behind it that would only produce a suspended one.

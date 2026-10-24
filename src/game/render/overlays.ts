@@ -147,6 +147,12 @@ export function drawTileGrid(
       ? 'rgba(255, 243, 196, 0.34)'
       : `rgba(255, 236, 170, ${(0.08 + 0.06 * pulse) * k})`
     ctx.fill()
+    // A dark keyline under the gold edge (Oct 2026 job critique): on the
+    // frost's snow and the harvest's straw a pale gold edge alone sank into
+    // the ground, and an open tile stopped reading as a place to stand.
+    ctx.lineWidth = (hover ? lw * 1.6 : lw) + 2 * lw
+    ctx.strokeStyle = `rgba(20, 12, 6, ${0.3 * k})`
+    ctx.stroke()
     ctx.lineWidth = hover ? lw * 1.6 : lw
     ctx.strokeStyle = hover ? '#fff3c4' : `rgba(255, 224, 138, ${(0.42 + 0.2 * pulse) * k})`
     ctx.stroke()
@@ -542,6 +548,7 @@ function drawGate(ctx: CanvasRenderingContext2D, map: GameMap, dmg: number, hurt
   const mid = (PLANKS - 1) / 2
   const w = fallen ? 16 : 9
   const x0 = fallen ? -2 : -4.5
+  const stakes: { y: number; k: number }[] = []
   for (let i = 0; i < PLANKS; i++) {
     const y = -span / 2 + i * step
     /**
@@ -555,6 +562,14 @@ function drawGate(ctx: CanvasRenderingContext2D, map: GameMap, dmg: number, hurt
     const rank = Math.abs(i - mid)
     const order = rank === 0 ? 0 : 2 * rank - 1 + (i > mid ? 1 : 0)
     if (order < gone) continue
+    if (!fallen) {
+      // Standing: a sharpened stake, drawn UPRIGHT on the screen whatever
+      // way the lane runs (Oct 2026 asset critique: the planks lay flat across
+      // the road, a log in the dirt rather than a palisade). Its foot is the
+      // plank's place on the line.
+      stakes.push({ y, k: i })
+      continue
+    }
     // Dark ground first, so the palisade separates from the dirt it stands on
     // — the same contour trick the unit sprites get baked (see pixmap.ts).
     ctx.fillStyle = 'rgba(24,14,8,0.85)'
@@ -564,9 +579,38 @@ function drawGate(ctx: CanvasRenderingContext2D, map: GameMap, dmg: number, hurt
     ctx.fillStyle = 'rgba(255,232,190,0.26)'
     ctx.fillRect(x0, y - 3, w, 1.6)
   }
-  if (!fallen) {
-    ctx.fillStyle = '#4a2d18'
-    for (const o of [-15, 15]) ctx.fillRect(-6, o - 2, 12, 4)
+  if (stakes.length) {
+    // The stakes in screen space, back to front, each its own outline, a lit
+    // left face and a shaded right, a point on top, the binding rope across.
+    const ang = laneAngle(map)
+    const ca = Math.cos(ang)
+    const sa = Math.sin(ang)
+    ctx.restore()
+    ctx.save()
+    const at = stakes.map((st) => ({ x: Math.round(a.x - sa * st.y), y: Math.round(a.y + ca * st.y), k: st.k })).sort((p, q) => p.y - q.y)
+    const H = 15
+    for (const st of at) {
+      const x = st.x - 3
+      const top = st.y - H
+      ctx.fillStyle = '#161c2e'
+      ctx.fillRect(x - 1, top + 1, 8, H + 1)
+      ctx.fillRect(x + 1, top - 2, 4, 3)
+      ctx.fillStyle = st.k % 2 ? '#7a5230' : '#86592f'
+      ctx.fillRect(x, top + 2, 6, H - 2)
+      ctx.fillRect(x + 2, top - 1, 2, 3)
+      ctx.fillStyle = '#a8703a'
+      ctx.fillRect(x, top + 2, 2, H - 2)
+      ctx.fillRect(x + 2, top - 1, 1, 2)
+      ctx.fillStyle = '#5a3a20'
+      ctx.fillRect(x + 4, top + 2, 2, H - 2)
+      ctx.fillStyle = '#c9b48c'
+      ctx.fillRect(x, top + 6, 6, 1)
+      ctx.fillRect(x, top + H - 4, 6, 1)
+    }
+    ctx.restore()
+    ctx.save()
+    ctx.translate(a.x, a.y)
+    ctx.rotate(ang)
   }
 
   if (heat > 0.02) {

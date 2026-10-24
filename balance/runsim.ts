@@ -28,6 +28,7 @@
 import { RNG, withOwnIds } from '../src/game/core/rng'
 import { ALL_SKILLS } from '../src/game/data/skills'
 import { recruitSkill, SKILL_MILESTONES, withFirstSkill } from '../src/game/run/skills'
+import { citySlate, HALL_SLATE_SIZE, SLATE_SIZE } from '../src/game/run/recruits'
 import { chosenHero, resolvePick, rollRecruitBody } from '../src/game/run/heroes'
 import { ALL_ITEM_KINDS, BASIC_ITEM_KINDS } from '../src/game/data/itemKinds'
 import { lookOf } from '../src/game/data/gear'
@@ -49,8 +50,8 @@ import { fieldFor, mapById } from '../src/game/data/maps'
 import { actFieldId, groundFor, type FieldState } from '../src/game/run/fields'
 import type { GameMap } from '../src/game/types'
 import { nodeHazardSeed, nodeTerrainRule } from '../src/game/run/terrain'
-import { encounterSeed, type EncounterKind } from '../src/game/data/waves'
-import { applyXp, xpToReach } from '../src/game/engine/leveling'
+import { encounterSeed, nodeArmour, type EncounterKind } from '../src/game/data/waves'
+import { applyXp } from '../src/game/engine/leveling'
 import { ACT_LAYERS, RUN_LAYERS, nodeThreatMult, threatAfterLayer, threatAtLayer, clearBonusGold, nodeClearLuck } from '../src/game/run/threat'
 import { hashSeed } from '../src/game/core/rng'
 import { MAX_BASE_HP } from '../src/game/run/economy'
@@ -68,6 +69,7 @@ import { difficultyRules, legMult, type DifficultyRules } from '../src/game/run/
 import type { Archetype, FocusMode, Item, ItemRarity, Sentinel } from '../src/game/types'
 import type { EngineRules } from '../src/game/engine/engine'
 import { autoEquipEmpty, type EquipRules } from '../src/game/engine/kit'
+import { fightTally, type AskTally } from '../src/game/run/asks'
 import {
   bestSkills,
   forcedSkills,
@@ -81,9 +83,7 @@ import {
   heroDps,
   ITEM_PRICE,
   MAX_ROSTER,
-  RECRUIT_PRICE,
   runBattle,
-  scaledRecruitLevel,
   PLAYER,
   type PlayerPolicy,
 } from './harness'
@@ -137,7 +137,8 @@ export interface Loadout {
    */
   markMult: number
   wideMap: boolean
-  extraRecruit: boolean
+  /** The HQ's Hiring Hall: one more candidate at every city, and hires trained to the company. */
+  hiringHall: boolean
   standingOrders: boolean
 }
 
@@ -168,7 +169,7 @@ export function loadoutFor(label: string, hq: HqState | Record<string, number>):
     focus: hqRun.focus ? { company: hqRun.focus, boost: hqRun.boost } : null,
     markMult: 1,
     wideMap: s.unlocked('cartographer'),
-    extraRecruit: s.unlocked('freeCompanies'),
+    hiringHall: s.unlocked('freeCompanies'),
     standingOrders: s.unlocked('standingOrders'),
   }
   useMetaStore.setState(keep)
@@ -230,7 +231,6 @@ export const veteranRun = (crates: number, company: CompanyId = 'silk'): SimOpti
 /** `run/map.mapOptionsFor`, read off a loadout instead of the live hub. */
 export const mapOptionsFor = (m: Loadout): MapOptions => ({
   wideMap: m.wideMap,
-  extraRecruit: m.extraRecruit,
   standingOrders: m.standingOrders,
 })
 
@@ -258,13 +258,9 @@ const GATE_HURT = 0.6
 
 /** A policy that ranks node *types* on a fixed table — the shape §11 shipped. */
 function prefPolicy(id: string, label: string, pref: Record<string, number>): RoutePolicy {
-  // Even a fixed-table player can see that a full company cannot hire: a
-  // recruit stop with no room for the recruit ranks below everything. Maps
-  // carry more hiring stops since Phase 3b, and a model that walked into them
-  // with a full roster measured `Free Companies` (a SECOND hiring stop) as a
-  // −9pt trap on the recruits line — the purchase was not the defect.
-  //
-  // …and that a hurt Gate needs the fire. The Gate bar is on screen for the
+  // A fixed-table player can see that a hurt Gate needs the fire. (It also used
+  // to rank a recruit stop with no room for the recruit below everything; there
+  // are no recruit stops since the gameplay pass — a hero is hired at a city.) The Gate bar is on screen for the
   // whole run and a campfire's first offer is its repair, so a player of ANY
   // table who is down to 60% of the Gate walks to the fire when the road offers
   // one (the same line the adaptive policy and the store's rest rule use). A
@@ -272,13 +268,11 @@ function prefPolicy(id: string, label: string, pref: Record<string, number>): Ro
   // campfire beside it measured the wide map's extra fights as a −3.5pt trap
   // on the battles-first line: the purchase was not the defect, the blindness was.
   const rank = (n: MapNode, v: RunView) =>
-    n.type === 'recruit' && v.roster.length >= MAX_ROSTER
-      ? 0.5
-      : n.type === 'campfire' && v.baseHp <= v.maxBaseHp * GATE_HURT
-        ? 8
-        : n.type === 'merchant' && v.baseHp <= v.maxBaseHp * GATE_HURT && v.gold >= GATE_REPAIR.price
-          ? 7
-          : (pref[n.type] ?? 0)
+    n.type === 'campfire' && v.baseHp <= v.maxBaseHp * GATE_HURT
+      ? 8
+      : n.type === 'merchant' && v.baseHp <= v.maxBaseHp * GATE_HURT && v.gold >= GATE_REPAIR.price
+        ? 7
+        : (pref[n.type] ?? 0)
   return {
     id,
     label,
@@ -295,21 +289,24 @@ function prefPolicy(id: string, label: string, pref: Record<string, number>): Ro
 export const POLICIES: RoutePolicy[] = [
   // The line §11 used to hardcode: every special beats every battle.
   prefPolicy('specials', 'specials-first (the shipped heuristic)', {
-    recruit: 5, campfire: 4.5, merchant: 4, shrine: 3, battle: 2, elite: 1, miniboss: 9, boss: 9,
+    campfire: 4.5, merchant: 4, shrine: 3, battle: 2, elite: 1, miniboss: 9, boss: 9,
   }),
   // An elite always pays a relic since Phase 3b, so the fight-first lines rank
   // it as a fight — just under a plain battle — rather than last.
-  prefPolicy('battles', 'battles-first', { battle: 5, elite: 4.8, recruit: 4, merchant: 3, campfire: 2.5, shrine: 2, miniboss: 9, boss: 9 }),
-  prefPolicy('recruits', 'recruits, else battles', {
-    recruit: 6, battle: 5, elite: 4.5, campfire: 3.5, merchant: 3, shrine: 2, miniboss: 9, boss: 9,
+  prefPolicy('battles', 'battles-first', { battle: 5, elite: 4.8, merchant: 3, campfire: 2.5, shrine: 2, miniboss: 9, boss: 9 }),
+  // Was "recruits, else battles": recruit stops first. There are none since
+  // the gameplay pass (a hero is hired at a city), so what is left of its table
+  // is a fight-first line that takes the fire before the shop. Kept under its
+  // old id so §12's paired cells stay comparable run to run.
+  prefPolicy('recruits', 'battles, the fire before the shop', {
+    battle: 5, elite: 4.5, campfire: 3.5, merchant: 3, shrine: 2, miniboss: 9, boss: 9,
   }),
   {
     id: 'adaptive',
     label: 'adaptive (reads the run state)',
     /**
      * The one policy that answers "is this stop worth a Threat step *to me,
-     * now*". A recruit is worth taking only while there is a slot for it; a
-     * merchant only with gold to spend; a shrine is a coin flip and an elite is
+     * now*". A merchant is worth it only with gold to spend; a shrine is a coin flip and an elite is
      * a harder fight for a better card, so both sit under a plain battle.
      */
     pick: (cands, v) => {
@@ -317,7 +314,6 @@ export const POLICIES: RoutePolicy[] = [
         switch (n.type) {
           case 'boss':
           case 'miniboss': return 9
-          case 'recruit': return v.roster.length < MAX_ROSTER ? 8 : 0.5
           // The fire is worth a stop when the Gate needs it, or before a boss.
           case 'campfire': return v.baseHp <= v.maxBaseHp * 0.6 ? 7 : 2.5
           case 'merchant': return v.gold >= ITEM_PRICE.rare ? 4 : 0.5
@@ -354,9 +350,10 @@ export interface SimOptions {
    * pay is recorded on the outcome (`RunOutcome.contract`) so a cash-out
    * policy can be priced after the fact (`contractNet`). Omitted: the open
    * road every route used to share, unweighted — exactly the run this model
-   * always played.
+   * always played. `desperate`: the trade war's desperate terms (its raiders
+   * ×`DESPERATE_STRENGTH`); no report section sets it.
    */
-  contract?: { company: CompanyId | null; crates: number; charter?: boolean }
+  contract?: { company: CompanyId | null; crates: number; charter?: boolean; desperate?: boolean }
   /**
    * The Sovereign Route's trade-offs, one switch each (all on by default on a
    * charter): its ground on every fight, the merchants' double prices, and
@@ -408,7 +405,7 @@ export interface SimOptions {
   /** Per-sub-wave safety cap (default 600s; counterfactuals only). */
   maxSeconds?: number
   /** Diagnostics: told about every fight the run takes (never changes the run). */
-  onFight?: (f: { layer: number; type: string; hpBefore: number; hpAfter: number; cleared: boolean; roster: number; level: number }) => void
+  onFight?: (f: { layer: number; type: string; hpBefore: number; hpAfter: number; cleared: boolean; roster: number; level: number; leaks?: number; leaked?: number }) => void
 }
 
 export interface RunOutcome {
@@ -449,6 +446,13 @@ export interface RunOutcome {
   nodes: number
   /** The leader's level after each layer it cleared, index = layer. */
   levelByLayer: number[]
+  /**
+   * What the company asks would have counted on this run (Draft 4 · A,
+   * `run/asks.ts`): kills, kills while burning, Plated and Warded kills, clean
+   * fights and clean city fights, elites won, wares bought and pacts taken.
+   * Diagnostics only — `balance/ask-rates.ts` fits the targets on it.
+   */
+  askTally?: Required<AskTally>
 }
 
 
@@ -508,6 +512,9 @@ export function slotsOn(m: GameMap): string[] {
  * read 23.2% and 25.3% delivered on the same rules, a run apart. Now a run is
  * a pure function of its seed and options, wherever it is played.
  */
+/** `FW_HIRE_PRICE`: an exploration knob for pricing a city's hire (default 0, what the game charges). */
+const HIRE_PRICE = Number(process.env.FW_HIRE_PRICE ?? 0) || 0
+
 export function simulateRun(seed: number, archetype: Archetype, o: SimOptions = {}): RunOutcome {
   return withOwnIds({ n: 0 }, () => simulateRunOnce(seed, archetype, o))
 }
@@ -518,7 +525,7 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
   const charter = !!k?.charter
   const parts = { ground: true, prices: true, muster: true, ...o.charterParts }
   // A charter's muster is its strength too (`contracts.contractRules`); §18 lifts it with the rest of the muster.
-  const banner = k ? (charter && !parts.muster ? stakeRules(0) : contractRules({ crates: k.crates, charter })) : (o.difficulty ?? difficultyRules(0))
+  const banner = k ? (charter && !parts.muster ? stakeRules(0) : contractRules({ crates: k.crates, charter, desperate: k.desperate })) : (o.difficulty ?? difficultyRules(0))
   const policy = o.policy ?? POLICIES[0]
   // A contract weights its company's pieces on its own road (`weightPool`), as
   // the store does; the Sovereign Route deals for no company and no focus, and
@@ -530,6 +537,8 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
   // Rosethread's trade-off: every merchant price doubles on the Sovereign Route.
   const price = (n: number) => (charter && parts.prices ? routePrice(n, { company: null, charter: true }) : n)
   const muster = charter && parts.muster
+  // The road's armour lean (`charter.encounterRulesOf`): Ironvein plate, Moonquill wards.
+  const armourRules = { allElite: false, eliteDepth: 0, armourLean: !charter && k?.company ? companyById(k.company).armour : undefined }
   const cities: { pay: number; cargo: number; gold: number; earned: number }[] = []
   /** A body joining the company: a random hire from the run's kinds, named apart. */
   const recruitBody = (rng: RNG, taken: Sentinel[]): Sentinel => rollRecruitBody(rng, items, taken.map((h) => h.name))
@@ -618,14 +627,39 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
   // worst slots. The modelled company re-posts best-first on every field.
   const heroSlots = slotsOn(field)
 
-  const hire = () => {
-    const lvl = scaledRecruitLevel(roster, hiresTrained(meta.extraRecruit, relics))
-    // A hire arrives bare (`scaledRecruit`) and dresses from the pack with the
-    // store's empty-slot rule (`withRecruits` → `autoEquipEmpty`).
-    const base = withRelicStats(firstSkill(recruitBody(rng, roster)), relics)
-    const dressed = autoEquipEmpty([evolve(lvl <= 1 ? base : applyXp(base, xpToReach(lvl)))], pack, rules())
+  /**
+   * A city's hire (the gameplay pass): the store's own slate (`citySlate`, a
+   * hash of the seed and the city — three candidates, four with the Hiring
+   * Hall, trained to the company with it), and the modelled player reads the
+   * cards — it takes the candidate with the most DPS. Arrives bare and dresses
+   * from the pack with the store's empty-slot rule (`withRecruits`).
+   */
+  const hire = (city: number) => {
+    // `FW_HIRE_PRICE` (exploration only, Node-side): what a hire would cost
+    // from the purse, if the game charged one. The modelled player pays it
+    // when it can and hires nobody when it cannot. The game charges nothing
+    // (REPORT §11 — the price measured as a pure cost on the first contract).
+    if (HIRE_PRICE > 0) {
+      if (gold < HIRE_PRICE) return
+      gold -= HIRE_PRICE
+    }
+    const slate = citySlate(seed, city, roster, {
+      statBonus: 0,
+      trained: hiresTrained(meta.hiringHall, relics),
+      skillFor: (id) => recruitSkill(seed, id, pool),
+      itemPool: items,
+      slate: meta.hiringHall ? HALL_SLATE_SIZE : SLATE_SIZE,
+    }).map((c) => evolve(withRelicStats(c, relics)))
+    const best = slate.reduce((a, b) => (heroDps(b) > heroDps(a) ? b : a))
+    const dressed = autoEquipEmpty([best], pack, rules())
     pack = dressed.rest
     roster = [...roster, dressed.roster[0]]
+  }
+
+
+  const askTally: Required<AskTally> = { kills: 0, burnKills: 0, platedKills: 0, wardedKills: 0, cleanFights: 0, cleanCities: 0, eliteWins: 0, wares: 0, pacts: 0 }
+  const countAsks = (t: AskTally) => {
+    for (const [k, v] of Object.entries(t) as [keyof AskTally, number][]) askTally[k] += v
   }
 
   let cur = map.nodes.find((n) => n.type === 'start')!
@@ -638,8 +672,8 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
 
     if (node.type === 'merchant') {
       // Four items rolled the way `selectNode` rolls them — with the roster's
-      // damage-type demand and the run's drought luck — at the store's prices,
-      // plus a hire at 80g.
+      // damage-type demand and the run's drought luck — at the store's prices.
+      // No hire: a merchant sells goods only (Oct 2026).
       const luck = merchantLuck(node.layer)
       // The counter's Gate repair, bought when the Gate is hurting (Phase 3b).
       if (baseHp <= meta.maxBaseHp * 0.65 && gold >= price(GATE_REPAIR.price)) {
@@ -647,7 +681,7 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
         baseHp = repairGate(baseHp, meta.maxBaseHp)
       }
       const stock = Array.from({ length: shelfSize(relics) }, () =>
-        generateItem(rng, { luck, roster: rosterRefs(roster), pity: { ...pity }, commitPity: false, kinds: items }),
+        generateItem(rng, { luck, depth: node.layer, roster: rosterRefs(roster), pity: { ...pity }, commitPity: false, kinds: items }),
       )
       for (let pass = 0; pass < 4; pass++) {
         let best: { item: Item; gain: number; hero: number } | null = null
@@ -660,23 +694,11 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
         }
         if (!best) break
         gold -= price(ITEM_PRICE[best.item.rarity])
+        askTally.wares++
         stock.splice(stock.indexOf(best.item), 1)
         equipOn(best.hero, best.item)
         creditPity(pity, best.item.rarity) // `buyMerchantItem` charges the sale
       }
-      if (roster.length < MAX_ROSTER && gold >= price(RECRUIT_PRICE)) {
-        gold -= price(RECRUIT_PRICE)
-        hire()
-      }
-      // A stop still drills the company: a share of a fight's XP (Phase 3b).
-      roster = roster.map((h) => evolve(applyXp(h, stopXp(node.layer))))
-      threat = threatAfterLayer(node.layer, banner.startThreat)
-      clearedCount++
-      reached = Math.max(reached, node.layer)
-      continue
-    }
-    if (node.type === 'recruit') {
-      if (roster.length < MAX_ROSTER) hire()
       // A stop still drills the company: a share of a fight's XP (Phase 3b).
       roster = roster.map((h) => evolve(applyXp(h, stopXp(node.layer))))
       threat = threatAfterLayer(node.layer, banner.startThreat)
@@ -693,6 +715,7 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
         baseHp = Math.max(1, baseHp + (eff.baseHpDelta ?? 0))
         gold = Math.max(0, gold + (eff.goldDelta ?? 0))
         earned += Math.max(0, eff.goldDelta ?? 0)
+        askTally.pacts++
       }
       // A stop still drills the company: a share of a fight's XP (Phase 3b).
       roster = roster.map((h) => evolve(applyXp(h, stopXp(node.layer))))
@@ -765,10 +788,13 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
       rules: o.rules,
       subWaves: o.subWaves,
       muster,
+      // An armoured ordinary fight, as `selectNode` deals it on this road.
+      mod: nodeArmour(node, seed, armourRules),
       // A stake's last leg (and the muster) steals more (`DifficultyRules`).
       baseDamageMul: banner.leakMult * legMult(banner, node.layer),
     })
-    o.onFight?.({ layer: node.layer, type: node.type, hpBefore: baseHp, hpAfter: m.baseHpLeft, cleared: m.cleared, roster: roster.length, level: roster[0].level })
+    o.onFight?.({ layer: node.layer, type: node.type, hpBefore: baseHp, hpAfter: m.baseHpLeft, cleared: m.cleared, roster: roster.length, level: roster[0].level, leaks: m.leaks, leaked: m.enemiesLeaked })
+    countAsks(fightTally(m, { cleared: m.cleared && m.baseHpLeft > 0, enemiesLeaked: m.enemiesLeaked, cargoBefore: baseHp, cargoAfter: m.baseHpLeft, node }))
     baseHp = m.baseHpLeft
     if (!m.cleared || baseHp <= 0) break
     clearedCount++
@@ -804,6 +830,7 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
     const cards = rewardHand(rng, {
       kind: handKind,
       luck: nodeClearLuck(node),
+      depth: node.layer,
       count: handSize({ thinPickings: false }),
       noBattleRelics: false,
       held: relics,
@@ -864,7 +891,7 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
      */
     if (forkFires(node)) {
       if (roster.length < MAX_ROSTER) {
-        hire()
+        hire(cityOfLayer(node.layer) ?? 0)
       } else if (roster.length) {
         const held = [...new Set(roster.flatMap((s) => (s.mutations ?? []).map((m) => m.key)))]
         const offer = rollMutationChoices(rng, held, 3)
@@ -896,6 +923,7 @@ function simulateRunOnce(seed: number, archetype: Archetype, o: SimOptions): Run
     fights: battles,
     nodes,
     levelByLayer,
+    askTally,
   }
 }
 
@@ -1043,6 +1071,7 @@ function monteCarloRunOnce(
       map: fieldFor(actField.id, rule, 'landscape', hazard) ?? actField,
       autoDeploy: true,
       variantSeed: encounterSeed(hashSeed(r, 'mc'), depth),
+      mod: nodeArmour({ ...mcNode, row: 0 }, hashSeed(r, 'mc')),
       enemyHpMult: threat * (o.curve?.(depth, kind) ?? 1),
       baseHp,
       // A cap, not a clock (Phase 3a). This was 70s and a capped battle was a

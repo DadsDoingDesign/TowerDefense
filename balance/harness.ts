@@ -44,7 +44,7 @@ import {
   STARTER_SKILLS,
   type BumpStat,
 } from '../src/game/data/skills'
-import { MAX_SKILLS, pendingMilestone, poolFor, SKILL_MILESTONES, skillOffer, slotsFull, takeBump, takeSkill } from '../src/game/run/skills'
+import { dropSkill, MAX_SKILLS, pendingMilestone, poolFor, SKILL_MILESTONES, skillOffer, slotsFull, takeBump } from '../src/game/run/skills'
 import type {
   Archetype,
   EffectMods,
@@ -382,6 +382,11 @@ export interface BattleMetrics {
   stats: BehaviourStats
   /** Ticks (at the harness `dt`) at which each Watch Command fired. */
   commandTicks: number[]
+  /** How many enemies reached the line (a head count, `BattleResult.enemiesLeaked`). */
+  enemiesLeaked: number
+  /** What a company ask counts off the fight (`run/asks.engineTally`): kills by key and kills while burning. */
+  killsByKey: Map<string, number>
+  burningKills: number
 }
 
 /**
@@ -571,6 +576,8 @@ export interface RunBattleOptions {
   subWaves?: boolean
   /** The Sovereign Route's muster: every goblin clan from the first fight (`waves` `muster`). */
   muster?: boolean
+  /** An ordinary fight's armour, as the node deals it (`waves.nodeArmour`). */
+  mod?: string | null
   /** What a leak steals, as a multiplier on its Gate damage (a stake's raiders steal more, `DifficultyRules.leakMult`). */
   baseDamageMul?: number
   /**
@@ -640,6 +647,9 @@ export function deployTeam(map: GameMap, team: readonly { sentinel: Sentinel; sl
     let cov = coverageCache.get(key)
     if (!cov) {
       cov = slotCoverage(geo, h.range)
+      // Generated roads (Oct 2026) make every run's field its own: keep the
+      // cache to the fields in play, not every field the suite has dealt.
+      if (coverageCache.size > 256) coverageCache.clear()
       coverageCache.set(key, cov)
     }
     const worth = (id: string) => cov![id] * tileDamageMult(map, id)
@@ -678,6 +688,7 @@ export function runBattle(opts: RunBattleOptions): BattleMetrics {
       variantId: opts.variantId,
       subWaves: opts.subWaves,
       muster: opts.muster,
+      mod: opts.mod,
     })
   if (opts.pressure != null && opts.pressure !== 1) wave = scaleWave(wave, opts.pressure, opts.pressureModel)
   const engine = new GameEngine({
@@ -738,6 +749,9 @@ export function runBattle(opts: RunBattleOptions): BattleMetrics {
     })),
     stats: { ...engine.behaviourStats },
     commandTicks,
+    enemiesLeaked: res.enemiesLeaked,
+    killsByKey: new Map(engine.killsByKey),
+    burningKills: engine.burningKills,
   }
 }
 
@@ -1003,7 +1017,7 @@ export function freshHero(archetype: Archetype, rng: RNG): Sentinel {
  * from `src/game/run/economy.ts` (pure, no zustand), re-exported so the run
  * model charges exactly what the store charges. They used to be mirrored here.
  */
-export { ITEM_PRICE, MAX_ROSTER, RECRUIT_PRICE } from '../src/game/run/economy'
+export { ITEM_PRICE, MAX_ROSTER } from '../src/game/run/economy'
 
 /**
  * The level a hire arrives at **with no meta unlocks**: the roster's median
@@ -1131,19 +1145,18 @@ const mainStat = (s: Sentinel): BumpStat => MAIN_STAT[heroStyle(s) ?? 'swing']
 
 /**
  * Every way a hero can settle its owed milestone (SK1): each skill on its
- * offer (with each held skill as the one it replaces, when full), and each
- * stat bump when one is on the table. Exactly the choices the store accepts.
+ * offer dropped on each slot that takes it — an empty slot (learned as
+ * itself; one move however many are empty) or each held skill (merged in,
+ * the drag-and-drop pass) — and each stat bump when one is on the table.
+ * Exactly the choices the store accepts.
  */
 function milestoneMoves(s: Sentinel, pool: readonly string[], seed: number): Sentinel[] {
   const out: Sentinel[] = []
   const offer = skillOffer(s, pool, seed)
+  const held = s.skills?.length ?? 0
   for (const k of offer) {
-    if (slotsFull(s)) for (const d of s.skills ?? []) {
-      const t = takeSkill(s, k.id, pool, seed, d)
-      if (t) out.push(t)
-    }
-    else {
-      const t = takeSkill(s, k.id, pool, seed)
+    for (let slot = 0; slot <= Math.min(held, MAX_SKILLS - 1); slot++) {
+      const t = dropSkill(s, k.id, slot, pool, seed)
       if (t) out.push(t)
     }
   }
@@ -1156,10 +1169,15 @@ function milestoneMoves(s: Sentinel, pool: readonly string[], seed: number): Sen
 
 /**
  * The coin-flipper (SK1): at every milestone it owes, a random skill from the
- * offer while it has a free slot; once full, half the time a random swap and
- * half the time the bump on its class's main stat. Every gate reads this — it
- * prices the skill LEVEL, not a player's read of it. `seed` is the run seed
- * the offers are hashed from (`run/skills.skillOffer`), `rng` the model's.
+ * offer into an empty slot while it has one; once full, half the time a
+ * random card merged into a random held skill (the drop: there is no swap)
+ * and half the time the bump on its class's main stat — and the bump, too,
+ * when the slot it drew is at the depth cap. It never merges by choice while
+ * a slot is free. Its draws are the ones the swap made (a card, then a held
+ * skill), so the model's stream is drawn as it always was. Every gate reads
+ * this — it prices the skill LEVEL, not a player's read of it. `seed` is the
+ * run seed the offers are hashed from (`run/skills.skillOffer`), `rng` the
+ * model's.
  */
 export function randomSkills(s: Sentinel, rng: RNG, pool: readonly string[], seed: number): Sentinel {
   let out = s
@@ -1167,7 +1185,9 @@ export function randomSkills(s: Sentinel, rng: RNG, pool: readonly string[], see
     const offer = skillOffer(out, pool, seed)
     let next: Sentinel | null = null
     if (offer.length && (!slotsFull(out) || rng.chance(0.5))) {
-      next = takeSkill(out, rng.pick(offer).id, pool, seed, slotsFull(out) ? rng.pick(out.skills!) : null)
+      const card = rng.pick(offer).id
+      const slot = slotsFull(out) ? out.skills!.indexOf(rng.pick(out.skills!)) : out.skills?.length ?? 0
+      next = dropSkill(out, card, slot, pool, seed)
     }
     out = next ?? takeBump(out, mainStat(out), pool, seed) ?? out
   }
@@ -1204,7 +1224,8 @@ export function forcedSkills(s: Sentinel, force: Record<string, string>, rng: RN
     const pinned = force[`${m.level}:${lookOf(out)}`]
     const offer = skillOffer(out, pool, seed)
     if (pinned && offer.some((k) => k.id === pinned)) {
-      out = takeSkill(out, pinned, pool, seed, slotsFull(out) ? rng.pick(out.skills!) : null) ?? out
+      const slot = slotsFull(out) ? out.skills!.indexOf(rng.pick(out.skills!)) : out.skills?.length ?? 0
+      out = dropSkill(out, pinned, slot, pool, seed) ?? out
       continue
     }
     out = randomSkills(out, rng, pool, seed)

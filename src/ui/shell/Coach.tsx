@@ -14,6 +14,7 @@ import { strengthPct, strengthText, type IconKey } from '../channels'
 import { Tap } from '../pointer'
 import { rewardInPlace, waveLive } from './levelUps'
 import { useShown } from './staging'
+import { useToastUp } from './toastUp'
 import {
   noteWhere,
   pickPill,
@@ -117,6 +118,7 @@ export function Coach({ stage }: { stage: RefObject<HTMLElement | null> }) {
   const markTaught = useSettingsStore((s) => s.markTaught)
 
   const screen = useGameStore((s) => s.screen)
+  const toastUp = useToastUp((s) => s.up)
   const battlePhase = useGameStore((s) => s.battlePhase)
   const roster = useGameStore((s) => s.roster)
   const placements = useGameStore((s) => s.placements)
@@ -204,7 +206,9 @@ export function Coach({ stage }: { stage: RefObject<HTMLElement | null> }) {
     wearingAnything,
     showThreat: threat > 1.001,
     threat,
-    owesSkill: owesSkill && (onMap || inSetup || inPlace) ? owesSkill.name : undefined,
+    // The run map has no party row and no gear (Oct 2026): the skill and gear
+    // lessons wait for the fight's setup, where the hero cards and slots are.
+    owesSkill: owesSkill && (inSetup || inPlace) ? owesSkill.name : undefined,
     danger: inSetup && !!battleMap.tiles?.some((t) => t.danger === 'cursed'),
     challenge: inSetup && rule ? { name: rule.name, blurb: rule.blurb } : undefined,
     elite: inSetup && nodeHere?.type === 'elite',
@@ -212,7 +216,9 @@ export function Coach({ stage }: { stage: RefObject<HTMLElement | null> }) {
     command: inSetup && deployed > 0 && commandShown && command ? { name: command.name, blurb: command.blurb } : undefined,
     subwave: screen === 'battle' && battlePhase === 'battle' && breather && subwaveShown,
     speed: screen === 'battle' && battlePhase === 'battle' && breather && speedShown,
-    gear: gearShown && (inPlace || onMap),
+    // In setup, where the gear and the pack are on screen — the reward hand
+    // in place shows neither (the three cards have the band).
+    gear: gearShown && inSetup,
     depth: depthShown && onMap ? { depth, last: Math.max(depth, runMap.layers - 1) } : undefined,
     merchant: onMap && reachable.some((id) => node(id)?.type === 'merchant'),
   })
@@ -327,6 +333,12 @@ export function Coach({ stage }: { stage: RefObject<HTMLElement | null> }) {
     item = { key: `tip:${id}`, icon: tipLive.icon, where: tipWhere(id, { wagonsLow: low, onMap }), body: tipLive.body, done: () => markTaught(id) }
   }
 
+  // A top-edge pill waits for the receipt toast to clear: the toast holds the
+  // band under the header, and a pill stepped under it lay over the field's
+  // first row (job critique leftovers, Oct 2026). Nothing is spent while it
+  // waits — the tip, the note or the new ground speaks once the toast is gone.
+  if (item?.where === 'top' && toastUp) item = null
+
   /*
    * A pill whose subject went away (the lesson performed, the setup over)
    * fades rather than blinking out: the last item is kept as a ghost for the
@@ -435,7 +447,7 @@ export function pickTip(s: TipFacts): Tip | null {
         icon: 'boon',
         body: (
           <>
-            <b>{s.owesSkill}</b> reached a <b>skill</b> level: <Tap /> the glowing hero and pick one of three. A hero holds up to three skills.
+            <b>{s.owesSkill}</b> can learn a <b>skill</b>: <Tap /> the glowing hero.
           </>
         ),
       }
@@ -449,7 +461,7 @@ export function pickTip(s: TipFacts): Tip | null {
         icon: 'warn',
         body: (
           <>
-            <b>{DANGER_COPY.cursed.name}</b> (the skull tiles): a hero can stand there, but deals {DANGER_COPY.cursed.short}.
+            <b>{DANGER_COPY.cursed.name}</b> (skull tiles): heroes there deal {DANGER_COPY.cursed.short}.
           </>
         ),
       }
@@ -484,11 +496,11 @@ export function pickTip(s: TipFacts): Tip | null {
         icon: 'relic',
         body: s.elite ? (
           <>
-            An <b>elite</b>: tougher goblins, and a <b>relic</b> in the spoils. A relic helps all your heroes for the rest of the run.
+            An <b>elite</b>: tougher goblins, and a <b>relic</b> in the spoils.
           </>
         ) : (
           <>
-            A <b>relic</b> helps all your heroes for the rest of the run.
+            Take one: an <b>item</b> for one hero, or a <b>relic</b> for the team.
           </>
         ),
       }
@@ -498,7 +510,7 @@ export function pickTip(s: TipFacts): Tip | null {
         icon: 'orders',
         body: (
           <>
-            New: <b>{s.command?.name}</b>, once per sub-wave in the fight. {s.command?.blurb}.
+            New: <b>{s.command?.name}</b>, once per sub-wave. {s.command?.blurb}.
           </>
         ),
       }
@@ -508,7 +520,7 @@ export function pickTip(s: TipFacts): Tip | null {
         icon: 'wave',
         body: (
           <>
-            A <b>sub-wave</b> is down and the fight is paused. Move one hero if you like, then <b>Next</b>.
+            <b>Sub-wave</b> down. Move one hero if you like, then <b>Next</b>.
           </>
         ),
       }
@@ -518,7 +530,7 @@ export function pickTip(s: TipFacts): Tip | null {
         icon: 'haste',
         body: (
           <>
-            <b>Speed</b> fast-forwards the fight. <Tap /> it for 2× or 3×.
+            <Tap /> <b>Speed</b> for 2× or 3×.
           </>
         ),
       }
@@ -528,7 +540,7 @@ export function pickTip(s: TipFacts): Tip | null {
         icon: 'equip',
         body: (
           <>
-            Items you win land in your <b>pack</b>. <Tap /> a slot under <b>Gear</b> to wear one — what a hero holds is what it does.
+            Won items land in your <b>pack</b>. <Tap /> a slot under <b>Gear</b> to wear one.
           </>
         ),
       }
@@ -540,7 +552,7 @@ export function pickTip(s: TipFacts): Tip | null {
           <>
             {/* Names the chip by its LABEL, the half that cannot go stale (M11),
                 and says what the number does in one plain clause. */}
-            <b>{strengthText(s.threat)}</b>: enemies have {strengthPct(s.threat)}% more HP. It rises at every stop.
+            <b>{strengthText(s.threat)}</b>: enemies have {strengthPct(s.threat)}% more HP, rising every stop.
           </>
         ),
       }
@@ -570,7 +582,7 @@ export function pickTip(s: TipFacts): Tip | null {
             <b>
               Depth {s.depth?.depth}/{s.depth?.last}
             </b>
-            : how far down the road you are. The boss waits at the end.
+            : how far down the road you are. The boss is at the end.
           </>
         ),
       }
@@ -580,7 +592,7 @@ export function pickTip(s: TipFacts): Tip | null {
         icon: 'merchant',
         body: (
           <>
-            A <b>Merchant</b> is in reach: spend your purse on gear, a hire or a wagon repair.
+            A <b>Merchant</b> is in reach: gear and wagon repairs for gold.
           </>
         ),
       }

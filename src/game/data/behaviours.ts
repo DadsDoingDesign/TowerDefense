@@ -73,6 +73,15 @@ export const HEAL_PULSE: Extract<EnemyBehaviour, { kind: 'healPulse' }> = {
   radius: 110,
   heal: 0.06,
   interval: 3,
+  /**
+   * A shaman's pulses run out (Oct 2026). Unlimited, a shaman held in a pack
+   * at high Threat out-healed a lone hero for good: a held column that
+   * neither dies nor leaks, in a game with no clock — REPORT §6 caught one at
+   * depth 11 on a generated road (four goblins held 33 minutes, 3% down). Ten
+   * pulses (30s, up to 60% of each goblin's health back) keep the shaman's
+   * threat and guarantee the hold grinds through.
+   */
+  charges: 10,
 }
 
 export const BERSERK: Extract<EnemyBehaviour, { kind: 'enrage' }> = {
@@ -175,8 +184,19 @@ export const COLOSSUS_SPLIT: Extract<EnemyBehaviour, { kind: 'bossSplit' }> = {
   radius: 24,
 }
 
-/** No resistance may pass this — the same cap the elite modifiers obey. */
+/** No resistance may pass this — a goblin's own, and a shield-bearer's aura on it. */
 export const RESIST_CAP = 0.55
+
+/**
+ * The cap an ARMOUR modifier (Plated, Warded; `enemies.ENEMY_MODS`) may take a
+ * goblin to — above `RESIST_CAP`, because an armoured fight is shown on the
+ * map and can be planned for (Oct 2026). Measured by `balance/armour-eval.ts`
+ * at 55 / 65 / 70%: at 55% a company of the wrong damage type needed only
+ * ×1.5 the damage (most of a column never reached the cap), at 65% ×1.8–2.0,
+ * at 70% ×2.0–2.3. 65% is "much harder, never unkillable" — the open type
+ * still goes straight through.
+ */
+export const ARMOUR_CAP = 0.65
 
 // ---------------------------------------------------------------- specialists
 
@@ -229,19 +249,19 @@ export function makeSpecialist(base: EnemyType, sp: Specialist): EnemyType {
  */
 export const BEHAVIOUR_INFO: Record<EnemyBehaviourKind, { label: string; telegraph: string; counter: string }> = {
   healPulse: {
-    label: 'Heals nearby goblins',
+    label: 'Heals nearby goblins, ten times',
     telegraph: 'green ring pulses out from the shaman',
-    counter: 'focus it first (Threat targeting) — every pulse it lives through undoes a volley',
+    counter: 'focus it first (Threat targeting): every pulse undoes a volley',
   },
   enrage: {
     label: 'Enrages when wounded',
     telegraph: 'red flame over it below 40% health',
-    counter: 'burst it through the threshold, or chill it — slows still apply to the enraged pace',
+    counter: 'burst it past the threshold, or chill it: slows still work',
   },
   sapper: {
     label: 'Blows up at your wagons, stealing extra cargo',
     telegraph: 'lit fuse over it; blast ring where it goes off',
-    counter: 'kill it on the approach, or hold it with a blocker: a held sapper goes off harmlessly and counts as the blocker\'s kill',
+    counter: 'kill it on the approach, or hold it: a held sapper goes off harmlessly',
   },
   lob: {
     label: 'Lobs a charge at your wagons when it gets close',
@@ -251,7 +271,7 @@ export const BEHAVIOUR_INFO: Record<EnemyBehaviourKind, { label: string; telegra
   split: {
     label: 'Breaks apart when destroyed',
     telegraph: 'crack mark on it; burst when it breaks',
-    counter: 'splash — the pieces spawn together and die together (and guns further down the lane for any that do not)',
+    counter: 'splash: the pieces spawn together and die together',
   },
   shieldAura: {
     label: 'Shields goblins around it',
@@ -266,7 +286,7 @@ export const BEHAVIOUR_INFO: Record<EnemyBehaviourKind, { label: string; telegra
   warCry: {
     label: 'War-cry at two-thirds and one-third health',
     telegraph: 'expanding red ring during the wind-up',
-    counter: 'Flare or chill the column after the cry; save Rally Horn for the burst through a threshold',
+    counter: 'Flare or chill after the cry; save Rally Horn to burst a threshold',
   },
   kingLob: {
     label: 'Lobs TNT at your wagons every few seconds, faster once wounded',

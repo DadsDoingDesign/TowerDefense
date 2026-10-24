@@ -48,7 +48,7 @@ export interface TipFacts {
    * The Stage is too short to hold the wave-clear ceremony AND a pill
    * (`stageCrowded`): a small phone's reward-in-place Stage is ~90-190px, and
    * the pill would sit on "Wave cleared". Every tip waits — the reward's own
-   * lessons (gear, a relic, a skill) come again on the run map.
+   * lessons (gear, a skill) come again at the next fight's setup.
    */
   ceremonyCrowded?: boolean
 }

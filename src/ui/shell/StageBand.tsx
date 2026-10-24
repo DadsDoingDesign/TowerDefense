@@ -6,6 +6,8 @@ import type { ShellContext } from './context'
 import { BossPlate } from './BossPlate'
 import { WaveCeremony } from './WaveCeremony'
 import { Coach } from './Coach'
+import { AskToast } from './AskToast'
+import { WavePreview } from './WavePreview'
 
 /**
  * Band 2 — the subject. Rule two of the shell: nothing ever covers this. No
@@ -78,11 +80,17 @@ export function StageBand({ ctx }: { ctx: ShellContext }) {
         <>
           <BattleCanvas />
           <div className="sh-stage-top">
+            {/* Setup: the coming wave, over the road's way in (the battle band,
+                Oct 2026). Live: the champion's plate. Never both — the preview
+                fades as the wave starts, and the plate only shows in one. */}
+            <WavePreview />
             <BossPlate />
           </div>
           <div className="sh-stage-center">
             <WaveCeremony />
           </div>
+          {/* A company ask's count moving (Draft 4 · A): a pill at the top edge. */}
+          <AskToast />
         </>
       )}
       {ctx.stage === 'map' && (

@@ -6,8 +6,9 @@
  * decides what is SHOWN), but four ideas are properties of the road itself and
  * can only be held back where the road is dealt:
  *
- *  - **Merchants from the second stop.** Layer 1 may roll one stop, and it can
- *    be a merchant — a shop before the player has seen an item. On a first run
+ *  - **Merchants from the second stop.** A road dealt before the opening
+ *    fight (`OPENING_LAYER`) could roll a stop on layer 1, and it could be a
+ *    merchant — a shop before the player has seen an item. On a first run
  *    a layer-1 merchant becomes a fight, and if that was the map's only
  *    merchant one is placed on the nearest later layer that has room.
  *  - **Danger tiles and map challenges not before depth 3.** Cursed ground

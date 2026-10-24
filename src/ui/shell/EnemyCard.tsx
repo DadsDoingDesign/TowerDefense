@@ -12,6 +12,8 @@ import { Icon } from '../Icon'
 import { strengthShort } from '../channels'
 import { enemyCardData, learnLine } from './enemyFacts'
 import { EnemyPortrait } from './EnemyPortrait'
+import { useRunClan } from './useRunClan'
+import { clanArtId } from '../../game/data/clans'
 
 /**
  * Q10 — the enemy info card: tap a portrait in the wave strip and a small card
@@ -43,6 +45,7 @@ export function EnemyCard({
   typeId,
   countNote,
   anchor,
+  below = false,
   onPick,
   onClose,
 }: {
@@ -53,6 +56,8 @@ export function EnemyCard({
   countNote: string
   /** The strip the card sits on (its top edge) and the portrait it points at. */
   anchor: { strip: HTMLElement | null; chip: HTMLElement | null }
+  /** Hang under the anchor rather than sit on its top edge (the Stage's wave preview, at the top). */
+  below?: boolean
   onPick: (typeId: string) => void
   /** `restore`: send focus back to the opener (false when a tap elsewhere should keep it). */
   onClose: (restore: boolean) => void
@@ -66,6 +71,7 @@ export function EnemyCard({
   const engine = useGameStore((s) => s.engine)
   // Re-render as the wave runs, so a kill mid-wave counts on an open card.
   const hud = useGameStore((s) => s.hud)
+  const clan = useRunClan()
 
   // The live wave's own kills of this kind: the meta tally is only written
   // when the wave settles (and the engine is dropped in the same breath).
@@ -85,11 +91,12 @@ export function EnemyCard({
     hpMult,
     laneLength: battleMap ? pathLength(battleMap.path) : 0,
     knowledge,
+    clan,
   })
 
   const idx = entries.findIndex((e) => e.typeId === typeId)
   const entry = idx >= 0 ? entries[idx] : null
-  const art = entry?.art ?? ENEMY_TYPES[typeId]?.id ?? typeId
+  const art = entry?.art ?? clanArtId(clan, ENEMY_TYPES[typeId]?.id ?? typeId)
 
   // Placement: on the strip's top edge, centred on the portrait, kept 16px
   // inside the viewport. Measured, then re-measured on resize.
@@ -104,12 +111,12 @@ export function EnemyCard({
       const vw = document.documentElement.clientWidth
       const w = card.offsetWidth
       const x = Math.max(16, Math.min(vw - 16 - w, c.left + c.width / 2 - w / 2))
-      setPos({ left: Math.round(x), bottom: Math.round(window.innerHeight - s.top + 8) })
+      setPos(below ? { left: Math.round(x), top: Math.round(s.bottom + 8) } : { left: Math.round(x), bottom: Math.round(window.innerHeight - s.top + 8) })
     }
     place()
     window.addEventListener('resize', place)
     return () => window.removeEventListener('resize', place)
-  }, [anchor.strip, anchor.chip, typeId])
+  }, [anchor.strip, anchor.chip, typeId, below])
 
   useEffect(() => {
     ref.current?.focus({ preventScroll: true })

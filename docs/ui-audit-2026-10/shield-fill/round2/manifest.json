@@ -1,0 +1,58 @@
+[
+  {
+    "id": "idle-before-after",
+    "group": "shield-fill-round2",
+    "people": "humans",
+    "title": "Idle: painted, round 1, round 2",
+    "caption": "Same knight with the shield gone? Judge the helmet curve, the narrow back, no near hand.",
+    "file": "idle-before-after.png"
+  },
+  {
+    "id": "swing-before-after",
+    "group": "shield-fill-round2",
+    "people": "humans",
+    "title": "Swing: round 1 vs round 2",
+    "caption": "Rough edges gone? The held piece follows the body through the swing.",
+    "file": "swing-before-after.png"
+  },
+  {
+    "id": "grip-closeup",
+    "group": "shield-fill-round2",
+    "people": "humans",
+    "title": "Grip close-up",
+    "caption": "Does it read as held in front, like the shield was? Nothing floats.",
+    "file": "grip-closeup.png"
+  },
+  {
+    "id": "every-combo",
+    "group": "shield-fill-round2",
+    "people": "humans",
+    "title": "Every off hand \u00d7 body, round 2",
+    "caption": "Like for like with round 1. The body pieces are unchanged by this round.",
+    "file": "every-combo.png"
+  },
+  {
+    "id": "option-a-vs-b",
+    "group": "shield-fill-round2",
+    "people": "humans",
+    "title": "Option A (fill + hand) vs B (shape fit)",
+    "caption": "B is picked for every off-hand piece; A only for a second weapon.",
+    "file": "option-a-vs-b.png"
+  },
+  {
+    "id": "helmet-proof",
+    "group": "shield-fill-round2",
+    "people": "humans",
+    "title": "Helmet contour vs the painted head",
+    "caption": "Does the rebuilt back of the head sit on the painted curve, not past it?",
+    "file": "helmet-proof.png"
+  },
+  {
+    "id": "shipped-look",
+    "group": "shield-fill-round2",
+    "people": "humans",
+    "title": "The knight as it ships",
+    "caption": "Every off hand \u00d7 the shipped weapon cases at 2\u00d7, and 1\u00d7 in a battle. Is each cell Pixel Frog-native?",
+    "file": "shipped-look.png"
+  }
+]

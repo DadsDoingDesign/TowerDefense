@@ -1,3 +1,4 @@
+import { generatedFieldDef } from './fieldGen'
 import { streamRng } from '../core/rng'
 import type { Vec2 } from '../core/vec'
 import type { GameMap, TerrainRuleId } from '../types'
@@ -96,7 +97,7 @@ export function pathLength(path: readonly Vec2[]): number {
  * tiles, and so the balance suite's fixed benches keep meaning "the tile where
  * `s3` used to be" ({@link legacyPostTile}).
  */
-interface FieldDef {
+export interface FieldDef {
   id: string
   name: string
   path: Vec2[]
@@ -237,7 +238,8 @@ const KILN: FieldDef = {
 }
 
 const FIELD_DEFS: readonly FieldDef[] = [GREEN, KILN]
-const defById = (id: string): FieldDef | undefined => FIELD_DEFS.find((d) => d.id === id)
+/** A field's definition: a hand-made one, or a generated one rebuilt from its id (`fieldGen`). */
+const defById = (id: string): FieldDef | undefined => FIELD_DEFS.find((d) => d.id === id) ?? generatedFieldDef(id) ?? undefined
 
 /**
  * Lay one field's grid, with a map challenge's pieces on top when it has one,
@@ -270,6 +272,14 @@ function buildField(def: FieldDef, rule: TerrainRuleId | null, hazard: number | 
   }
 }
 
+/**
+ * A field built from its definition with no map challenge and no seeded
+ * hazards — what the procedural generator (`data/fieldGen.ts`) and its gallery
+ * build each candidate road into, through the same `buildField` as every
+ * shipped map.
+ */
+export const mapFromDef = (def: FieldDef): GameMap => buildField(def, null)
+
 export const FIRST_MAP: GameMap = buildField(GREEN, null)
 export const KILN_MAP: GameMap = buildField(KILN, null)
 
@@ -288,8 +298,23 @@ export const KILN_MAP: GameMap = buildField(KILN, null)
  */
 export const ALL_MAPS: readonly GameMap[] = [FIRST_MAP, KILN_MAP]
 
-/** The map with this id, or null if this build has never heard of it. */
-export const mapById = (id: string): GameMap | null => ALL_MAPS.find((m) => m.id === id) ?? null
+/**
+ * The map with this id, or null if this build has never heard of it. A
+ * generated field (`gen.<profile>.<seed>`, Oct 2026) is rebuilt from its id
+ * on first use and kept: the id is the recipe.
+ */
+export function mapById(id: string): GameMap | null {
+  const shipped = ALL_MAPS.find((m) => m.id === id)
+  if (shipped) return shipped
+  const hit = genMaps.find((m) => m.id === id)
+  if (hit) return hit
+  const def = generatedFieldDef(id)
+  if (!def) return null
+  const m = buildField(def, null)
+  genMaps = [m, ...genMaps].slice(0, 48)
+  return m
+}
+let genMaps: GameMap[] = []
 
 /**
  * The open tile a pre-grid build circle maps to on `fieldId`: the nearest open
@@ -456,7 +481,16 @@ export function fieldFor(
     hazardVariants = [...add, ...hazardVariants].slice(0, HAZARD_CACHE)
     return m
   }
-  if (!rule) return orientation === 'landscape' ? land : (PORTRAIT_MAPS.find((m) => m.twinOf === fieldId) ?? land)
+  if (!rule) {
+    if (orientation === 'landscape') return land
+    const shipped = PORTRAIT_MAPS.find((m) => m.twinOf === fieldId)
+    if (shipped) return shipped
+    // A generated field's twin, built once and kept like a challenge variant.
+    const key = `${fieldId}~~portrait`
+    let tall = variants.get(key)
+    if (!tall) variants.set(key, (tall = portraitTwin(land)))
+    return tall
+  }
   const key = `${fieldId}~${rule}~${orientation}`
   let m = variants.get(key)
   if (!m) {

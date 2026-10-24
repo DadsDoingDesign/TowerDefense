@@ -20,6 +20,9 @@ import { createEventsSlice } from './eventsSlice'
 import { createRosterSlice } from './rosterSlice'
 import { createShellSlice } from './shellSlice'
 import type { GameState } from './types'
+import { useSettingsStore } from '../settingsStore'
+import { markAssisted } from '../../game/run/ranking'
+import { isLiveRun } from './selectors'
 
 export const useGameStore = create<GameState>()((...a) => {
   const bootSeed = newRunSeed()
@@ -34,6 +37,7 @@ export const useGameStore = create<GameState>()((...a) => {
     ...bootRun,
     runSeed: bootSeed,
     screen: 'hub',
+    homeFocus: null,
     roster: bootRoster,
     gold: START_GOLD,
     baseHp: MAX_BASE_HP,
@@ -48,4 +52,16 @@ export const useGameStore = create<GameState>()((...a) => {
     ...createRosterSlice(...a),
     ...createShellSlice(...a),
   }
+})
+
+/**
+ * The assist dial marks the live run the moment it is turned on, wherever it
+ * is turned on — Settings, the result page's "Assist: Steady" — and the mark
+ * stays when it is turned off again (`game/run/ranking.markAssisted`). A run
+ * that is not live (the hub, a finished run) is not marked: the next one is,
+ * when it begins with the dial on.
+ */
+useSettingsStore.subscribe((s) => {
+  const g = useGameStore.getState()
+  if (!g.assisted && isLiveRun(g) && markAssisted(false, s.assist)) useGameStore.setState({ assisted: true })
 })

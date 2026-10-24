@@ -22,7 +22,8 @@ It supersedes everything below, which is kept as history. The page's own
 | X Edge cases | 15 screens at the limits: five heroes (the Selector scrolls), a full 10-slot pack, a long wave queue (+N chip), long names, Large UI, the 320×568 tier, nothing affordable, roster full, toasts over content, every header chip at once, the longest militia name with an 8-digit bank, and the High contrast and Tritan modes. Magenta dashed boxes are annotations, not UI. |
 | Audit / Findings | 44 findings with severity and `file:line`, plus the visual issues seen in a full capture of `main`. |
 | Brand (Oct 2026) | The game is **Merchant Mercenaries** (short name *MerchMercs*, tagline “Guard the road, bank the gold.” (it replaced “Sellswords for hire”, which said *for hire* twice; the menu subtitle still reads “… · sellswords for hire” in code, `militiaTagline`)). The mark is the **Dripping Seal**: red wax, a gold coin and a sword whose crossguard runs into the ring. It is the chosen concept, *29 refined*, in the `LOGO ONLY` section. A **Brand Lockup** set (Stacked · Horizontal · Short) in Components / 08 Menu replaces the Fieldwatch wordmark on every menu screen and in the rotate prompt. The run header carries no wordmark, as on main. The four variable collections are renamed to `Merchant Mercenaries · …`. The repo itself still uses *Fieldwatch* (`index.html`, `manifest.webmanifest`, `package.json`, `docs/BRAND.md`): those change when the rename lands in code. |
-| Proposal · Pick one, then read | **Built in the game (October 2026)** as `ui/shell/PickStrip.tsx` on the contract board, hero pick, recruit, city payout and skill choice; the reward cards (after a wave, and the elite/boss spoils) are select-then-take with a CTA that names the card ("Take Cruel Bow"); only the campfire commits on the tap. One pattern for every choose-one surface: hero pick, contract board, recruit, elite/boss spoils, city payout and skill choice. Options sit in one row as small Pick Tokens (a new component set: Default, Focused, Seen, Unavailable, Locked). One focused option shows below in a fixed recipe: head, three key facts, what it does, specifics, and a compare line against the option looked at before. Tapping focuses and never commits; the CTA names the choice. Each surface has a before → after pair; there is also a desk master–detail. Revised after the first review: tokens are pictures with one label + number and no name (a new Company Logo set gives each company its own pixel logo), gear is drawn as the in-game equipment slots and skills as the Skill card, and the compare line, the Seen dot and the swipe hint are gone. |
+| Proposal · Home cleanup (B2) | **Built in the game (October 2026).** The home is the contract board: the trade map's road labels are wooden **Road Signposts** (company logo + "Rep N"; a gold "×1.3" on the road whose goods sell high today, once the market is revealed; a padlock and "—" on a road not hiring yet). A tap focuses that road and never signs (`homeFocus` in the store, `TradeMap` `focused`). Under the map a parchment **Contract Notice** (`MenuScreen` `ContractNotice`): the company's wax seal, "Notice · Spice road · 3 cities", the company name and a ‹ n/5 › pager, the three cities, the letter, and chips — Market, Ground, Rep ("Rep 2 · a skill at 3") or Locked ("Opens at Standing 3"). The CTA "Read Peppercorn's terms" opens the terms directly (`openContracts`); the board screen, the market/standing rows, the locked-tile sentences, the "N companies hiring" line, the tagline and the desk standing list are gone. Back from the terms returns home with the road still focused. Choosing the hero marches straight into the first layer's middle fight (`marchOut`, `run/map.firstFightOf`); the run map comes after its spoils. Desk: the column holds the head, the notice, the tiles and the CTA; the map is the picker. One deviation: the notice's title is the company's name, not "… seeks an escort", because several letters open with those same words. **Superseded by the map-first home (October 2026, `docs/ui-audit-2026-10/home-map/REVIEW.md`):** the map fills the screen; the notice, its liaison, the pager, the war strip and the tiles are gone. A slim bar (seal, bank, place icons), a company dock (five fixed slots in `COMPANY_IDS` order — the roads fan west→east in the same order — with Rep, war share and the day's marks) and one glass card for the focused company (flag, name, chips, Next → track, the CTA) float over it; a slot or a crest-only signpost focuses a road and the canvas lights it and names its cities. |
+| Proposal · Pick one, then read | **Built in the game (October 2026)** as `ui/shell/PickStrip.tsx` on the hero pick, a city's hire (there are no recruit stops since the Oct 2026 gameplay pass), city payout and skill choice; the reward cards (after a wave, and the elite/boss spoils) are select-then-take with a CTA that names the card ("Take Cruel Bow"); only the campfire commits on the tap. One pattern for every choose-one surface: hero pick, contract board, recruit, elite/boss spoils, city payout and skill choice. Options sit in one row as small Pick Tokens (a new component set: Default, Focused, Seen, Unavailable, Locked). One focused option shows below in a fixed recipe: head, three key facts, what it does, specifics, and a compare line against the option looked at before. Tapping focuses and never commits; the CTA names the choice. Each surface has a before → after pair; there is also a desk master–detail. Revised after the first review: tokens are pictures with one label + number and no name (a new Company Logo set gives each company its own pixel logo), gear is drawn as the in-game equipment slots and skills as the Skill card, and the compare line, the Seen dot and the swipe hint are gone. |
 
 Older pages: **FieldWatch** (tokens, components, desktop) and **_Mobile first UI**
 (the mobile system, the flow board, and the Root Shell redesign).
@@ -32,6 +33,44 @@ Read the sections in two halves. `FieldWatch`, `01 · Mobile UI System` and
 the audit captured. `03 · Root Shell` and `04 · Contexts` are a **proposal**:
 one four-band screen that absorbs those forty screens. Where the two halves
 disagree, the shipped app is right and the shell is the argument.
+
+## Page: Item assets — `?node-id=2276-2083`
+
+**Built October 2026.** Every item base the game deals, drawn by the real code. Use it to see which items share a picture and what each one looks like when a hero carries it.
+<https://www.figma.com/design/xbggdvIl5WA2LYc4LyeII4/TD-Game-Roguelite?node-id=2276-2083>
+
+| Section | What's in it |
+| --- | --- |
+| Header | The page's purpose, how to read a set, and the counts: 27 kinds, each with its own icon cell (12 of them shipped October 2026). |
+| One-handed · Two-handed · Off hand · Body | One card per kind (`ITEM_KINDS`). Each card shows: its tier (basic / unlock / Sovereign), its hand rule, its icon cell, what the figure draws, its doll strip, and "Own icon cell" (muted; a "Shares the X icon with …" warn line would mark a shared one, and there are none). Under that sits **one component set per item**: `Rarity` (Common … Mythic) × `View`. `Icon` is the pack tile at that rarity. `Equipped (figure)` is the battlefield hero carrying it, via `gearMarks` on the neutral Pawn rig — a body piece WORN by the body layer (`bodyLayer.ts`, since the kit-look pass: the tunic re-inked in the icon's colours plus its silhouette — pauldrons, a tasset, a skirt, a ringed hem, a cape behind). `Equipped (doll)` is the `loadout.heroStrip` paper doll in the `fieldwatch` pack. Every variant is an image fill of a real render. |
+| Full loadouts | Six mixed kits. Each shows the neutral figure, the paper doll, the figure as the game draws it today (the look picked by the weapon, `gear.lookOf`) and the kit's tiles; the figures wear their body piece. A note explains what changes between them. |
+| Needs a unique asset · shipped | **Shipped October 2026.** The six cells that used to be shared (blade, wand, grimoire, shield, plate, cloth). The owner keeps its cell; each of the 12 kinds that borrowed one shows the cell it borrowed ("Was: the shield cell") beside its **own atlas cell**, as editable 16 × 16 pixels (8 px rectangles, pack palette, `#161C2E` outline), labelled `SHIPPED · ATLAS CELL`. The art is drawn in `scripts/fw-icons.ts` (atlas rows 12–13: `brand`, `rod`, `tome`, `codex`, `buckler`, `pavise`, `easel`, `mail`, `aegis`, `ironheart`, `cloak`, `silkwind`); `SHIPPED_CELLS` in `scripts/item-assets-lib.ts` names each one's old and new cell. The item cards' renders show the new cells too, and the loadouts show the knight without its painted shield when it holds none. A closing note lists the gaps that remain: 19 kinds have no doll strip; only the icon shows rarity, and the figure changes only by the enchantment glint. (The body-piece gap closed with the kit-look pass.) |
+
+**Kit portraits.** Every hero portrait in the shell (party bar, hero card, Upgrade button, Pack strip, hero pick, a city's hire, the campfire's rows) is the battlefield figure in its kit — weapon, off hand, body — cut to a square bust by `render/heroPortrait.ts` from `units.heroFigure`, the composition the field draws, so a portrait cannot drift from the figure. The page shows the figures; the portraits are their crops (`harness/kit.html` draws both, `scripts/kit-look.mjs` captures them in the app).
+
+**Regenerate.** `npx tsx scripts/item-assets.ts` prints the inventory and writes `docs/item-assets/inventory.json`. Add `--render` to start vite on :5217, run `harness/items.html` in Playwright and write the renders to `docs/item-assets/` (palette-compressed PNGs, about 2 MB; `cells/` is each old borrower's borrowed cell beside its own). `docs/item-assets/figma/` holds screenshots of the page **as first built**, before the twelve cells shipped; the page itself is current (the egress proxy refuses Figma's screenshot host, so they could not be retaken).
+
+**Getting images in.** `upload_assets` and plain HTTPS to the Figma hosts are refused by this sandbox's egress proxy. Each render goes in as base64 inside a `use_figma` script, using `figma.createImage(figma.base64Decode(b))`, and fills the rectangle named `img:<sha1-10>`. To survive transcription, the scripts:
+
+- fold runs of repeated characters;
+- checksum every string;
+- report any that fail, so they can be resent.
+
+Figures go in at 1×, because Figma scales small images up with nearest-neighbour, so they stay crisp. From a machine with Figma network access, `upload_assets` onto the same `img:` rectangles is simpler.
+
+## Page: Enemy assets — `?node-id=2333-2083`
+
+**Built October 2026.** Every goblin the game fields, clan by clan, drawn by the real code. Use it to see what each clan's units look like at every tier and form, and to check that the clans part from each other.
+<https://www.figma.com/design/xbggdvIl5WA2LYc4LyeII4/TD-Game-Roguelite?node-id=2333-2083>
+
+| Section | What's in it |
+| --- | --- |
+| Header | The page's purpose and how to read a set: the five clans, one per company's road (the clan follows the run; the Sovereign Route mixes them by act; with no run the Cinder Clan is drawn), what Faction, Tier and Form mean, how tiers read (the tier hue, plus one more ornament per tier), and where the names come from (`clans.enemyName`). Under it, the **clan comparison**: each clan's tier-3 torch, powder and keg and its torch champion, side by side, as instances of the sets below. |
+| One section per clan | Cinder Clan (Peppercorn), Gnawbone Pack (Butcherblock), Deepdelve (Ironvein), Silkcut Gang (Rosethread), Sporecap Rot (Greenvial). Each is **one component set** `<Clan> · goblins` with 18 variants: `Faction` (Torch, Powder, Barrel) × `Tier` (1–5) at `Form=Base` (tier 5 is `Form=Boss`, the clan's champion), plus the tier-3 torch as `Elite` (Swift), `Plated` and `Warded`. Each variant shows the render, the unit's name, its look (what was added at that tier) and its look id and engine name (`delve.torch3 · engine Torch Raider`). |
+
+**Regenerate.** `npx tsx scripts/enemy-assets.ts` prints the inventory and writes `docs/enemy-assets/inventory.json`. Add `--render` to start vite on :5225 (or use one already there, `ENEMY_ASSETS_BASE=http://localhost:5225`), run `harness/enemies.html` in Playwright and write the renders to `docs/enemy-assets/` (palette-compressed PNGs, about 1.8 MB): one per clan × faction × tier × form, each clan's run cycle and keg roll frame by frame, a sheet per clan, and `compare.png` / `compare-grey.png`. The art itself is baked by `npx tsx scripts/enemy-clans.ts`.
+
+**Getting images in.** As on Item assets: the egress proxy refuses `upload_assets` and the Figma hosts, so each render goes in as base64 inside a `use_figma` script (`figma.createImage(figma.base64Decode(b))`) and fills the rectangle named `Render · units.drawEnemy` in the variant's `Render` frame, at 1× drawn at 2×. Each string carries an FNV-1a checksum and the script reports the ones that fail. Strings much over 2 KB fail often, so send five to eight renders a call; replacing the PNG boilerplate every render shares (the `tRNS` / `pHYs` run) with a token that the script expands, and sending a long render as 100-character rows, both cut the failures. A failed string can report its 100-character chunk checksums so the bad chunk can be found and resent.
 
 ## Page: FieldWatch — `?node-id=2001-30`
 
@@ -106,7 +145,7 @@ every other surface becomes a state of those bands rather than a place you go.
 | **Header** | 44 (was 76) | Run state in ONE row — depth, enemy strength, cargo, gold. No wordmark (October 2026) |
 | **Stage** | 388 | The subject: battlefield · map · board · result · title |
 | **Selector** | 126 | The row of choosable things — party, offers, rooms, menu |
-| **Detail** | 254 | Context panel (the rest, ~160) · gear doll 98 · pack 108 |
+| **Detail** | 254 | Context panel (the rest, ~160) · gear doll 98 · pack 108 — since the battle band (Oct 2026): the hero card beside ONE "Gear \| Pack" kit column (128), see § The battle band |
 
 ### The four rules
 
@@ -341,8 +380,9 @@ landscape field).
 - **Setup collapses too on a portrait field** (`setupCollapsible`, `live.ts`).
   A portrait field in the four-band setup Stage would be smaller than the
   landscape one was (0.30 at 390, 0.12 at 320), so setup takes the live layout:
-  the Detail band is the wave strip — a caption (*Post a hero*, then *12
-  enemies*) over the wave's line-up, a **Details** toggle and Start Wave. Arming a hero from the party
+  the Detail band is the action bar — **Details**, the hero's **Upgrade** and
+  Start Wave — and the wave's name and line-up hang from the Stage's top edge
+  (§ The battle band). Arming a hero from the party
   row keeps it collapsed (the field is the target); a post lets go of the
   selection; Details, or tapping a posted hero on the field, opens the band.
   Setup field at 390×844: 341×528 (was 390×228); at 320×568: 184×285 (was
@@ -360,7 +400,7 @@ ONE `role="img"` whose name lists every kind and count.
 
 | Moment | Caption | Queue | Actions |
 | --- | --- | --- | --- |
-| Setup | *Depth 1 · Post a hero* → *Depth 1 · 12 enemies* | the whole wave | (Details) · Start Wave |
+| Setup | — (on the Stage's top edge since the battle band: *Depth 1 · Post a hero* → *8 enemies*) | — (the same queue, in the preview) | (Details) · (Upgrade) · Start Wave |
 | Live | *Depth 1 · 8 left* | everything not yet spawned (*All on the field* when empty) | Watch Command · Speed |
 | Held sub-wave | *Held · Move one hero* → *Held · Moved* (accent edge on the strip) | the NEXT sub-wave only | Next ▶ · Speed |
 | Cleared | *Depth 1 · Wave cleared* | gold earned | Continue |
@@ -371,6 +411,33 @@ still light up on the field. Where the middle is under 140px (portrait setup
 beside Details on a phone, and every moment at 320 wide) the name steps aside whole and the moment keeps the
 line; the header's Depth chip names the wave right above.
 
+### The battle band (October 2026)
+
+The designer's mark-up of the setup screen: "the bottom wave preview should
+overlay the map instead · the gear and pack should be tabs and merge · the
+current player details is unusable and unstructured · the team wide control
+shouldn't even be on characters, it should be on the hud · maybe upgrade is
+another button that appears in the bottom". Three layouts were drawn first
+(`docs/ui-audit-2026-10/battle-band/round0/`); B shipped — the side card with
+the party row stepping down to tokens while a hero is read.
+
+| Where | What | File |
+| --- | --- | --- |
+| Stage, top edge | **Wave preview**: the wave's name, *Post a hero* / *8 enemies* (a tap: the wave's make-up in the Context panel), the line-up (a tap: the enemy's card, hung under it). Setup only — it fades at Start Wave and the live strip's queue takes over. `BattleCanvas` fits the play below it when the woodland above the first row of posts is not room enough (`frame.firstRowTop` / `previewRoom` / `stageViewClear`), so it never covers a post, the lane's middle or the wagon; on the portrait twins it needs a pixel or two at most. A top pill (a field note, a tip) or the receipt toast takes its band while it is up, and the preview steps aside for those seconds, so a note never lies across the road's first run. | `WavePreview.tsx`, `live.wavePreviewShown` |
+| Header, right | **Team** button → the Team panel: targeting (five across), relics, keepsakes, older team bonuses. Every hero's, so it takes the band's width. | `HeaderBand.tsx`, `TeamPanel.tsx` |
+| Selector | Full party cards while posting; while a hero is read on a phone (`.is-peek`) the row steps down to picture-and-level tokens (126 → 66), and the field keeps the height. | `SelectorBand.tsx`, `battle-band.css` |
+| Detail, left | **Hero card**: face, name, level + XP, DPS; Reach · Targets · Damage · Speed (`.field-k` / `.field-v`); three skill slots + "All stats"; Undeploy (small, foot, posted in setup). No tabs. Or the hero's **Upgrade panel**, an item, the team, the wave. | `HeroCard.tsx`, `heroCard.ts`, `UpgradePanel.tsx` |
+| Detail, right | **Kit**: "Gear \| Pack" tabs over one column (128 on a phone). An empty doll slot opens the Pack filtered to what fits; an equip lands back on Gear. | `DetailBand.tsx` (`KitColumn`) |
+| Action bar | Setup: Details (portrait) · **Upgrade** (the focused hero's, only when it can spend; a badge while a skill choice waits) · Start Wave (the one primary). Live, held, cleared: as before. | `DetailBand.tsx` (`WaveBar`, `UpgradeButton`) |
+
+The band at each phone tier (`battle-band.css`): Detail 256 (390×844 and
+360×740), 250 (375×667), 200 (320×568). Stage while a hero is read, before →
+after (measured): 390×844 364 → 417; 375×667 253 → 252, now with the whole
+card on screen (the old stat block was cut at the fold); 320×568 182 → 209,
+where the card's body scrolls ~50px when the hero is posted. Collapsed setup
+is unchanged (601 at 390×844: the bar keeps its 56 + 12). Desk: the card
+beside a kit of `minmax(150px, 42%)` in the right rail.
+
 **Where things go — for the COMBAT and RUN/META lanes:**
 
 | Place | File | Rule |
@@ -379,7 +446,7 @@ line; the header's Depth chip names the wave right above.
 | **Boss / champion nameplate** | `src/ui/shell/BossPlate.tsx` in `.sh-stage-top` | While it renders, `.sh-stage:has(.sh-bossplate)` pads the canvas wrap by `--sh-bossplate-h` (54px) and `BattleCanvas` fits the playable rect below it — the plate lies over the woodland past the play (grid-fit). Boss phases: fill `.sh-bossplate-extra` (a flex spacer between the name and the HP number) with phase pips / a phase word. |
 | **Telegraphs** | `render/overlays.ts` or a new render file | Draw in the field composite (logical px). The HP bar stack sits at `artTop` (see `render/hpbar.ts`); leave the band just above the head for it. |
 | **Post-wave / result copy** | `WaveCeremony.tsx` (Stage centre, after the fight only), `DefeatReceipt.tsx` (run end) | The ceremony may cover the field because the fight is over; nothing may cover a LIVE field. |
-| **Post-wave reward + level-ups** (G3-2) | `levelUps.ts` (`rewardInPlace`, the roster's level-up state), `SelectorBand.tsx` (`RewardSelector`), `LevelUpPanel.tsx` | After a cleared NORMAL campaign wave the Stage dims to one result line, the Selector holds a compact party strip over the reward hand (first card preselected, "Take it" in the Context panel), and a levelled hero wears a "Lv 5 ↑" badge until its level-up is dealt with in the panel. Elite and boss spoils keep their page, and their level-ups keep the modal. |
+| **Post-wave reward + level-ups** (G3-2) | `levelUps.ts` (`rewardInPlace`, the roster's level-up state), `SelectorBand.tsx` (`RewardSelector`), `LevelUpPanel.tsx` | After a cleared NORMAL campaign wave the Stage dims to one result line and the Selector holds the reward hand alone: three columns, each card with its detail written out so they compare side by side (first card focused; the wave strip's CTA names and takes it). No hero strip (no spoils card is a hero's) and no gear or pack — the Detail band keeps only the take (`.sh-detail.reward-hand`, Oct 2026). A levelled hero wears a "Lv 5 ↑" badge on the party row at the next fight's setup until its level-up is dealt with in the panel. Elite and boss spoils keep their page, and their level-ups keep the modal. |
 | **Announcements** | `Announcer.tsx` | The one polite live region in a battle. Add a message there; do not add a second region. |
 | **Event-page receipts** | `ReceiptToast` + `PackStrip` (`PackStrip.tsx`) | Derived from the store (a new item id / hero id), so a new rest/unlock page gets them for free. |
 
@@ -398,7 +465,7 @@ byte-for-byte the phone layout.
 | --- | --- | --- |
 | Phone portrait | < 700 wide | Unchanged: one 520px-capped column, four bands. |
 | Phone landscape | landscape, ≤ 500 tall, ≤ 950 wide, coarse pointer | Unchanged: the rotate prompt. |
-| Tablet portrait | 700–899 wide, portrait | Four bands at FULL width (768 → field 768×448, was 520×303); Detail 296. Pages 600 wide; the menu fills the screen over its trade map. |
+| Tablet portrait | 700–899 wide, portrait | Four bands at FULL width (768 → field 768×448, was 520×303); Detail 296. Pages 600 wide; the home is its trade map, full-bleed, with the phone's dock and card centred at ≤ 584px. |
 | Wide | ≥ 900 wide and ≥ 540 tall | Header one row across (52, no wordmark); Stage left spanning the height; Selector + Detail stacked in a right column `clamp(400px, 32vw, 468px)`. The coach pill floats over the Stage's edge, as on a phone. |
 
 **Wide, battle / run map** (1440×900):
@@ -422,12 +489,14 @@ byte-for-byte the phone layout.
   the stacked slots (narrow rail on Large UI), they cap at 76px.
 - **Run map** centred at ≤ 760px of the Stage.
 - **Pages** are a 600px column framed on the table (hairline sides, soft
-  shadow). The **menu** fills the screen over the trade map
-  (`ui/attract/TradeMap.tsx`): a left-hand column (`clamp(380px, 31vw,
-  460px)`, 52px title) holds the title, your militia, the bank, today's
-  market, the charter line, the tiles and the CTA, with your standing with
-  each company at its foot; the map takes the rest (mockup
-  `trade/r3/1-menu-desk.png`, CSS in `menu.css`).
+  shadow). The **home** is the trade map, full-bleed
+  (`ui/attract/TradeMap.tsx`), with its layers in fixed places: the bar one
+  row across the top (seal and name, militia, bank, the places with their
+  names), and a centred console at the foot (≤ 980px): the season pill on
+  its shoulder, the company dock (five company slots and the Buy Company
+  slot, six even columns on a desk), then the focused card as one row with
+  its CTA at the end. Nothing
+  scrolls (CSS in `menu.css`; shots in `docs/ui-audit-2026-10/home-map/`).
 
 **Pointer and keyboard** (any width):
 

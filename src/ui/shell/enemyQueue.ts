@@ -1,3 +1,4 @@
+import { clanArtId, DEFAULT_CLAN, enemyName, type ClanId } from '../../game/data/clans'
 import { ENEMY_TYPES } from '../../game/data/enemies'
 import type { WaveDef } from '../../game/types'
 
@@ -41,7 +42,10 @@ export function spawnOrder(wave: WaveDef | null | undefined): QueuedSpawn[] {
 export interface LineUpEntry {
   /** Registry key — `torch3`, `barrel3_plated`, `torch3_shaman`. */
   typeId: string
-  /** The art identity (`ENEMY_TYPES[key].id`): an elite or a specialist is drawn as its base goblin. */
+  /**
+   * The art identity (`ENEMY_TYPES[key].id`): an elite or a specialist is drawn as its base goblin —
+   * in the road's clan, its clan strip (`clans.clanArtId`).
+   */
   art: string
   name: string
   count: number
@@ -53,7 +57,7 @@ export interface LineUpEntry {
  * always the next body through the gate, and a kind drops off the front once
  * its last body has spawned.
  */
-export function lineUp(queue: readonly QueuedSpawn[]): LineUpEntry[] {
+export function lineUp(queue: readonly QueuedSpawn[], clan: ClanId = DEFAULT_CLAN): LineUpEntry[] {
   const out = new Map<string, LineUpEntry>()
   for (const { typeId } of queue) {
     const hit = out.get(typeId)
@@ -65,7 +69,7 @@ export function lineUp(queue: readonly QueuedSpawn[]): LineUpEntry[] {
     // A key this build has no entry for is skipped by the engine too
     // (`spawnDue`), so it is not "coming" and gets no chip.
     if (!t) continue
-    out.set(typeId, { typeId, art: t.id, name: t.name, count: 1, boss: !!t.isBoss })
+    out.set(typeId, { typeId, art: clanArtId(clan, t.id), name: enemyName(t, clan), count: 1, boss: !!t.isBoss })
   }
   return [...out.values()]
 }
@@ -136,4 +140,16 @@ export function chipsThatFit(w: number, n: number): number {
     if (need <= w) return k
   }
   return 0
+}
+
+/**
+ * The width a queue of `n` kinds asks for at most — every portrait up to the
+ * three-kind default and the "+N" tail when kinds are left out. The Stage's
+ * wave preview (`WavePreview`) sizes its queue to this, so the pill is as wide
+ * as its line-up and `chipsThatFit` still has the last word on a narrow phone.
+ */
+export function queueWidth(n: number): number {
+  const k = Math.min(n, MAX_KINDS)
+  if (k <= 0) return QUEUE_CHIP
+  return k * QUEUE_CHIP + (k - 1) * GAP + (n > k ? GAP + MORE : 0)
 }

@@ -26,6 +26,7 @@
  */
 import { fxNow } from './fx'
 import { getViewScale } from './frame'
+import { ARMOUR_INK } from '../data/armourInk'
 import { drawEliteMark, type EliteMark } from './plaques'
 
 /** Fill height and outline, in CSS px. 2.5 + 2×1 = 4.5 CSS px of bar. */
@@ -87,6 +88,23 @@ export function barGeometry(minWidth: number) {
   return { px, fillH, edge, w, h: fillH + edge * 2, cssFill: fillH * vs }
 }
 
+/** The elite badge's radius over a bar of geometry `G`. */
+const badgeR = (G: ReturnType<typeof barGeometry>): number => Math.max(5, 4.2 * G.px)
+
+/**
+ * The top of what {@link drawEnemyBar} draws for these arguments, without
+ * drawing it: a battle draws every bar in one pass over all the bodies
+ * (`renderer.drawBattleEntities`), but the behaviour marks need each head's
+ * top as the enemy is drawn.
+ */
+export function enemyBarTop(elite: EliteMark, champion: boolean, bottom: number): number {
+  const G = barGeometry(champion ? 44 : 26)
+  const y = Math.round(bottom - G.h)
+  if (!elite) return y
+  const r = badgeR(G)
+  return Math.round(y - r - G.px) - r
+}
+
 /**
  * An enemy's bar, its tier ticks and its elite badge, centred on x = 0 with
  * its BOTTOM at `bottom` (token space). Returns the top of what it drew so a
@@ -144,14 +162,17 @@ export function drawEnemyBar(
 
   if (elite) {
     // A dark disc with the modifier mark, sitting on the bar's centre.
-    const r = Math.max(5, 4.2 * G.px)
+    const r = badgeR(G)
     const cy = Math.round(top - r - G.px)
     ctx.beginPath()
     ctx.arc(0, cy, r, 0, Math.PI * 2)
     ctx.fillStyle = 'rgba(20,12,6,0.92)'
     ctx.fill()
     ctx.lineWidth = Math.max(1, G.px * 0.9)
-    ctx.strokeStyle = '#e0ac4c'
+    // Armour rings in its own colour, the run map tab's (`ARMOUR_INK`), so a
+    // Warded node on the map and the Warded goblin in the lane are one thing;
+    // Swift keeps the elite gold.
+    ctx.strokeStyle = elite === 'plated' ? ARMOUR_INK.plated : elite === 'warded' ? ARMOUR_INK.warded : '#e0ac4c'
     ctx.stroke()
     const mh = r * 1.1
     const stroke = elite === 'swift' ? Math.max(mh * 0.24, 1.15 * G.px) : 0

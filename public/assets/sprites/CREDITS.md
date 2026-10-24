@@ -28,6 +28,43 @@ required; provenance is recorded for reference, courtesy, and — for Tiny Sword
 > in. Verify, don't trust the README. `npx tsx scripts/harvest-cc0.ts --check`
 > runs the verification.
 
+## `scenes/` — the stops on the road and the liaisons' posts (composed from the CC0 build)
+
+`public/assets/scenes/{merchant,campfire,shrine,recruit}.png` and the five
+companies' posts, `public/assets/scenes/liaison-{spice,art,metals,silk,scrolls}.png`
+(Draft 4 · D), are composed by
+`scripts/stop-scenes.ts` from the **old CC0 build** of Tiny Swords, read from the
+same verified upstream as `harvest-cc0.ts` (`FulAppiOS/Agent-Quest`, which ships
+the build under a real CC0 1.0 LICENSE.txt): terrain tiles (the flat ground,
+whose sand the script re-inks as trodden earth, and the elevation cliff for
+Ironvein's quarry), the water rocks, pines, the house and
+the tower, pawns (idle and carrying), warriors, the archer, the fire, the wood
+pile, deco. The stall, tents, standing stones, altar, flagstones, hearth,
+spit and pot, bedroll, crates, barrels, rack of arms, helm, shield, straw man
+and candles — and, at the liaisons' posts, the spice sacks, chilies and chili
+field, brazier, smokehouse, salt barge, hook rail and haunches, butcher's
+block, cleaver and salt sacks, stone counter, ore, anvil, forge, adit, rails
+and ore cart, river, hung silk and bolts, loom, reeds, glasshouse, drying
+herbs, clay pots, seed tray and tonics — are drawn by the script in the
+pack's palette and ink; each post's standard is the game's own company
+standard (`src/game/data/companyStandard.ts`); each post's liaison is the
+game's own approved character design (`scripts/designs/`, drawn in-house in
+the pack's inks, listed in `scripts/liaison-finals.ts`); the night, dusk
+and firelight are its own. The scenes live outside the `*tinyswords` folders on
+purpose: their drawn props and lighting carry colours the palette check would
+(rightly) not find in the pack.
+
+The HQ's castle, `public/assets/scenes/hq-castle-{timber,stone,fortified,grand}.png`
+(the HQ pass, Oct 2026: one sheet per quality tier, the scene and every part
+at every level), is composed by `scripts/hq-keep.ts` from the same old CC0
+build and upstream: the Knights' castle (Blue), re-inked pixel for pixel by
+light in each tier's material; the Knights' pawn and archer; the flat
+ground's grass and sand (re-inked as earth), pines and deco. The great hall,
+lookout, tents, rack of arms, crates, barrels, pallets, stakes and pennant
+poles are drawn by the script in the pack's palette and ink. Nothing comes
+from `BuildingsCustom/` (unverified provenance, never harvested) or the
+current, non-CC0 download.
+
 ## `tinyswords` — the default theme (Tiny Swords by Pixel Frog)
 
 **Tiny Swords**, created by **Pixel Frog**, *old CC0 1.0 build only*.
@@ -95,3 +132,17 @@ tints the procedural fallback token, not the sprite.
 
 Distinct champion art is an open art task. Until it exists, do not describe
 these as recoloured.
+
+### The goblin clans (`tinyswords/<clan>_*.png`, Oct 2026)
+
+The 75 clan strips — `cinder_`, `smudge_`, `delve_`, `silkcut_`, `hexmoon_`
+× `torch1..5_walk`, `tnt1..5_walk`, `barrel1..5` — are **derived** files, baked
+by `scripts/enemy-clans.ts` from the plain old-CC0 goblins above. The bake cuts
+the parts a clan replaces (the torch's flame, the bomber's dynamite, the keg's
+fuse and stencil) and lays on ORIGINAL pixel parts drawn in this repository
+(`scripts/enemy-clans-art.ts`: crests, helmets, hats, horns, weapons, packs,
+caps, mantles), snapped to colours the pack already ships — so they pass the
+CC0 palette test (`harvest-cc0.ts --check`; offline twin in
+`tests/clans.test.ts`). Nothing comes from the current Tiny Swords download.
+Each clan's champion (tier 5) now carries its own boss look: the open art task
+above is answered per clan, while the plain bench champions stay as noted.

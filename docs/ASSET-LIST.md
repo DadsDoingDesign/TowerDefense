@@ -10,7 +10,7 @@ by `scripts/harvest-cc0.ts --check` and a pixel comparison against the CC0 mirro
 irrevocable and allows commercial use. Only the *current* Tiny Swords download carries the
 restrictive "may not redistribute… even if modified" licence, and none of it is used. The reasons
 to replace the art are distinctiveness for a commercial release and gaps in the CC0 set (no
-caster, bosses reuse tier-1 art). The 78-icon atlas is generated from source in this repo.
+caster, bosses reuse tier-1 art). The 108-icon atlas is generated from source in this repo.
 
 **Status of the numbers below.** Every frame count and **drawn** size in this document was measured
 live from the running game via a `drawImage` census, not read off the source files or inferred.
@@ -423,17 +423,18 @@ by nothing.
 
 ---
 
-## 7. T1 — The icon atlas (1 file, 78 icons)
+## 7. T1 — The icon atlas (1 file, 108 icons)
 
 | File | Sheet px | Grid | Cell px |
 |---|---|---|---|
-| `public/assets/ui/fw-icons.png` | **128 × 160** | **8 cols × 10 rows** | **16 × 16** |
+| `public/assets/ui/fw-icons.png` | **128 × 224** | **8 cols × 14 rows** | **16 × 16** |
 
 Position is `ix = index % 8`, `iy = floor(index / 8)`; CSS offset `(−ix × 16px, −iy × 16px)`.
-80 cells for 78 icons, so **cells (6,9) and (7,9) are unused** — pixel rects (96,144)–(111,159) and
-(112,144)–(127,159).
+112 cells for 108 icons, so **cells (4,13)–(7,13) are unused**. Rows 12–13 (Oct 2026) are the
+twelve item kinds that used to borrow another kind's cell — original pixel art drawn in this
+repository, like the rest of the sheet.
 
-> **This file is generated, not harvested.** `scripts/fw-icons.ts` holds all 78 icons as 16 × 16
+> **This file is generated, not harvested.** `scripts/fw-icons.ts` holds all 108 icons as 16 × 16
 > ASCII palette grids in this repository, and `npm run build` fails if the PNG, `ICON_ORDER` and
 > the CSS tokens ever disagree. **It carries no third-party licence and does not need replacing.**
 > Redraw it only if you want a different look — and if you do, edit the ASCII grids in that script
@@ -557,7 +558,7 @@ exactly five files. Orphans include all 30 `icon_*`, all 6 `pointer_*`, 6 `banne
 
 | File | Dims | Used by | 9-slice |
 |---|---|---|---|
-| `ui/fw-icons.png` | 128 × 160 | `.fw-i` (`global.css:318`) | — |
+| `ui/fw-icons.png` | 128 × 224 | `.fw-i` (`global.css:318`) | — |
 | `ui/tinyswords/paper_special_9.png` | 110 × 110 | `.overlay-card` (`app.css:383`) | slice 46, 22 px border, `fill`, no stretch |
 | `ui/tinyswords/paper_regular_9.png` ⚠ | 110 × 110 | `.hp-card` (`legacy.css:1845`) | slice 46, 20 px border |
 | `ui/tinyswords/btn_big_blue_9.png` ⚠ | 110 × 110 | `.hp-cta`, `.overlay-btn` (`legacy.css:1871`) | slice 46, 15 px border |

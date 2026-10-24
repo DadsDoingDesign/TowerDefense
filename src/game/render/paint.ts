@@ -30,8 +30,11 @@ export function roundRect(
   h: number,
   r: number,
 ): void {
-  const rr = Math.min(r, w / 2, h / 2)
+  // A shape squeezed to nothing (a tiny view scale against a screen-px inset)
+  // draws nothing rather than throwing: `arcTo` refuses a negative radius.
+  const rr = Math.max(0, Math.min(r, w / 2, h / 2))
   ctx.beginPath()
+  if (w <= 0 || h <= 0) return
   ctx.moveTo(x + rr, y)
   ctx.arcTo(x + w, y, x + w, y + h, rr)
   ctx.arcTo(x + w, y + h, x, y + h, rr)

@@ -6,8 +6,8 @@ import type { RewardCard } from '../src/game/data/rewards'
 import { classicHero } from '../src/game/data/sentinels'
 import { xpToReach } from '../src/game/engine/leveling'
 import { ITEM_PRICE, merchantLuck, rollMerchantShelf, sortItems } from '../src/game/run/economy'
-import { forkFires } from '../src/game/run/map'
-import { recruitSlate, recruitTargetLevel, scaledRecruit, withRecruits } from '../src/game/run/recruits'
+import { firstFightOf, forkFires, makeRun, openingNodeOf } from '../src/game/run/map'
+import { citySlate, HALL_SLATE_SIZE, recruitTargetLevel, scaledRecruit, SLATE_SIZE, withRecruits } from '../src/game/run/recruits'
 import { applyRewardCard } from '../src/game/run/rewards'
 import { planPayout, runWasPlayed, type SettleFacts } from '../src/game/run/settle'
 import {
@@ -30,7 +30,7 @@ import { CAMPFIRE_REPAIR, canTrain, restAtCampfire, restGain, trainAtCampfire, x
 import { GATE_REPAIR, repairGate, rerollCost } from '../src/game/run/economy'
 import { levelXpAwards, STOP_XP_SHARE, stopXp, waveRawXp, waveXp } from '../src/game/run/battle'
 import { encounterNode } from '../src/game/run/map'
-import { generateRunMap } from '../src/game/data/runmap'
+import { generateRunMap, OPENING_LAYER } from '../src/game/data/runmap'
 import { RNG } from '../src/game/core/rng'
 import { ENGINE_CAPABILITIES, RELICS, relicPool, relicSupported, relicTeamMods } from '../src/game/data/relics'
 import { afterFightRelics, diaryXp, hiresTrained, restockFree, rewardHand, shelfSize, SURGEON_HEAL, TITHE_GOLD, withRelicStats } from '../src/game/run/relics'
@@ -93,6 +93,33 @@ describe('threat maths (game/run/threat)', () => {
     expect(nodeClearLuck(node('battle', 2))).toBeCloseTo(0.05)
     expect(nodeClearLuck(node('elite', 2))).toBeCloseTo(0.2)
     expect(nodeClearLuck(node('boss', 12))).toBeCloseTo(0.65)
+  })
+})
+
+describe('the opening fight is the start (data/runmap, run/map)', () => {
+  it('every road opens on one plain battle, the only road out of the start', () => {
+    for (const wideMap of [false, true]) {
+      for (let seed = 1; seed <= 200; seed++) {
+        const run = makeRun(new RNG(seed), { wideMap })
+        const row = run.runMap.nodes.filter((n) => n.layer === OPENING_LAYER)
+        expect(row).toHaveLength(1)
+        expect(row[0].type).toBe('battle')
+        expect(run.reachableNodeIds).toEqual([row[0].id])
+        expect(openingNodeOf(run.runMap)).toBe(row[0])
+        // The hero pick marches into it.
+        expect(firstFightOf(run.runMap, run.reachableNodeIds)).toBe(row[0].id)
+        // The first fork is the layer after: every node on it is a road out of the opening.
+        const next = run.runMap.nodes.filter((n) => n.layer === OPENING_LAYER + 1)
+        for (const n of next) expect(run.runMap.edges.some((e) => e.from === row[0].id && e.to === n.id)).toBe(true)
+      }
+    }
+  })
+
+  it('an older map, whose first layer forked, has no opening node', () => {
+    const map = generateRunMap(new RNG(7))
+    const opener = openingNodeOf(map)!
+    const older = { ...map, nodes: [...map.nodes, { ...opener, id: 'n-old', row: 1, ny: 0.8 }] }
+    expect(openingNodeOf(older)).toBeNull()
   })
 })
 
@@ -210,7 +237,7 @@ describe('merchant shelf (game/run/economy)', () => {
   const roster = [classicHero('rogue')]
   const shelfFrom = (seed: number) => {
     const ids = idCounterState()
-    const shelf = rollMerchantShelf(streamRng(seed, 'loot'), { luck: merchantLuck(4), roster, pity: newRarityPity() })
+    const shelf = rollMerchantShelf(streamRng(seed, 'loot'), { luck: merchantLuck(4), depth: 4, roster, pity: newRarityPity() })
     restoreIdCounter(ids)
     return shelf.map((e) => ({ name: e.item.name, rarity: e.item.rarity, slot: e.item.slot, price: e.price }))
   }
@@ -222,7 +249,7 @@ describe('merchant shelf (game/run/economy)', () => {
 
   it('deals four items priced by rarity, and never spends the pity counter', () => {
     const pity = { dry: 7 }
-    const shelf = rollMerchantShelf(streamRng(9, 'loot'), { luck: 0.2, roster, pity })
+    const shelf = rollMerchantShelf(streamRng(9, 'loot'), { luck: 0.2, depth: 6, roster, pity })
     expect(shelf).toHaveLength(4)
     for (const e of shelf) expect(e.price).toBe(ITEM_PRICE[e.item.rarity])
     expect(pity).toEqual({ dry: 7 })
@@ -294,18 +321,32 @@ describe('recruit scaling (game/run/recruits)', () => {
     expect(plain.equipment.mainHand).toBeTruthy()
   })
 
-  it('the slate is three random hires, deterministic in the stream, from the run’s kinds only', () => {
+  it('a city’s slate is three hires (four with the Hiring Hall), a hash of the seed and the city, from the run’s kinds only', () => {
     const kinds = ['Sword', 'Bow', 'Wand', 'Shield', 'Mail']
-    const deal = () => {
+    const deal = (seed: number, city: number, slate = SLATE_SIZE) => {
       // Names come off a process-wide, forward-only counter, so compare what
-      // the STREAM decides: the gear and its rolled numbers, and the stats.
-      const slate = recruitSlate(streamRng(8, 'loot'), [], { statBonus: 0, trained: false, itemPool: kinds })
-      return slate.map((s) => ({ w: s.equipment.mainHand?.name, off: s.equipment.offHand?.name ?? null, base: s.equipment.mainHand?.base, stats: s.stats }))
+      // the HASH decides: the gear and its rolled numbers, and the stats.
+      const out = citySlate(seed, city, [], { statBonus: 0, trained: false, itemPool: kinds, slate })
+      return out.map((s) => ({ w: s.equipment.mainHand?.name, off: s.equipment.offHand?.name ?? null, base: s.equipment.mainHand?.base, stats: s.stats }))
     }
-    const a = deal()
+    const a = deal(8, 0)
     expect(a).toHaveLength(3)
     for (const h of a) expect(kinds.some((k) => h.w?.includes(k))).toBe(true)
-    expect(deal()).toEqual(a)
+    // The same seed meets the same hires at the same city, whatever else the run drew.
+    expect(deal(8, 0)).toEqual(a)
+    expect(deal(8, 1)).not.toEqual(a)
+    expect(deal(9, 0)).not.toEqual(a)
+    // The Hiring Hall: one more candidate; the first three are the same three.
+    const hall = deal(8, 0, HALL_SLATE_SIZE)
+    expect(hall).toHaveLength(4)
+    expect(hall.slice(0, 3)).toEqual(a)
+  })
+
+  it('a city’s hires never draw on a run stream', () => {
+    const loot = streamRng(8, 'loot')
+    const before = loot.saveState()
+    citySlate(8, 0, [], { statBonus: 0, trained: false })
+    expect(loot.saveState()).toBe(before)
   })
 })
 
@@ -368,16 +409,15 @@ describe('skills in the run (game/run/skills, SK1)', () => {
     expect(computeCombat({ ...base, skills: ['not-a-skill'] }).dps).toBe(computeCombat(base).dps)
   })
 
-  it('a hire arrives with one Level 1 skill, dealt by hash: the loot stream is untouched', () => {
+  it('a hire arrives with one Level 1 skill, dealt by hash: the slate it rides on is untouched', () => {
     const hub = { statBonus: 0, trained: false }
     const deal = (skillFor?: (id: string) => string | null) => {
-      const rng = new RNG(31)
-      const slate = recruitSlate(rng, [], { ...hub, skillFor })
-      return { slate, next: rng.next() }
+      const slate = citySlate(31, 0, [], { ...hub, skillFor })
+      return { slate, gear: slate.map((s) => s.equipment.mainHand?.base) }
     }
     const plain = deal()
     const skilled = deal((id) => recruitSkill(7, id, STARTER_SKILLS))
-    expect(skilled.next).toBe(plain.next)
+    expect(skilled.gear).toEqual(plain.gear)
     for (const s of skilled.slate) expect(s.skills).toHaveLength(1)
     for (const s of plain.slate) expect(s.skills).toBeUndefined()
   })
@@ -434,11 +474,11 @@ describe('relics (data/relics + game/run/relics)', () => {
   it('the reward hand: a battle mixes, an elite always holds a relic, an act boss is all relics', () => {
     const roster = [classicHero('rogue')]
     for (let seed = 1; seed < 40; seed++) {
-      const battle = rewardHand(streamRng(seed, 'loot'), { kind: 'battle', luck: 0.1, count: 3, held: [], roster })
+      const battle = rewardHand(streamRng(seed, 'loot'), { kind: 'battle', luck: 0.1, depth: 2, count: 3, held: [], roster })
       expect(battle.some((c) => c.kind === 'item')).toBe(true)
-      const elite = rewardHand(streamRng(seed, 'loot'), { kind: 'elite', luck: 0.1, count: 3, held: [], roster })
+      const elite = rewardHand(streamRng(seed, 'loot'), { kind: 'elite', luck: 0.1, depth: 3, count: 3, held: [], roster })
       expect(elite.some((c) => c.kind === 'relic')).toBe(true)
-      const boss = rewardHand(streamRng(seed, 'loot'), { kind: 'boss', luck: 0.3, count: 3, held: [], roster })
+      const boss = rewardHand(streamRng(seed, 'loot'), { kind: 'boss', luck: 0.3, depth: 4, count: 3, held: [], roster })
       expect(boss.every((c) => c.kind === 'relic')).toBe(true)
       expect(new Set(boss.map((c) => c.relic)).size).toBe(3)
     }

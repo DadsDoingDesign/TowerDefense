@@ -1,13 +1,19 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { nodeMeta, type MapNode } from '../../game/data/runmap'
 import { useGameStore } from '../../state/gameStore'
 import { encounterThreat } from '../../game/run/threat'
 import { legMult, type DifficultyRules } from '../../game/run/watch'
 import { cityOfLayer, contractRules } from '../../game/run/contracts'
+import { openingNodeOf } from '../../game/run/map'
 import { routeOf } from '../../game/run/charter'
-import { NODE_ICON, strengthPct, strengthShort } from '../channels'
+import { companyVar, NODE_ICON, strengthPct, strengthShort } from '../channels'
+import { askById, askText, nodeServesAsk } from '../../game/run/asks'
+import { companyById } from '../../game/data/companies'
+import { Crest } from '../pixel'
+import { ArmourMark } from '../ArmourMark'
 import { Icon } from '../Icon'
-import { frontierScrollTop, MARCH_SETTLE_MS, useMapFocus } from '../shell/mapFocus'
+import { frontierScrollTop, MARCH_SETTLE_MS, openingFocus, useMapFocus } from '../shell/mapFocus'
+import { nodeModFor } from '../shell/encounterPreview'
 
 /**
  * The Threat a fight on this node is fought at (M5, re-based in Phase 3b).
@@ -22,8 +28,11 @@ import { frontierScrollTop, MARCH_SETTLE_MS, useMapFocus } from '../shell/mapFoc
  */
 const FIGHT_NODES = new Set(['battle', 'elite', 'miniboss', 'boss'])
 
+// Unrounded: `strengthShort` rounds to a whole percent, as the stop's card
+// does. Rounding the multiplier to a tenth first made a ×1.07 fight read
+// "+10%" on its node and "+7%" on its card (job critique, Oct 2026).
 const nodeThreat = (n: { type: MapNode['type']; layer: number }, rules: DifficultyRules): number | null =>
-  FIGHT_NODES.has(n.type) ? Math.round(encounterThreat(n, rules.startThreat) * legMult(rules, n.layer) * 10) / 10 : null
+  FIGHT_NODES.has(n.type) ? encounterThreat(n, rules.startThreat) * legMult(rules, n.layer) : null
 
 const GAP = 104 // vertical px between layers
 const PAD_X = 44
@@ -41,7 +50,11 @@ export function RunMapView() {
   const selectNode = useGameStore((s) => s.selectNode)
   const crates = useGameStore((s) => s.contract?.crates ?? 0)
   const charter = useGameStore((s) => !!s.contract?.charter)
-  const rules = contractRules({ crates, charter })
+  // Desperate terms (the trade war): its raiders are stronger from the first fight.
+  const desperate = useGameStore((s) => !!s.contract?.desperate)
+  const contract = useGameStore((s) => s.contract)
+  const runSeed = useGameStore((s) => s.runSeed)
+  const rules = contractRules({ crates, charter, desperate })
   // The act bosses are the route's cities (the mercenary company): named on the map.
   const towns = useGameStore((s) => (s.contract ? routeOf(s.contract).towns : null))
   const focusedId = useMapFocus((s) => s.nodeId)
@@ -56,17 +69,23 @@ export function RunMapView() {
    */
   const onNode = (id: string) => {
     const f = useMapFocus.getState()
-    if (f.nodeId === id && Date.now() - f.at >= MARCH_SETTLE_MS) {
+    if (f.nodeId === id && !f.auto && Date.now() - f.at >= MARCH_SETTLE_MS) {
       focus(null)
       selectNode(id)
       return
     }
-    if (f.nodeId !== id) focus(id)
+    // A tap on the stop the map opened on is the player's own look at it.
+    if (f.nodeId !== id || f.auto) focus(id)
   }
-  // A new map (new run, resume) starts with nothing focused.
+  // The map opens on a stop you can march to (Oct 2026 review): the Context
+  // panel says what is ahead, and the CTA names it, from the first frame. A
+  // new map, a resumed run or a cleared stop (a new row of choices) re-offers.
+  const reachKey = reachable.join(',')
   useEffect(() => {
-    focus(null)
-  }, [runMap, focus])
+    const id = openingFocus(reachable, cleared)
+    if (id) useMapFocus.getState().offer(id)
+    else focus(null)
+  }, [runMap, reachKey, focus])
 
   const innerRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -82,14 +101,34 @@ export function RunMapView() {
     return () => ro.disconnect()
   }, [])
 
+  /*
+   * The opening fight IS the start (Oct 2026; the designer: "the start is what
+   * the first battle is, and where it should stay"): the bare start node and
+   * its one road are not drawn, and the opening fight is drawn as the Start,
+   * on the bottom row. An older map (its first layer forked) draws as before.
+   */
+  const opening = openingNodeOf(runMap)
+  const base = opening ? opening.layer : 0
+  const shown = opening ? runMap.nodes.filter((n) => n.layer >= base) : runMap.nodes
+  const shownIds = new Set(shown.map((n) => n.id))
+
   const layers = runMap.layers
-  const height = (layers - 1) * GAP + PAD_Y * 2
+  const height = (layers - 1 - base) * GAP + PAD_Y * 2
 
   const posOf = (layer: number, ny: number) => ({
     x: PAD_X + ny * (innerW - PAD_X * 2),
     y: PAD_Y + (layers - 1 - layer) * GAP,
   })
   const nodePos = new Map(runMap.nodes.map((n) => [n.id, posOf(n.layer, n.ny)]))
+
+  /*
+   * Cleared ground and the country ahead (the designer: "you are clearing out
+   * an area first — show the row you select from, and below, as cleared, and
+   * the area above as danger, not cleared yet"). The line sits halfway between
+   * your row and the next.
+   */
+  const here = runMap.nodes.find((n) => n.id === currentNodeId)
+  const frontierY = here ? Math.max(0, posOf(Math.max(here.layer, base), 0).y - GAP / 2) : null
 
   // The scroll box's own height: the Stage settles after the battle shell
   // hands it back, so the first measurement after a win can be stale.
@@ -120,8 +159,23 @@ export function RunMapView() {
   return (
     <div className="run-map-scroll" ref={scrollRef}>
       <div className="run-map-inner" ref={innerRef} style={{ height }}>
+        {frontierY != null && frontierY > 0 && (
+          <>
+            <div className="rm-zone danger" style={{ height: frontierY }} aria-hidden="true" />
+            <div className="rm-zone cleared" style={{ top: frontierY }} aria-hidden="true" />
+            {/* Captions, not controls: written up the map's left margin, where
+                no node stands, one rising from the line into the ground ahead,
+                one falling from it into the ground behind. */}
+            <span className="rm-zone-tag danger field-k" style={{ top: frontierY }}>
+              Not cleared yet
+            </span>
+            <span className="rm-zone-tag cleared field-k" style={{ top: frontierY }}>
+              Cleared
+            </span>
+          </>
+        )}
         <svg className="run-map-edges" width={innerW} height={height}>
-          {runMap.edges.map((e, i) => {
+          {runMap.edges.filter((e) => shownIds.has(e.from) && shownIds.has(e.to)).map((e, i) => {
             const a = nodePos.get(e.from)!
             const b = nodePos.get(e.to)!
             const active = clearedSet.has(e.from) && (clearedSet.has(e.to) || reachableSet.has(e.to))
@@ -142,11 +196,13 @@ export function RunMapView() {
           })}
         </svg>
 
-        {runMap.nodes.map((n) => {
+        {shown.map((n) => {
           const p = nodePos.get(n.id)!
           // Under Banner 2 a "battle" node IS an elite — same glyph, same hue,
           // same word, or the map is drawing a wave the run will not field.
-          const meta = nodeMeta(n.type)
+          // The opening fight wears the start's look and name.
+          const isOpening = n.id === opening?.id
+          const meta = nodeMeta(isOpening ? 'start' : n.type)
           const city = towns ? cityOfLayer(n.layer) : null
           const town = city != null && (n.type === 'miniboss' || n.type === 'boss') ? towns![city] : null
           const isCleared = clearedSet.has(n.id)
@@ -161,10 +217,18 @@ export function RunMapView() {
                 : 'locked'
           const threat = nodeThreat(n, rules)
           const isFocused = focusedId === n.id
+          // What every goblin here wears (Plated, Warded, Swift), on every
+          // fight still ahead, near or far: a road is planned from the map.
+          const mod = isCleared || isCurrent ? null : nodeModFor({ runSeed, runMap, contract }, n)
+          // A stop ahead that serves an ask still open (Draft 4 · A): an elite
+          // for an elite ask, a city for a clean city fight, a Plated fight
+          // for a Plated tally, a merchant, a shrine.
+          const asked = isCleared || isCurrent ? undefined : contract?.asks?.find((a) => a.got < a.target && nodeServesAsk(a, n, mod?.id ?? null))
+          const askedBy = asked ? askById(asked.id)?.company : undefined
           return (
             <button
               key={n.id}
-              className={`map-node ${state} type-${n.type} ${isFocused ? 'focused' : ''}`}
+              className={`map-node ${state} type-${isOpening ? 'start' : n.type} ${isFocused ? 'focused' : ''}`}
               style={{ left: p.x, top: p.y, borderColor: meta.color }}
               disabled={!isReachable}
               aria-pressed={isReachable ? isFocused : undefined}
@@ -179,7 +243,7 @@ export function RunMapView() {
                  offers composes another ×1.05 on top. The chip has no room to
                  say so, but the accessible name does, and the offer itself
                  spells it out. */
-              aria-label={`${meta.label}${town ? `, ${town}` : ''}${
+              aria-label={`${meta.label}${town ? `, ${town}` : ''}${mod ? `, ${mod.prefix}: ${mod.blurb}` : ''}${asked && askedBy ? `, asked by ${companyById(askedBy).name}: ${askText(asked)}` : ''}${
                 threat && strengthPct(threat) > 0
                   ? `, enemy strength ${strengthShort(threat)}`
                   : ''
@@ -199,9 +263,25 @@ export function RunMapView() {
                   ♛ ⟡ ❖ ＋, system-font characters in whatever face the phone
                   had, and `⟡` doubled as the gold mark. */}
               <span className="mn-glyph">
-                <Icon name={NODE_ICON[n.type] ?? 'depth'} />
+                <Icon name={NODE_ICON[isOpening ? 'start' : n.type] ?? 'depth'} />
               </span>
+              {/* The armour tab: the modifier's name, and the damage type this
+                  fight's goblins shrug off, struck through (Swift: its speed).
+                  The Context panel says the rest when the node is focused. */}
+              {mod && (
+                <span className={`mn-armour ${mod.id}`} aria-hidden>
+                  <ArmourMark mod={mod.id} />
+                  {mod.prefix}
+                </span>
+              )}
               <span className={`mn-label${town ? ' town' : ''}`}>{town ?? meta.label}</span>
+              {/* The "Asked" tab: this stop serves what the company asks. */}
+              {askedBy && (
+                <span className="mn-asked" style={{ '--co': companyVar(askedBy) } as CSSProperties} aria-hidden>
+                  <Crest company={askedBy} scale={1} />
+                  Asked
+                </span>
+              )}
               {/* Only on nodes you can actually choose between: the cost is
                   information for the fork in front of you, not decoration on
                   the twenty nodes behind and above it. */}

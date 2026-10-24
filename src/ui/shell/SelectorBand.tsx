@@ -7,16 +7,15 @@ import { computeCombat } from '../../game/engine/combat'
 import { levelProgress } from '../../game/engine/leveling'
 import { DANGER_COPY, tileDamageMult } from '../../game/data/hazards'
 import type { Sentinel } from '../../game/types'
-import { MAX_ROSTER, useGameStore } from '../../state/gameStore'
+import { useGameStore } from '../../state/gameStore'
 import { ARCHETYPE_GLYPH, markLabel } from '../channels'
 import { Icon } from '../Icon'
-import { type Offer } from './offers'
+import { lineMark, lineText, lineTone, type Offer } from './offers'
+import { EffectLine } from './EffectLine'
 import { tapWord } from '../pointer'
 import { RarityTag } from './Page'
 import { FLASH_MS, flashLive, levelUpOpen, rewardInPlace, useLevelUps, type LevelFlash } from './levelUps'
 import { useMapFocus } from './mapFocus'
-import { openSlotShown } from '../../state/staging'
-import { useShown, useStaged } from './staging'
 import { isMelee, MELEE_LINE } from '../../game/engine/melee'
 import { conflictedIds } from '../../game/run/clearance'
 import { fieldConflicts } from '../../state/game/selectors'
@@ -59,7 +58,11 @@ export function SelectorBand({ offers }: { offers: Offer[] }) {
   // `rewardInPlace` holds only in the `bands` battle context, so the invariant
   // above (bands => party) still decides everything else.
   const inPlace = useGameStore(rewardInPlace)
+  // The run map has no party row (Oct 2026): the stop's card and its CTA take
+  // the room, and the heroes are posted, geared and levelled at the fight.
+  const onMap = useGameStore((s) => s.screen === 'map')
   if (inPlace) return <RewardSelector offers={offers} />
+  if (onMap) return null
   return <PartySelector />
 }
 
@@ -113,11 +116,8 @@ function PartyCards() {
   const battlePhase = useGameStore((s) => s.battlePhase)
   const flash = useFlashes()
   const battleMap = useGameStore((s) => s.battleMap)
-  // LS3: "recruit a hero" names a stop the first run has not reached yet, and
-  // the first battle is only "post a hero, start the wave".
-  const recruitShown = useShown('recruit')
-  const staged = useStaged()
-  const openSlot = useGameStore((s) => openSlotShown(staged, recruitShown, s))
+  // Armed for posting — a hero READ (its Upgrade panel) is selected, not armed.
+  const armedId = useGameStore((s) => s.selectedSentinelId)
 
   const slotOf = (id: string) => Object.entries(placements).find(([, v]) => v === id)?.[0] ?? null
   const canPlace = screen === 'battle' && battlePhase === 'setup'
@@ -142,7 +142,7 @@ function PartyCards() {
         const dps = Math.round(profile.dps * ground)
         const hue = lookVar(s)
         const clash = swingers.has(s.id) ? 'swing' : tooClose.has(s.id) ? 'close' : null
-        const state = placed ? (cursed ? `deployed on ${DANGER_COPY.cursed.name.toLowerCase()}, ${DANGER_COPY.cursed.short}` : 'deployed') : selected && canPlace ? `selected, ${tapWord(false)} a glowing tile to post it` : 'on the bench'
+        const state = placed ? (cursed ? `deployed on ${DANGER_COPY.cursed.name.toLowerCase()}, ${DANGER_COPY.cursed.short}` : 'deployed') : armedId === s.id && canPlace ? `selected, ${tapWord(false)} a glowing tile to post it` : 'on the bench'
         // "Swings — needs clearance", in words, for whoever swings (what it holds or a skill).
         const swings = isMelee(s) ? `, ${MELEE_LINE.toLowerCase()}` : ''
         const clashWords = clash === 'swing' ? ', others too close — make space' : clash === 'close' ? ', too close to a hero that swings — move it' : ''
@@ -187,6 +187,10 @@ function PartyCards() {
               <span className="sh-hero-arch">{ARCHETYPE_GLYPH[lookOf(s)]}</span>
             </span>
             <span className="sh-hero-name">{s.name}</span>
+            {/* The compact token's one line while a hero is read (battle-band.css). */}
+            <span className="sh-hero-lvc" aria-hidden="true">
+              Lv {s.level}
+            </span>
             <span className="sh-hero-sub">
               {/* The weapon it really holds — the picture it carries on the
                   field too (`render/gearMarks`), since the portrait's painted
@@ -197,19 +201,15 @@ function PartyCards() {
             <span className="sh-hero-xp">
               <span className="sh-hero-xp-fill" style={{ width: `${levelProgress(s) * 100}%` }} />
             </span>
-            <span className={`sh-hero-tag ${clash ? 'on clash' : placed ? (cursed ? 'on cursed' : 'on') : selected && canPlace ? 'arm' : ''}`}>
-              {clash === 'swing' ? 'Make space' : clash === 'close' ? 'Too close' : placed ? (cursed ? 'Cursed' : 'Deployed') : selected && canPlace ? 'Place it' : `${dps} DPS`}
+            <span className={`sh-hero-tag ${clash ? 'on clash' : placed ? (cursed ? 'on cursed' : 'on') : armedId === s.id && canPlace ? 'arm' : ''}`}>
+              {clash === 'swing' ? 'Make space' : clash === 'close' ? 'Too close' : placed ? (cursed ? 'Cursed' : 'Deployed') : armedId === s.id && canPlace ? 'Place it' : `${dps} DPS`}
             </span>
           </button>
         )
       })}
-      {roster.length < MAX_ROSTER && openSlot && (
-        <div className="sh-hero empty" aria-hidden>
-          <span className="sh-hero-glyph ghost">+</span>
-          <span className="sh-hero-name muted">Open slot</span>
-          <span className="sh-hero-sub">recruit a hero</span>
-        </div>
-      )}
+      {/* No "Open slot · recruit a hero" card (Oct 2026, the designer): it
+          looked like a button, and a hero is only ever hired at a city (the
+          gameplay pass: there are no recruit stops). */}
     </>
   )
 }
@@ -277,17 +277,26 @@ function RewardSelector({ offers }: { offers: Offer[] }) {
   const selection = useGameStore((s) => s.shellSelection)
   const cards = offers.filter((o) => reward?.some((c) => c.id === o.id))
   const firstId = cards[0]?.id ?? null
-  // Show the first card's detail once per hand. Nothing selected yet is the
-  // only case: a hero or a level-up the player opened is theirs to leave.
+  // Focus the first card once per hand, so the strip's CTA names a take from
+  // the start. A card already read, or a skill choice the player opened (it
+  // takes the band over the hand), is theirs to leave; a hero read during the
+  // fight is not — nothing shows it under the hand, and keeping it left the
+  // CTA a dead "Pick a reward" (job critique, Oct 2026).
   useEffect(() => {
     if (!firstId) return
-    if (useGameStore.getState().shellSelection) return
+    const s = useGameStore.getState()
+    const sel = s.shellSelection
+    if (sel?.kind === 'offer' || (sel?.kind === 'hero' && s.heroTab === 'upgrade')) return
     pickReward(firstId)
   }, [firstId])
 
+  // No hero strip over the hand (Oct 2026; the designer: "if this reward
+  // isn't per hero you should hide that too"): no spoils card is a hero's —
+  // an item goes to the pack, a relic and a boon to every hero — so the
+  // strip only competed with the three cards. A skill choice a hero is owed
+  // keeps its badge on the party row at the next fight.
   return (
     <section className="sh-selector sh-selector-reward" aria-label="Spoils">
-      <PartyStrip />
       <div className="sh-reward-row" role="group" aria-label="Spoils — pick one, then take it">
         {cards.map((o) => {
           const selected = selection?.kind === 'offer' && selection.id === o.id
@@ -316,6 +325,25 @@ function RewardSelector({ offers }: { offers: Offer[] }) {
                 {o.rarity ? <RarityTag rarity={o.rarity} /> : null}
                 {o.sub && <span className="sh-reward-scope">{o.sub}</span>}
               </span>
+              {/* Its detail, written out on the card, so the three compare
+                  side by side (the Context panel no longer holds one at a
+                  time). The cost reads first, as on every offer. */}
+              <span className="sh-reward-body">
+                {o.warn && (
+                  <span className="sh-line bad">
+                    <Icon name="warn" /> {o.warn}
+                  </span>
+                )}
+                {o.body.map((l, i) =>
+                  o.bodyIcons ? (
+                    <EffectLine text={lineText(l)} tone={lineTone(l)} mark={lineMark(l)} inline key={i} />
+                  ) : (
+                    <span className={`sh-line${lineTone(l) === 'note' ? ' note' : ''}`} key={i}>
+                      {lineText(l)}
+                    </span>
+                  ),
+                )}
+              </span>
             </button>
           )
         })}
@@ -330,39 +358,3 @@ function pickReward(id: string) {
   useGameStore.setState({ shellSelection: { kind: 'offer', id }, selectedSentinelId: null, gearSlot: null })
 }
 
-/**
- * The company in one line — portrait, name, level — while the reward hand has
- * the row. A hero with a level-up waiting glows and wears its badge; tapping
- * any hero opens it in the Context panel (its level-up, or its detail).
- */
-function PartyStrip() {
-  const roster = useGameStore((s) => s.roster)
-  const selection = useGameStore((s) => s.shellSelection)
-  const shellSelect = useGameStore((s) => s.shellSelect)
-  const flash = useFlashes()
-  return (
-    <div className="sh-partystrip" role="group" aria-label="Your heroes">
-      {roster.map((h) => {
-        const lvlUp = levelUpOpen(h)
-        const selected = selection?.kind === 'hero' && selection.id === h.id
-        return (
-          <button
-            key={h.id}
-            className={`sh-mate ${lvlUp ? 'levelled' : ''} ${selected ? 'selected' : ''}`}
-            style={railStyle(lookVar(h)) as CSSProperties}
-            aria-pressed={selected}
-            aria-label={`${h.name}, level ${h.level}${lvlUp ? ` — ${levelUpWords(h)}` : ''}`}
-            onClick={() => shellSelect({ kind: 'hero', id: h.id })}
-          >
-            <span className="sh-mate-art" aria-hidden="true">
-              <img src={heroLookArt(h)} alt="" />
-            </span>
-            <span className="sh-mate-name">{h.name}</span>
-            {lvlUp ? <LevelBadge /> : <span className="sh-mate-lv">Lv {h.level}</span>}
-            {!lvlUp && <LevelFlashChip f={flash[h.id]} />}
-          </button>
-        )
-      })}
-    </div>
-  )
-}

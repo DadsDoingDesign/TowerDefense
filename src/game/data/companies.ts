@@ -27,17 +27,30 @@ import type { TerrainRuleId } from '../types'
  */
 export type CompanyId = 'spice' | 'art' | 'metals' | 'silk' | 'scrolls'
 
+/**
+ * The two newest companies' names (Oct 2026, the world bible's rename: the
+ * `art` slot was Easel House, the `scrolls` slot Moonquill). ONE constant
+ * each: every surface reads the name from here (through `companyById`, or
+ * these where a table is keyed by name, like the rig's liveries), so a
+ * rename is a one-line change. The ids and every storage key stay `art` and
+ * `scrolls`. "Greenvial" is a working name.
+ */
+export const BUTCHERBLOCK = 'Butcherblock'
+export const GREENVIAL = 'Greenvial'
+
 export const COMPANY_IDS: readonly CompanyId[] = ['spice', 'art', 'metals', 'silk', 'scrolls']
 
 export const isCompanyId = (v: unknown): v is CompanyId => typeof v === 'string' && (COMPANY_IDS as readonly string[]).includes(v)
 
 export interface RouteGround {
-  /** The ground's name, as the contract board shows it ("Wildfire"). */
+  /**
+   * The ground's place-name ("Wildfire"), for the balance report. A player
+   * is told what the ground DOES instead (`terrain.groundEffect`, the home
+   * card's Ground row).
+   */
   name: string
   /** The map challenges a battle on this road may carry (one is drawn per battle, as ever). */
   rules: readonly TerrainRuleId[]
-  /** The 8px swatch beside the name (a chip, never a signal on its own). */
-  swatch: string
 }
 
 export interface Company {
@@ -51,6 +64,13 @@ export interface Company {
   /** The company's hue (`--co-<id>`). A fill and a light; names stay cream. */
   color: string
   ground: RouteGround
+  /**
+   * The armour its road's goblins lean to (Oct 2026): of the ordinary fights
+   * on its road that come armoured (`waves.nodeArmour`), most wear this. The
+   * ore road's raiders strap on plate; Greenvial's are warded. A road
+   * with none deals Plated and Warded evenly.
+   */
+  armour?: 'plated' | 'warded'
   /** Its road's three cities, in order: act 1's, act 2's, and the destination. */
   towns: readonly [string, string, string]
   /**
@@ -77,7 +97,7 @@ export const COMPANIES: readonly Company[] = [
     goods: 'Spice',
     noun: 'spice',
     color: '#c6e05a',
-    ground: { name: 'Wildfire', rules: ['wildfire'], swatch: '#e0743a' },
+    ground: { name: 'Wildfire', rules: ['wildfire'] },
     towns: ['Saltmarsh', 'Cinder Ford', 'Pepperport'],
     letters: [
       '{name} seeks an escort for its {noun}, by {c1} and {c2} to {dest}.',
@@ -87,17 +107,18 @@ export const COMPANIES: readonly Company[] = [
   },
   {
     id: 'art',
-    name: 'Easel House',
-    goods: 'Art',
-    noun: 'paintings',
-    color: '#c6a4ff',
-    ground: { name: 'Flooded canals', rules: ['flooded'], swatch: '#4f8fc4' },
-    towns: ['Hollowmere', 'Gilt Bridge', 'Varnish'],
+    name: BUTCHERBLOCK,
+    goods: 'Salt',
+    noun: 'salt meat',
+    color: '#c25b6b',
+    ground: { name: 'Flooded canals', rules: ['flooded'] },
+    towns: ['Brinefen', 'Smoke Ferry', 'Saltcleave'],
     letters: [
-      '{name} needs its {noun} kept dry along the canal road to {dest}.',
-      '{name} sends its {noun} by {c1} and {c2} to {dest}, and pays for every frame that arrives.',
+      '{name} needs its {noun} kept dry along the reed channels to {dest}.',
+      '{name} sends its {noun} by {c1} and {c2} to {dest}, and pays for every cask that keeps.',
     ],
-    emblem: ['gggggggg', 'gppppppg', 'gpppoppg', 'gppooopg', 'gpooooog', 'gppppppg', 'gggggggg', '........'],
+    // A haunch on the bone.
+    emblem: ['....ooo.', '...opppo', '..opgppo', '..oppppo', '.oopppo.', 'opoooo..', 'po......', '.o......'],
   },
   {
     id: 'metals',
@@ -105,7 +126,8 @@ export const COMPANIES: readonly Company[] = [
     goods: 'Metals & Stones',
     noun: 'ore',
     color: '#5d8be2',
-    ground: { name: 'Quarry boulders', rules: ['quarry'], swatch: '#8a8a8a' },
+    ground: { name: 'Quarry boulders', rules: ['quarry'] },
+    armour: 'plated',
     towns: ['Slagpit', 'Cobble Rise', 'Deepforge'],
     letters: [
       '{name} will pay well for {noun} that reaches {dest} unstolen.',
@@ -119,7 +141,7 @@ export const COMPANIES: readonly Company[] = [
     goods: 'Silk',
     noun: 'silk',
     color: '#dba5b9',
-    ground: { name: 'Fords and fires', rules: OPEN_GROUND, swatch: '#a08060' },
+    ground: { name: 'Fords and fires', rules: OPEN_GROUND },
     towns: ['Reedwick', 'Spindle', 'Loomhaven'],
     letters: [
       '{name} asks for quiet blades on the river road to {dest}.',
@@ -129,17 +151,19 @@ export const COMPANIES: readonly Company[] = [
   },
   {
     id: 'scrolls',
-    name: 'Moonquill',
-    goods: 'Scrolls & Arcana',
-    noun: 'scrolls',
-    color: '#e4e8f2',
-    ground: { name: 'Cursed ground', rules: ['hexed'], swatch: '#f49e80' },
-    towns: ['Quill Hill', 'Lanternhold', 'Inkspire'],
+    name: GREENVIAL,
+    goods: 'Potions',
+    noun: 'tonic',
+    color: '#2fa58a',
+    ground: { name: 'Cursed ground', rules: ['hexed'] },
+    armour: 'warded',
+    towns: ['Mossdell', 'Spore Hollow', 'Greenglass'],
     letters: [
       '{name} seeks wardens for sealed {noun} bound for {dest}.',
-      '{name} sends its {noun} over cursed ground, by {c1} and {c2} to {dest}.',
+      '{name} sends its {noun} through the spoiled hollows, by {c1} and {c2} to {dest}.',
     ],
-    emblem: ['.oooooo.', 'oppppppo', '.pgggpp.', '.pppppp.', '.pggggp.', '.pppppp.', 'oppppppo', '.oooooo.'],
+    // A stoppered flask, a sprout from its cork.
+    emblem: ['....g...', '...gg...', '...oo...', '...pp...', '..pppp..', '.ppgppp.', '.pppppp.', '..pppp..'],
     opensAt: 3,
   },
 ]
@@ -153,8 +177,11 @@ export const FIRST_COMPANY: CompanyId = 'spice'
 /**
  * The Sovereign Route's emblem (the endgame charter): a crown — no company's
  * road, so no company's crest. Drawn on the same shield in the Sovereign cyan.
+ * `g` gold, `w` its lit points, `y` the band, `r` one ruby. (The marks
+ * critique, Oct 2026: the old crown's two paper jewels over an outline band
+ * read as a smiling face.) The trade war's `Crown` is its top six rows.
  */
-export const SOVEREIGN_EMBLEM: readonly string[] = ['........', 'g..gg..g', 'gg.gg.gg', 'gggggggg', 'gpggggpg', 'gggggggg', '.oooooo.', '........']
+export const SOVEREIGN_EMBLEM: readonly string[] = ['...ww...', 'w..gg..w', 'gg.gg.gg', 'gggggggg', 'gggggggg', 'yyyrryyy', '........', '........']
 
 /** A locked company's emblem: a question mark. */
 export const UNKNOWN_EMBLEM: readonly string[] = ['..pppp..', '.pp..pp.', '.....pp.', '....pp..', '...pp...', '...pp...', '........', '...pp...']
@@ -178,117 +205,120 @@ export interface CompanyLogo {
 
 export const COMPANY_LOGOS: Readonly<Record<CompanyId | 'locked', CompanyLogo>> = {
   spice: {
-    // a chili pepper with a green stem
+    // a chili hanging from its green cap, curling to its tip (the marks critique, Oct 2026: the old one read as a pickle)
     rows: [
       '................',
-      '..........oo....',
-      '.........oGGo...',
-      '........oGgGo...',
-      '......ooogGo....',
-      '.....ohhhooo....',
-      '....ohllhhhdo...',
-      '...ohlhhhhhdo...',
-      '...ohlhhhhddo...',
-      '..ohhhhhhddo....',
-      '..ohhhhhdddo....',
-      '.ohhhhhddo......',
-      '.ohhhhddo.......',
-      '.ohhddoo........',
-      '..oddo..........',
-      '...oo...........',
+      '..........oGo...',
+      '........ooGo....',
+      '.......oggggo...',
+      '......oGGGGGGo..',
+      '.....ohllhhhhdo.',
+      '.....ohlhhhhhdo.',
+      '.....ohhhhhhhdo.',
+      '......ohhhhhddo.',
+      '......ohhhhhdo..',
+      '......ohhhhhdo..',
+      '......ohhhhddo..',
+      '....oohhhhddo...',
+      '..oohhhhdddo....',
+      '.odddddddoo.....',
+      '..ooooooo.......',
     ],
     palette: { G: '#276740', d: '#8fa83a', g: '#38b251', h: '#c6e05a', l: '#fffce7', o: '#161c2e' },
   },
   art: {
-    // an easel holding a painted canvas
+    // a haunch on the bone, its fat marbled: the meat Butcherblock's marsh
+    // smokehouses salt and sell (the marks proposal, Oct 2026; a hook over it
+    // read as a flask's neck at signpost size, so the bone carries it alone)
     rows: [
-      '.......oo.......',
-      '......oWWo......',
-      '..oooooooooooo..',
-      '..ohhhhhhhhhho..',
-      '..ohlhhhhhrrho..',
-      '..ohhhhhhrrrho..',
-      '..ohhyyhhhhhho..',
-      '..ohyyyhhbbhho..',
-      '..ohhhhhbbbddo..',
-      '..ohddddddddo...',
-      '..oooooooooooo..',
-      '....owo..owo....',
-      '...owo....owo...',
-      '...owo....owo...',
-      '..owo......owo..',
-      '..ooo......ooo..',
+      '................',
+      '........ooooo...',
+      '......oohhhhhoo.',
+      '.....olhhhhhhhdo',
+      '....olhhfhhhhhdo',
+      '....ohhhhhhffhdo',
+      '...olhhffhhhhddo',
+      '...ohhhhhhhhhddo',
+      '...ohhhhhhhhdddo',
+      '...oddhhhhhdddo.',
+      '..owoddddddddo..',
+      '.owwWoooooooo...',
+      'owwWo...........',
+      'owwWWo..........',
+      '.owoWo..........',
+      '..o.o...........',
     ],
-    palette: { W: '#866353', b: '#5d8be2', d: '#8d6fd0', h: '#c6a4ff', l: '#fffce7', o: '#161c2e', r: '#f76666', w: '#a38250', y: '#ffed44' },
+    palette: { o: '#161c2e', h: '#c25b6b', l: '#e2868c', d: '#8a3a48', f: '#f3d0c0', w: '#ece0c8', W: '#c9b48c' },
   },
   metals: {
-    // a pickaxe over an ore rock with a vein
+    // a blue-steel pick over a lump of ore with its blue vein (the old one was a brown rock: no blue to read at dock size)
     rows: [
       '................',
-      '..ooooooo.......',
-      '.osssssssoo.....',
-      '..oooowWosso....',
-      '......owWooso...',
-      '.......owWoso...',
-      '.......owWo.o...',
-      '.....oooowWo....',
-      '...oorrrrowWo...',
-      '..orrhhrrrowWo..',
-      '.orrrrhhrrrowo..',
-      '.orRrrrhrRrroo..',
-      '.orrRrrrrrRrro..',
-      '.oRRrRRRrRRRro..',
-      '..oRRRRRRRRRo...',
-      '...ooooooooo....',
+      '..oooooo........',
+      '.ocbbbbboo......',
+      '.oBbbbbbbboo....',
+      '..oooooowbbBo...',
+      '.......owWobBo..',
+      '......owWo.obBo.',
+      '.....owWo...oBo.',
+      '....owWo.....oo.',
+      '...owWooooooo...',
+      '..owWorrcbbrro..',
+      '.owWorrcbbBrrro.',
+      '.oWorrrbbBBrRRo.',
+      '..orrRrrBrrRRRo.',
+      '..oRRRRRRRRRRo..',
+      '...oooooooooo...',
     ],
-    palette: { R: '#6f5a48', W: '#866353', h: '#5d8be2', o: '#161c2e', r: '#9e8776', s: '#bac1c8', w: '#a38250' },
+    palette: { B: '#3c5fae', R: '#6f5a48', W: '#866353', b: '#5d8be2', c: '#b8d0ff', o: '#161c2e', r: '#9e8776', w: '#a38250' },
   },
   silk: {
-    // a spool of silk with a needle through the thread
+    // a spool of silk between wooden flanges, its loose thread run through a needle
     rows: [
       '................',
-      '...oooooooooo...',
-      '...owwwwwwwwo...',
-      '...oooooooooo...',
-      '....ohhhhhho....',
-      '....ohlhhhdo..o.',
-      '....ohhhhhdo.oso',
-      '....ohlhhhdooso.',
-      '....ohhhhhdoso..',
-      '....ohlhhhdso...',
-      '....ohhhhhsdo...',
-      '....ohhhhsddo...',
-      '...oooooooooo...',
-      '...owwwwwwwwo...',
-      '...oooooooooo...',
-      '................',
+      '.oooooooooooo...',
+      '.owwwwwwwwwwo...',
+      '.oWWWWWWWWWWo...',
+      '..ohllhhhhdo....',
+      '..ohlhhhhhdo..o.',
+      '..ohlhhhhhdo.oso',
+      '..ohlhhhhhdooso.',
+      '..ohlhhhhhdoso..',
+      '..ohlhhhhddso...',
+      '..ohlhhhhdsho...',
+      '..ohlhhhhsdo....',
+      '.oooooooooooo...',
+      '.owwwwwwwwwwo...',
+      '.oWWWWWWWWWWo...',
+      '.oooooooooooo...',
     ],
-    palette: { d: '#a8718a', h: '#dba5b9', l: '#fffce7', o: '#161c2e', s: '#bac1c8', w: '#a38250' },
+    palette: { W: '#866353', d: '#a8718a', h: '#dba5b9', l: '#fffce7', o: '#161c2e', s: '#bac1c8', w: '#a38250' },
   },
   scrolls: {
-    // a crescent moon behind a quill
+    // a flask of plant potion, a sprout from its cork, spores glowing in it
+    // (the marks proposal, Oct 2026)
     rows: [
-      '................',
-      '.....ooo......o.',
-      '...oommoo....oho',
-      '..ommMMoo...ohho',
-      '.ommMoo....ohlho',
-      '.omMo.....ohlhdo',
-      'omMo.....ohlhdo.',
-      'omMo....ohlhdo..',
-      'omMo...ohlhdo...',
-      'omMo..ohlhdo....',
-      '.omMo.ohhdo.....',
-      '.ommMoohdo......',
-      '..ommMoooo......',
-      '...oommoo.......',
-      '.....ooo........',
-      '................',
+      '.........oo.....',
+      '.......oogGo....',
+      '......ogGGoo....',
+      '.....oocco......',
+      '......oCco......',
+      '......oqvo......',
+      '.....oqvvqo.....',
+      '....oqxvvvqo....',
+      '...oqlhhhhhqo...',
+      '..oqlhhhshhhdo..',
+      '..olhhhhhhhhdo..',
+      '..ohhshhhhhhdo..',
+      '..ohhhhhhhshdo..',
+      '...ohhhhhhhdo...',
+      '....oddddddo....',
+      '.....oooooo.....',
     ],
-    palette: { M: '#d08c41', d: '#a9b0c4', h: '#e4e8f2', l: '#fffce7', m: '#ffed44', o: '#161c2e' },
+    palette: { o: '#161c2e', G: '#276740', g: '#38b251', c: '#a38250', C: '#866353', q: '#d8efe6', v: '#24423c', h: '#2fa58a', l: '#7fe0c4', d: '#1d6e5c', s: '#d8ff7a', x: '#fffce7' },
   },
   locked: {
-    // a padlock
+    // a padlock, in the small lock's warm parchment and steel (it was cool slate)
     rows: [
       '................',
       '.....oooooo.....',
@@ -307,7 +337,7 @@ export const COMPANY_LOGOS: Readonly<Record<CompanyId | 'locked', CompanyLogo>> 
       '..oooooooooooo..',
       '................',
     ],
-    palette: { d: '#4b5563', h: '#737f8e', l: '#fffce7', o: '#161c2e', s: '#bac1c8' },
+    palette: { d: '#94784e', h: '#c9b48c', l: '#ece0c8', o: '#161c2e', s: '#d8d2c4' },
   },
 }
 
@@ -315,6 +345,7 @@ export const COMPANY_LOGOS: Readonly<Record<CompanyId | 'locked', CompanyLogo>> 
  * The crest's pixel rows: a 16 × 18 heater shield (`o` outline, `l` light top,
  * `c` field, `d` shaded right edge) with the 8 × 8 emblem set into it.
  */
+const SHIELD_HALF = [7, 7, 6, 5, 4, 3, 2, 1]
 export function crestRows(emblem: readonly string[]): string[] {
   const W = 16
   const H = 18
@@ -322,7 +353,9 @@ export function crestRows(emblem: readonly string[]): string[] {
   const inside = (x: number, y: number): boolean => {
     if (y < 0 || y >= H) return false
     if (y < 10) return x >= 1 && x <= 14
-    const half = 7 - Math.floor((y - 9) * 0.85)
+    // The point tapers a step a row to a two-cell tip (it used to hang a
+    // two-row stem under the point).
+    const half = SHIELD_HALF[y - 10]
     return x >= 8 - half && x <= 7 + half
   }
   for (let y = 0; y < H; y++) {

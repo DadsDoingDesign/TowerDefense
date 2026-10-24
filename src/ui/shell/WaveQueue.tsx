@@ -23,6 +23,9 @@ export function WaveQueue({
   lead,
   emptyText,
   countNote,
+  anchor = '.sh-wavebar',
+  cardBelow = false,
+  width: fixedWidth,
 }: {
   entries: LineUpEntry[]
   /** What the accessible name opens with — "Still to come", "Next sub-wave"… */
@@ -31,6 +34,12 @@ export function WaveQueue({
   emptyText: string
   /** Q10 — the info card's count line: "still to come", "in this wave"… */
   countNote: string
+  /** The box the info card sits on: the wave strip, or the Stage's wave preview. */
+  anchor?: string
+  /** The card hangs under the anchor (the preview at the Stage's top) instead of over it. */
+  cardBelow?: boolean
+  /** The queue's own width, CSS px (the Stage's preview is as wide as its line-up); absent, it takes the room it is given. */
+  width?: number
 }) {
   const ref = useRef<HTMLDivElement>(null)
   // Q10 — the open info card: which kind, and the button that opened it.
@@ -66,14 +75,15 @@ export function WaveQueue({
       entries={entries}
       typeId={card.typeId}
       countNote={countNote}
-      anchor={{ strip: ref.current?.closest<HTMLElement>('.sh-wavebar') ?? ref.current, chip: card.opener }}
+      anchor={{ strip: ref.current?.closest<HTMLElement>(anchor) ?? ref.current, chip: card.opener }}
+      below={cardBelow}
       onPick={(typeId) => setCard((c) => (c ? { ...c, typeId } : c))}
       onClose={closeCard}
     />
   )
   if (entries.length === 0) {
     return (
-      <div ref={ref} className="sh-wq empty">
+      <div ref={ref} className="sh-wq empty" style={fixedWidth ? { flexBasis: fixedWidth, width: fixedWidth } : undefined}>
         <span className="sh-wq-empty">{emptyText}</span>
         {/* Q10 — a card left open as the last body spawns stays up ("All on the field now"). */}
         {cardEl}
@@ -84,7 +94,13 @@ export function WaveQueue({
   const more = moreCount(entries, shown)
   const hidden = entries.slice(shown)
   return (
-    <div ref={ref} className="sh-wq" role="group" aria-label={`${lead}: ${lineUpWords(entries)}.`}>
+    <div
+      ref={ref}
+      className="sh-wq"
+      role="group"
+      aria-label={`${lead}: ${lineUpWords(entries)}.`}
+      style={fixedWidth ? { flexBasis: fixedWidth, width: fixedWidth } : undefined}
+    >
       {shown === 0 ? (
         // Narrower than one portrait: say it in words rather than clip a face.
         <span className="sh-wq-empty">{total} {total === 1 ? 'enemy' : 'enemies'}</span>

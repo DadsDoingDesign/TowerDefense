@@ -7,6 +7,7 @@ import { itemIcon, itemName, RARITY_INITIAL, railStyle, rarityVar } from '../cha
 import { Icon } from '../Icon'
 import { Money } from './Money'
 import { NOTE_FRESH_MS, useCombatNotes } from '../../state/combatNotes'
+import { useToastUp } from './toastUp'
 
 /**
  * The pack and the company, in one strip under an event page's title
@@ -157,7 +158,9 @@ export function ReceiptToast() {
         sayNotice(s.gearNotice)
         return
       }
-      if (s.runPhase !== 'active') {
+      // The hero pick deals the whole company: the heroes you just chose are
+      // not news, and the toast would sit on the road's panel (Oct 2026).
+      if (s.runPhase !== 'active' || prev.screen === 'heroPick') {
         prev = s
         return
       }
@@ -188,6 +191,11 @@ export function ReceiptToast() {
       if (parts.length) post({ text: parts.join(' · '), key: Date.now() })
     })
   }, [])
+  // The Coach's top pill waits while this is up (`toastUp`).
+  useEffect(() => {
+    useToastUp.setState({ up: !!msg })
+  }, [msg])
+  useEffect(() => () => useToastUp.setState({ up: false }), [])
   useEffect(() => {
     if (!msg) return
     const t = setTimeout(() => {

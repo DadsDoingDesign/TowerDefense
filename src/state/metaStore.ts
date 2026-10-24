@@ -6,10 +6,11 @@ import { ACHIEVEMENTS, newlyEarned, type RunFacts } from '../game/data/achieveme
 import { addFelled, sanitizeFelled } from '../game/data/enemyKnowledge'
 import { readMet, type IdeaId } from './staging'
 import { rollItemUnlock, rollUnlock, watchLevelFor } from '../game/run/watch'
-import { RANDOM_UNLOCK_SKILLS } from '../game/data/skills'
+import { isNamedId, RANDOM_UNLOCK_SKILLS, SIGNATURE_SKILLS } from '../game/data/skills'
 import { SOVEREIGN_ITEM_KINDS, UNLOCK_ITEM_KINDS } from '../game/data/itemKinds'
 import { rollSovereign } from '../game/run/charter'
 import { COMPANY_IDS, isCompanyId, type CompanyId } from '../game/data/companies'
+import { CLAN_OF_COMPANY, isClanId } from '../game/data/clans'
 import { clampCrates, deliveryUnlocks, type StakeRecord } from '../game/run/contracts'
 import {
   dealRules,
@@ -35,19 +36,25 @@ import {
   type RunHq,
 } from '../game/run/hq'
 import { isItemKind } from '../game/data/itemKinds'
+import { canonicalKind } from '../game/data/peopleKinds'
 import { newRunSeed } from '../game/core/rng'
 import {
   charterStandingXp,
   dealMany,
+  migrateStandingXp,
   rollContractItem,
   rollContractSkill,
-  rollStandingCard,
   spreadWatchXp,
-  standingBonusKind,
   standingFor,
   standingXpFor,
 } from '../game/run/standing'
+import { canSignTerm, payTrack, readTerm, termCap, type TrackPay, type TrackSpan } from '../game/run/track'
 import { readMilitia, type Militia } from '../game/run/militia'
+import { readLiveries, readLivery, type Liveries } from '../game/run/livery'
+import { isDefaultStandard, type StandardLook } from '../game/data/companyStandard'
+import { askStanding, askTips, readAskResults, type AskResult } from '../game/run/asks'
+import { endSeason, freshSeason, readSeason, recordContract, seasonOver, warOpen, type Season } from '../game/run/tradeWar'
+import { companyOpen } from '../game/run/standing'
 
 /**
  * The HQ (build step 3) replaced the Watchtower's list of hub purchases. Its
@@ -83,13 +90,30 @@ export interface Codex {
   relics: string[]
   /** Q10 — enemies felled, by KIND (the key without its elite modifier). */
   felled: Record<string, number>
+  /**
+   * The goblin clans met (`data/clans.ts`, Oct 2026): a clan's Codex tiles open
+   * once it has fielded a wave against you. Absent on a save from before the
+   * clans: read as the clans of the roads you have earned standing on.
+   */
+  clans?: string[]
+  /**
+   * The fused skills made (skill fusion, Oct 2026, `data/fusions.ts`), in the
+   * order found: the Codex reveals a recipe's result once it is here. Absent
+   * on a save from before fusion: none found. Known fusion ids only, each once.
+   */
+  fusions?: string[]
 }
-const freshCodex = (): Codex => ({ enemies: [], relics: [], felled: {} })
+const freshCodex = (): Codex => ({ enemies: [], relics: [], felled: {}, clans: [], fusions: [] })
 const strList = (raw: unknown): string[] =>
   Array.isArray(raw) ? [...new Set(raw.filter((x): x is string => typeof x === 'string'))] : []
-function migrateCodex(raw: unknown): Codex {
+function migrateCodex(raw: unknown, standing?: Record<CompanyId, number>): Codex {
   const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
-  return { enemies: strList(o.enemies), relics: strList(o.relics), felled: sanitizeFelled(o.felled) }
+  // Before the clans every road fielded the same goblins: the clans of the
+  // roads already ridden (standing earned) are the ones met.
+  const clans = Array.isArray(o.clans)
+    ? strList(o.clans).filter(isClanId)
+    : COMPANY_IDS.filter((c) => (standing?.[c] ?? 0) > 0).map((c) => CLAN_OF_COMPANY[c])
+  return { enemies: strList(o.enemies), relics: strList(o.relics), felled: sanitizeFelled(o.felled), clans, fusions: strList(o.fusions).filter(isNamedId) }
 }
 function migrateAchievements(raw: unknown): Record<string, number> {
   const out: Record<string, number> = {}
@@ -105,6 +129,12 @@ function migrateAchievements(raw: unknown): Record<string, number> {
 function migrateStanding(raw: unknown): Record<CompanyId, number> {
   const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
   return Object.fromEntries(COMPANY_IDS.map((c) => [c, Math.max(0, Math.floor(num(o[c], 0)))])) as Record<CompanyId, number>
+}
+
+/** The term signed with each company (Draft 4 · B): 1 or 2, never past what its XP reached (`track.readTerm`). */
+function migrateTerms(raw: unknown, xp: Record<CompanyId, number>): Record<CompanyId, number> {
+  const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  return Object.fromEntries(COMPANY_IDS.map((c) => [c, readTerm(o[c], xp[c])])) as Record<CompanyId, number>
 }
 
 /** The stake record: crate counts 0–8 only, each with runs ≥ delivered ≥ 0. */
@@ -138,7 +168,8 @@ function migrateCharters(raw: unknown): CharterRecord {
 /** The Sovereign kinds owned: known ones, each once, in unlock order. */
 const migrateSovereign = (raw: unknown): string[] => {
   const known = new Set(SOVEREIGN_ITEM_KINDS)
-  return Array.isArray(raw) ? [...new Set(raw.filter((x): x is string => typeof x === 'string' && known.has(x)))] : []
+  // A renamed kind (the roster's, Oct 2026) is owned under its new name.
+  return Array.isArray(raw) ? [...new Set(raw.map((x) => (typeof x === 'string' ? canonicalKind(x) : x)).filter((x): x is string => typeof x === 'string' && known.has(x)))] : []
 }
 
 /** What the HQ grants each new run. */
@@ -166,8 +197,17 @@ export interface RunProgress {
   xp: number
   standingBefore: number
   standingAfter: number
-  /** Skill cards the standing levels unlocked, in order. */
+  /** Skill cards the standing levels unlocked, in order (a signature skill among them). */
   standingCards: string[]
+  /** Item kinds the standing levels unlocked, in order (Draft 4 · B: levels 3, 6 and 8). */
+  standingItems: string[]
+  /**
+   * Every track level the settle crossed, company by company, with what each
+   * paid (Draft 4 · B, `run/track.ts`): the receipt lists them per company.
+   */
+  track: TrackPay[]
+  /** How far each company's track moved, within its term (the receipt's standing). */
+  spans: TrackSpan[]
   /**
    * Standing levels crossed once the card pool was exhausted: each pays a Rare
    * bonus item of `kind` in the next contract's pack (October 2026).
@@ -188,6 +228,15 @@ export interface RunProgress {
   interest: number
   /** True on a custom seed: it paid its gold, and earned nothing else. */
   unranked: boolean
+  /**
+   * What the company asked of the run (Draft 4 · A), each judged met or not —
+   * the receipt's "What Ironvein asked". Empty for a contract with no asks.
+   */
+  asks: AskResult[]
+  /** Standing XP the asks met paid (in `xp` above, or in `standingAll` on the Sovereign Route). */
+  askXp: number
+  /** The tips the asks met banked (a delivery only; in `deposit` above). */
+  askTips: number
 }
 export const lastProgress: { run: RunProgress | null } = { run: null }
 
@@ -208,8 +257,17 @@ export interface ContractSettle {
   deposit: number
   /** A custom seed: pays its gold, earns no standing and unlocks nothing. */
   unranked?: boolean
+  /**
+   * The run counts for a ranking or a record (`run/ranking.countsForRanking`;
+   * default true). An assisted run (false) keeps every reward — gold,
+   * standing, unlocks, feats, the trade war — and is left out of the best
+   * depth, the best stake and the stake record.
+   */
+  rankable?: boolean
   /** The facts the feats are judged on. Omitted: no feat can be earned. */
   facts?: RunFacts
+  /** The company's asks, judged (`run/asks.judgeAsks`). Omitted: none were dealt. */
+  asks?: AskResult[]
 }
 
 /** The sealed crates' ledger: the save's crate seed and how many have been opened. */
@@ -264,6 +322,23 @@ interface MetaState {
    * after the first finished contract. Validated on load (`run/militia.readMilitia`).
    */
   militia: Militia | null
+  /**
+   * How you dressed each company's standard (Draft 4 § C): the look its wagon
+   * and notice fly. Only the companies you dressed; each part validated
+   * against that company's kit at your standing with it (`run/livery`).
+   */
+  liveries: Liveries
+  /**
+   * The trade war (Draft 4 § D, `run/tradeWar.ts`): the season, each
+   * company's share, your deliveries this season, the desperate company,
+   * and the season just ended until its page is read.
+   */
+  season: Season
+  /**
+   * The term signed with each company (Draft 4 · B): 1, or 2 once re-signed at
+   * standing 10. Validated against its XP (`track.readTerm`).
+   */
+  terms: Record<CompanyId, number>
   // actions
   /** The next level's price, or null when it is maxed or unknown. */
   upgradeCost: (id: string) => number | null
@@ -302,6 +377,16 @@ interface MetaState {
   recordMet: (ids: Iterable<IdeaId>) => void
   /** Raise (or change) the militia's name and banner. An invalid one is ignored. */
   setMilitia: (m: Militia) => void
+  /** Dress a company's standard. A part not unlocked at your standing with it falls back to the plain one. */
+  setLivery: (company: CompanyId, look: StandardLook) => void
+  /**
+   * Close the season-end page: take `kind` from your patron's vault (a locked
+   * kind is unlocked, an owned one is a Rare bonus item for the next
+   * contract), or nothing (`null`, when there was no pick to make).
+   */
+  closeSeasonEnd: (kind: string | null) => void
+  /** Sign a second term with a company at standing 10 (Draft 4 · B). False when refused. */
+  signTerm: (company: CompanyId) => boolean
   resetMeta: () => void
 }
 
@@ -317,6 +402,7 @@ const freshStats = (): MetaStats => ({
   runsWon: 0,
 })
 const freshStanding = (): Record<CompanyId, number> => Object.fromEntries(COMPANY_IDS.map((c) => [c, 0])) as Record<CompanyId, number>
+const freshTerms = (): Record<CompanyId, number> => Object.fromEntries(COMPANY_IDS.map((c) => [c, 1])) as Record<CompanyId, number>
 
 /**
  * Persisted meta schema version (M11). Bump this and add a case to
@@ -354,8 +440,31 @@ const freshStanding = (): Record<CompanyId, number> => Object.fromEntries(COMPAN
  * base interest. Nothing else moves: the staggered reveal's latches are the
  * `met` list a save already holds, so a player who met the HQ or the crates
  * keeps them.
+ *
+ * v12 — company flags (Draft 4 § C): `liveries`, the standards you dressed,
+ * per company. An older save has none (every standard flies plain).
+ *
+ * v13 — the loyalty track (Draft 4 · B): standing costs 1.75× what it did,
+ * and each company's XP moves onto the new curve at the same level and the
+ * same fraction of the way to the next (`standing.migrateStandingXp`) — nobody
+ * loses a level, and no level is crossed by the move, so none pays. New:
+ * `terms`, every company on its first.
+ *
+ * v14 — the trade war (Draft 4 § D): `season`, read by
+ * `tradeWar.readSeason`. An older save has none, and starts the war at
+ * season 1 with even shares — nothing else moves.
+ *
+ * v15 — the two landed together: a v14 save with no `terms` came from the
+ * trade war's build alone, its standing XP still on the old curve, so it
+ * takes v13's step too.
+ *
+ * v16 — the trade war simplified (October 2026): exclusives, rivals and cold
+ * are cut, and the season's end pays your patron's purse instead of the
+ * leader's champion's. `season.exclusive` is read past and dropped, and a
+ * pending season's end reads its old leader as your patron when it paid you
+ * (`tradeWar.readSeason`, which runs on every load) — nothing to migrate here.
  */
-export const META_VERSION = 11
+export const META_VERSION = 16
 
 /** The orders a save holds, as booleans (the boulder order was cut at v11 and refunded). */
 const migrateOrders = (raw: unknown): HqOrders => {
@@ -425,6 +534,9 @@ type PersistedMeta = Pick<
   | 'codex'
   | 'met'
   | 'militia'
+  | 'liveries'
+  | 'season'
+  | 'terms'
 >
 
 /**
@@ -457,8 +569,8 @@ export function migrateMeta(persisted: unknown, version: number): PersistedMeta 
     runsCompleted: Math.max(0, num(rawStats.runsCompleted, 0)),
     runsWon: Math.max(0, num(rawStats.runsWon, 0)),
   }
-  // Only the random cards are stored, each once, in unlock order.
-  const known = new Set(RANDOM_UNLOCK_SKILLS)
+  // Only the random cards and the signature skills are stored, each once, in unlock order.
+  const known = new Set([...RANDOM_UNLOCK_SKILLS, ...Object.values(SIGNATURE_SKILLS)])
   let skills = Array.isArray(o.skills) ? [...new Set(o.skills.filter((x): x is string => typeof x === 'string' && known.has(x)))] : []
   let watchXp = Math.max(0, Math.floor(num(o.watchXp, 0)))
   // v6: a save that played before skills is credited the Watch XP its record
@@ -477,14 +589,21 @@ export function migrateMeta(persisted: unknown, version: number): PersistedMeta 
       ? Math.max(NEW_BANK, Math.floor(Math.max(0, num(o.watchMarks, 0)) + refund))
       : Math.max(0, Math.floor(num(o.bank, NEW_BANK)))
   const bank = Math.min(1e9, bank0 + (fold?.refund ?? 0) + retired)
-  const standing = version < 8 ? spreadWatchXp(watchXp) : migrateStanding(o.standing)
+  const standing0 = version < 8 ? spreadWatchXp(watchXp) : migrateStanding(o.standing)
+  // v13: the longer curve — same level, same fraction of the way (only on a
+  // real version step; `merge` calls this on every load).
+  // A v14 save with no `terms` was written by the trade war's build before
+  // the track's landed (a preview): its XP is still on the old curve (v15).
+  const oldCurve = version < 13 || (version === 14 && o.terms === undefined)
+  const standing = oldCurve ? (Object.fromEntries(COMPANY_IDS.map((c) => [c, migrateStandingXp(standing0[c])])) as Record<CompanyId, number>) : standing0
+  const terms = migrateTerms(oldCurve ? null : o.terms, standing)
   const lastInterest = o.lastInterest == null ? null : Math.max(0, Math.min(1e6, Math.floor(num(o.lastInterest, 0))))
   return {
     bank,
     upgrades,
     focus: isCompanyId(o.focus) ? o.focus : null,
     orders: migrateOrders(o.orders),
-    bonusItems: Array.isArray(o.bonusItems) ? o.bonusItems.filter(isItemKind).slice(0, MAX_BONUS_ITEMS) : [],
+    bonusItems: Array.isArray(o.bonusItems) ? o.bonusItems.map((x) => (typeof x === 'string' ? canonicalKind(x) : x)).filter(isItemKind).slice(0, MAX_BONUS_ITEMS) : [],
     crates: migrateCrates(o.crates),
     lastInterest,
     standing,
@@ -495,9 +614,15 @@ export function migrateMeta(persisted: unknown, version: number): PersistedMeta 
     charters: migrateCharters(o.charters),
     stats,
     achievements: migrateAchievements(o.achievements),
-    codex: migrateCodex(o.codex),
+    codex: migrateCodex(o.codex, standing),
     met: readMet(o.met),
-    militia: readMilitia(o.militia),
+    // Its UI theme checked against the standing just read (locked → neutral).
+    militia: readMilitia(o.militia, (c) => standingFor(standing[c] ?? 0)),
+    // v12: none before; each part checked against the standing just read.
+    liveries: readLiveries(o.liveries, (c) => standingFor(standing[c] ?? 0)),
+    // v14: none before (a fresh war); validated whatever the version.
+    season: readSeason(o.season),
+    terms,
   }
 }
 
@@ -528,6 +653,9 @@ export const useMetaStore = create<MetaState>()(
       codex: freshCodex(),
       met: [],
       militia: null,
+      liveries: {},
+      season: freshSeason(),
+      terms: freshTerms(),
 
       upgradeCost: (id) => (isHqId(id) ? hqCost(id, hqLevel(get().upgrades, id)) : null),
 
@@ -625,8 +753,13 @@ export const useMetaStore = create<MetaState>()(
       recordCodex: (seen) => {
         const cur = get().codex
         const merge = (a: string[], b?: string[]) => (b && b.some((x) => !a.includes(x)) ? [...a, ...b.filter((x, i) => !a.includes(x) && b.indexOf(x) === i)] : a)
-        const next: Codex = { enemies: merge(cur.enemies, seen.enemies), relics: merge(cur.relics, seen.relics), felled: cur.felled }
-        if (next.enemies !== cur.enemies || next.relics !== cur.relics) set({ codex: next })
+        const prevClans = cur.clans ?? []
+        const clans = merge(prevClans, seen.clans)
+        // Fusions found: known fused ids only.
+        const prevFusions = cur.fusions ?? []
+        const fusions = merge(prevFusions, seen.fusions?.filter(isNamedId))
+        const next: Codex = { enemies: merge(cur.enemies, seen.enemies), relics: merge(cur.relics, seen.relics), felled: cur.felled, clans, fusions }
+        if (next.enemies !== cur.enemies || next.relics !== cur.relics || clans !== prevClans || fusions !== prevFusions) set({ codex: next })
       },
 
       recordMet: (ids) => {
@@ -641,7 +774,7 @@ export const useMetaStore = create<MetaState>()(
         if (felled) set({ codex: { ...cur, felled } })
       },
 
-      settleContract: ({ depth, won, kills, contract, deposit, unranked = false, facts }) => {
+      settleContract: ({ depth, won, kills, contract, deposit, unranked = false, rankable = true, facts, asks: askList }) => {
         const { stats, achievements } = get()
         const d = Math.max(0, num(depth, 0))
         const k = Math.max(0, num(kills, 0))
@@ -659,45 +792,50 @@ export const useMetaStore = create<MetaState>()(
         const status = contract?.status ?? 'lost'
         const paysInterest = !!contract && !unranked && earnsInterest(status)
         const interest = paysInterest ? interestFor(num(get().bank, 0)) : 0
-        const banked = Math.max(0, Math.round(num(deposit, 0))) + featGold + interest
 
         // ---- standing with the company, and what it unlocks ----------------
         const company = contract && isCompanyId(contract.company) ? contract.company : null
         const charter = !!contract?.charter
         const ranked = !!company && !unranked
+        // The company's asks (Draft 4 · A): each met one pays its company
+        // standing on any finish that earns standing, and a tip on a
+        // delivery. A custom seed earns neither.
+        const asks = readAskResults(askList)
+        // Draft 4 · B: a company you signed a second term with pays its asks double.
+        const terms = migrateTerms(get().terms, migrateStanding(get().standing))
+        const askAll = askStanding(asks, (c) => terms[c])
+        // A company's road pays only its own asks; the Sovereign Route each ask's company.
+        const askXp: Partial<Record<CompanyId, number>> = unranked ? {} : charter ? askAll : company ? { [company]: askAll[company] ?? 0 } : {}
+        const tips = !unranked && contract ? askTips(asks, status) : 0
+        const banked = Math.max(0, Math.round(num(deposit, 0))) + featGold + interest + tips
         const standingXp = { ...freshStanding(), ...get().standing }
         const xpBefore = company ? Math.max(0, num(standingXp[company], 0)) : 0
-        const xp = ranked ? standingXpFor({ depth: d, kills: k, delivered: won }) : 0
-        const before = standingFor(xpBefore)
-        const after = standingFor(xpBefore + xp)
+        const season0 = readSeason(get().season)
+        const xp = Math.floor((ranked ? standingXpFor({ depth: d, kills: k, delivered: won }) : 0) + (company ? (askXp[company] ?? 0) : 0))
         const have = get().skills
         const haveItems = Array.isArray(get().items) ? get().items : []
         // The Sovereign Route earns standing with all five companies — each
         // what an escort that ended the same way earns with its one (October
         // 2026). A custom seed earns none.
-        const gains: Partial<Record<CompanyId, number>> = charter && !unranked ? charterStandingXp({ depth: d, kills: k, delivered: won }) : company && xp ? { [company]: xp } : {}
-        const nextStanding = { ...standingXp }
-        // One card per standing level crossed, each at that level's floor,
-        // the company's own cards first. Once the card pool is exhausted, a
-        // level pays a Rare bonus item for the next contract instead — a hash
-        // of its own parts, never a run stream.
-        const standingCards: string[] = []
-        const standingBonus: RunProgress['standingBonus'] = []
-        const standingAll: NonNullable<RunProgress['standingAll']> = []
-        for (const c of COMPANY_IDS) {
-          const gain = gains[c] ?? 0
-          if (!gain) continue
-          const from = Math.max(0, num(standingXp[c], 0))
-          const lvBefore = standingFor(from)
-          const lvAfter = standingFor(from + gain)
-          nextStanding[c] = from + gain
-          if (charter) standingAll.push({ company: c, before: lvBefore, after: lvAfter })
-          for (let s = lvBefore + 1; s <= lvAfter; s++) {
-            const card = rollStandingCard([...have, ...standingCards], c, s, runsDone)
-            if (card) standingCards.push(card)
-            else standingBonus.push({ company: c, standing: s, kind: standingBonusKind(haveItems, c, s, runsDone) })
-          }
-        }
+        const baseGains: Partial<Record<CompanyId, number>> = charter && !unranked ? charterStandingXp({ depth: d, kills: k, delivered: won }) : company && xp ? { [company]: xp } : {}
+        // On the Sovereign Route each ask pays the company whose ask it is.
+        const gains: Partial<Record<CompanyId, number>> = charter
+          ? Object.fromEntries(COMPANY_IDS.map((c) => [c, (baseGains[c] ?? 0) + (askXp[c] ?? 0)]).filter(([, n]) => (n as number) > 0))
+          : baseGains
+        // Each company's loyalty track (Draft 4 · B, `run/track.ts`): every
+        // level crossed pays what its row named — the company's next card or
+        // kind, its signature skill, or a Rare bonus item for the next
+        // contract once nothing is left — never a roll, never a run stream.
+        const paid = payTrack({ gains, xp: standingXp, terms, skills: have, items: haveItems })
+        const nextStanding = { ...standingXp, ...paid.xp }
+        const before = standingFor(xpBefore)
+        const after = company ? standingFor(nextStanding[company]) : 0
+        const standingCards = paid.cards
+        const standingItems = paid.items
+        const standingBonus: RunProgress['standingBonus'] = paid.pays.filter((p) => p.bonus).map((p) => ({ company: p.company, standing: p.level, kind: p.bonus! }))
+        const standingAll: NonNullable<RunProgress['standingAll']> = charter
+          ? paid.spans.map((sp) => ({ company: sp.company, before: standingFor(standingXp[sp.company]), after: standingFor(nextStanding[sp.company]) }))
+          : []
         // A delivery: the contract's skill and item, a skill per milestone
         // crate and the stake's item chances — the floor rising with the stake.
         const crates = contract ? clampCrates(contract.crates) : 0
@@ -705,7 +843,7 @@ export const useMetaStore = create<MetaState>()(
         const contractCards = company
           ? dealMany([...have, ...standingCards], owed.skills, (h, i) => rollContractSkill(h, company, crates, runsDone, i))
           : []
-        const items = company ? dealMany(haveItems, owed.items, (h, i) => rollContractItem(h, company, crates, runsDone, i)) : []
+        const items = company ? dealMany([...haveItems, ...standingItems], owed.items, (h, i) => rollContractItem(h, company, crates, runsDone, i)) : []
 
         // The Sovereign Route (the endgame charter): a delivery unlocks one
         // Sovereign kind still locked — a hash of the charter count, never a
@@ -718,49 +856,84 @@ export const useMetaStore = create<MetaState>()(
           company,
           charter,
           sovereign,
-          // The Sovereign Route's XP is the same with each of the five.
-          xp: charter ? (Object.values(gains)[0] ?? 0) : xp,
+          // The Sovereign Route's road XP is the same with each of the five
+          // (its asks' XP is on the companies whose asks they were).
+          xp: charter ? (Object.values(baseGains)[0] ?? 0) : xp,
           standingBefore: before,
           standingAfter: after,
           standingCards,
+          standingItems,
           standingBonus,
+          track: paid.pays,
+          spans: paid.spans,
           standingAll: charter ? standingAll : null,
           contractCards,
           items,
           deposit: banked,
           interest,
           unranked: (!!company || charter) && unranked,
+          asks,
+          askXp: Object.values(askXp).reduce((a, b) => a + (b ?? 0), 0),
+          askTips: tips,
         }
 
         // The record: every finished contract at its stake, and whether it
         // arrived. A charter has its own record — it is no stake.
+        // An assisted run (or a custom seed) is no record (`run/ranking`).
         const record = { ...get().record }
-        if (contract && !charter) {
+        if (contract && !charter && rankable) {
           const key = String(crates)
           const cur = record[key] ?? { runs: 0, delivered: 0 }
           record[key] = { runs: cur.runs + 1, delivered: cur.delivered + (won ? 1 : 0) }
         }
         const newCards = [...standingCards, ...contractCards]
 
+        // The trade war (Draft 4 § D): from the market's opening, every
+        // ranked finished contract counts toward the season and moves its
+        // company's share; the seventh ends it. Your patron pays you (the
+        // purse banked now, the vault pick on the season's page), and
+        // the last company that hires you posts desperate terms.
+        let season = season0
+        let warGold = 0
+        let warItems: string[] = []
+        let warBonus: string[] = []
+        if (contract && !unranked && warOpen(num(stats.runsCompleted, 0))) {
+          season = recordContract(season, { company: contract.company, crates, status: contract.status, charter })
+          if (seasonOver(season)) {
+            // A page left unread when the next season ends: its pick is taken for you (the first offered).
+            const old = season.ended?.vault[0]
+            if (old) (old.unlock ? warItems : warBonus).push(old.kind)
+            const haveNow = [...haveItems, ...items, ...warItems]
+            const ended = endSeason(season, { haveItems: haveNow, open: (c) => companyOpen(c, nextStanding) })
+            season = ended.next
+            warGold = ended.end.purse
+          }
+        }
+        warItems = warItems.filter((k) => !haveItems.includes(k) && !items.includes(k))
+
         // Every read is coerced: this is `x + n` arithmetic over a persisted
         // record, and one field arriving as `undefined` would turn a stat into
         // NaN permanently (M11).
         set({
-          bank: Math.max(0, num(get().bank, 0)) + banked,
+          bank: Math.max(0, num(get().bank, 0)) + banked + warGold,
           ...(paysInterest ? { lastInterest: interest } : {}),
           standing: nextStanding,
           // A standing level past the card pool owes a Rare bonus item to the
           // next contract (`hq.bonusItemsFor`), as a sealed crate's duplicate does.
-          ...(standingBonus.length ? { bonusItems: [...get().bonusItems, ...standingBonus.map((b) => b.kind)].slice(0, MAX_BONUS_ITEMS) } : {}),
+          ...(standingBonus.length || warBonus.length
+            ? { bonusItems: [...get().bonusItems, ...standingBonus.map((b) => b.kind), ...warBonus].slice(0, MAX_BONUS_ITEMS) }
+            : {}),
           record,
           skills: newCards.length ? [...have, ...newCards] : have,
-          items: items.length ? [...haveItems, ...items] : haveItems,
+          items: items.length || standingItems.length || warItems.length ? [...haveItems, ...standingItems, ...items, ...warItems] : haveItems,
+          season,
           ...(charter ? { charters: { runs: charters.runs + 1, delivered: charters.delivered + (won ? 1 : 0) } } : {}),
           ...(sovereign ? { sovereign: [...owned, sovereign] } : {}),
           achievements: feats.length ? { ...achievements, ...Object.fromEntries(feats.map((f) => [f.id, runsDone])) } : achievements,
           stats: {
-            bestDepth: Math.max(num(stats.bestDepth, 0), d),
-            bestStake: won ? Math.max(num(stats.bestStake, 0), crates) : num(stats.bestStake, 0),
+            // The bests are records: an assisted run (or a custom seed) leaves them alone.
+            bestDepth: rankable ? Math.max(num(stats.bestDepth, 0), d) : num(stats.bestDepth, 0),
+            bestStake: rankable && won ? Math.max(num(stats.bestStake, 0), crates) : num(stats.bestStake, 0),
             totalKills: num(stats.totalKills, 0) + k,
             runsCompleted: runsDone,
             runsWon: num(stats.runsWon, 0) + (won ? 1 : 0),
@@ -770,8 +943,46 @@ export const useMetaStore = create<MetaState>()(
       },
 
       setMilitia: (m) => {
-        const militia = readMilitia(m)
+        const xp = get().standing
+        const militia = readMilitia(m, (c) => standingFor(Math.max(0, num(xp[c], 0))))
         if (militia) set({ militia })
+      },
+
+      setLivery: (company, look) => {
+        if (!isCompanyId(company)) return
+        const fit = readLivery(company, look, standingFor(Math.max(0, num(get().standing[company], 0))))
+        const { [company]: _old, ...rest } = get().liveries
+        set({ liveries: isDefaultStandard(fit) ? rest : { ...rest, [company]: fit } })
+      },
+
+      signTerm: (company) => {
+        if (!isCompanyId(company)) return false
+        const xp = Math.max(0, num(get().standing[company], 0))
+        const terms = migrateTerms(get().terms, migrateStanding(get().standing))
+        if (!canSignTerm(xp, terms[company])) {
+          sfx('error')
+          return false
+        }
+        // The new term starts where the last one ended: its XP is the old cap.
+        set({ terms: { ...terms, [company]: terms[company] + 1 }, standing: { ...get().standing, [company]: Math.min(xp, termCap(terms[company])) } })
+        sfx('confirm')
+        return true
+      },
+
+      closeSeasonEnd: (kind) => {
+        const season = readSeason(get().season)
+        const end = season.ended
+        if (!end) return
+        const pick = kind ? end.vault.find((v) => v.kind === kind) : undefined
+        // A patron's page closes only with a pick from its vault.
+        if (end.vault.length && !pick) return
+        const items = Array.isArray(get().items) ? get().items : []
+        set({
+          season: { ...season, ended: null },
+          ...(pick && pick.unlock && !items.includes(pick.kind) ? { items: [...items, pick.kind] } : {}),
+          ...(pick && (!pick.unlock || items.includes(pick.kind)) ? { bonusItems: [...get().bonusItems, pick.kind].slice(0, MAX_BONUS_ITEMS) } : {}),
+        })
+        if (pick) sfx('coin')
       },
 
       bonuses: () => {
@@ -806,6 +1017,9 @@ export const useMetaStore = create<MetaState>()(
           codex: freshCodex(),
           met: [],
           militia: null,
+          liveries: {},
+          season: freshSeason(),
+          terms: freshTerms(),
         }),
     }),
     {
@@ -831,6 +1045,9 @@ export const useMetaStore = create<MetaState>()(
         codex: s.codex,
         met: s.met,
         militia: s.militia,
+        liveries: s.liveries,
+        season: s.season,
+        terms: s.terms,
       }),
       migrate: migrateMeta,
       // `migrate` only runs when the stored version differs, so the coercion is

@@ -138,6 +138,70 @@ export interface EffectMods {
   rushPerHeld?: number
   /** Every `every`th kill this hero makes mends the Gate by `hp`. */
   killMend?: { every: number; hp: number }
+
+  // ---- the peoples' kit (Oct 2026, `docs/peoples/roster.json`) -------------
+  // Each is read in exactly one place in `engine.ts` and is off unless a
+  // source grants it, so a hero without one fights exactly as before (and no
+  // RNG draw moves: none of these draws).
+  /** Speed aura: heroes within `radius` (itself too) attack ×`rateMult` faster. */
+  rateAura?: { rateMult: number; radius: number }
+  /** This hero's hits deal this fraction more to a Plated enemy (`ENEMY_MODS`). */
+  vsPlated?: number
+  /** This hero's hits deal this fraction more to a Warded enemy. */
+  vsWarded?: number
+  /** This hero's CRITS also burn (its own burn line, not its hits'). */
+  critBurn?: { dps: number; dur: number }
+  /** Every `n`th attack this hero makes strikes twice (double damage). */
+  doubleEvery?: number
+  /** A kill readies this hero's next attack at once (its reload is reset). */
+  killReady?: boolean
+  /** Every `every`th attack also jumps to `chains` more enemies for `dmgFrac`. */
+  chainEvery?: { every: number; chains: number; dmgFrac: number }
+  /** Every `every`th attack poisons the `count` enemies nearest its target. */
+  spitEvery?: { every: number; count: number; dps: number; dur: number }
+  /**
+   * Roots: an impact holds up to `count` of the enemies it strikes in place
+   * for `dur` seconds (a stun that does not roll). A rooted body cannot be
+   * rooted again until `ROOT_REST` seconds after its roots break.
+   */
+  root?: { count: number; dur: number }
+
+  // ---- the fusions' twists (Oct 2026, `data/fusions.ts`, docs/SKILL_FUSION.md)
+  // Only a fused skill grants these. Each is read in one place in `engine.ts`,
+  // is off unless granted, and draws nothing, so a hero without one fights
+  // exactly as before. Area damage they deal goes through `damageEnemy`, is
+  // never itself a hit (no statuses, no further twist), and lands after the
+  // loop that set it off.
+  /** Ricochet: a crit that lands bounces to the nearest enemy it did not touch, for this share of the hit. */
+  ricochet?: number
+  /** Overkill: a hit that kills carries this share of its excess to the nearest living enemy. */
+  overkill?: number
+  /** Arc carry: its chain arcs also write its burn and its chill on what they jump to. */
+  arcCarry?: boolean
+  /** Freeze: a crit on a frost-chilled enemy deals `bonus` more and stops it `dur` seconds (not again for `FREEZE_REST`). */
+  critFreeze?: { dur: number; bonus: number; chance: number }
+  /** Focus: each shot it has already aimed at an enemy makes the next on it `step` harder, up to `cap`. */
+  focusStack?: { step: number; cap: number }
+  /** Held burst: an enemy it was holding that dies bursts for `frac` of its hit on enemies within `radius`. */
+  heldBurst?: { frac: number; radius: number }
+  /** First strike: its first hit on each enemy deals this fraction more. */
+  firstHit?: number
+  /** Contagion: an enemy dying of its poison spreads the poison to `count` enemies within `radius`. */
+  contagion?: { count: number; radius: number }
+  /** Death burst: an enemy dying while its burn is on it bursts for `frac` of its hit within `radius`. */
+  deathBurst?: { frac: number; radius: number }
+  /** Fan: every `every`th attack also shoots `count` other enemies in reach for `frac` of the hit. */
+  fanEvery?: { every: number; count: number; frac: number }
+  /** Execute refund: an execution readies its next attack at once. */
+  executeReady?: boolean
+  /** Shatter: a hit on a slowed enemy splinters `frac` of it to the enemies within `radius`. */
+  frostSplash?: { frac: number; radius: number }
+  /** Crit aura: heroes within `radius` (itself too) crit `add` more often; the strongest aura counts. */
+  critAura?: { add: number; radius: number }
+  /** Quake: every `every`th attack's impact also strikes every other enemy within `radius` for `frac`. */
+  quakeEvery?: { every: number; frac: number; radius: number }
+  /** Frenzy: each kill this wave makes it attack `rate` faster, up to `cap`. */
+  frenzy?: { rate: number; cap: number }
 }
 
 /** A run-acquired attack mutation applied to one hero (rolled at the mid-map fork). */
@@ -272,7 +336,7 @@ export type TerrainKind = 'lane' | 'forest' | 'rock' | 'water' | 'fire'
  * A map challenge, as a terrain rule (G1-2): what the battle's field adds.
  * `quarry` and `hexed` are route ground (the mercenary company): they add no
  * authored pieces, they deepen the seeded layout — more boulders on Ironvein's
- * quarry road, more cursed ground on Moonquill's (`data/hazards.ROUTE_HAZARDS`).
+ * quarry road, more cursed ground on Greenvial's (`data/hazards.ROUTE_HAZARDS`).
  */
 /**
  * A map challenge. `sovereign` is the Sovereign Route's own ground (the
@@ -383,7 +447,7 @@ export interface EnemyType {
  */
 export type EnemyBehaviour =
   /** Torch shaman: every `interval` s, heal allies within `radius` by `heal` × their max HP. */
-  | { kind: 'healPulse'; radius: number; heal: number; interval: number }
+  | { kind: 'healPulse'; radius: number; heal: number; interval: number; charges: number }
   /** Torch berserker: below `below` of max HP, moves `speedMult`× faster. */
   | { kind: 'enrage'; below: number; speedMult: number }
   /**

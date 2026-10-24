@@ -1,0 +1,541 @@
+/**
+ * The company builder (`ui/shell/MilitiaScreen.tsx`, `company/FlagCarousel.tsx`):
+ * the name, a preview of the flag over three soldiers in its colours, and two
+ * columns — the flag and the emblem — each a vertical wheel (the chosen part
+ * large in the middle, its neighbours peeking) over a small horizontal
+ * carousel. Tapping a wheel's middle opens every option as a grid (`.fc-sheet`).
+ */
+
+/* ------------------------------------------------------------ the name
+   The header is the name: the screen's title, typed in place. A dashed rule
+   under it says it can be written on; the dice beside it rolls one. */
+.ct-hdr.co-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 8px;
+}
+.ct-hdr.co-head:has(.ct-back) {
+  grid-template-columns: auto minmax(0, 1fr) 44px;
+}
+.co-title-input {
+  min-width: 0;
+  height: 48px;
+  padding: 0 2px;
+  border: 0;
+  border-bottom: 2px dashed var(--line-strong);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+}
+.co-title-fit {
+  display: block;
+  min-width: 0;
+  container-type: inline-size;
+}
+/* The name's size follows its length (`--len`, set by the builder): a Crimson
+   bold letter is about half an em wide, so the field holds `--len` letters at
+   100cqi / (len × 0.52), between --fs-md and the 28px display size. */
+.co-title-fit .co-title-input {
+  width: 100%;
+  font-size: clamp(var(--fs-md), calc(100cqi / (var(--len, 12) * 0.52)), 28px);
+}
+.co-title-input::placeholder {
+  color: var(--dim);
+}
+.co-title-input:focus {
+  outline: none;
+  border-bottom-color: var(--accent);
+}
+.co-title-input:focus-visible {
+  outline: var(--focus-width, 2px) solid var(--focus-ring, var(--accent));
+  outline-offset: 2px;
+}
+.co-title-input[aria-invalid='true'] {
+  border-bottom-color: var(--bad);
+}
+.co-dice,
+.co-surprise {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  background: color-mix(in srgb, var(--panel) 90%, transparent);
+  color: var(--accent-text);
+  font: inherit;
+  cursor: pointer;
+}
+.co-dice {
+  width: 44px;
+  height: 44px;
+}
+/* Said only when the name is refused: no hint under a field that needs none. */
+.co-why {
+  grid-column: 1 / -1;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--bad-text);
+}
+
+/* ------------------------------------------------------------ the preview */
+.co-preview {
+  flex: none;
+  height: 136px;
+}
+.co-preview .mi-preview-road {
+  bottom: 16px;
+  height: 30px;
+}
+.co-preview .mi-preview-flag {
+  left: auto;
+  right: 58%;
+  bottom: 30px;
+}
+/* Three of your soldiers in the flag's colours, on the road beside it. */
+.co-troop {
+  position: absolute;
+  left: 46%;
+  bottom: 12px;
+  display: flex;
+  gap: 4px;
+}
+.co-troop > :nth-child(2) {
+  margin-bottom: 6px;
+}
+/* The flag stirs in the wind (and holds still under reduced motion). */
+.co-wave .banner {
+  transform-origin: 0 50%;
+  animation: co-wave 2.6s ease-in-out infinite;
+}
+@keyframes co-wave {
+  50% {
+    transform: skewY(-2deg) scaleX(0.97);
+  }
+}
+:root[data-reduced-motion='true'] .co-wave .banner {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .co-wave .banner {
+    animation: none;
+  }
+}
+/* The dice in the preview's corner: a whole new flag. */
+.co-surprise {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 1;
+  width: 44px;
+  height: 44px;
+  background: color-mix(in srgb, var(--shade) 88%, transparent);
+}
+
+/* ------------------------------------------------------------ the two columns
+   The flag on the left, the emblem on the right: each a vertical wheel over
+   its own small horizontal carousel (the pattern; the colours). */
+.co-cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.co-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px 8px 10px 10px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel) 40%, var(--bg));
+  border: 1px solid var(--line);
+}
+/* Your road's colours (Oct 2026): one carousel across the builder's foot.
+   Its part has no rule above it — it is the section's only part. */
+.co-theme {
+  margin-top: 10px;
+}
+.co-theme .fw-part {
+  padding-top: 0;
+  border-top: 0;
+}
+.fw,
+.fw-part {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.fw-part {
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+/* The label and value are the shared `.field-k` / `.field-v` (global.css). */
+.fw-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+}
+.fw-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 40px;
+  align-items: center;
+  gap: 4px;
+}
+.fw-strip,
+.fw-row {
+  position: relative;
+  overflow: hidden;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.fw-strip {
+  height: 140px;
+  touch-action: pan-x;
+  mask-image: linear-gradient(transparent, #000 16%, #000 84%, transparent);
+  -webkit-mask-image: linear-gradient(transparent, #000 16%, #000 84%, transparent);
+}
+.fw-row {
+  height: 48px;
+  touch-action: pan-y;
+  mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent);
+}
+.fw-strip:focus-visible,
+.fw-row:focus-visible {
+  outline: var(--focus-width, 2px) solid var(--focus-ring, var(--accent));
+  outline-offset: -2px;
+  border-radius: 10px;
+}
+.fw-item,
+.fw-chip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  pointer-events: none;
+  transition:
+    transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.22s ease;
+}
+.fw-item {
+  width: 76px;
+  height: 84px;
+}
+.fw-chip {
+  width: 40px;
+  height: 40px;
+}
+.fw-item.on,
+.fw-chip.on {
+  background: radial-gradient(circle at 50% 45%, rgba(240, 196, 106, 0.2), transparent 70%);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.is-dragging > .fw-item,
+.is-dragging > .fw-chip {
+  transition: none;
+}
+:root[data-reduced-motion='true'] :is(.fw-item, .fw-chip) {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fw-item,
+  .fw-chip {
+    transition: none;
+  }
+}
+.fw-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.fw-step {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  background: var(--night);
+  color: var(--text);
+  cursor: pointer;
+}
+.fw-track {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) 26px;
+  align-items: center;
+}
+.fw-nudge {
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 22px;
+  font-weight: 900;
+  cursor: pointer;
+}
+/* A colour pair: one circle split between the field and the pattern's colour, rimmed in the metal. */
+.co-pair {
+  display: block;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+}
+/* A metal, as a round coin: the metal row is a carousel like the colours. */
+.co-coin {
+  display: block;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  box-shadow:
+    inset 3px 3px 0 rgba(255, 255, 255, 0.35),
+    inset -3px -3px 0 rgba(0, 0, 0, 0.25),
+    0 0 0 2px rgba(0, 0, 0, 0.55),
+    0 2px 0 3px rgba(0, 0, 0, 0.4);
+}
+
+/* ------------------------------------------------------------ every option */
+.fc-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: calc(16px + var(--safe-top, 0px)) 14px calc(16px + var(--safe-bottom, 0px));
+  background: rgba(8, 5, 3, 0.74);
+}
+.fc-sheet {
+  width: 100%;
+  max-width: 460px;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  border: 2px solid var(--accent-dim);
+  background: var(--bg-2);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+.fc-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 12px 8px 16px;
+}
+.fc-sheet-head h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--text);
+}
+.fc-x {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid #000;
+  background: #d8402f;
+  color: #fff;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+.fc-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  padding: 4px 12px 14px;
+  overflow-y: auto;
+}
+.fc-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px 6px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  background: var(--night);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  cursor: pointer;
+}
+.fc-cell.on {
+  border: 2px solid var(--accent);
+  background: var(--panel-2);
+  color: var(--accent-text);
+}
+.fc-cell-art {
+  display: grid;
+  place-items: center;
+  height: 84px;
+}
+.fc-cell-name {
+  text-align: center;
+  line-height: 1.1;
+}
+.fc-cell:focus-visible {
+  outline: var(--focus-width, 2px) solid var(--focus-ring, var(--accent));
+  outline-offset: 2px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .fw-step:hover,
+  .fw-nudge:hover,
+  .co-dice:hover,
+  .co-surprise:hover {
+    color: var(--text);
+    border-color: var(--accent-dim);
+  }
+  .fc-cell:hover {
+    border-color: var(--accent-dim);
+  }
+}
+
+
+/* ------------------------------------------------------------ one part, alone
+   Each row shows only its own part; the assembled flag is the preview above. */
+.co-pattern {
+  border: 1px solid rgba(236, 224, 200, 0.55);
+  border-radius: 4px;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
+}
+.co-emblem {
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.6));
+}
+.co-none {
+  display: block;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px dashed var(--line-strong);
+  position: relative;
+}
+.co-none::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 26px;
+  height: 2px;
+  background: var(--line-strong);
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+.co-none.big {
+  width: 50px;
+  height: 50px;
+}
+
+/* ------------------------------------------------------------ a company's livery
+   (Draft 4 § C, `company/LiveryScreen.tsx`): the company's standard on its
+   wagon, large, over one small carousel per part. A piece not unlocked yet is
+   dimmed with its lock, and its row says the standing that unlocks it. */
+.lv-head .lv-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+.lv-standing {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex: none;
+}
+.mi-preview.lv-preview {
+  flex: none;
+  height: 220px;
+}
+.lv-preview .mi-preview-road {
+  bottom: 18px;
+  height: 30px;
+}
+.lv-wagon {
+  position: absolute;
+  right: 50%;
+  bottom: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.lv-crates {
+  display: flex;
+  gap: 3px;
+  margin-bottom: -6px;
+  margin-left: 18px;
+}
+.lv-flag {
+  position: absolute;
+  left: calc(50% + 4px);
+  bottom: 24px;
+}
+.lv-flag .banner {
+  transform-origin: 0 50%;
+  filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.3));
+}
+.lv-parts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0 10px;
+  padding: 2px 10px 10px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel) 40%, var(--bg));
+  border: 1px solid var(--line);
+}
+/* Two columns where there is room for "Chequers · Standing 1" in each; the
+   trim, alone on the last row, across both. */
+@media (min-width: 600px) {
+  .lv-parts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .lv-parts > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+}
+.lv-opt {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+.fw-chip.is-locked .lv-opt > :first-child {
+  opacity: 0.45;
+  filter: grayscale(0.5);
+}
+.lv-lock {
+  position: absolute;
+  right: -8px;
+  bottom: -8px;
+  display: grid;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.7));
+}
+.fw-part.is-locked .field-v {
+  color: var(--muted);
+}
+.lv-cut {
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.45));
+}
+
+/* A company's piece in the militia builder (Draft 4 § C): its logo, small, in
+   the option's corner — where the piece came from. */
+.co-from {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+.co-from-mark {
+  position: absolute;
+  right: -10px;
+  bottom: -8px;
+  display: grid;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.8));
+}

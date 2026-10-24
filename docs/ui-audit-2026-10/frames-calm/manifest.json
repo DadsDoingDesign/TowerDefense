@@ -1,0 +1,58 @@
+[
+  {
+    "id": "home-spice",
+    "group": "Frames",
+    "people": "Peppercorn Co.",
+    "title": "Peppercorn Co. · Home card",
+    "caption": "A dim charred line, a few embers, a low crest; the CTA keeps its plain button look, no frame or flames inside the card",
+    "file": "home-spice.png"
+  },
+  {
+    "id": "home-art",
+    "group": "Frames",
+    "people": "Easel House",
+    "title": "Easel House · Home card",
+    "caption": "A two-pixel brush stroke: each dab its paint over its bristle shade, parted between dabs, a drip",
+    "file": "home-art.png"
+  },
+  {
+    "id": "home-metals",
+    "group": "Frames",
+    "people": "Ironvein",
+    "title": "Ironvein · Home card",
+    "caption": "A two-tone iron band lit on top, a rivet every 16 px, riveted corner plates, a forge glow in each joint",
+    "file": "home-metals.png"
+  },
+  {
+    "id": "home-silk",
+    "group": "Frames",
+    "people": "Rosethread",
+    "title": "Rosethread · Home card",
+    "caption": "A satin line with a running stitch inside; no ribbon or frame on the CTA inside the card",
+    "file": "home-silk.png"
+  },
+  {
+    "id": "home-scrolls",
+    "group": "Frames",
+    "people": "Moonquill",
+    "title": "Moonquill · Home card",
+    "caption": "Two clearer runes a tile under the silver line, and a four-pointed star at each corner",
+    "file": "home-scrolls.png"
+  },
+  {
+    "id": "pick-metals",
+    "group": "Frames",
+    "people": "Ironvein",
+    "title": "Ironvein · Hero pick",
+    "caption": "The pick card wears the riveted iron band; the lone CTA stands on an iron bar with two domed rivets",
+    "file": "pick-metals.png"
+  },
+  {
+    "id": "terms-metals",
+    "group": "Frames",
+    "people": "Ironvein",
+    "title": "Ironvein · Terms",
+    "caption": "Every framed panel on the terms in riveted iron, one deep; the CTA keeps only its iron bar",
+    "file": "terms-metals.png"
+  }
+]

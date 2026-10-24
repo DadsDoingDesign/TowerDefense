@@ -35,7 +35,7 @@ import {
   type ProcKind,
 } from './fx'
 import { baseAnchor } from './overlays'
-import { deliveryOfRt, leadEffect, type Delivery, type HitEffect } from './attackLook'
+import { arcInk, deliveryOfRt, leadEffect, type Delivery, type EffectInk, type HitEffect } from './attackLook'
 import { swingSide } from './projectiles'
 import { caravanSpot } from './caravan'
 
@@ -170,6 +170,8 @@ interface PSnap {
   src: string
   targetId: string | null
   shockChains: number
+  /** The ink its chain arcs take when they carry its status (`attackLook.arcInk`), or null. */
+  arcInk: EffectInk | null
   pierce: number
   hasBurn: boolean
   hasExecute: boolean
@@ -438,6 +440,7 @@ export class FxDiffer {
         src: p.srcId,
         targetId: p.targetId,
         shockChains: p.mods.shock?.chains ?? 0,
+        arcInk: arcInk(p.mods),
         pierce: p.pierce,
         hasBurn: !!p.mods.burn,
         hasExecute: !!p.mods.execute,
@@ -800,7 +803,7 @@ export class FxDiffer {
           if (!this.tookDiscreteDamage(c)) continue
           if (!this.hpNow.has(c.id)) this.goneClaimed.add(c.id)
           this.hitThisTick.add(c.id)
-          this.sink.fxArc(ox, oy - 4, this.ex(c), this.ey(c) - 4)
+          this.sink.fxArc(ox, oy - 4, this.ex(c), this.ey(c) - 4, p.arcInk ?? undefined)
           this.sink.fxHitEnemy(c.id, this.ex(c) - ox, this.ey(c) - oy, 0.4)
         }
         this.procOf.set(p.src, 'shock')

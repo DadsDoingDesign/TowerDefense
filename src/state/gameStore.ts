@@ -14,6 +14,7 @@ export type {
   Crossroads,
   EventKind,
   HeroTab,
+  HomeFocus,
   RunContract,
   RunPhase,
   RunRecap,

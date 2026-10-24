@@ -33,6 +33,18 @@ const rgba = (s: string): { rgb: RGB; a: number } => {
   if (!m) throw new Error(`not an rgba(): ${s}`)
   return { rgb: [+m[1], +m[2], +m[3]], a: +m[4] }
 }
+/**
+ * A translucent wash as a rule writes it: an `rgba()`, or a token mixed toward
+ * transparent (`color-mix(in srgb, var(--shade) 94%, transparent)`, the form
+ * a company theme can re-tint) — the token read from the default `:root`.
+ */
+const wash = (body: string): { rgb: RGB; a: number } => {
+  const mix = body.match(/color-mix\(in srgb, var\(--([\w-]+)\) ([\d.]+)%, transparent\)/)
+  if (mix) return { rgb: hex(token(mix[1])), a: +mix[2] / 100 }
+  const m = body.match(/rgba\([^)]*\)/)
+  if (!m) throw new Error(`no wash in: ${body}`)
+  return rgba(m[0])
+}
 const over = (fg: { rgb: RGB; a: number }, bg: RGB): RGB =>
   fg.rgb.map((c, i) => Math.round(c * fg.a + bg[i] * (1 - fg.a))) as RGB
 const lum = ([r, g, b]: RGB) => {
@@ -159,45 +171,50 @@ describe('icon size tokens are whole multiples of the 16px sprite', () => {
 })
 
 /*
- * The menu over the trade map (the mercenary company, build step 4). The map
- * moves, glows and differs with every save's standing, so the menu's text is
- * held against PURE WHITE under its panels and washes — the brightest ground
- * any frame of any map could put there — rather than against one render.
+ * The home over the trade map (October 2026, the map-first home). The map
+ * moves, glows and differs with every save's standing and focus, so the
+ * home's text is held against PURE WHITE under its glass — the brightest
+ * ground any frame of any map could put there — rather than against one
+ * render. Every layer (the bar's buttons and bank, the pills, the dock, the
+ * card, the cities' tags) is `--glass` or `--glass-strong`.
  */
-describe('the menu over the trade map', () => {
+describe('the home over the trade map', () => {
   const menuCss = readFileSync(join(ROOT, 'src/styles/menu.css'), 'utf8')
   const WHITE: RGB = [255, 255, 255]
-  const ruleBg = (selector: string): { rgb: RGB; a: number } => {
+  const glass = (name: 'glass' | 'glass-strong') => over(rgba(token(name)), WHITE)
+  const ruleBody = (selector: string): string => {
     const at = menuCss.indexOf(`${selector} {`)
     if (at < 0) throw new Error(`${selector} not found in menu.css`)
-    const body = menuCss.slice(at, menuCss.indexOf('}', at))
-    const m = body.match(/background:\s*(rgba\([^)]*\))/)
-    if (!m) throw new Error(`${selector} has no rgba background`)
-    return rgba(m[1])
+    return menuCss.slice(at, menuCss.indexOf('}', at))
   }
 
-  it('the tiles clear 4.5:1 over pure white', () => {
-    const tile = over(ruleBg('.mn-tile'), WHITE)
-    for (const name of ['text', 'muted']) expect(ratio(hex(token(name)), tile), `--${name} on a tile`).toBeGreaterThanOrEqual(4.5)
+  it('every glass layer is the glass token, and its text clears 4.5:1 on the lighter glass over pure white', () => {
+    for (const sel of ['.mn-season', '.mn-slot', '.tm-town']) expect(ruleBody(sel), sel).toMatch(/background:\s*var\(--glass\)/)
+    for (const sel of ['.mn-card', '.mn-coach']) expect(ruleBody(sel), sel).toMatch(/background:\s*var\(--glass-strong\)/)
+    for (const name of ['text', 'muted', 'accent-text', 'bad-text', 'teal-text']) expect(ratio(hex(token(name)), glass('glass')), `--${name} on --glass`).toBeGreaterThanOrEqual(4.5)
   })
 
-  it('the road labels clear 4.5:1 over pure white', () => {
-    const pill = over(ruleBg('.tm-pill::after'), WHITE)
-    for (const name of ['text', 'muted', 'accent-text']) expect(ratio(hex(token(name)), pill), `--${name} on a label`).toBeGreaterThanOrEqual(4.5)
+  it('the bare purse clears 4.5:1 on its halo over pure white; your company’s purse is a carved plate', () => {
+    const halo = over(wash(ruleBody('.mn-purse:not(.is-own)::before')), WHITE)
+    for (const name of ['text', 'accent-text', 'gold-text']) expect(ratio(hex(token(name)), halo), `--${name} on the purse's halo`).toBeGreaterThanOrEqual(4.5)
+    expect(ruleBody('.mn-purse-btn::after')).toMatch(/var\(--plate\)/)
   })
 
-  it('the charter line clears 4.5:1 over pure white', () => {
-    const line = over(ruleBg('.mn-charter'), WHITE)
-    for (const name of ['text', 'muted']) expect(ratio(hex(token(name)), line), `--${name} on the charter line`).toBeGreaterThanOrEqual(4.5)
+  it('the dock’s marks clear 4.5:1: the market and desperate tags', () => {
+    expect(ratio(hex(token('market-ink')), hex(token('market')))).toBeGreaterThanOrEqual(4.5)
+    expect(ratio(hex(token('ink-on-fill')), hex(token('bad-text'))), 'desperate tag').toBeGreaterThanOrEqual(4.5)
   })
 
-  it('the tagline clears 4.5:1 and the wordmark 3:1 (large) under the head wash over pure white', () => {
-    const m = menuCss.match(/\.mn-head \{[^}]*rgba\((\d+), (\d+), (\d+), ([\d.]+)\) (\d+)%/)
-    if (!m) throw new Error('the head wash was not found')
-    const wash = over({ rgb: [+m[1], +m[2], +m[3]], a: +m[4] }, WHITE)
-    expect(ratio(hex(token('text')), wash)).toBeGreaterThanOrEqual(4.5)
-    expect(ratio(hex(token('accent')), wash)).toBeGreaterThanOrEqual(3)
-    // The wash holds solid past the tagline (it ends ~95px into a ~150px head).
-    expect(+m[5]).toBeGreaterThanOrEqual(64)
+  it('the places’ carved plates clear 4.5:1: their ink on the wood, and a locked one over pure white', () => {
+    expect(ruleBody('.mn-place::after')).toMatch(/var\(--plate\)/)
+    expect(ratio(hex(token('plate-ink')), hex(token('plate'))), '--plate-ink on --plate').toBeGreaterThanOrEqual(4.5)
+    expect(ratio(hex(token('sign-ink')), hex(token('sign-wood'))), '--sign-ink on --sign-wood').toBeGreaterThanOrEqual(4.5)
+    for (const sel of ['.mn-place.is-locked::after']) {
+      expect(ratio(hex(token('muted')), over(wash(ruleBody(sel)), WHITE)), `--muted on ${sel}`).toBeGreaterThanOrEqual(4.5)
+    }
+  })
+
+  it('the road signposts clear 4.5:1: a locked plate over pure white', () => {
+    expect(ratio(hex(token('muted')), over(wash(ruleBody('.tm-label.is-pin .tm-pill::after')), WHITE)), '--muted on a locked plate').toBeGreaterThanOrEqual(4.5)
   })
 })

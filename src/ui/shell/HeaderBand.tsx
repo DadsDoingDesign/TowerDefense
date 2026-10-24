@@ -8,10 +8,48 @@ import { Crate } from '../pixel'
 import { Money } from './Money'
 import { strengthPct, strengthShort, strengthText } from '../channels'
 import { useShown } from './staging'
+import { LeaveRun } from './LeaveRun'
+import { AssistedTag } from './AssistedTag'
 
 /**
- * Band 1 — run state, and nothing else. It never holds a control that changes
- * the subject; it only reports where you stand.
+ * The team's controls, from the HUD (the battle band, Oct 2026; the designer:
+ * "the team wide control shouldn't even be on characters it should be on the
+ * hud somewhere"). Opens the Team panel — the targeting order every hero
+ * follows, and the relics and keepsakes that act on all of them — in the
+ * Context panel, as any selection does; a second tap (or its Done) closes it.
+ * It arrives with the first thing it holds: the targeting order (with the
+ * Watch Command, as the old Team tab did) or a relic.
+ */
+function TeamButton() {
+  const relics = useGameStore((s) => s.relics.length)
+  const open = useGameStore((s) => s.shellSelection?.kind === 'team')
+  const shellSelect = useGameStore((s) => s.shellSelect)
+  const ordersShown = useShown('command')
+  if (!ordersShown && relics === 0) return null
+  return (
+    <button
+      className={`sh-team-btn${open ? ' on' : ''}`}
+      aria-pressed={open}
+      aria-controls="sh-detail-panels"
+      aria-label={`Team: targeting${relics ? ` and ${relics} relic${relics === 1 ? '' : 's'}` : ''}`}
+      data-sfx="toggle"
+      onClick={() => shellSelect({ kind: 'team', id: 'team' })}
+    >
+      <span className="sh-team-face" aria-hidden="true">
+        <Icon name="banner" />
+        {relics > 0 && <b className="sh-team-n">{relics}</b>}
+      </span>
+      <span className="sh-team-word" aria-hidden="true">
+        Team
+      </span>
+    </button>
+  )
+}
+
+/**
+ * Band 1 — run state, and one control: the Team button (the battle band,
+ * Oct 2026), which opens what applies to every hero. It never changes the
+ * subject; everything else here only reports where you stand.
  *
  * Only battle and the run map use the four-band layout, and both are inside a
  * run, so this band is never the Watchtower's. The meta variant it used to
@@ -47,6 +85,8 @@ export function HeaderBand() {
   // LS3: a first battle's header carries two numbers, the Gate and gold. The
   // road's length arrives with the first win (`state/staging.ts`).
   const depthShown = useShown('depth')
+  // The gameplay pass: assist was on at some point of this run (`run/ranking`).
+  const assisted = useGameStore((s) => s.assisted)
 
   const inBattle = battlePhase === 'battle'
   const baseHp = inBattle ? hud.baseHp : baseHpStore
@@ -84,6 +124,7 @@ export function HeaderBand() {
           whose name is its aria-label. */}
       <h1 className="sh-screen-h" tabIndex={-1} aria-label={screenName} />
       <div className="sh-header-row">
+        {hasContract && <LeaveRun />}
         {depthShown && (
           <span className="sh-chip depth" role="img" aria-label={`Depth ${depth} of ${lastLayer}`}>
             {/* H2: "Depth 1" is the heading and "/12" the context. */}
@@ -100,6 +141,7 @@ export function HeaderBand() {
             </span>
           </span>
         )}
+        {assisted && <AssistedTag where="hud" />}
         {threat > 1.001 && (
           /* The name is accessible, and the first time this chip appears the
              coach pill says it out loud once (WS9 — `Coach`, tip `threat`). */
@@ -138,6 +180,7 @@ export function HeaderBand() {
             <Money amount={goldDisplay} c="gold" />
           </span>
         </span>
+        {screen === 'battle' && <TeamButton />}
       </div>
     </header>
   )

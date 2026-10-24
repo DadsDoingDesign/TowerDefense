@@ -70,7 +70,7 @@ export const HAZARD_LEVERS = {
 /**
  * Route ground (the mercenary company): what a company's own map challenge adds
  * to the seeded layout, on top of {@link HAZARD_LEVERS}. Ironvein's quarry road
- * lays more boulders; Moonquill's road curses more of the best ground. Read
+ * lays more boulders; Greenvial's road curses more of the best ground. Read
  * only when the battle carries that rule, so every other field lays exactly
  * what it laid before.
  */
@@ -84,7 +84,7 @@ export const ROUTE_HAZARDS: Partial<Record<TerrainRuleId, HazardBoost>> = {
   quarry: { obstacles: 4, obstaclePool: 8 },
   hexed: { dangerTiles: 2, dangerPool: 4 },
   // The Sovereign Route (the endgame charter): Ironvein's boulders AND
-  // Moonquill's cursed ground, on every field.
+  // Greenvial's cursed ground, on every field.
   sovereign: { obstacles: 4, obstaclePool: 8, dangerTiles: 2, dangerPool: 4 },
 }
 

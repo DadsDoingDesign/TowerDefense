@@ -59,7 +59,8 @@ describe('copy', () => {
   it('reward cards state their scope and never say "bought with"', () => {
     for (const c of allStatCards()) {
       expect(c.desc).not.toMatch(/bought with|the team|tower/i)
-      expect(c.desc).toMatch(/all your heroes/)
+      // The scope, said once: "… to team", or a line that opens on it ("Team’s hits burn …").
+      expect(c.desc).toMatch(/to team|^Team’s /)
     }
   })
   it('money reads in words', () => {
@@ -70,7 +71,7 @@ describe('copy', () => {
 
 describe('icon coverage', () => {
   it('every map node type has its own atlas cell', () => {
-    for (const t of ['start', 'battle', 'elite', 'merchant', 'shrine', 'recruit', 'campfire', 'miniboss', 'boss']) {
+    for (const t of ['start', 'battle', 'elite', 'merchant', 'shrine', 'campfire', 'miniboss', 'boss']) {
       expect(ICON_ORDER).toContain(NODE_ICON[t])
     }
   })

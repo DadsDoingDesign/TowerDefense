@@ -1,0 +1,362 @@
+/**
+ * The company worlds (Oct 2026) — what makes a theme a PLACE, not a palette.
+ *
+ * The designer: "if one is fire themed it should have fire effects … this is
+ * just ez boring crap". Each company theme (`ui/theme/companyThemes.ts` sets
+ * the colours) brings its world here, all in pixels:
+ *
+ *  1. the ambient layer (`.th-fx`, `ThemeFx`): embers, paint, sparks, petals,
+ *     stars — a pixel canvas BEHIND the page's panels (fixed, `z-index: -1`
+ *     inside the page's own stacking context), over the map on the home;
+ *  2. a frame on the panels: a pixel 9-slice drawn by `themeArt.ts`
+ *     (`--th-frame-0`), laid on as `border-image` — which paints over the
+ *     border box and never changes a box (the home's no-wiggle rule). STILL:
+ *     the calm pass (Oct 2026; the designer: "a bit overwhelming now that I'm
+ *     playing more") stopped the flipbook that flickered on the card, the pick
+ *     card and the CTA. QUIET and ONE DEEP: the frames pass (Oct 2026; "the
+ *     border on the ui can be too intense, especially when it's doubled up at
+ *     the bottom") made each frame one dim line with sparse detail, and a
+ *     framed part inside a framed panel wears none;
+ *  3. the CTA: no frame; a still strip of the world standing on its lip
+ *     (flames, paint, a seam, a ribbon, runes — `--th-strip`) where it stands
+ *     alone, none inside a framed panel; one slow faint
+ *     shimmer (`th-shimmer`, the only loop the worlds keep in CSS), and a
+ *     burst on press (`fxEngine`, the overlay `.th-fx-over`);
+ *  4. the switch-in on the home (`fxEngine.switchIn`, on the overlay);
+ *  5. the run screens' panels and the battle HUD's trims (never over the
+ *     field: the trims are on the header's foot and the detail band's head).
+ *
+ * Nothing here applies to the house look: every rule is under
+ * `:root[data-co-theme]`, which `useCompanyTheme` sets only for a company's
+ * theme. Light and reduced motion stop the shimmer, and reduced motion hides
+ * the particle layers; the frames and the textures stay, static.
+ */
+
+/* ------------------------------------------------------- 1. ambient layers */
+.pg,
+.cx {
+  isolation: isolate;
+}
+.th-fx {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: -1;
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+/* The home's: over the map, under its signposts and city labels. */
+.th-fx.is-map {
+  z-index: 1;
+}
+.mn-map .tm-labels {
+  z-index: 2;
+}
+.th-fx-over {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 2147483000;
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+:root[data-reduced-motion='true'] :is(.th-fx, .th-fx-over) {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(.th-fx, .th-fx-over) {
+    display: none;
+  }
+}
+
+/* -------------------------------------------------------------- 2. frames */
+:root[data-co-theme]
+  :is(
+    .mn-card,
+    .mn-slot,
+    .mn-season,
+    .mn-coach,
+    .pg-row,
+    .hq-card,
+    .cr-panel,
+    .tk-card,
+    .fc-sheet,
+    .pk-card,
+    .ask-panel,
+    .ct-mode,
+    .ct-stand-btn,
+    .ct-route,
+    .sh-context,
+    .sh-kit,
+    .cx-card-in,
+    .fw-resume-card
+  ),
+:root[data-co-theme] .mn-purse-btn::after {
+  border-image-source: var(--th-frame-0);
+  border-image-slice: 4;
+  border-image-width: 8px;
+  border-image-outset: 0;
+  border-image-repeat: repeat;
+  image-rendering: pixelated;
+}
+:root[data-co-theme] :is(.mn-card, .pk-card, .pg-cta) {
+  position: relative;
+  isolation: isolate;
+}
+/* One frame deep (the frames pass, Oct 2026; the designer: "the border on
+   the ui can be too intense, especially when it's doubled up at the bottom").
+   A framed part inside a framed panel — the CTA on the home card and the Buy
+   Company card, the panels under the battle's detail-band trim, anything in a
+   sheet — wears no world frame of its own: the outer edge already says whose
+   world it is. A CTA there loses its strip and its glow too (`--th-strip-on`,
+   `--th-glow`) and keeps its plain button look: its fill, its 1 px edge, its
+   lift, the shimmer. Both lists are the frames' list above (the first adds
+   the detail band, whose trim is a frame; the second the CTA, whose strip is
+   one); `tests/themeWorlds.test.ts` holds them to it. */
+:root[data-co-theme]
+  :is(
+    .sh-detail,
+    .mn-card,
+    .mn-slot,
+    .mn-season,
+    .mn-coach,
+    .pg-row,
+    .hq-card,
+    .cr-panel,
+    .tk-card,
+    .fc-sheet,
+    .pk-card,
+    .ask-panel,
+    .ct-mode,
+    .ct-stand-btn,
+    .ct-route,
+    .sh-context,
+    .sh-kit,
+    .cx-card-in,
+    .fw-resume-card
+  )
+  :is(
+    .mn-card,
+    .mn-slot,
+    .mn-season,
+    .mn-coach,
+    .pg-row,
+    .hq-card,
+    .cr-panel,
+    .tk-card,
+    .fc-sheet,
+    .pk-card,
+    .ask-panel,
+    .ct-mode,
+    .ct-stand-btn,
+    .ct-route,
+    .sh-context,
+    .sh-kit,
+    .pg-cta,
+    .cx-card-in,
+    .fw-resume-card
+  ) {
+  border-image: none;
+  --th-strip-on: none;
+  --th-glow: 0 0 0 transparent;
+}
+/* The page's exits row (Back, Never mind) sits on the CTA and under the
+   body's last panel: a secondary control, so it wears none of the world. */
+:root[data-co-theme] .pg-foot .pg-row {
+  border-image: none;
+}
+/* A dock slot's share figure sits 4px off its foot: the frame's foot there is
+   drawn at half height and hung 2px below the slot, so it never runs under
+   the figure. */
+:root[data-co-theme] .mn-slot {
+  border-image-width: 8px 8px 4px;
+  border-image-outset: 0 0 2px;
+}
+/* The battle HUD's chrome: a trim along the header's foot and the detail
+   band's head — the world's edge, never over the field, and still (a live
+   wave needs every frame). */
+:root[data-co-theme] .sh-header {
+  border-image: var(--th-frame-0) 4 / 0 0 8px 0 / 0 repeat;
+}
+:root[data-co-theme] .sh-detail {
+  border-image: var(--th-frame-0) 4 / 8px 0 0 0 / 0 repeat;
+}
+
+/* The chosen one of a row of framed parts (Oct 2026, the job critique): the
+   frame paints over the border that lit the focused dock slot and the chosen
+   mode on the terms, and every frame in a world is the same colour, so the
+   choice all but vanished. It is ringed OUTSIDE its frame now, in its own
+   colour, and filled stronger — paint only, never a box. */
+:root[data-co-theme] .mn-slot.is-on {
+  outline: 2px solid var(--co);
+  outline-offset: 2px;
+  background: color-mix(in srgb, var(--co) 34%, var(--glass-strong));
+}
+:root[data-co-theme] .ct-mode.on {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+:root[data-co-theme] .ct-mode.free.on {
+  outline-color: var(--good);
+}
+/* A list of settings on a home page is read row by row: twelve framed rows
+   were twelve panels competing, so only the open row wears the world there.
+   (`.is-hub`: the run's pages keep their own rules.) */
+:root[data-co-theme] .shell-page.is-hub .pg-row:not(.sel) {
+  border-image: none;
+}
+/* A quiet pinned control (a setting's toggle: Mute) is not the screen's
+   primary action, so it wears none of the CTA's world: no strip or glow. */
+:root[data-co-theme] .pg-cta.quiet,
+:root[data-co-theme] .pg-cta.quiet:not(:disabled) {
+  border-image: none;
+  box-shadow:
+    inset 0 0 0 1px var(--line-strong),
+    0 3px 0 color-mix(in srgb, var(--shade) 45%, transparent);
+}
+:root[data-co-theme] .pg-cta.quiet:not(:disabled)::before,
+:root[data-co-theme] .pg-cta.quiet::after {
+  content: none;
+}
+
+/* Each world's light on its panels: a glow that belongs to the place (faint
+   since the calm pass), and the colour of its CTA's shimmer. */
+:root[data-co-theme='spice'] {
+  --th-glow: 0 0 0 1px rgba(255, 138, 44, 0.12), 0 0 14px rgba(255, 110, 30, 0.12);
+  --th-shimmer: #ffd35e;
+}
+:root[data-co-theme='art'] {
+  --th-glow: 0 0 0 1px rgba(224, 138, 124, 0.08), 0 0 14px rgba(176, 168, 150, 0.12);
+  --th-shimmer: #f2e8d8;
+}
+:root[data-co-theme='metals'] {
+  --th-glow: 0 0 0 1px rgba(255, 138, 44, 0.08), 0 0 12px rgba(255, 138, 44, 0.1);
+  --th-shimmer: #ffe08a;
+}
+:root[data-co-theme='silk'] {
+  --th-glow: 0 0 14px rgba(233, 168, 191, 0.13);
+  --th-shimmer: #fff0f5;
+}
+:root[data-co-theme='scrolls'] {
+  --th-glow: 0 0 0 1px rgba(127, 224, 196, 0.12), 0 0 14px rgba(127, 224, 196, 0.12);
+  --th-shimmer: #e6ffd2;
+}
+:root[data-co-theme] :is(.mn-card, .pk-card) {
+  box-shadow:
+    var(--th-glow),
+    0 10px 28px rgba(0, 0, 0, 0.45);
+}
+:root[data-co-theme] .pg-cta:not(:disabled) {
+  box-shadow:
+    inset 0 0 0 1px var(--cta-edge),
+    var(--cta-lift),
+    var(--th-glow);
+}
+/* The titles catch the world's light, faintly. */
+:root[data-co-theme='spice'] :is(.t-title, .ct-title, .mn-card-name) {
+  text-shadow: 0 0 8px rgba(255, 120, 30, 0.26);
+}
+:root[data-co-theme='metals'] :is(.t-title, .ct-title, .mn-card-name) {
+  text-shadow: 0 1px 0 #000, 0 0 8px rgba(255, 138, 44, 0.18);
+}
+:root[data-co-theme='scrolls'] :is(.t-title, .ct-title, .mn-card-name) {
+  text-shadow: 0 0 8px rgba(127, 224, 196, 0.3);
+}
+:root[data-co-theme='silk'] :is(.t-title, .ct-title, .mn-card-name) {
+  text-shadow: 0 0 8px rgba(233, 168, 191, 0.24);
+}
+:root[data-co-theme='art'] :is(.t-title, .ct-title, .mn-card-name) {
+  text-shadow: 0 1px 0 #000, 0 0 8px rgba(224, 138, 124, 0.2);
+}
+
+/* Peppercorn's crest: flame tongues, still, rising from the card's top edge
+   into the gap above it (never as high as the dock's words). */
+:root[data-co-theme='spice'] .mn-card::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: -10px;
+  height: 20px;
+  background-image: var(--th-crest);
+  background-size: 32px 20px;
+  background-repeat: repeat-x;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+/* ----------------------------------------------------------------- 3. CTA */
+:root[data-co-theme] .pg-cta {
+  position: relative;
+}
+/* The world along its top, standing on its lip (its foot row on the button's
+   top 2 px, the rest on the ground above): the CTA's one world mark — a
+   button wears no frame (a 9-slice squared its corners and laid dark pixels
+   on its light fill), and inside a framed panel not even this. Still. */
+:root[data-co-theme] .pg-cta:not(:disabled)::before {
+  content: var(--th-strip-on, '');
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: -10px;
+  height: 12px;
+  background-image: var(--th-strip);
+  background-size: 32px 12px;
+  background-repeat: repeat-x;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+/* The shimmer: one faint pale band crossing the CTA, the one thing to press,
+   once every nine seconds, in steps, on a promoted layer under the words
+   (`z-index: -1` in the button's own stacking context). It lightens the face
+   by a few hundredths, so the label keeps its contrast. */
+@keyframes th-shimmer {
+  0%,
+  72% {
+    background-position: 130% 0;
+  }
+  100% {
+    background-position: -30% 0;
+  }
+}
+:root[data-co-theme] .pg-cta:not(:disabled)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: inherit;
+  background-image: linear-gradient(
+    105deg,
+    transparent 0 44%,
+    color-mix(in srgb, var(--th-shimmer, #fff) 7%, transparent) 44% 56%,
+    transparent 56% 100%
+  );
+  background-size: 260% 100%;
+  background-repeat: no-repeat;
+  background-position: 130% 0;
+  will-change: background-position;
+  animation: th-shimmer 9s steps(36, end) infinite;
+}
+/* A press is felt in the button as well as seen around it. */
+:root[data-co-theme] .pg-cta:not(:disabled):active {
+  transform: translateY(2px);
+}
+
+/* ------------------------------------------------------- the light set
+   Effects: Light (the setting, or a device that could not keep up —
+   `game/render/fxQuality`): no shimmer. */
+:root[data-co-theme][data-fx='light'] .pg-cta::after {
+  animation: none !important;
+}
+
+/* ----------------------------------------------------------- reduced motion
+   The shimmer stops: the frames and textures stay, static. */
+:root[data-co-theme][data-reduced-motion='true'] .pg-cta::after {
+  animation: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-co-theme] .pg-cta::after {
+    animation: none !important;
+  }
+}

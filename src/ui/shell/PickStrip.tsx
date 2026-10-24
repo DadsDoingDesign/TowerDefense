@@ -11,8 +11,9 @@ import { useRef, type CSSProperties, type KeyboardEvent, type ReactNode } from '
  * systematically below making it quick to focus on each option 1 by 1 and then
  * compare that way. the tabs shouldnt look like tabs necessarily".
  *
- * So every choose-one surface — the contract board, the hero pick, a recruit,
- * a city's cash-out-or-press-on, a skill milestone — is the same three parts:
+ * So every choose-one surface — the hero pick, a recruit, a city's
+ * cash-out-or-press-on, a skill milestone — is the same three parts (the
+ * contract board became the menu's map and notice, Figma "B2"):
  *
  *   [tok] [TOK] [tok] [tok]      ← `PickStrip`: a picture + ONE label/number,
  *          ▾                        no name, so nothing in the strip truncates
@@ -61,18 +62,29 @@ export function PickStrip({
   focused,
   onFocus,
   className,
+  allowNone = false,
+  trailing,
+  columns,
 }: {
   label: string
   tokens: readonly PickTokenSpec[]
   focused: string | null
   onFocus: (id: string) => void
   className?: string
+  /**
+   * The focus may be on none of these tokens (the shop's shelf and counter
+   * share one focus, Oct 2026): then none is checked, and the first holds the
+   * group's tab stop. Off: the first token stands focused, as ever.
+   */
+  allowNone?: boolean
+  /** Decorative cells after the tokens, in the same grid (never focusable). */
+  trailing?: ReactNode
+  /** The grid's column count when `trailing` adds cells (default: one per token). */
+  columns?: number
 }) {
   const ref = useRef<HTMLDivElement>(null)
-  const at = Math.max(
-    0,
-    tokens.findIndex((t) => t.id === focused),
-  )
+  const found = tokens.findIndex((t) => t.id === focused)
+  const at = Math.max(0, found)
   const move = (i: number) => {
     const t = tokens[(i + tokens.length) % tokens.length]
     if (!t) return
@@ -94,10 +106,10 @@ export function PickStrip({
       role="radiogroup"
       aria-label={label}
       onKeyDown={onKey}
-      style={{ '--pk-n': tokens.length } as CSSProperties}
+      style={{ '--pk-n': columns ?? tokens.length } as CSSProperties}
     >
       {tokens.map((t, i) => {
-        const on = i === at
+        const on = allowNone ? i === found : i === at
         return (
           <button
             key={t.id}
@@ -108,7 +120,7 @@ export function PickStrip({
             aria-checked={on}
             aria-label={t.name}
             // One tab stop for the group; the arrows move within it.
-            tabIndex={on ? 0 : -1}
+            tabIndex={i === at ? 0 : -1}
             data-sfx="toggle"
             style={t.rail ? ({ '--pk-rail': t.rail } as CSSProperties) : undefined}
             onClick={() => onFocus(t.id)}
@@ -123,6 +135,7 @@ export function PickStrip({
           </button>
         )
       })}
+      {trailing}
     </div>
   )
 }

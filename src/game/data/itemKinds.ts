@@ -1,5 +1,6 @@
 import type { ItemSlot } from '../types'
 import type { CompanyId } from './companies'
+import { PEOPLE_KINDS } from './peopleKinds'
 
 /**
  * ---------------------------------------------------------------------------
@@ -45,41 +46,83 @@ export interface ItemKind {
    * names one.
    */
   company: CompanyId
+  /**
+   * Added by the peoples' rosters (Oct 2026, `peopleKinds.ts`). Not part of
+   * the catalogue a save from before them was dealing, nor of the charter's
+   * door (`run/charter.charterDoor`), so an earned door stays open.
+   */
+  peoples?: true
 }
 
-export const ITEM_KINDS: readonly ItemKind[] = [
+/*
+ * Each kind's company is its PEOPLE's (`docs/peoples/roster.json`, Oct 2026):
+ * humans → Peppercorn (`spice`), elves → Rosethread (`silk`), dwarves →
+ * Ironvein (`metals`), reptilians → the `art` company, gnomes → the `scrolls`
+ * company. The kept kinds were re-filed to the roster's people where they had
+ * been dealt by another company.
+ */
+const CLASSIC_KINDS: readonly ItemKind[] = [
   // ---- weapons: what the hero does comes from these ------------------------
-  { id: 'Sword', slot: 'oneHand', level: 1, company: 'spice', basic: true, does: 'One hand. Swings at enemies up close, and adds a little attack speed.' },
-  { id: 'Bow', slot: 'twoHand', level: 1, company: 'art', basic: true, does: 'Both hands. Shoots enemies from far away.' },
-  { id: 'Wand', slot: 'oneHand', level: 1, company: 'scrolls', basic: true, does: 'One hand, or the off hand. Casts magic that bursts on a group, and adds a little attack speed.' },
-  { id: 'Axe', slot: 'oneHand', level: 1, company: 'spice', does: 'One hand. Swings up close, and every hit also strikes the enemies beside its target.' },
-  { id: 'Dagger', slot: 'oneHand', level: 1, company: 'spice', does: 'One hand, or the off hand. Throws quick strikes from far away, and adds the most attack speed.' },
-  { id: 'Rod', slot: 'oneHand', level: 1, company: 'silk', does: 'One hand. Casts magic that bursts on a group, and reaches farther.' },
-  { id: 'Sceptre', slot: 'oneHand', level: 2, company: 'scrolls', does: 'One hand. Casts magic that bursts on a group, and crits more often.' },
-  { id: 'Greatsword', slot: 'twoHand', level: 3, company: 'metals', does: 'Both hands. Swings up close, hits much harder, reaches farther, and swings a little slower.' },
-  { id: 'Warhammer', slot: 'twoHand', level: 3, company: 'metals', does: 'Both hands. Swings up close and hits hardest of all, but swings slower.' },
-  { id: 'Staff', slot: 'twoHand', level: 3, company: 'scrolls', does: 'Both hands. Casts magic that hits much harder, in a wider burst.' },
-  { id: 'Grimoire', slot: 'twoHand', level: 3, company: 'scrolls', does: 'Both hands. Casts magic that bursts on a group, hits much harder, and casts quicker.' },
+  { id: 'Sword', slot: 'oneHand', level: 1, company: 'spice', basic: true, does: 'One hand. Swings up close; a little attack speed.' },
+  { id: 'Bow', slot: 'twoHand', level: 1, company: 'silk', basic: true, does: 'Both hands. Shoots from far away.' },
+  { id: 'Wand', slot: 'oneHand', level: 1, company: 'scrolls', basic: true, does: 'One hand, or the off hand. Casts a burst at a group; a little attack speed.' },
+  { id: 'Axe', slot: 'oneHand', level: 1, company: 'metals', does: 'One hand. Swings up close; every hit also strikes the enemies beside.' },
+  { id: 'Dagger', slot: 'oneHand', level: 1, company: 'silk', does: 'One hand, or the off hand. Throws quick strikes from afar; the most attack speed.' },
+  { id: 'Rod', slot: 'oneHand', level: 1, company: 'scrolls', does: 'One hand. Casts a burst at a group; reaches farther.' },
+  { id: 'Sceptre', slot: 'oneHand', level: 2, company: 'scrolls', does: 'One hand. Casts a burst at a group; crits more often.' },
+  { id: 'Greatsword', slot: 'twoHand', level: 3, company: 'spice', does: 'Both hands. Swings up close, much harder and farther, a little slower.' },
+  { id: 'Warhammer', slot: 'twoHand', level: 3, company: 'metals', does: 'Both hands. Swings up close, hardest of all, but slower.' },
+  { id: 'Staff', slot: 'twoHand', level: 3, company: 'scrolls', does: 'Both hands. Casts a much harder, wider burst.' },
+  { id: 'Grimoire', slot: 'twoHand', level: 3, company: 'scrolls', does: 'Both hands. Casts a much harder burst at a group, quicker.' },
   // ---- the off hand ----------------------------------------------------------
-  { id: 'Shield', slot: 'offHand', level: 1, company: 'metals', basic: true, does: 'Off hand. Holds 2 enemies on the road, and adds attack speed and crit.' },
-  { id: 'Buckler', slot: 'offHand', level: 1, company: 'art', does: 'Off hand. Holds 1 enemy on the road, and adds a lot of attack speed and crit.' },
-  { id: 'Pavise', slot: 'offHand', level: 2, company: 'metals', does: 'Off hand. Holds 3 enemies on the road, but its holder attacks slower.' },
-  { id: 'Tome', slot: 'offHand', level: 1, company: 'scrolls', does: 'Off hand. Makes every hit harder.' },
-  { id: 'Quiver', slot: 'offHand', level: 1, company: 'spice', does: 'Off hand. Adds attack speed.' },
-  { id: 'Focus', slot: 'offHand', level: 2, company: 'art', does: 'Off hand. Adds crit chance.' },
+  { id: 'Shield', slot: 'offHand', level: 1, company: 'spice', basic: true, does: 'Off hand. Holds 2 enemies; attack speed and crit.' },
+  { id: 'Buckler', slot: 'offHand', level: 1, company: 'art', does: 'Off hand. Holds 1 enemy; a lot of attack speed and crit.' },
+  { id: 'Pavise', slot: 'offHand', level: 2, company: 'metals', does: 'Off hand. Holds 3 enemies, but attacks slower.' },
+  { id: 'Tome', slot: 'offHand', level: 1, company: 'scrolls', does: 'Off hand. Every hit harder.' },
+  { id: 'Quiver', slot: 'offHand', level: 1, company: 'silk', does: 'Off hand. Attack speed.' },
+  { id: 'Focus', slot: 'offHand', level: 2, company: 'silk', does: 'Off hand. Crit chance.' },
   // ---- the body --------------------------------------------------------------
-  { id: 'Mail', slot: 'body', level: 1, company: 'metals', basic: true, does: 'Body. Adds reach and a wider blast.' },
-  { id: 'Plate', slot: 'body', level: 2, company: 'metals', does: 'Body. Makes every hit harder.' },
-  { id: 'Robe', slot: 'body', level: 1, company: 'silk', does: 'Body. Adds a much wider blast.' },
-  { id: 'Cloak', slot: 'body', level: 1, company: 'art', does: 'Body. Adds much more reach.' },
-  { id: 'Aegis', slot: 'body', level: 3, company: 'silk', does: 'Body. Adds attack speed.' },
+  { id: 'Mail', slot: 'body', level: 1, company: 'spice', basic: true, does: 'Body. Reach and a wider blast.' },
+  { id: 'Plate', slot: 'body', level: 2, company: 'metals', does: 'Body. Every hit harder.' },
+  { id: 'Robe', slot: 'body', level: 1, company: 'scrolls', does: 'Body. A much wider blast.' },
+  { id: 'Cloak', slot: 'body', level: 1, company: 'silk', does: 'Body. Much more reach.' },
+  { id: 'Aegis', slot: 'body', level: 3, company: 'spice', does: 'Body. Attack speed.' },
   // ---- the Sovereign tier (Level 4): one per company, a delivered charter each --
-  { id: 'Saffron Brand', slot: 'oneHand', level: 4, company: 'spice', does: 'One hand. Swings up close, and every hit burns for 20 a second for 3 seconds.' },
-  { id: 'Gilded Easel', slot: 'offHand', level: 4, company: 'art', does: 'Off hand. Holds 4 enemies on the road, and adds attack speed and crit.' },
-  { id: 'Ironheart Plate', slot: 'body', level: 4, company: 'metals', does: 'Body. Adds reach, a wider blast, and 15% damage.' },
-  { id: 'Silkwind Cloak', slot: 'body', level: 4, company: 'silk', does: 'Body. Adds reach, a wider blast, and 15% attack speed.' },
-  { id: 'Moonquill Codex', slot: 'twoHand', level: 4, company: 'scrolls', does: 'Both hands. Casts magic that bursts on a group, hits much harder, and jumps to 2 more enemies.' },
+  { id: 'Saffron Brand', slot: 'oneHand', level: 4, company: 'spice', does: 'One hand. Swings up close; every hit burns 20/s for 3s.' },
+  // Renamed by the roster (was the Gilded Easel, `peopleKinds.KIND_RENAMES`).
+  { id: 'Kingscale Shield', slot: 'offHand', level: 4, company: 'art', does: 'Off hand. Holds 4 enemies; attack speed and crit.' },
+  { id: 'Ironheart Plate', slot: 'body', level: 4, company: 'metals', does: 'Body. Reach, a wider blast, +15% damage.' },
+  { id: 'Silkwind Cloak', slot: 'body', level: 4, company: 'silk', does: 'Body. Reach, a wider blast, +15% attack speed.' },
+  // Renamed by the roster (was the Moonquill Codex).
+  { id: 'Greenvial Herbal', slot: 'twoHand', level: 4, company: 'scrolls', does: 'Both hands. Casts a much harder burst at a group that jumps to 2 more.' },
 ]
+
+/**
+ * Every kind: the classic catalogue, then the peoples' kinds in roster order
+ * (`peopleKinds.PEOPLE_KINDS`). Appended, never interleaved: every list built
+ * off this one keeps its classic entries where they were.
+ */
+export const ITEM_KINDS: readonly ItemKind[] = [
+  ...CLASSIC_KINDS,
+  ...PEOPLE_KINDS.map((k): ItemKind => ({ id: k.id, slot: k.slot, level: k.level, company: k.company, does: k.does, peoples: true })),
+]
+
+/**
+ * A kind's `does` in two halves, for a card that names the slot in a field of
+ * its own (job critique leftovers, Oct 2026: "Body. Reach and a wider blast."
+ * beside "Slot · Body" said the slot twice). `kindSlot` is the lead (which
+ * hand, or Body) as the card's slot, "Either hand" for one hand or the off
+ * hand; `kindEffect` is the rest, what it makes its holder do. Every card
+ * that shows a kind's slot and its line reads both, so neither can drift.
+ */
+export function kindSlot(k: Pick<ItemKind, 'does'>): string {
+  const lead = k.does.split('. ')[0]
+  return lead === 'One hand, or the off hand' ? 'Either hand' : lead
+}
+export function kindEffect(k: Pick<ItemKind, 'does'>): string {
+  const i = k.does.indexOf('. ')
+  return i < 0 ? k.does : k.does.slice(i + 2)
+}
 
 const BY_ID = new Map(ITEM_KINDS.map((k) => [k.id, k]))
 export const itemKindById = (id: string): ItemKind | undefined => BY_ID.get(id)
@@ -99,11 +142,16 @@ export const BASIC_ITEM_KINDS: readonly string[] = ITEM_KINDS.filter((k) => k.ba
 export const UNLOCK_ITEM_KINDS: readonly string[] = ITEM_KINDS.filter((k) => !k.basic && k.level < SOVEREIGN_LEVEL).map((k) => k.id)
 /** The Sovereign tier, in collection order: each opens with one delivered Sovereign Route. */
 export const SOVEREIGN_ITEM_KINDS: readonly string[] = ITEM_KINDS.filter((k) => k.level === SOVEREIGN_LEVEL).map((k) => k.id)
-/**
- * Every kind of Levels 1–3 — what a run saved before item unlocks keeps
- * dealing. Never the Sovereign tier: those deal only once owned.
- */
+/** Every kind of Levels 1–3 (a veteran's catalogue). Never the Sovereign tier: those deal only once owned. */
 export const ALL_ITEM_KINDS: readonly string[] = ITEM_KINDS.filter((k) => k.level < SOVEREIGN_LEVEL).map((k) => k.id)
+/**
+ * The Levels 1–3 catalogue as it stood before the peoples' rosters — what a
+ * run saved before item unlocks keeps dealing (`runSnapshot`), so it deals
+ * exactly what it was dealing.
+ */
+export const CLASSIC_ITEM_KINDS: readonly string[] = ITEM_KINDS.filter((k) => k.level < SOVEREIGN_LEVEL && !k.peoples).map((k) => k.id)
+/** The kinds the charter's door counts (`run/charter.charterDoor`): the classic unlock catalogue. */
+export const CHARTER_ITEM_KINDS: readonly string[] = UNLOCK_ITEM_KINDS.filter((id) => !BY_ID.get(id)?.peoples)
 
 /**
  * The kinds a run deals: the basic set plus every unlocked kind, in collection

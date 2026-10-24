@@ -4,8 +4,9 @@ import { RARITY } from '../../game/data/items'
 import { Icon } from '../Icon'
 import { effectIcon, markLabel, RARITY_INITIAL, railStyle, rarityRank, rarityVar, type Currency, type IconKey } from '../channels'
 import { Money } from './Money'
-import { lineMark, lineText, type Body } from './offers'
+import { lineMark, lineText, lineTone, type Body } from './offers'
 import type { OneTapProps } from './oneTap'
+import { ThemeFx } from '../theme/ThemeFx'
 
 /**
  * The page skeleton from the Figma mobile system: a serif title block, a body
@@ -27,8 +28,10 @@ export function PageLayout({
   live,
   foot,
   strip,
+  brand,
   tone,
   compact = false,
+  back,
 }: {
   title: string
   subtitle?: string
@@ -91,8 +94,10 @@ export function PageLayout({
   foot?: ReactNode
   /** The pack + company strip on event pages (Phase 2) — buying is seen to land. */
   strip?: ReactNode
+  /** A page's brand over its title (the hero pick's contract banner, Oct 2026). */
+  brand?: ReactNode
   /** A distinct frame for an elite's spoils (Phase 2). */
-  tone?: 'elite'
+  tone?: 'elite' | 'shop' | 'camp' | 'shrine' | 'recruit'
   /**
    * Oct 2026 (3.5): a short board keeps its exits and CTA right under its
    * content, and the column's slack goes below the CTA instead of between the
@@ -101,15 +106,34 @@ export function PageLayout({
    * sits at the bottom. Off wherever the CTA can arm (see `PageScreen`).
    */
   compact?: boolean
+  /**
+   * The way back to the menu, drawn as an icon button at the head's top left —
+   * the same place and the same button as every other page (the Codex, the HQ).
+   * `label` names it for a screen reader.
+   */
+  back?: { label: string; run: () => void }
 }) {
   const bodyRef = useRef<HTMLDivElement>(null)
   const more = useMoreBelow(bodyRef)
   return (
     <div className={`pg${tone ? ` tone-${tone}` : ''}${compact ? ' compact' : ''}`}>
-      <div className="pg-band pg-head" {...(live ? { role: 'status', 'aria-live': 'polite' as const } : {})}>
-        <h1 className="t-title" tabIndex={-1}>
-          {title}
-        </h1>
+      <ThemeFx />
+      <div className={`pg-band pg-head${brand ? ' has-brand' : ''}`} {...(live ? { role: 'status', 'aria-live': 'polite' as const } : {})}>
+        {brand}
+        {back ? (
+          <div className="pg-titlebar">
+            <button type="button" className="ct-back" onClick={() => back.run()} aria-label={back.label}>
+              <Icon name="back" />
+            </button>
+            <h1 className="t-title" tabIndex={-1}>
+              {title}
+            </h1>
+          </div>
+        ) : (
+          <h1 className="t-title" tabIndex={-1}>
+            {title}
+          </h1>
+        )}
         {subtitle && <p className="t-sub">{subtitle}</p>}
         {resources && <div className="pg-res">{resources}</div>}
         {strip}
@@ -545,7 +569,7 @@ export function InfoCard({
         // panel, which almost nobody reaches first, had the override.
         const mark = icons ? (lineMark(l) ?? effectIcon(lineText(l))) : null
         return (
-          <p className={`pg-card-body ${mark ? 'iconed' : ''}`} key={i}>
+          <p className={`pg-card-body ${mark ? 'iconed' : ''}${lineTone(l) === 'note' ? ' note' : ''}`} key={i}>
             {mark && <Icon name={mark} />}
             {lineText(l)}
           </p>

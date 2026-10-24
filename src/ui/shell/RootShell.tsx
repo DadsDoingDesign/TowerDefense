@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { useGameStore } from '../../state/gameStore'
 import { assertRarityTokensMatch } from '../channels'
 import { DetailBand } from './DetailBand'
@@ -8,6 +8,10 @@ import { StageBand } from './StageBand'
 import { PageScreen } from './PageScreens'
 import { MenuScreen } from './MenuScreen'
 import { MilitiaScreen } from './MilitiaScreen'
+import { LiveryScreen } from './company/LiveryScreen'
+import { StandingsScreen } from './war/StandingsScreen'
+import { SeasonEndScreen } from './war/SeasonEndScreen'
+import type { CompanyId } from '../../game/data/companies'
 import { useShellContext } from './context'
 import { useBattleLayout } from './live'
 import { Announcer } from './Announcer'
@@ -19,13 +23,24 @@ import '../../styles/shell.css'
 import '../../styles/shell-live.css'
 import '../../styles/shell-wide.css'
 import '../../styles/shell-reward.css'
+import '../../styles/battle-band.css'
 import '../../styles/contracts.css'
 import '../../styles/pick.css'
+import '../../styles/shop.css'
+import '../../styles/stops.css'
+import '../../styles/liaisons.css'
 import '../../styles/menu.css'
 import '../../styles/hq.css'
 import '../../styles/charter.css'
+import '../../styles/war.css'
+import '../../styles/worlds.css'
 import { useLevelUpTracker } from './levelUps'
 import { useMenuStaged, useReveal, useStagingRecorder } from './staging'
+import { useMetaStore } from '../../state/metaStore'
+import { charterDoor } from '../../game/run/charter'
+import { useTrackLink } from './company/trackLink'
+import { useCompanyTheme } from '../theme/useCompanyTheme'
+import { onPortraitChange, portraitVersion } from '../../game/render/heroPortrait'
 
 /*
  * The hub's sub-pages load as their own chunks (Lane 4.3). None of them is the
@@ -45,6 +60,8 @@ const PAGES = {
   hq: () => import('./hq/HqScreen'),
   crates: () => import('./hq/CratesScreen'),
   charter: () => import('./charter/CharterScreen'),
+  codex: () => import('./codex/CodexScreen'),
+  track: () => import('./company/TrackScreen'),
 }
 const ResultScreen = lazy(() => PAGES.result().then((m) => ({ default: m.ResultScreen })))
 const ContractsScreen = lazy(() => PAGES.contracts().then((m) => ({ default: m.ContractsScreen })))
@@ -52,6 +69,8 @@ const CityScreen = lazy(() => PAGES.city().then((m) => ({ default: m.CityScreen 
 const HqScreen = lazy(() => PAGES.hq().then((m) => ({ default: m.HqScreen })))
 const CratesScreen = lazy(() => PAGES.crates().then((m) => ({ default: m.CratesScreen })))
 const CharterScreen = lazy(() => PAGES.charter().then((m) => ({ default: m.CharterScreen })))
+const CodexScreen = lazy(() => PAGES.codex().then((m) => ({ default: m.CodexScreen })))
+const TrackScreen = lazy(() => PAGES.track().then((m) => ({ default: m.TrackScreen })))
 
 /** Warm every lazy page once, when the browser is next idle after mount. */
 function usePagePrefetch(): void {
@@ -86,22 +105,53 @@ const META_COPY: Record<MetaView, { title?: string; subtitle?: string }> = {
   hq: {},
   crates: {},
   charter: {},
-  codex: { title: 'Codex', subtitle: 'Your collection of skills and items, your standing, feats to earn, and everything your militia has met on the road.' },
-  settings: { title: 'Settings', subtitle: 'Audio, motion, contrast, scale, colour vision, assist and tips.' },
+  // No subtitles: the rows under each title say what is there (Oct 2026, the copy pass).
+  codex: { title: 'Codex' },
+  settings: { title: 'Settings' },
   militia: { title: 'Your militia' },
+  livery: {},
+  war: {},
+  track: {},
 }
 
 export function RootShell() {
   const ctx = useShellContext()
+  // The whole UI wears the company the game is with (Oct 2026): the focused
+  // road at home, the hiring company through a run (`ui/theme`).
+  useCompanyTheme()
+  // Hero portraits are cut from the battlefield figure once its art has
+  // decoded (`render/heroPortrait`); re-render then, so no box keeps the still.
+  useSyncExternalStore(onPortraitChange, portraitVersion)
   const screen = useGameStore((s) => s.screen)
   const shellSelect = useGameStore((s) => s.shellSelect)
+  // Your militia is founded when the Sovereign Route opens — the full run,
+  // where you raise your own trade road (Oct 2026; the designer: "not have a
+  // user pick their own company stuff until they unlock the full run … at the
+  // start let's just get into the gameplay loop").
+  const militia = useMetaStore((s) => s.militia)
+  const skills = useMetaStore((s) => s.skills)
+  const items = useMetaStore((s) => s.items)
+  const charterOpen = useMemo(() => charterDoor({ skills, items: items ?? [] }).open, [skills, items])
   const [metaView, setMetaView] = useState<MetaView>('menu')
+  // The company whose standard the livery panel dresses (Draft 4 § C).
+  const [liveryOf, setLiveryOf] = useState<CompanyId | null>(null)
+  // The company whose loyalty track the track page shows (Draft 4 · B).
+  const [trackOf, setTrackOf] = useState<CompanyId | null>(null)
+  // The receipt's standing card asks for a track from outside the hub: open it
+  // once the run is back at the hub.
+  const wantTrack = useTrackLink((s) => s.want)
   // The banner picker returns to where it was opened from (the menu's tip, or Settings).
   const beforeMilitia = useRef<MetaView>('menu')
   useEffect(() => {
     if (metaView !== 'militia') beforeMilitia.current = metaView
   }, [metaView])
   const offers = useOffers(metaView, setMetaView)
+  useEffect(() => {
+    if (!wantTrack || screen !== 'hub' || ctx.stage === 'result') return
+    setTrackOf(wantTrack)
+    setMetaView('track')
+    useTrackLink.getState().clear()
+  }, [wantTrack, screen, ctx.stage])
   const battle = useBattleLayout()
   // G3-2: level-ups from a normal wave wait on the roster, not in a modal.
   useLevelUpTracker()
@@ -111,6 +161,8 @@ export function RootShell() {
   const menuStaged = useMenuStaged()
   const reveal = useReveal()
   const metaCopy = META_COPY[metaView]
+  // The trade war (Draft 4 § D): a season that just ended is read at home before anything else.
+  const seasonEnd = useMetaStore((s) => s.season.ended)
   usePagePrefetch()
 
   // Dev-only: shout if `--rarity-*` and `items.ts` have drifted apart. The ramp
@@ -161,7 +213,7 @@ export function RootShell() {
   if (ctx.layout === 'page') {
     const isMenu = screen === 'hub' && metaView === 'menu'
     return (
-      <div className="shell shell-page">
+      <div className={`shell shell-page${screen === 'hub' ? ' is-hub' : ''}`}>
         {/* While a page chunk is still on its way, the page frame stays up and
             empty — no spinner to flash, nothing to shift when it lands. */}
         <Suspense fallback={null}>
@@ -171,14 +223,35 @@ export function RootShell() {
             <ContractsScreen />
           ) : ctx.stage === 'city' ? (
             <CityScreen />
+          ) : screen === 'hub' && seasonEnd && !menuStaged ? (
+            <SeasonEndScreen end={seasonEnd} />
+          ) : screen === 'hub' && metaView === 'war' && !menuStaged && reveal.war ? (
+            <StandingsScreen onBack={() => setMetaView('menu')} />
           ) : screen === 'hub' && metaView === 'hq' && !menuStaged && reveal.hq ? (
             <HqScreen onBack={() => setMetaView('menu')} />
           ) : screen === 'hub' && metaView === 'crates' && !menuStaged && reveal.crates ? (
             <CratesScreen onBack={() => setMetaView('menu')} />
+          ) : screen === 'hub' && metaView === 'charter' && !menuStaged && charterOpen && !militia ? (
+            // The Sovereign Route is your own road: found your militia — its
+            // name and its flag — first, then its charter.
+            <MilitiaScreen mode="create" onBack={() => setMetaView('menu')} onDone={() => setMetaView('charter')} />
           ) : screen === 'hub' && metaView === 'charter' && !menuStaged ? (
             <CharterScreen onBack={() => setMetaView('menu')} />
+          ) : screen === 'hub' && metaView === 'codex' ? (
+            <CodexScreen onBack={() => setMetaView('menu')} />
           ) : isMenu ? (
-            <MenuScreen offers={offers} onMilitia={() => setMetaView('militia')} onCharter={() => setMetaView('charter')} />
+            <MenuScreen
+              offers={offers}
+              onMilitia={() => setMetaView('militia')}
+              onCharter={() => setMetaView('charter')}
+              onLivery={(c) => (setLiveryOf(c), setMetaView('livery'))}
+              onWar={() => setMetaView('war')}
+              onTrack={(c) => (setTrackOf(c), setMetaView('track'))}
+            />
+          ) : screen === 'hub' && metaView === 'livery' && liveryOf && !menuStaged ? (
+            <LiveryScreen company={liveryOf} onDone={() => setMetaView('menu')} />
+          ) : screen === 'hub' && metaView === 'track' && trackOf && !menuStaged ? (
+            <TrackScreen company={trackOf} onBack={() => setMetaView('menu')} />
           ) : screen === 'hub' && metaView === 'militia' ? (
             <MilitiaScreen onDone={() => setMetaView(beforeMilitia.current)} />
           ) : (

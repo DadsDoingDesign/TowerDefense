@@ -42,7 +42,7 @@
   box-shadow:
     inset 0 0 0 1px var(--accent),
     inset 0 -3px 0 var(--pk-rail, transparent),
-    0 0 14px rgba(224, 172, 76, 0.22);
+    0 0 14px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 /* The caret: the focused token points at the card it opened. */
 .pk-tok[aria-checked='true']::after {
@@ -60,7 +60,7 @@
 }
 .pk-tok.locked {
   border-style: dashed;
-  background: rgba(20, 14, 8, 0.45);
+  background: color-mix(in srgb, var(--shade) 45%, transparent);
   box-shadow: none;
 }
 .pk-tok.locked[aria-checked='true'] {
@@ -145,13 +145,16 @@
   width: 52px;
   height: 52px;
   border-radius: var(--r-sm);
-  background: rgba(20, 14, 8, 0.55);
+  background: color-mix(in srgb, var(--shade) 55%, transparent);
   border: 1px solid var(--line);
   overflow: hidden;
 }
+/* The box's own size: a hero's portrait is a square bust cut from its figure
+   (`render/heroPortrait`), so there are no feet to crop any more, and an
+   oversized image would only cut off what the hero holds. */
 .pk-head-art > img {
-  width: 64px;
-  height: 64px;
+  width: 52px;
+  height: 52px;
   object-fit: contain;
   image-rendering: pixelated;
 }
@@ -214,7 +217,7 @@
   min-width: 0;
   padding: 6px 9px 7px;
   border-radius: var(--r-sm);
-  background: rgba(20, 14, 8, 0.45);
+  background: color-mix(in srgb, var(--shade) 45%, transparent);
 }
 .pk-fact dt {
   font-size: var(--fs-micro);
@@ -299,7 +302,7 @@
   height: 44px;
   border-radius: var(--r-sm);
   border: 2px solid var(--pk-rar, var(--line-strong));
-  background: rgba(20, 14, 8, 0.5);
+  background: color-mix(in srgb, var(--shade) 50%, transparent);
   color: var(--text);
 }
 .pk-slot.empty .pk-slot-box {
@@ -389,3 +392,45 @@
     color: var(--accent-text);
   }
 }
+
+/* ------------------------------------------------------------ offer boards */
+/* `OfferPick` (Oct 2026): the spoils, the merchant — every offer board that
+   commits on its CTA. An offer's token carries its picture, its rarity as the
+   rarity tag's pips in the top-left corner, and its damage type in the
+   top-right one, anchored to the token so neither touches the picture. */
+.pk-ware {
+  display: grid;
+  place-items: center;
+}
+.pk-ware-pips {
+  position: absolute;
+  top: 6px;
+  left: 7px;
+}
+.pk-ware-mark {
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  line-height: 0;
+}
+.pk-ware-mark .fw-i {
+  --fw-i-size: 16px;
+}
+/* Several strips share one card, which stands under the last of them: the
+   caret would point into the next strip. */
+.pk-offers .pk-tok[aria-checked='true']::after {
+  display: none;
+}
+.pk-offer-card .pk-detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+/* The card is the box: its specifics sit on it, not in a second one. */
+.pk-offer-card .pg-card {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+

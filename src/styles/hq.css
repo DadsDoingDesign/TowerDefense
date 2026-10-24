@@ -7,66 +7,340 @@
  * least 44px tall.
  */
 
-/* ------------------------------------------------------------ the head */
-.hq-keep {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  flex: none;
-  border-radius: 8px;
-  background: var(--panel-2);
-  border: 1px solid var(--line-strong);
+/* ================================================================ the HQ
+   The HQ pass (Oct 2026): no tabs — the castle as it stands, the five
+   upgrades as one pick (`PickStrip` + `PickCard`, `pick.css`), the page's one
+   CTA buying the focused one. Only HQ rules here; the crates' are below. */
+
+.hq-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-/* ------------------------------------------------------------ tabs */
-.hq-tabs {
+/* ------------------------------------------------------------ the castle */
+/* A picture (the pack's buildings at their own density, 1×) over its stage
+   line. The panel is the world's one frame here (`worlds.css` lists
+   `.hq-card`); nothing inside it is framed again. */
+.hq-card {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 4px;
-  padding: 4px;
-  border-radius: 12px;
-  background: var(--bg-2);
-  border: 1px solid var(--line);
+  gap: 8px;
+  padding: 0 0 10px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  text-align: left;
+  overflow: hidden;
 }
-.hq-tab {
-  min-height: 48px;
-  border-radius: 9px;
+.hq-scene {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--shade) 60%, transparent);
+}
+/* The castle: the tier's scene and each part at its level, as layers of one
+   sheet — centred and never scaled; a phone sees the middle, where it is
+   composed. */
+.hq-castle {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  translate: -50% 0;
+}
+.hq-layer {
+  position: absolute;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  transition: filter 180ms ease;
+}
+/* The focused upgrade's part, lit: a 1 px gold ring outside the pack's ink;
+   everything else steps back a little. */
+.hq-castle.has-lit .hq-layer:not(.is-lit) {
+  filter: brightness(0.78) saturate(0.85);
+}
+.hq-part.is-lit {
+  filter: drop-shadow(1px 0 0 var(--gold)) drop-shadow(-1px 0 0 var(--gold)) drop-shadow(0 1px 0 var(--gold)) drop-shadow(0 -1px 0 var(--gold));
+}
+:root[data-reduced-motion='true'] .hq-layer {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hq-layer {
+    transition: none;
+  }
+}
+
+/* The tier's rise (once, `useTierRise`): the old castle fades off the new
+   one, the new tier's name hangs for a beat. Never under reduced motion (the
+   hook does not start it). */
+.hq-rise {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.hq-rise-old {
+  animation: hq-rise-out 1300ms ease-in 300ms both;
+}
+.hq-rise-tag {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  translate: -50% -50%;
+  padding: 6px 14px;
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--shade) 82%, transparent);
+  border: 1px solid var(--gold);
+  color: var(--gold-text);
+  font-family: var(--font-display);
+  font-size: 22px;
   font-weight: 700;
+  white-space: nowrap;
+  animation: hq-rise-tag 2600ms ease both;
+}
+@keyframes hq-rise-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes hq-rise-tag {
+  0%,
+  20% {
+    opacity: 0;
+    translate: -50% -40%;
+  }
+  35%,
+  80% {
+    opacity: 1;
+    translate: -50% -50%;
+  }
+  100% {
+    opacity: 0;
+    translate: -50% -50%;
+  }
+}
+/* A 320 phone: the castle runs edge to edge, so the whole of it fits. */
+@media (max-width: 359.98px) {
+  .hq-keep {
+    margin-inline: calc(-1 * var(--gutter));
+    border-radius: 0;
+    border-inline: 0;
+  }
+}
+
+/* Under the picture: the tier's name and the four tiers as a track — past
+   ones lit, this one ringed, the ones to come in shadow (the marks are the
+   home plate's) — then the next milestone, in one quiet line. */
+.hq-stage {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 12px;
+}
+.hq-stage-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 24px;
+  line-height: 1.05;
+  color: var(--text);
+}
+.hq-stages {
+  display: flex;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.hq-stages li {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--r-xs);
+}
+.hq-stages li:not(.on):not(.done) .fw-i {
+  filter: brightness(0) opacity(0.5);
+}
+.hq-stages li.on {
+  background: color-mix(in srgb, var(--accent) 26%, transparent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.hq-tier-line {
+  margin: 0;
+  padding: 0 12px;
   font-size: var(--fs-sm);
+  font-weight: 600;
+  line-height: 1.3;
   color: var(--muted);
-  background: transparent;
-  border: 0;
+}
+.hq-tier-line.is-done {
+  color: var(--gold-text);
+}
+
+/* ------------------------------------------------------------ the strip */
+/* A token: the upgrade's level as pips over its mark, its price on its foot. */
+.hq-tok {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.hq-pips {
+  display: flex;
+  gap: 2px;
+}
+.hq-pips i {
+  width: 6px;
+  height: 4px;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--rule) 18%, transparent);
+}
+.hq-pips i.on {
+  background: var(--accent);
+}
+/* Every level bought: the pips in gold. */
+.hq-pips.full i {
+  background: var(--gold);
+}
+.hq-tok-lock {
+  position: absolute;
+  right: -10px;
+  bottom: -3px;
+  display: flex;
+}
+.hq-strip .pk-foot {
+  justify-content: center;
+}
+.hq-strip .pk-label:empty {
+  display: none;
+}
+/* Maxed: its label in gold, like its pips. */
+.hq-strip .pk-tok:has(.hq-pips.full) .pk-label {
+  color: var(--gold-text);
+}
+
+/* ------------------------------------------------------------ the card */
+.hq-rows {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+.hq-row {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 10px;
+  min-height: 34px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line);
+}
+.hq-row:last-child {
+  border-bottom: 0;
+}
+.hq-row dd {
+  margin: 0;
+  color: var(--text);
+  /* A long effect wraps to a second line rather than losing its end. */
+  white-space: normal;
+  line-height: 1.3;
+}
+.hq-row.is-next dd {
+  color: var(--accent-text);
+}
+.hq-row dd.quiet {
+  color: var(--muted);
+}
+.hq-note-line {
+  margin: 0;
+  color: var(--muted);
+}
+/* The card's kicker names the part and its level ("Lookout · 1/2") on one line. */
+.hq-up .pk-kicker {
+  white-space: nowrap;
+}
+/* Maxed: the card says so in gold, the way the pips do. */
+.hq-up.is-max .pk-kicker {
+  color: var(--gold-text);
+}
+.hq-up.is-locked .pk-head-art .fw-i {
+  filter: saturate(0.2) brightness(0.6);
+}
+
+/* Company focus: the crests (free, on the tap) and the one-contract order. */
+.hq-focus-pick {
+  display: grid;
+  gap: 8px;
+}
+.hq-focus {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+.hq-fc {
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--shade) 50%, transparent);
+  border: 1.5px solid var(--line-strong);
+  color: var(--muted);
   cursor: pointer;
 }
-.hq-tab.on {
-  background: var(--accent);
-  color: var(--ink-on-fill);
+.hq-fc.on {
+  border-color: var(--co);
+  background: color-mix(in srgb, var(--co) 18%, var(--panel));
+  box-shadow: inset 0 0 0 1px var(--co);
 }
-.hq-body {
-  display: grid;
+.hq-fc[aria-disabled='true'] {
+  cursor: default;
+}
+.hq-fc:focus-visible,
+.hq-order:focus-visible {
+  outline: var(--focus-width) solid var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+/* A second, quiet purchase: a plain row button, never the CTA's look. */
+.hq-order {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 10px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 12px;
+  border-radius: var(--r-md);
+  border: 1px dashed var(--line-strong);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+.hq-order:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+.hq-order.is-done {
+  border-style: solid;
+  color: var(--good);
+  justify-content: center;
 }
 
 /* ------------------------------------------------------------ the bank's rule */
-/* The free interest, one quiet line under the tabs (the Finance office was cut). */
+/* The free interest, one quiet line under the upgrades (the Finance office was cut). */
 .hq-bankline {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
   margin: 0;
-  padding: 8px 12px;
-  border-radius: 10px;
-  background: var(--bg-2);
-  border: 1px solid var(--line);
+  padding: 0 4px;
   font-size: var(--fs-sm);
   color: var(--muted);
   line-height: 1.35;
 }
-.hq-bankline b {
-  color: var(--text);
-}
-.hq-bankline .tone-good {
+.hq-bank-v b {
   color: var(--good);
   font-variant-numeric: tabular-nums;
 }
@@ -74,36 +348,7 @@
   font-size: var(--fs-xs);
 }
 
-/* ------------------------------------------------------------ cards */
-.hq-card {
-  display: grid;
-  gap: 8px;
-  padding: 12px;
-  border-radius: 12px;
-  background: var(--panel);
-  border: 1px solid var(--line-strong);
-  text-align: left;
-}
-.hq-card h2 {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 21px;
-  line-height: 1.1;
-  color: var(--text);
-}
-/* A card the staggered reveal has not opened yet: what it is, and when it opens. */
-.hq-card.is-locked h2 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--muted);
-}
-.hq-line {
-  margin: -4px 0 0;
-  font-size: var(--fs-sm);
-  color: var(--muted);
-  line-height: 1.35;
-}
+/* The crates' small print (shared with `CratesScreen`). */
 .hq-note {
   margin: 0;
   font-size: var(--fs-xs);
@@ -113,444 +358,43 @@
 .hq-note b {
   color: var(--text);
 }
-.hq-kv {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--line);
-  font-size: var(--fs-sm);
-}
-.hq-kv span {
-  color: var(--muted);
-  flex: none;
-}
-.hq-kv b {
-  font-weight: 600;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-.hq-kv b.tone-good {
-  color: var(--good);
-  font-weight: 800;
-}
-.hq-big {
-  margin: 2px 0 0;
-  font-family: var(--font-display);
-  font-size: 40px;
-  line-height: 1;
-  color: var(--accent-text);
+
+/* ------------------------------------------------------------ desk */
+/* Wide: the castle on the left, the pick on the right, the CTA under the pick. */
+@media (min-width: 900px) and (min-height: 540px) {
+  .shell.shell-page:has(.hq-grid) {
+    max-width: 920px;
+  }
+  .hq-grid {
+    display: grid;
+    grid-template-columns: 400px minmax(0, 1fr);
+    grid-template-areas:
+      'keep pick'
+      'bank pick';
+    grid-template-rows: auto 1fr;
+    align-items: start;
+    gap: 12px 20px;
+  }
+  .hq-keep {
+    grid-area: keep;
+  }
+  .hq-pick {
+    grid-area: pick;
+  }
+  .hq-bankline {
+    grid-area: bank;
+  }
+  .shell.shell-page:has(.hq-grid) .pg-cta-band {
+    padding-left: calc(var(--gutter) + 400px + 20px);
+  }
 }
 
-/* ------------------------------------------------------------ buttons */
-.hq-btn {
-  min-height: 56px;
-  padding: 6px 10px;
-  border-radius: 10px;
-  background: var(--panel-3);
-  border: 1px solid var(--line-strong);
-  color: var(--text);
-  font-weight: 700;
-  font-size: var(--fs-sm);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  cursor: pointer;
-}
-.hq-btn small {
-  font-size: var(--fs-md);
-  color: var(--accent-text);
-  font-weight: 700;
-}
-.hq-btn:disabled {
-  cursor: default;
-  color: var(--muted);
-  background: rgba(47, 36, 24, 0.6);
-  border-style: dashed;
-}
-.hq-btn:disabled small {
-  color: var(--muted);
-}
-.hq-acts {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-.hq-done {
-  margin: 0;
-  min-height: 44px;
-  display: grid;
-  place-items: center;
-  padding: 6px 10px;
-  border-radius: 10px;
-  border: 1px solid rgba(111, 206, 136, 0.45);
-  background: rgba(111, 206, 136, 0.1);
-  color: var(--text);
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  text-align: center;
-}
-
-/* ------------------------------------------------------------ level pips */
-.hq-pips {
-  display: flex;
-  gap: 3px;
-}
-.hq-pips i {
-  flex: 1;
-  height: 6px;
-  border-radius: 2px;
-  background: rgba(233, 205, 150, 0.14);
-}
-.hq-pips i.on {
-  background: var(--accent);
-}
-
-/* ------------------------------------------------------------ HR */
-.hq-deal {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-}
-.hq-hero {
-  height: 72px;
-  border-radius: 8px;
-  background: var(--portrait);
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-}
-.hq-hero img {
-  width: 64px;
-  height: 64px;
-  object-fit: contain;
-  image-rendering: pixelated;
-}
-.hq-hero.locked {
-  background: rgba(20, 14, 8, 0.5);
-  border: 1.5px dashed var(--line-strong);
-  color: var(--muted);
-}
-
-/* ------------------------------------------------------------ Finance */
-.hq-cmp {
-  display: grid;
-  grid-template-columns: 112px 1fr 52px;
-  align-items: center;
-  gap: 8px;
-  font-size: var(--fs-sm);
-}
-.hq-cmp span {
-  color: var(--muted);
-}
-.hq-cmp i {
-  height: 10px;
-  border-radius: 3px;
-}
-.hq-cmp b {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-/* ------------------------------------------------------------ Operations */
-.hq-slots {
-  display: flex;
-  gap: 5px;
-  flex-wrap: wrap;
-}
-.hq-slots i {
-  width: 26px;
-  height: 26px;
-  border-radius: 5px;
-  background: transparent;
-  border: 1px dashed var(--line-strong);
-}
-.hq-slots i.on {
-  background: var(--panel-3);
-  border-style: solid;
-}
-.hq-focus {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 6px;
-}
-.hq-fc {
-  min-height: 60px;
-  border-radius: 10px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  background: rgba(20, 14, 8, 0.5);
-  border: 1.5px solid var(--line-strong);
-  color: var(--muted);
-  font-size: var(--fs-micro);
-  font-weight: 700;
-  cursor: pointer;
-}
-.hq-fc.on {
-  border-color: var(--co);
-  background: color-mix(in srgb, var(--co) 14%, #2f2418);
-  color: var(--text);
-}
-.hq-fc[aria-disabled='true'] {
-  cursor: default;
-}
-.hq-steps {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-}
-.hq-steps span {
-  text-align: center;
-  padding: 6px 0;
-  border-radius: 8px;
-  font-weight: 800;
-  font-size: var(--fs-sm);
-  border: 1px solid var(--line-strong);
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
-.hq-steps span.on {
-  background: var(--accent-dim);
-  color: var(--text);
-  border-color: var(--accent);
-}
-
-/* ------------------------------------------------------------ the crates */
-.hq-crate-title {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  text-align: left;
-}
-.hq-crate-title .ct-title {
-  font-size: 30px;
-  color: var(--accent);
-}
-.hq-crate-title p {
-  margin: 4px 0 0;
-  font-size: var(--fs-md);
-  color: var(--text);
-  line-height: 1.3;
-}
-.hq-crate-art {
-  flex: none;
-  filter: drop-shadow(0 0 12px rgba(245, 196, 81, 0.45));
-  animation: hq-shake 2.4s ease-in-out infinite;
-}
-.hq-crate-art.opened {
-  animation: none;
-}
-@keyframes hq-shake {
-  0%,
-  86%,
-  100% {
-    transform: none;
-  }
-  89% {
-    transform: rotate(-4deg);
-  }
-  92% {
-    transform: rotate(4deg);
-  }
-  95% {
-    transform: rotate(-2deg);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .hq-crate-art {
-    animation: none;
-  }
-}
-:root[data-reduced-motion='true'] .hq-crate-art {
-  animation: none;
-}
-.hq-pulled {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  padding: 12px;
-  border-radius: 12px;
-  background: var(--panel-2);
-  border: 1px solid var(--accent);
-  box-shadow: 0 0 18px rgba(224, 172, 76, 0.25);
-  text-align: left;
-  animation: hq-pop 450ms cubic-bezier(0.3, 1.6, 0.5, 1);
-}
-.hq-pulled.dup {
-  border-color: var(--line-strong);
-  box-shadow: none;
-}
-.hq-pulled-icon {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 52px;
-  height: 52px;
-  border-radius: 8px;
-  background: var(--panel);
-  border: 1px solid var(--line-strong);
-}
-.hq-pulled-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-.hq-pulled-k {
-  font-size: var(--fs-micro);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  font-weight: 700;
-  color: var(--accent-text);
-}
-.hq-pulled-text b {
-  font-family: var(--font-display);
-  font-size: 22px;
-  line-height: 1.1;
-}
-.hq-pulled-text small {
-  font-size: var(--fs-xs);
-  color: var(--muted);
-}
-.hq-pulled-does {
-  font-size: var(--fs-sm);
-  color: var(--text);
-}
-@keyframes hq-pop {
-  0% {
-    transform: scale(0.6);
-    opacity: 0;
-  }
-  70% {
-    transform: scale(1.04);
-  }
-  100% {
-    transform: none;
-    opacity: 1;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .hq-pulled {
-    animation: none;
-  }
-}
-.hq-odds {
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: var(--panel);
-  border: 1px solid var(--line-strong);
-  text-align: left;
-  display: grid;
-  gap: 0;
-}
-.hq-odds-h,
-.hq-odds-r {
-  display: grid;
-  grid-template-columns: 1fr 56px 72px;
-  align-items: center;
-  gap: 8px;
-}
-.hq-odds-h {
-  font-size: var(--fs-micro);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  font-weight: 700;
-  color: var(--muted);
-  padding-bottom: 4px;
-  border-bottom: 1px solid var(--line);
-}
-.hq-odds-h span:not(:first-child),
-.hq-odds-r span:not(:first-child) {
-  text-align: right;
-}
-.hq-odds-r {
-  min-height: 40px;
-  font-size: var(--fs-md);
-  border-bottom: 1px solid var(--line);
-}
-.hq-odds-n {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 700;
-}
-.hq-odds-n i {
-  font-style: normal;
-  background: var(--accent-text);
-  color: var(--ink-on-fill);
-  border-radius: 3px;
-  padding: 0 4px;
-  font-size: var(--fs-micro);
-}
-.hq-odds-n small {
-  font-weight: 500;
-  font-size: var(--fs-xs);
-  color: var(--muted);
-}
-.hq-odds-b {
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
-.hq-odds-y {
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-}
-.hq-odds-y em {
-  font-style: normal;
-  font-size: var(--fs-micro);
-  color: var(--good);
-  margin-left: 3px;
-}
-.hq-odds .hq-note {
-  margin-top: 8px;
-}
-.hq-pool-row {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 6px;
-  margin-top: 6px;
-}
-.hq-pool-it {
-  aspect-ratio: 1;
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  background: var(--panel);
-  border: 2px solid var(--line-strong);
-}
-.hq-pool-it small {
-  font-size: var(--fs-micro);
-  color: var(--muted);
-}
-.hq-pool-it.have {
-  border-style: dashed;
-}
-.hq-dup {
-  text-align: left;
-}
-.hq-dup-k {
-  margin: 0;
-  font-weight: 800;
-  color: var(--slip-ink);
-}
-.hq-dup-t {
-  margin: 2px 0 0;
-  font-size: var(--fs-sm);
-  color: var(--slip-ink);
-}
+/* The sealed crates' rules live in crates.css (the crates pass, Oct 2026). */
 
 /* ------------------------------------------------------------ the result's purse line */
 .ct-sub.ct-home {
   margin-top: 2px;
-  color: var(--accent-text);
+  color: var(--gold-text);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }

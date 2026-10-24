@@ -85,7 +85,7 @@ describe('horizontal services (strange growth, the wide map)', () => {
   it('an act boss lays out a hand of three relics', () => {
     expect(handSize({ thinPickings: false })).toBe(3)
     expect(handSize({ thinPickings: true })).toBe(2)
-    const hand = rewardHand(new RNG(3), { kind: 'boss', luck: 0.3, count: handSize({ thinPickings: false }), held: [] })
+    const hand = rewardHand(new RNG(3), { kind: 'boss', luck: 0.3, depth: 4, count: handSize({ thinPickings: false }), held: [] })
     expect(hand.filter((c) => c.kind === 'relic').length).toBe(3)
   })
 
@@ -146,7 +146,7 @@ describe('feats pay gold into the bank (state/metaStore)', () => {
     expect(m.bank).toBe(190 + 60)
     expect(migrateMeta({ watchMarks: 90 }, 3).bank).toBe(NEW_BANK)
     expect(m.achievements).toEqual({})
-    expect(m.codex).toEqual({ enemies: [], relics: [], felled: {} })
+    expect(m.codex).toEqual({ enemies: [], relics: [], felled: {}, clans: [], fusions: [] })
     const junk = migrateMeta({ achievements: { act_two: 'x', nope: 1, first_light: -4 }, codex: { enemies: ['a', 'a', 3], relics: 'no' } }, 4)
     expect(junk.achievements).toEqual({ act_two: 1, first_light: 1 })
     expect(junk.codex.enemies).toEqual(['a'])

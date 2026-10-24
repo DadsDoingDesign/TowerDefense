@@ -13,8 +13,6 @@ export const MAX_ROSTER = 5
 
 
 export const ITEM_PRICE: Record<ItemRarity, number> = { common: 30, rare: 60, epic: 110, legendary: 200, mythic: 340 }
-/** What a merchant charges for the hire on its shelf. */
-export const RECRUIT_PRICE = 80
 /** Gold recovered when scrapping an item, by rarity (gold is the only currency). */
 const SCRAP_GOLD: Record<ItemRarity, number> = { common: 8, rare: 18, epic: 40, legendary: 75, mythic: 130 }
 export const scrapGold = (item: Item): number => SCRAP_GOLD[item.rarity]
@@ -36,7 +34,11 @@ export interface ShelfEntry {
   price: number
 }
 
-/** A campaign merchant's luck at a map layer. */
+/**
+ * A campaign merchant's luck at a map layer. The shelf also rolls at its
+ * layer's act (`depth`), so it follows the same curve as the loot: mostly
+ * Common and Rare in act 1 (`items.RARITY_BY_ACT`).
+ */
 export const merchantLuck = (layer: number): number => Math.min(0.4, layer * 0.04)
 
 /**
@@ -53,12 +55,12 @@ export const merchantLuck = (layer: number): number => Math.min(0.4, layer * 0.0
  */
 export function rollMerchantShelf(
   rng: RNG,
-  opts: { luck: number; roster: readonly RosterRef[]; pity: RarityPity; size?: number; kinds?: readonly string[]; priceMult?: number },
+  opts: { luck: number; depth: number; roster: readonly RosterRef[]; pity: RarityPity; size?: number; kinds?: readonly string[]; priceMult?: number },
 ): ShelfEntry[] {
   // The road's price multiplier (the Sovereign Route's merchants charge double, `run/charter`).
   const mult = opts.priceMult ?? 1
   return Array.from({ length: opts.size ?? 4 }, () => {
-    const item = generateItem(rng, { luck: opts.luck, roster: opts.roster, pity: { ...opts.pity }, commitPity: false, kinds: opts.kinds })
+    const item = generateItem(rng, { luck: opts.luck, depth: opts.depth, roster: opts.roster, pity: { ...opts.pity }, commitPity: false, kinds: opts.kinds })
     return { item, price: Math.round(ITEM_PRICE[item.rarity] * mult) }
   })
 }

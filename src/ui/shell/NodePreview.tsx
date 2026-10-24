@@ -6,22 +6,22 @@ import { legMult } from '../../game/run/watch'
 import { nodeTerrainRule } from '../../game/run/terrain'
 import { TERRAIN_RULES } from '../../game/data/terrain'
 import { CAMPFIRE_REPAIR } from '../../game/run/campfire'
-import { cargoShare } from '../../game/run/contracts'
+import { cargoShare, cityOfLayer, routeTowns } from '../../game/run/contracts'
 import { contractRules } from '../../game/run/contracts'
 import { groundOf } from '../../state/game/runSlice'
 import { fieldIdOf } from '../../game/data/maps'
 import { fieldName, groundFor } from '../../game/run/fields'
-import { NODE_ICON, strengthPct, strengthText } from '../channels'
+import { NODE_ICON, NODE_TEXT, strengthPct, strengthText } from '../channels'
 import { Icon } from '../Icon'
+import { tapWord } from '../pointer'
 import { resistHint, summarizeEncounter } from './encounterPreview'
 import { useMapFocus } from './mapFocus'
 
 /** What each special stop is, in one line — the preview's whole body for a non-fight. */
 const SPECIAL_BLURB: Record<string, string> = {
-  merchant: 'Items for gold, and sometimes a hero for hire.',
-  shrine: 'A bargain: a boon for all your heroes, paid for with a curse.',
-  recruit: 'A hero looking for work. Take one on or walk on.',
-  campfire: `Rest (round up stray cargo, +${cargoShare(CAMPFIRE_REPAIR)}%) or train one hero a full level. One of the two.`,
+  merchant: 'Items for gold, and a wagon repair.',
+  shrine: 'A bargain: a boon for your heroes, paid with a curse.',
+  campfire: `Rest (+${cargoShare(CAMPFIRE_REPAIR)}% cargo) or train one hero a level. Not both.`,
 }
 
 /**
@@ -33,7 +33,9 @@ const SPECIAL_BLURB: Record<string, string> = {
  * `tests/encounterPreview.test.ts`): the variant's name and what it asks for,
  * the elite modifier every enemy wears, the head count, any champions, and a
  * damage-type hint, and the Threat it is fought at. For a special stop it says
- * what the stop is. The march is a separate button.
+ * what the stop is. The march is a separate control: the full-width
+ * {@link MarchBar} under this panel (Oct 2026: the map is the card and its CTA,
+ * no party row and no gear beside it).
  */
 export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
   const runMap = useGameStore((s) => s.runMap)
@@ -41,9 +43,11 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
   const crates = useGameStore((s) => s.contract?.crates ?? 0)
   const company = useGameStore((s) => s.contract?.company ?? null)
   const charter = useGameStore((s) => !!s.contract?.charter)
+  // Desperate terms (the trade war): its raiders are stronger from the first fight.
+  const desperate = useGameStore((s) => !!s.contract?.desperate)
+  const contract = useGameStore((s) => s.contract)
   const reachable = useGameStore((s) => s.reachableNodeIds)
   const cleared = useGameStore((s) => s.clearedNodeIds)
-  const selectNode = useGameStore((s) => s.selectNode)
   const focus = useMapFocus((s) => s.focus)
 
   const firstRun = useGameStore((s) => s.firstRun)
@@ -60,10 +64,10 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
   if (!node) return null
 
   const meta = nodeMeta(node.type)
-  const summary = summarizeEncounter({ runSeed, runMap, muster: charter }, nodeId)
+  const summary = summarizeEncounter({ runSeed, runMap, contract }, nodeId)
   // Threat follows the road (Phase 3b): a fight here is fought at this layer's
   // Threat whatever the route was, and a stop costs none at all.
-  const rules = contractRules({ crates, charter })
+  const rules = contractRules({ crates, charter, desperate })
   const step = summary ? encounterThreat(node, rules.startThreat) * legMult(rules, node.layer) : null
   const hint = summary ? resistHint(summary) : null
   // The map challenge this fight is fought under (G1-2) — the same pure draw
@@ -74,6 +78,10 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
   // A new act's first fight is on new ground (`run/fields`) — the same pure
   // rule `selectNode` deals it by — and the company starts it on the bench.
   const ground = summary ? groundFor(runSeed, { fieldId, fieldAct }, node.layer) : null
+  // The gameplay pass: an act boss before the last is a city — where a hero is
+  // hired. Said where the road is read, so the player knows where crew comes from.
+  const city = node.type === 'miniboss' ? cityOfLayer(node.layer) : null
+  const town = city != null && contract ? routeTowns(charter ? null : company)[city] : null
 
   return (
     <div className="sh-context" role="group" aria-labelledby="sh-node-head">
@@ -81,13 +89,15 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
         <span className="sh-context-icon" aria-hidden="true">
           <Icon name={NODE_ICON[node.type] ?? 'depth'} />
         </span>
-        <strong id="sh-node-head" style={{ color: meta.color }}>
+        <strong id="sh-node-head" style={{ color: NODE_TEXT[node.type] ?? meta.color }}>
           {summary ? summary.variant : meta.label}
         </strong>
       </div>
       <div className="sh-context-body">
         <p className="sh-line muted sh-node-kind">
-          {meta.label} · Depth {node.layer}
+          {/* The head already names a stop ("Merchant"); a fight's head is its
+              variant ("Bombard"), so only a fight says its kind again. */}
+          {summary ? `${meta.label} · ` : ''}Depth {node.layer}
           {rule ? ` · ${TERRAIN_RULES[rule].name}` : ''}
         </p>
         {ground?.fresh && (
@@ -127,30 +137,56 @@ export function NodePreviewPanel({ nodeId }: { nodeId: string }) {
         ) : (
           <p className="sh-line">{SPECIAL_BLURB[node.type] ?? 'Where the march began.'}</p>
         )}
+        {town && (
+          <p className="sh-line">
+            <Icon name="recruit" /> Win to reach <b>{town}</b>: city pay, and a hero for hire.
+          </p>
+        )}
         {/* Enemies at their starting strength need no line (LS3/LS4). */}
         {step && strengthPct(step) > 0 && (
           <p className="sh-line muted">
-            <Icon name="threat" /> {strengthText(step)}: every enemy has {strengthPct(step)}% more HP.
+            <Icon name="threat" /> {strengthText(step)}: enemies have {strengthPct(step)}% more HP.
           </p>
         )}
-        {!canMarch && <p className="sh-line muted">Out of reach from where you stand.</p>}
+        {!canMarch && <p className="sh-line muted">Out of reach from here.</p>}
       </div>
-      <div className="sh-context-foot">
-        <button className="sh-btn" onClick={() => focus(null)}>
-          Back
-        </button>
-        {canMarch && (
-          <button
-            className="sh-btn primary"
-            onClick={() => {
-              focus(null)
-              selectNode(nodeId)
-            }}
-          >
-            March
-          </button>
-        )}
-      </div>
+    </div>
+  )
+}
+
+/**
+ * The run map's one CTA, full width under the Context panel like every page's
+ * (Oct 2026). It names the focused stop — "March to Patrol" — and commits the
+ * march; with nothing focused, or a stop out of reach, it waits and says why.
+ */
+export function MarchBar() {
+  const screen = useGameStore((s) => s.screen)
+  const runMap = useGameStore((s) => s.runMap)
+  const runSeed = useGameStore((s) => s.runSeed)
+  const contract = useGameStore((s) => s.contract)
+  const reachable = useGameStore((s) => s.reachableNodeIds)
+  const cleared = useGameStore((s) => s.clearedNodeIds)
+  const selectNode = useGameStore((s) => s.selectNode)
+  const nodeId = useMapFocus((s) => s.nodeId)
+  const focus = useMapFocus((s) => s.focus)
+  if (screen !== 'map') return null
+  const node = nodeId ? runMap.nodes.find((n) => n.id === nodeId) : undefined
+  const canMarch = !!node && reachable.includes(node.id) && !cleared.includes(node.id)
+  const name = node ? (summarizeEncounter({ runSeed, runMap, contract }, node.id)?.variant ?? nodeMeta(node.type).label) : null
+  return (
+    <div className="sh-marchbar">
+      <button
+        type="button"
+        className="pg-cta"
+        disabled={!canMarch}
+        onClick={() => {
+          if (!node || !canMarch) return
+          focus(null)
+          selectNode(node.id)
+        }}
+      >
+        {canMarch ? `March to ${name}` : node ? 'Out of reach' : `${tapWord()} a stop to march`}
+      </button>
     </div>
   )
 }

@@ -21,7 +21,7 @@ import { classicHero } from '../src/game/data/sentinels'
 import { generateEncounter, nodeEncounter, subWaveCount } from '../src/game/data/waves'
 import { commandsFor, HOLD, RALLY } from '../src/game/data/commands'
 import { relicById, relicCommands, relicSupported, relicTeamMods } from '../src/game/data/relics'
-import { BOMBER_LOB, COLOSSUS_SPLIT } from '../src/game/data/behaviours'
+import { BOMBER_LOB, COLOSSUS_SPLIT, HEAL_PULSE } from '../src/game/data/behaviours'
 import { GamePath } from '../src/game/core/path'
 import {
   BRITTLE_MULT,
@@ -105,6 +105,18 @@ describe('the behaviour kit (Phase 3a)', () => {
     expect(threat.leaks).toBeLessThanOrEqual(first.leaks)
   })
 
+  it('a shaman runs out of pulses: a held pack cannot out-heal a hero for ever', () => {
+    // A tough shaman held by a fighter for minutes: it pulses ten times, then
+    // stops (Oct 2026 — unlimited, a held pack stalled a battle with no clock).
+    const e = engineFor([at('torch3_shaman', 0, 400)], [['fighter', P.s1]])
+    let held = 0
+    runOut(e, 60 * 240, (eng) => {
+      if (eng.enemies[0]?.blockedBy) held++
+    })
+    expect(held).toBeGreaterThan(60 * 40)
+    expect(e.behaviourStats.healPulses).toBe(HEAL_PULSE.charges)
+  })
+
   it('a berserker enrages below its threshold and walks faster for it', () => {
     const e = engineFor([at('torch4', 0, 1)], [])
     runOut(e, 30)
@@ -177,8 +189,11 @@ describe('the behaviour kit (Phase 3a)', () => {
     expect(plain.shield).toBeGreaterThan(0)
     expect(bearer.shield).toBe(0)
     expect(takenMult(plain, 'physical')).toBeLessThan(takenMult({ ...plain, shield: 0 }, 'physical'))
-    // The cap: nothing is ever more than 55% resistant.
-    expect(takenMult(fake('barrel5_plated', 0.2), 'physical')).toBeCloseTo(0.45, 10)
+    // The caps: the aura takes a goblin to 55% and no further…
+    expect(takenMult(fake('barrel4', 0.4), 'physical')).toBeCloseTo(0.45, 10)
+    // …armour (Plated, Warded) stops at 65%, and the aura never takes it away.
+    expect(takenMult(fake('barrel5_plated', 0.2), 'physical')).toBeCloseTo(0.35, 10)
+    expect(takenMult(fake('barrel5_plated'), 'physical')).toBeCloseTo(0.35, 10)
     // No aura, no frost: exactly the pre-3a arithmetic.
     expect(takenMult(fake('barrel3'), 'physical')).toBe(1 - (ENEMY_TYPES.barrel3.physResist ?? 0))
   })

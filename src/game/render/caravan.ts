@@ -3,8 +3,10 @@
  * caravan"). A wagon stands where the road leaves the field, loaded with
  * crates in the route's colour — one crate for every third of the cargo still
  * on board — so a leak that steals cargo is SEEN to take a crate off the
- * wagon (mockup `trade/r3/4b-battle.png`). Your militia's banner flies on its
- * own pole beside it (build step 4, `CaravanLook.banner`).
+ * wagon (mockup `trade/r3/4b-battle.png`). Beside it, on its own pole, flies
+ * the flag of whoever the run is for: the hiring company's standard
+ * (`CaravanLook.company`, `data/companyStandard.ts`), or on your own road —
+ * the Sovereign Route — your militia's banner (`CaravanLook.banner`).
  *
  * ## Where it stands
  *
@@ -24,20 +26,31 @@
 import type { GameMap } from '../types'
 import type { Vec2 } from '../core/vec'
 import { CRATE, cratePalette, pixelRuns, WAGON, WAGON_PALETTE, type Palette, type PixelRows } from '../data/pixelArt'
-import { BANNER_H, BANNER_W, bannerPalette, bannerRows, DEFAULT_BANNER, type BannerLook } from '../data/banner'
+import { BANNER_H, BANNER_W, bannerKey, bannerPalette, bannerRows, DEFAULT_BANNER, type BannerLook } from '../data/banner'
+import type { CompanyId } from '../data/companies'
+import { companyStandardPalette, companyStandardRows, standardKey, type StandardLook } from '../data/companyStandard'
 
 export interface CaravanLook {
   /** The route's company colour — the crates' band. */
   color: string
   /** Cargo still on board, 0–1. */
   cargo: number
-  /** Your militia's banner, on its pole beside the wagon (the default one until you raise your own). */
+  /**
+   * Whose road this is: the hiring company, whose standard flies beside the
+   * wagon (its colour, its logo). Null on your own road, the Sovereign Route.
+   */
+  company?: CompanyId | null
+  /** How you dressed that company's standard (`metaStore.liveries`); absent: plain. */
+  livery?: StandardLook | null
+  /** Your militia's banner — flown only on your own road (no `company`); the default one until you raise your own. */
   banner?: BannerLook | null
 }
 
 const WAGON_UNIT = 3
 const CRATE_UNIT = 2
 const BANNER_UNIT = 3
+/** A company standard's cell: 19 × 30 cells at 2 px fill the banner's 39 × 60 box. */
+const STANDARD_UNIT = 2
 const SLOTS = 3
 
 const WAGON_W = WAGON[0].length * WAGON_UNIT
@@ -183,8 +196,8 @@ const BAKES = new Map<string, HTMLCanvasElement>()
 const BAKE_MAX = 24
 
 function bakeKey(look: CaravanLook, full: number): string {
-  const b = look.banner ?? DEFAULT_BANNER
-  return `${look.color}|${full}|${b.shape}|${b.charge}|${b.tincture}`
+  const flag = look.company ? `co:${look.company}:${standardKey(look.livery)}` : bannerKey(look.banner ?? DEFAULT_BANNER)
+  return `${look.color}|${full}|${flag}`
 }
 
 /** The caravan's pixels drawn at `(x0, y0)` (the wagon's top-left), straight to `ctx`. */
@@ -199,11 +212,17 @@ function drawPixels(ctx: CanvasRenderingContext2D, look: CaravanLook, full: numb
   const gap = (bedW - SLOTS * cw) / (SLOTS - 1 || 1)
   const pal = cratePalette(look.color)
   for (let i = 0; i < full; i++) blit(ctx, CRATE, pal, bedLeft + i * (cw + gap), y0 - CRATE_H + WAGON_UNIT, CRATE_UNIT)
-  // The banner, its pole planted beside the wagon's tail.
-  const b = look.banner ?? DEFAULT_BANNER
+  // The flag, its pole planted beside the wagon's tail: the hiring company's
+  // standard (19 × 30 cells at 2 px — the same box as a banner at 3), or on
+  // your own road your militia's banner.
   ctx.fillStyle = 'rgba(0,0,0,0.26)'
   ctx.fillRect(flagX - 1, ground - 2, 6, 2)
-  blit(ctx, bannerRows(b.shape, b.charge), bannerPalette(b.tincture), flagX, ground - FLAG_H, BANNER_UNIT)
+  if (look.company) {
+    blit(ctx, companyStandardRows(look.company, look.livery), companyStandardPalette(look.company, look.livery), flagX, ground - FLAG_H, STANDARD_UNIT)
+  } else {
+    const b = look.banner ?? DEFAULT_BANNER
+    blit(ctx, bannerRows(b), bannerPalette(b), flagX, ground - FLAG_H, BANNER_UNIT)
+  }
 }
 
 /** The baked look, or null where there is no DOM (tests) — then the caller draws live. */
@@ -234,12 +253,9 @@ export function drawCaravan(ctx: CanvasRenderingContext2D, map: GameMap, look: C
   const y0 = Math.round(at.y - WAGON_H / 2)
   const ground = y0 + WAGON_H
   ctx.save()
-  // A trodden patch under the caravan, so it stands in a clearing rather than
-  // on the treetops, then the contact shadow every object on the field has.
-  ctx.fillStyle = 'rgba(74, 56, 34, 0.55)'
-  ctx.beginPath()
-  ctx.ellipse(at.x + (FLAG_GAP + FLAG_W) / 2, ground - 8, (WAGON_W + FLAG_W) * 0.56, 16, 0, 0, Math.PI * 2)
-  ctx.fill()
+  // The clearing it stands in is the terrain bake's (`terrain.drawWagonClearing`:
+  // no tree or prop inside the caravan's box); here, the contact shadow every
+  // object on the field has.
   ctx.fillStyle = 'rgba(0,0,0,0.26)'
   ctx.beginPath()
   ctx.ellipse(at.x + 6, ground - 6, WAGON_W * 0.46, 7, 0, 0, Math.PI * 2)

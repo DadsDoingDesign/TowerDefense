@@ -5,6 +5,7 @@ import { planPrecache, renderWorker } from '../build/pwa'
 import {
   ALL_ROLES,
   artFamily,
+  isLazyRole,
   packAssetPaths,
   packRoles,
   themeArtPacks,
@@ -12,6 +13,7 @@ import {
   themeAssetPaths,
 } from '../src/game/render/sprites'
 import { artOverride, DEFAULT_THEME, packDensity, THEMES } from '../src/game/render/themes'
+import { isClanRole } from '../src/game/data/clans'
 
 const ROOT = resolve(import.meta.dirname, '..')
 const PUBLIC = join(ROOT, 'public')
@@ -174,16 +176,29 @@ describe('the per-role fallback chain (HANDOFF §6.4)', () => {
   const fw = THEMES.fieldwatch
   const plan = themeArtPlan(fw)
 
-  it('leaves the default theme exactly as it was: its whole pack, nothing else', () => {
-    expect(themeAssetPaths(THEMES[DEFAULT_THEME]).sort()).toEqual(packAssetPaths(DEFAULT_THEME).sort())
+  it('leaves the default theme exactly as it was: its whole pack but the lazy clan strips, nothing else', () => {
+    const eager = packAssetPaths(DEFAULT_THEME).filter((f) => !isLazyRole(f.slice(f.lastIndexOf('/') + 1, -4)))
+    expect(themeAssetPaths(THEMES[DEFAULT_THEME]).sort()).toEqual(eager.sort())
     expect(themeArtPacks(THEMES[DEFAULT_THEME])).toEqual([DEFAULT_THEME])
   })
 
+  it('precaches the default goblin clan only: every other clan loads per run, on first use', () => {
+    const lazy = packRoles(DEFAULT_THEME).filter(isLazyRole)
+    // 4 clans × (torch + tnt run cycles, the keg's still) × 5 tiers; the
+    // default clan's 15 ship with the boot (`sprites.isLazyRole`).
+    expect(lazy).toHaveLength(60)
+    expect(lazy.every((r) => isClanRole(r))).toBe(true)
+    const files = themeAssetPaths(THEMES[DEFAULT_THEME])
+    for (const r of lazy) expect(files).not.toContain(`assets/sprites/${DEFAULT_THEME}/${r}.png`)
+    // Still declared truthfully: every clan file is on disk.
+    for (const r of lazy) expect(existsSync(join(PUBLIC, `assets/sprites/${DEFAULT_THEME}/${r}.png`)), r).toBe(true)
+  })
+
   it('draws each role from the first pack in the chain that ships its family', () => {
-    for (const role of ['fighter', 'fighter_idle', 'fighter_atk', 'torch1', 'torch1_walk', 'grass', 'tree1', 'gear_sword']) {
+    for (const role of ['fighter', 'fighter_idle', 'fighter_atk', 'grass', 'tree1', 'gear_sword']) {
       expect(plan.get(role), role).toBe('fieldwatch')
     }
-    for (const role of ['rogue', 'rogue_idle', 'mystic_atk', 'torch2_walk', 'tnt5', 'barrel3', 'tree2', 'rock1', 'bush2']) {
+    for (const role of ['rogue', 'rogue_idle', 'mystic_atk', 'cinder_torch2_walk', 'cinder_tnt5_walk', 'cinder_barrel3', 'tree2', 'rock1', 'bush2']) {
       expect(plan.get(role), role).toBe('tinyswords')
     }
     // Nobody ships a road: it stays procedural, under either theme.
@@ -201,7 +216,7 @@ describe('the per-role fallback chain (HANDOFF §6.4)', () => {
     const files = themeAssetPaths(fw)
     expect(new Set(files).size).toBe(files.length)
     expect(new Set(files.map((f) => f.slice(f.lastIndexOf('/') + 1))).size).toBe(files.length)
-    for (const shadowed of ['fighter', 'fighter_idle', 'fighter_atk', 'torch1', 'torch1_walk', 'grass', 'tree1']) {
+    for (const shadowed of ['fighter', 'fighter_idle', 'fighter_atk', 'grass', 'tree1']) {
       expect(files).not.toContain(`assets/sprites/tinyswords/${shadowed}.png`)
       expect(files).toContain(`assets/sprites/fieldwatch/${shadowed}.png`)
     }

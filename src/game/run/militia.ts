@@ -3,10 +3,10 @@
  * Your militia: its name and its banner (the mercenary company, build step 4)
  * ---------------------------------------------------------------------------
  *
- * The name is PICKED, never typed: a generated name with a re-roll. Free text
- * would need moderation the moment it is shown to anyone else (a weekly
- * charter seed, a shared run), and a name built only from the fragments below
- * cannot say anything they do not.
+ * The name is TYPED (Oct 2026: "you can make any name you want but use a
+ * profanity filter") — checked by `run/nameFilter.checkCompanyName` — or
+ * rolled: a generated name from the fragments below, which the builder's dice
+ * deals and a first launch starts from.
  *
  * A name is "The <place> <company>" ("The Ashford Company"), "The <colour>
  * <company>" ("The Grey Lances") or "The <place> Free Company". A place is a
@@ -18,7 +18,23 @@
  * (`militia`), validated by {@link readMilitia}.
  */
 import { hashSeed, RNG } from '../core/rng'
-import { isBannerShape, isCharge, isTincture, type BannerLook } from '../data/banner'
+import {
+  BANNER_SHAPES,
+  CHARGE_IDS,
+  COLOUR_PAIRS,
+  isBannerShape,
+  isCharge,
+  isMetal,
+  isPattern,
+  isTincture,
+  METAL_IDS,
+  PATTERNS,
+  type BannerLook,
+} from '../data/banner'
+import type { CompanyId } from '../data/companies'
+import { charterDoor } from './charter'
+import { readTheme, type ThemeId } from './militiaTheme'
+import { checkCompanyName } from './nameFilter'
 
 const STEMS = [
   'Ash', 'Thorn', 'Oak', 'Grey', 'Iron', 'Raven', 'Wolf', 'Stone', 'Black', 'Red', 'Hollow', 'Bram',
@@ -32,7 +48,16 @@ const COMPANIES = ['Company', 'Lances', 'Blades', 'Watch', 'Guard', 'Wardens', '
 export interface Militia extends BannerLook {
   /** The militia's name, from {@link militiaName}: "The Ashford Company". */
   name: string
+  /**
+   * The UI theme your own road wears (the Sovereign Route; `run/militiaTheme.ts`).
+   * Absent: neutral — every save from before themes, and any theme not (or no
+   * longer) unlocked.
+   */
+  theme?: ThemeId
 }
+
+/** A militia's theme: its saved one, or neutral. */
+export const militiaTheme = (m: Pick<Militia, 'theme'> | null | undefined): ThemeId => m?.theme ?? 'neutral'
 
 /** One name, from a seed: the same seed is always the same name. */
 export function militiaName(seed: number): string {
@@ -66,12 +91,53 @@ export function isMilitiaName(name: unknown): name is string {
   return (isPlace(w[1]) || (COLOURS as readonly string[]).includes(w[1])) && (COMPANIES as readonly string[]).includes(w[2])
 }
 
-/** A stored militia, validated: a generated name and a known shape, tincture and charge — or null. */
-export function readMilitia(raw: unknown): Militia | null {
+/**
+ * A stored militia, validated — or null: a name the generator deals or one
+ * that passes the typed-name check, and a known shape, field and emblem. The
+ * flag's newer parts (pattern, its colour, the metal) are optional: an older
+ * save's flag loads as a plain one in parchment, and an unknown value is
+ * dropped to that default rather than losing the company.
+ *
+ * The UI theme is checked against `levelOf` (your standing level with each
+ * company): an unknown or locked one — or any company's, when no standing is
+ * given — is dropped to neutral, which is stored as no `theme` at all.
+ */
+export function readMilitia(raw: unknown, levelOf: (c: CompanyId) => number = () => 0): Militia | null {
   if (!raw || typeof raw !== 'object') return null
   const o = raw as Record<string, unknown>
-  if (!isMilitiaName(o.name) || !isBannerShape(o.shape) || !isTincture(o.tincture) || !isCharge(o.charge)) return null
-  return { name: o.name, shape: o.shape, tincture: o.tincture, charge: o.charge }
+  if (!isBannerShape(o.shape) || !isTincture(o.tincture) || !isCharge(o.charge)) return null
+  const named = isMilitiaName(o.name) ? o.name : (() => {
+    const c = checkCompanyName(o.name)
+    return c.ok ? c.name : null
+  })()
+  if (!named) return null
+  return {
+    name: named,
+    shape: o.shape,
+    tincture: o.tincture,
+    charge: o.charge,
+    pattern: isPattern(o.pattern) ? o.pattern : 'plain',
+    tincture2: isTincture(o.tincture2) ? o.tincture2 : 'sable',
+    metal: isMetal(o.metal) ? o.metal : 'parchment',
+    ...withTheme(readTheme(o.theme, levelOf)),
+  }
+}
+
+const withTheme = (theme: ThemeId): Pick<Militia, 'theme'> => (theme === 'neutral' ? {} : { theme })
+
+/** A whole random flag, from a seed (the builder's "Surprise me"). Its pattern colour is never its field. */
+export function randomBanner(seed: number): BannerLook {
+  const r = new RNG(hashSeed('militia-banner', seed))
+  const pick = <T,>(xs: readonly T[]): T => xs[Math.floor(r.next() * xs.length)]
+  const [tincture, tincture2] = pick(COLOUR_PAIRS)
+  return {
+    shape: pick(BANNER_SHAPES),
+    tincture,
+    pattern: r.next() < 0.3 ? 'plain' : pick(PATTERNS.filter((p) => p !== 'plain')),
+    tincture2,
+    charge: pick(CHARGE_IDS.filter((c) => c !== 'none')),
+    metal: pick(METAL_IDS),
+  }
 }
 
 /**
@@ -81,3 +147,15 @@ export function readMilitia(raw: unknown): Militia | null {
  */
 export const TAGLINE = 'Guard the road, bank the gold'
 export const militiaTagline = (m: Pick<Militia, 'name'> | null): string => (m ? `${m.name} · ${TAGLINE.toLowerCase()}` : TAGLINE)
+
+/**
+ * The militia the game SHOWS: the saved one, but only once the Sovereign Route
+ * has opened (Oct 2026; the designer: "not have a user pick their own company
+ * stuff until they unlock the full run"). A save that founded a militia before
+ * that rule keeps it, and it flies again when the road opens; until then the
+ * hero pick, the home and the wagons show none (the wagons fly the default flag).
+ */
+export function flyingMilitia<T>(militia: T | null, unlocks: { skills: readonly string[]; items?: readonly string[] | null }): T | null {
+  if (!militia) return null
+  return charterDoor({ skills: unlocks.skills, items: unlocks.items ?? [] }).open ? militia : null
+}

@@ -29,8 +29,8 @@
  *    marches from the first fight (`waves` `muster`).
  *  - **Five trade-offs at once** ({@link TRADE_OFFS}), one per company, each
  *    an existing mechanic: the route's ground on every field is all four
- *    companies' (`terrain` `sovereign`: Peppercorn's fire, Easel House's
- *    lakes, Ironvein's boulders, Moonquill's cursed ground), and Rosethread's
+ *    companies' (`terrain` `sovereign`: Peppercorn's fire, Butcherblock's
+ *    lakes, Ironvein's boulders, Greenvial's cursed ground), and Rosethread's
  *    merchants charge double ({@link CHARTER_PRICE_MULT}).
  *
  * The **Sovereign tier** is item Level 4 (`data/itemKinds.ts`): five kinds,
@@ -42,8 +42,8 @@
  * for the tuning pass.
  */
 import { companyById, type CompanyId } from '../data/companies'
-import { RANDOM_UNLOCK_SKILLS } from '../data/skills'
-import { isSovereignKind, SOVEREIGN_ITEM_KINDS, UNLOCK_ITEM_KINDS } from '../data/itemKinds'
+import { CHARTER_SKILLS } from '../data/skills'
+import { CHARTER_ITEM_KINDS, isSovereignKind, SOVEREIGN_ITEM_KINDS } from '../data/itemKinds'
 import type { NodeEncounterRules } from '../data/waves'
 import type { TerrainRuleId } from '../types'
 import { rollFromPool } from './watch'
@@ -130,11 +130,14 @@ export interface CharterDoor {
  * Whether the Sovereign Route is open: every skill card a contract, a
  * standing level or a sealed crate can unlock, and every item kind of Levels
  * 1–3. HQ offices and standing do not count; feat cards follow their feats
- * and are not in it.
+ * and are not in it. The catalogue is the one that stood before the peoples'
+ * rosters (Oct 2026, `CHARTER_SKILLS` / `CHARTER_ITEM_KINDS`): their new
+ * cards and kinds are more to find, not more the door asks of a save that
+ * had already opened it.
  */
 export function charterDoor(v: { skills: readonly string[]; items: readonly string[] }): CharterDoor {
-  const skills = { have: RANDOM_UNLOCK_SKILLS.filter((id) => v.skills.includes(id)).length, need: RANDOM_UNLOCK_SKILLS.length }
-  const items = { have: UNLOCK_ITEM_KINDS.filter((id) => v.items.includes(id)).length, need: UNLOCK_ITEM_KINDS.length }
+  const skills = { have: CHARTER_SKILLS.filter((id) => v.skills.includes(id)).length, need: CHARTER_SKILLS.length }
+  const items = { have: CHARTER_ITEM_KINDS.filter((id) => v.items.includes(id)).length, need: CHARTER_ITEM_KINDS.length }
   const have = skills.have + items.have
   const need = skills.need + items.need
   return { skills, items, progress: need ? have / need : 1, open: have >= need }
@@ -157,7 +160,7 @@ export interface TradeOff {
  */
 export const TRADE_OFFS: readonly TradeOff[] = [
   { company: 'spice', rule: 'Wildfire on every field', line: 'Fire covers part of every field.' },
-  { company: 'art', rule: 'The canals flood', line: 'Lakes cover some of the best ground.' },
+  { company: 'art', rule: 'The channels flood', line: 'Lakes cover some of the best ground.' },
   { company: 'metals', rule: 'Quarry boulders', line: '4 more boulders a field. They can’t be cleared.' },
   { company: 'silk', rule: 'Merchants charge double', line: 'Every merchant price is twice as much.' },
   { company: 'scrolls', rule: 'More cursed ground', line: '2 more cursed patches on every field.' },
@@ -201,9 +204,16 @@ export function routeOf(c: RouteRef): RouteView {
   return { name: co.name, goods: co.goods, color: co.color, towns: co.towns }
 }
 
-/** The encounter rules a contract's road fields its waves under: the muster on the Sovereign Route, else none. */
-export const encounterRulesOf = (c: RouteRef | null | undefined): NodeEncounterRules | undefined =>
-  isCharter(c) ? { allElite: false, eliteDepth: 0, muster: true } : undefined
+/**
+ * The encounter rules a contract's road fields its waves under: the muster on
+ * the Sovereign Route; on a company's road, the armour its goblins lean to
+ * (`Company.armour`); else none.
+ */
+export function encounterRulesOf(c: RouteRef | null | undefined): NodeEncounterRules | undefined {
+  if (isCharter(c)) return { allElite: false, eliteDepth: 0, muster: true }
+  const lean = c?.company ? companyById(c.company).armour : undefined
+  return lean ? { allElite: false, eliteDepth: 0, armourLean: lean } : undefined
+}
 
 /** The merchant's price multiplier on a contract's road. */
 export const priceMultOf = (c: RouteRef | null | undefined): number => (isCharter(c) ? CHARTER_PRICE_MULT : 1)

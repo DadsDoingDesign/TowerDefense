@@ -69,6 +69,7 @@
  */
 import type { Vec2 } from '../core/vec'
 import type { FieldTile, TerrainKind, TerrainRuleId } from '../types'
+import { CURSED_DAMAGE_MULT } from './hazards'
 
 /** Edge of one deployment tile, in logical field px. */
 export const TILE = 40
@@ -302,7 +303,7 @@ export function layTiles(path: readonly Vec2[], pieces: readonly TerrainPiece[])
 
 /** What each blocking kind is called, and the coach line a tap on it gets. */
 export const BLOCK_COPY: Record<TerrainKind, { name: string; line: string }> = {
-  lane: { name: 'Road', line: 'Road — the horde marches here. Post heroes beside it.' },
+  lane: { name: 'Road', line: 'Road — the horde marches here. Post beside it.' },
   forest: { name: 'Forest', line: 'Forest — too thick to stand in.' },
   rock: { name: 'Rock', line: 'Rock — nothing can stand here.' },
   water: { name: 'Lake', line: 'Lake — heroes can’t stand in water.' },
@@ -317,7 +318,7 @@ export const BLOCK_COPY: Record<TerrainKind, { name: string; line: string }> = {
  */
 export const ROOM_COPY = {
   name: 'Too close',
-  line: 'Too close — a hero with a sword, axe or hammer swings all round it, so keep the tiles next to it clear.',
+  line: 'Too close — a hero with a sword, axe or hammer needs the tiles beside it clear.',
 }
 
 /**
@@ -348,17 +349,17 @@ export const TERRAIN_RULES: Record<TerrainRuleId, TerrainRule> = {
   flooded: {
     id: 'flooded',
     name: 'Flooded meadow',
-    blurb: 'Lakes have spread over the grass. Fewer tiles to post on near the bends.',
+    blurb: 'Lakes cover tiles near the bends.',
   },
   wildfire: {
     id: 'wildfire',
     name: 'Wildfire',
-    blurb: 'Patches of the field are burning. No hero can stand in the flames.',
+    blurb: 'Fires burn on the field. No hero can stand in them.',
   },
   quarry: {
     id: 'quarry',
     name: 'Quarry boulders',
-    blurb: 'Boulders from the quarry lie across the field. Fewer tiles to post on.',
+    blurb: 'Quarry boulders block more tiles.',
   },
   hexed: {
     id: 'hexed',
@@ -384,6 +385,58 @@ export const COMPOSITE_RULES: Partial<Record<TerrainRuleId, readonly TerrainRule
 }
 
 export const TERRAIN_RULE_IDS = Object.keys(TERRAIN_RULES) as TerrainRuleId[]
+
+/**
+ * A road's ground, said as what it DOES to the field (October 2026; the
+ * designer, on the home card's "Wildfire" / "Quarry boulders" chips: "I don't
+ * know what that means?"). The place-name told a player nothing unless they
+ * already knew the rule, so the home card's Ground row says the effect, in a
+ * few words, with the hazard's own mark. One table: the home card reads it,
+ * and anything else that names a road's ground must read it too.
+ *
+ * Every line says only what the rule does (`TERRAIN_RULES` blurbs,
+ * `hazards.ROUTE_HAZARDS`): fire and lakes are tiles no hero can stand on;
+ * the quarry lays more boulders; the curse rule curses more of the best
+ * ground, where a hero deals {@link CURSED_DAMAGE_PCT}% less.
+ */
+export type GroundMark = 'fire' | 'water' | 'rock' | 'curse'
+export interface GroundEffect {
+  /** The hazard's noun, for a road that deals one of several ("Lakes or fires …"). */
+  noun: string
+  /** The effect in a few words, for a row ≤ 30 characters. */
+  effect: string
+  /** The sentence an accessible name reads. */
+  line: string
+  /** Its marks, in the order drawn. */
+  marks: readonly GroundMark[]
+}
+/** How much less a hero on cursed ground deals, in percent (`hazards.CURSED_DAMAGE_MULT`). */
+export const CURSED_DAMAGE_PCT = Math.round((1 - CURSED_DAMAGE_MULT) * 100)
+export const GROUND_EFFECTS: Record<TerrainRuleId, GroundEffect> = {
+  wildfire: { noun: 'Fires', effect: 'Fires block posts', line: 'Patches of the field burn: no hero can stand in them.', marks: ['fire'] },
+  flooded: { noun: 'Lakes', effect: 'Lakes block posts', line: 'Lakes cover tiles near the bends: no hero can stand in them.', marks: ['water'] },
+  quarry: { noun: 'Boulders', effect: 'Extra boulders block posts', line: 'More boulders lie across the field: fewer tiles to post on.', marks: ['rock'] },
+  hexed: {
+    noun: 'Curses',
+    effect: `More cursed tiles · −${CURSED_DAMAGE_PCT}% dmg`,
+    line: `More of the best ground is cursed: a hero there deals ${CURSED_DAMAGE_PCT}% less damage.`,
+    marks: ['curse'],
+  },
+  sovereign: { noun: 'Every hazard', effect: 'Every hazard at once', line: TERRAIN_RULES.sovereign.blurb, marks: ['fire', 'water', 'rock', 'curse'] },
+}
+
+/** A road's ground effect: its one rule's, or — a road that deals one of two ("Fords and fires") — both nouns. */
+export function groundEffect(rules: readonly TerrainRuleId[]): GroundEffect {
+  const fx = rules.map((r) => GROUND_EFFECTS[r])
+  if (fx.length === 1) return fx[0]
+  const nouns = fx.map((f, i) => (i ? f.noun.toLowerCase() : f.noun)).join(' or ')
+  return {
+    noun: nouns,
+    effect: `${nouns} block posts`,
+    line: `${nouns} on the field: no hero can stand in them.`,
+    marks: fx.flatMap((f) => f.marks),
+  }
+}
 
 /** The rule with this id, or null for anything this build does not know. */
 export const terrainRuleById = (id: unknown): TerrainRule | null =>

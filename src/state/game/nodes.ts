@@ -30,7 +30,6 @@ export function completeNode(get: GetState, set: SetState, nodeId: string): void
       event: null,
       merchant: null,
       shrineOffer: null,
-      recruitOptions: [],
       screen: 'map',
       ...CLEAR_SHELL,
     })
@@ -51,7 +50,6 @@ export function completeNode(get: GetState, set: SetState, nodeId: string): void
     event: null,
     merchant: null,
     shrineOffer: null,
-    recruitOptions: [],
     screen: 'map',
     ...CLEAR_SHELL,
   })

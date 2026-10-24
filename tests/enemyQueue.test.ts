@@ -102,9 +102,11 @@ describe('enemy queue (G2-2)', () => {
       ['torch2', 1, false],
       ['torch5', 1, true],
     ])
-    expect(lineUpWords(entries)).toBe('Bomber ×2, Torch Goblin ×1, Warlord Grukk ×1')
+    // Named as the road's clan does (the default clan with none given — never the plain goblin's name).
+    expect(lineUpWords(entries)).toBe('Firepot Bomber ×2, Cinder Goblin ×1, Chief Scorchgut ×1')
     // An elite draws as its base goblin.
-    expect(lineUp([{ typeId: 'barrel3_plated', group: 0 }])[0].art).toBe('barrel3')
+    expect(lineUp([{ typeId: 'barrel3_plated', group: 0 }])[0].art).toBe('cinder_barrel3')
+    expect(lineUp([{ typeId: 'barrel3_plated', group: 0 }], 'delve')[0].art).toBe('delve_barrel3')
   })
 
   it('chipsThatFit: at most three kinds, and room for "+N" when some are left out', () => {

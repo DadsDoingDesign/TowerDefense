@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { frontierScrollTop } from '../src/ui/shell/mapFocus'
+import { frontierScrollTop, openingFocus, useMapFocus } from '../src/ui/shell/mapFocus'
 
 /*
  * Oct 2026 audit, 3.7: the run map scrolls so the reachable row is fully on
@@ -32,5 +32,22 @@ describe('the run map keeps the reachable row in view', () => {
 
   it('never scrolls past the top of the map', () => {
     expect(frontierScrollTop({ curY: 62, reachYs: [], box: 600 })).toBe(0)
+  })
+})
+
+describe('the stop the map opens on (Oct 2026 review)', () => {
+  it('is the first stop you can still march to', () => {
+    expect(openingFocus(['n2-0', 'n2-1'], [])).toBe('n2-0')
+    expect(openingFocus(['n2-0', 'n2-1'], ['n2-0'])).toBe('n2-1')
+  })
+  it('is nothing when the road ahead is closed', () => {
+    expect(openingFocus([], [])).toBeNull()
+    expect(openingFocus(['n2-0'], ['n2-0'])).toBeNull()
+  })
+  it('an offered focus is the map’s, so a tap on it is still a look', () => {
+    useMapFocus.getState().offer('n2-0')
+    expect(useMapFocus.getState()).toMatchObject({ nodeId: 'n2-0', auto: true })
+    useMapFocus.getState().focus('n2-0')
+    expect(useMapFocus.getState()).toMatchObject({ nodeId: 'n2-0', auto: false })
   })
 })

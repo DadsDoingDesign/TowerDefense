@@ -524,7 +524,8 @@ const SHOTS = [
       await p.evaluate(() => {
         const h = window.__h
         h.get().newRun(); h.get().pickStartingHero('fighter')
-        h.set({ roster: h.roster(), event: { kind: 'recruit', nodeId: 'n1' }, recruitOptions: [h.sentinels.createSentinel('rogue'), h.sentinels.createSentinel('mystic')] })
+        // A hire is made at a city (the gameplay pass): the Crossroads with candidates on it.
+        h.set({ roster: h.roster(), screen: 'crossroads', crossroads: { recruits: [h.sentinels.createSentinel('rogue'), h.sentinels.createSentinel('mystic'), h.sentinels.createSentinel('fighter')], mutations: [], mutationHeroId: null } })
       })
       await settle(p, 400)
       await shot(p, '06-modals', '12-recruit', vp)
@@ -538,7 +539,7 @@ const SHOTS = [
         const h = window.__h
         h.get().newRun(); h.get().pickStartingHero('fighter')
         const full = ['fighter', 'rogue', 'mystic', 'fighter', 'rogue'].map((a) => h.sentinels.createSentinel(a))
-        h.set({ roster: full, event: { kind: 'recruit', nodeId: 'n1' }, recruitOptions: [h.sentinels.createSentinel('rogue')] })
+        h.set({ roster: full, screen: 'crossroads', crossroads: { recruits: [h.sentinels.createSentinel('rogue'), h.sentinels.createSentinel('mystic'), h.sentinels.createSentinel('fighter')], mutations: [], mutationHeroId: null } })
       })
       await settle(p, 400)
       await shot(p, '06-modals', '13-recruit-roster-full', vp)

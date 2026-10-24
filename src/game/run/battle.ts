@@ -50,8 +50,8 @@ const XP_KIND: Record<EncounterKind, number> = { normal: 1, elite: 1.4, boss: 1.
 
 /**
  * A stop still drills the company: every hero gains this share of a plain
- * fight's XP for the layer when the company consumes a merchant, shrine,
- * recruit or campfire stop. A fight pays more — the XP is still the price of
+ * fight's XP for the layer when the company consumes a merchant, shrine or
+ * campfire stop. A fight pays more — the XP is still the price of
  * skipping one — but a stop is no longer a dead loss on the level curve, which
  * made a stop-first route a walk into the act-2 boss two levels short.
  *
@@ -60,8 +60,13 @@ const XP_KIND: Record<EncounterKind, number> = { normal: 1, elite: 1.4, boss: 1.
  * 15–35% band, because it reached act 3 levels short. At 0.55 it wins 20.3%
  * (n=600) while the fight-first lines move ≤2pt: a fight still pays nearly
  * twice a stop's XP, plus its gold and card. §6 has no stops, so it cannot move.
+ *
+ * 0.55 → **0.7** (the gameplay pass): with hires only at cities the stop-first
+ * line lost the recruit stops it leaned on, and read 11% at n=240 (14.7% at
+ * n=600) against the re-gated 12–25% band. A first-timer walks the stops; the
+ * drill is what keeps that walk winnable.
  */
-export const STOP_XP_SHARE = 0.55
+export const STOP_XP_SHARE = 0.7
 export const stopXp = (depth: number): number => Math.round(waveXp(depth, 'normal') * STOP_XP_SHARE)
 
 /** Level-XP one fielded hero earns, on average, for clearing a wave at `depth`. */

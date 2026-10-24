@@ -77,7 +77,7 @@ export function describeMods(m: EffectMods): string[] {
   else if (m.critChanceAdd) out.push(`${m.critChanceAdd >= 0 ? '+' : ''}${pct(m.critChanceAdd)} crit chance`)
   if (m.critMultAdd) out.push(`${m.critMultAdd >= 0 ? '+' : ''}${pct(m.critMultAdd)} crit damage`)
   if (m.splashAdd) out.push(`${m.splashAdd >= 0 ? '+' : ''}${m.splashAdd} splash radius`)
-  if (m.pierce) out.push(`pierces ${m.pierce} extra ${m.pierce === 1 ? 'enemy' : 'enemies'}`)
+  if (m.pierce) out.push(m.pierce >= 50 ? 'pierces its whole path' : `pierces ${m.pierce} extra ${m.pierce === 1 ? 'enemy' : 'enemies'}`)
   if (m.execute) out.push(`executes below ${pct(m.execute)} HP`)
   if (m.burn) out.push(`burns ${Math.round(m.burn.dps)}/s for ${m.burn.dur}s`)
   // Only meaningful alongside a burn, and it changes WHO burns rather than by
@@ -122,6 +122,33 @@ export function describeMods(m: EffectMods): string[] {
   if (m.openingRush) out.push(`first ${m.openingRush.dur}s of a wave: ${pct(m.openingRush.rate)} faster attacks`)
   if (m.leakWard) out.push(`the first ${m.leakWard} raiders to reach your wagons each wave steal nothing`)
   if (m.burnSpreadOnDeath) out.push('a burning enemy that dies spreads its fire to its neighbours')
+  // The peoples' kit (Oct 2026): the number and what it touches.
+  if (m.holdAdd) out.push(`holds ${m.holdAdd} more ${m.holdAdd === 1 ? 'enemy' : 'enemies'}`)
+  if (m.rateAura) out.push(`heroes near it attack ${pct(m.rateAura.rateMult - 1)} faster`)
+  if (m.vsPlated) out.push(`${pct(m.vsPlated)} more to plated enemies`)
+  if (m.vsWarded) out.push(`${pct(m.vsWarded)} more to warded enemies`)
+  if (m.critBurn) out.push(`crits burn ${Math.round(m.critBurn.dps)}/s for ${m.critBurn.dur}s`)
+  if (m.doubleEvery) out.push(`every ${ordinal(m.doubleEvery)} attack hits twice`)
+  if (m.killReady) out.push('each kill readies its next attack')
+  if (m.chainEvery) out.push(`every ${ordinal(m.chainEvery.every)} attack jumps to ${m.chainEvery.chains} more for ${pct(m.chainEvery.dmgFrac)}`)
+  if (m.spitEvery) out.push(`every ${ordinal(m.spitEvery.every)} attack poisons the ${m.spitEvery.count} nearest ${Math.round(m.spitEvery.dps)}/s`)
+  if (m.root) out.push(m.root.count >= 50 ? `roots what it hits for ${m.root.dur}s` : `roots ${m.root.count} it hits for ${m.root.dur}s`)
+  // The fusions' twists (Oct 2026): each line is the rule the engine applies.
+  if (m.ricochet) out.push(`crits bounce to 1 more enemy for ${pct(m.ricochet)}`)
+  if (m.overkill) out.push(`a kill's excess damage carries ${pct(m.overkill)} to the nearest enemy`)
+  if (m.arcCarry) out.push('its arcs carry its burn and slow')
+  if (m.critFreeze) out.push(`+${pct(m.critFreeze.chance)} crit on slowed enemies; those crits deal ${pct(m.critFreeze.bonus)} more and freeze them ${m.critFreeze.dur}s`)
+  if (m.focusStack) out.push(`each hit on an enemy makes the next on it +${pct(m.focusStack.step)}, to +${pct(m.focusStack.cap)}`)
+  if (m.heldBurst) out.push(`a held enemy that dies bursts ${pct(m.heldBurst.frac)} of its hit around it`)
+  if (m.firstHit) out.push(`its first hit on each enemy deals ${pct(m.firstHit)} more`)
+  if (m.contagion) out.push(`poisoned enemies spread it to ${m.contagion.count} near when they die`)
+  if (m.deathBurst) out.push(`enemies it set burning burst ${pct(m.deathBurst.frac)} of its hit when they die`)
+  if (m.fanEvery) out.push(`every ${ordinal(m.fanEvery.every)} attack also shoots ${m.fanEvery.count} more for ${pct(m.fanEvery.frac)}`)
+  if (m.executeReady) out.push('an execution readies its next attack')
+  if (m.frostSplash) out.push(`hits on slowed enemies splinter ${pct(m.frostSplash.frac)} to those near`)
+  if (m.critAura) out.push(`heroes near it crit +${pct(m.critAura.add)}`)
+  if (m.quakeEvery) out.push(`every ${ordinal(m.quakeEvery.every)} attack shakes enemies near its target for ${pct(m.quakeEvery.frac)}`)
+  if (m.frenzy) out.push(`each kill +${pct(m.frenzy.rate)} attack speed for the wave, to +${pct(m.frenzy.cap)}`)
   return out
 }
 

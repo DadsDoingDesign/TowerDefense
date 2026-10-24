@@ -27,8 +27,15 @@ export function subscribeFatal(fn: Listener): () => void {
  */
 export function reportFatal(err: unknown, where: string): void {
   if (current) return
-  const e = err instanceof Error ? err : new Error(String(err))
-  e.message = `[${where}] ${e.message}`
+  let e = err instanceof Error ? err : new Error(String(err))
+  try {
+    e.message = `[${where}] ${e.message}`
+  } catch {
+    // A DOMException's message is read-only: wrap it rather than throw here.
+    const wrapped = new Error(`[${where}] ${e.name}: ${e.message}`)
+    wrapped.stack = e.stack
+    e = wrapped
+  }
   current = e
   // Still log it: the recovery screen is for the player, the console is for us.
   console.error(e)

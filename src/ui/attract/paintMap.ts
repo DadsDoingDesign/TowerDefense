@@ -21,12 +21,12 @@ import { companyById, type CompanyId } from '../../game/data/companies'
 import { bannerPalette, bannerRows, type BannerLook } from '../../game/data/banner'
 import { OUTLINE, pixelRuns } from '../../game/data/pixelArt'
 import { RNG } from '../../game/core/rng'
-import { glowAlpha, glowWidth, pulseIndex, type MapGeometry, type Pulse, type RoadView } from './mapRules'
+import { glowAlpha, glowWidth, litBy, pulseIndex, seasonFor, type MapFocus, type MapGeometry, type MapSeason, type Pulse, type RoadView } from './mapRules'
 
 /** The night palette, dusk-lifted (`trade/NOTES.md` § Round 2). */
 const NIGHT = {
   grass: ['#1d2a1f', '#212f22', '#253425', '#2a3a29'],
-  forest: ['#0f1912', '#172719', '#223823'],
+  forest: ['#0e170f', '#1a2d1b', '#2a4428'],
   trunk: '#2a1c12',
   water: ['#122230', '#152837'],
   foam: '#2d5266',
@@ -37,11 +37,34 @@ const NIGHT = {
   roadEdge: '#16100a',
   unlit: '#6a5638',
   keep: { wall: '#7a6648', roof: '#3a2614', flag: '#e0ac4c' },
+  // A town's roof: warm thatch-and-tile at night, so a house reads by its roof first.
+  townRoof: '#7a3f24',
   pulseCore: '#fff3c4',
   window: '#f5c451',
 } as const
 
-const PINE = ['..1..', '.121.', '.121.', '12221', '.010.', '00100', '..t..']
+/**
+ * A pine, 5 × 7: three tiers lit from the upper left (`2` the lit side, `0`
+ * the shade). The marks critique (Oct 2026): the old one was lit in the
+ * middle and darker than the grass at its foot, so a wood read as black
+ * blots; this one is still dim — it frames the roads — but reads as trees.
+ */
+const PINE = ['..2..', '.221.', '.211.', '22110', '.210.', '21100', '..t..']
+
+/**
+ * A peak on the ore road, 13 × 7 (`2` snow, `1` the lit west face, `0` the
+ * shade): a summit with a shoulder and a ragged snowline. It was a 45° wedge
+ * with a flat cap, which read as a tent (the marks critique).
+ */
+const PEAK = ['.....2.......', '....220......', '...2120..2...', '...11000220..', '..1110000100.', '.111100000000', '1111000000000']
+
+/**
+ * The towns, by their foot's middle: a house with a pitched roof (`r`), its
+ * walls (`w`) and a lit window (`y`); the destination is wider, with two. They
+ * were flat boxes, which read as crates beside the road (the marks critique).
+ */
+const TOWN = ['...o...', '..oro..', '.orrro.', 'orrrrro', 'owwwwwo', 'owwywwo', 'ooooooo']
+const CITY = ['....o....', '...oro...', '..orrro..', '.orrrrro.', 'orrrrrrro', 'owwwwwwwo', 'owywwwywo', 'ooooooooo']
 
 const hexRgb = (h: string): [number, number, number] => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]
 const rgba = (h: string, a: number): string => `rgba(${hexRgb(h).join(',')},${Math.max(0, Math.min(1, a))})`
@@ -227,9 +250,11 @@ function* terrainSteps(geo: MapGeometry): Generator<void, HTMLCanvasElement, voi
     if (!free(x, y)) continue
     const nearPeaks = Math.hypot(x - metals[0], y - metals[1]) < Math.min(W, H) * 0.3
     if (nearPeaks && R.next() > 0.25) {
-      for (let j = 0; j < 6; j++) {
-        for (let i = -j; i <= j; i++) {
-          if (free(x + i, y + j)) set(x + i, y + j, j < 2 ? P.rock[2] : i < 0 ? P.rock[1] : P.rock[0])
+      for (let j = 0; j < PEAK.length; j++) {
+        const row = PEAK[j]
+        for (let i = 0; i < row.length; i++) {
+          const ch = row[i]
+          if (ch !== '.' && free(x + i - 5, y + j)) set(x + i - 5, y + j, P.rock[+ch])
         }
       }
     } else if (n3(x / 14, y / 14) > 0.45) {
@@ -279,26 +304,31 @@ function drawTowns(ctx: CanvasRenderingContext2D, geo: MapGeometry, roads: reado
   for (const r of geo.routes) {
     const v = roads.find((q) => q.company === r.company)!
     const lit = v.light > 0
+    const ink: Record<string, string> = {
+      o: OUTLINE,
+      r: lit ? NIGHT.townRoof : mix(NIGHT.unlit, '#000000', 0.3),
+      w: lit ? NIGHT.keep.wall : NIGHT.unlit,
+      y: lit ? NIGHT.window : NIGHT.unlit,
+    }
     r.towns.forEach(([x, y], k) => {
       const big = k === 2
-      const w = big ? 7 : 5
-      const h = big ? 6 : 4
-      const left = x - Math.ceil(w / 2)
-      ctx.fillStyle = OUTLINE
-      ctx.fillRect(left - 1, y - h - 1, w + 2, h + 2)
-      ctx.fillStyle = lit ? NIGHT.keep.wall : NIGHT.unlit
-      ctx.fillRect(left, y - h, w, h)
-      ctx.fillStyle = lit ? NIGHT.keep.roof : mix(NIGHT.unlit, '#000000', 0.3)
-      ctx.fillRect(left, y - h, w, 2)
+      const art = big ? CITY : TOWN
+      const left = x - Math.floor(art[0].length / 2)
+      const top = y - art.length + 1
+      art.forEach((row, j) => {
+        for (let i = 0; i < row.length; i++) {
+          const fill = ink[row[i]]
+          if (!fill) continue
+          ctx.fillStyle = fill
+          ctx.fillRect(left + i, top + j, 1, 1)
+        }
+      })
       if (!lit) return
-      ctx.fillStyle = NIGHT.window
-      ctx.fillRect(x - 1, y - 2, 1, 1)
-      if (big) ctx.fillRect(x + 1, y - 2, 1, 1)
-      // The company's pennant over a town on a road you have worked.
+      // The company's pennant over a town on a road you have worked, on its roof's peak.
       ctx.fillStyle = OUTLINE
-      ctx.fillRect(x, y - h - 6, 1, 5)
+      ctx.fillRect(x, top - 4, 1, 4)
       ctx.fillStyle = colorOf(r.company)
-      ctx.fillRect(x + 1, y - h - 6, 3, 2)
+      ctx.fillRect(x + 1, top - 4, 3, 2)
     })
   }
 }
@@ -320,10 +350,75 @@ function drawHub(ctx: CanvasRenderingContext2D, geo: MapGeometry, banner: Banner
   // Your militia's banner flies over the HQ.
   const bx = hx + 8
   const by = hy - 21
-  for (const r of pixelRuns(bannerRows(banner.shape, banner.charge), bannerPalette(banner.tincture))) {
+  for (const r of pixelRuns(bannerRows(banner), bannerPalette(banner))) {
     ctx.fillStyle = r.fill
     ctx.fillRect(bx + r.x, by + r.y, r.w, 1)
   }
+}
+
+/** A per-pixel hash in [0, 1): the speckle is the same on every bake. */
+const hash01 = (x: number, y: number, salt: number): number => {
+  let h = (Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(salt, 2246822519)) | 0
+  h = Math.imul(h ^ (h >>> 13), 1274126177)
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296
+}
+const MIST_NOISE = valueNoise(53)
+const SEASONED = new WeakMap<HTMLCanvasElement, Map<string, HTMLCanvasElement>>()
+
+/**
+ * The map's pixels in a company's season (`mapRules.MAP_SEASONS`): the same
+ * bake — the same trees, the same shore — with a speckle on the open grass
+ * and the tree-tops, a low mist, then the season's washes. Cached per bake
+ * and season, so a focus change costs one `drawImage` after the first.
+ */
+export function seasonPixels(pixels: HTMLCanvasElement, season: MapSeason | null): HTMLCanvasElement {
+  if (!season) return pixels
+  let byName = SEASONED.get(pixels)
+  if (!byName) SEASONED.set(pixels, (byName = new Map()))
+  const hit = byName.get(season.name)
+  if (hit) return hit
+  const W = pixels.width
+  const H = pixels.height
+  const c = canvas(W, H)
+  const g = c.getContext('2d')!
+  g.drawImage(pixels, 0, 0)
+  if (season.grass || season.trees || season.mist) {
+    const img = g.getImageData(0, 0, W, H)
+    const px = new Uint32Array(img.data.buffer)
+    const grass = new Set(P.grass)
+    const top = P.forest[2]
+    const fleck = season.grass?.colors.map(packed) ?? []
+    const snow = season.trees ? packed(season.trees.color) : 0
+    const mist = season.mist ? hexRgb(season.mist.color) : null
+    const d = img.data
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const i = y * W + x
+        const v = px[i]
+        if (season.grass && grass.has(v) && hash01(x, y, 1) < season.grass.share) px[i] = fleck[Math.floor(hash01(x, y, 2) * fleck.length)]
+        else if (season.trees && v === top && hash01(x, y, 3) < season.trees.share) px[i] = snow
+        if (mist && season.mist) {
+          const low = Math.max(0, Math.min(1, (y / H - (1 - season.mist.reach)) / season.mist.reach))
+          const a = season.mist.alpha * low * (0.35 + 0.65 * MIST_NOISE(x / 46, y / 12))
+          if (a > 0.004) {
+            const j = i * 4
+            d[j] += (mist[0] - d[j]) * a
+            d[j + 1] += (mist[1] - d[j + 1]) * a
+            d[j + 2] += (mist[2] - d[j + 2]) * a
+          }
+        }
+      }
+    }
+    g.putImageData(img, 0, 0)
+  }
+  for (const w of season.washes) {
+    g.globalCompositeOperation = w.op
+    g.fillStyle = rgba(w.color, w.alpha)
+    g.fillRect(0, 0, W, H)
+  }
+  g.globalCompositeOperation = 'source-over'
+  byName.set(season.name, c)
+  return c
 }
 
 /** How many chain pixels out of the hub a road's glow starts. */
@@ -354,21 +449,55 @@ function radial(g: CanvasRenderingContext2D, x: number, y: number, r: number, co
   g.fillRect(x - r, y - r, r * 2, r * 2)
 }
 
+/** How much the roads not in focus keep of their light (the home's dock lights one road, October 2026). */
+export const UNFOCUSED_LIGHT = 0.3
+/** The night laid over the map round a focused road (or every road): the rest sinks, the roads stay lit. */
+const FOCUS_DIM = 'rgba(6,8,14,0.5)'
+
 /**
  * The pixels scaled by `k` with the static light over them. `skip` leaves one
  * road's glow out (it is being brightened, and draws its own).
+ *
+ * `focus` is the road the home's dock (or a signpost) has picked: the rest of
+ * the map sinks under a night wash, the road's own pixels and towns are laid
+ * back over it undimmed, and its glow burns at least as bright as Standing 5
+ * would — a road you have never worked lights up in its colour too, so a tap
+ * always shows where it runs. The others keep {@link UNFOCUSED_LIGHT} of theirs.
+ * `'all'` (the dock's Buy Company slot: the Sovereign Route carries every
+ * good) lights every road so, none dimmed, and only the land between sinks.
  */
-export function bakeBase(pixels: HTMLCanvasElement, geo: MapGeometry, roads: readonly RoadView[], k: number, skip: CompanyId | null = null): HTMLCanvasElement {
+export function bakeBase(
+  pixels: HTMLCanvasElement,
+  geo: MapGeometry,
+  roads: readonly RoadView[],
+  k: number,
+  skip: CompanyId | null = null,
+  focus: MapFocus = null,
+): HTMLCanvasElement {
   const c = canvas(geo.W * k, geo.H * k)
   const g = c.getContext('2d')!
   g.imageSmoothingEnabled = false
+  // The focused company's season, over the same bake (none for no focus or every road).
+  pixels = seasonPixels(pixels, seasonFor(focus))
   g.drawImage(pixels, 0, 0, geo.W * k, geo.H * k)
+  const lit = geo.routes.filter((r) => litBy(focus, r.company))
+  if (lit.length) {
+    g.fillStyle = FOCUS_DIM
+    g.fillRect(0, 0, c.width, c.height)
+    // The focused roads, their towns and their pennants, back at full strength.
+    const copy = (x: number, y: number, w: number, h: number) => g.drawImage(pixels, x, y, w, h, x * k, y * k, w * k, h * k)
+    for (const r of lit) for (const [x, y] of r.chain) copy(x - 1, y - 1, 3, 3)
+    for (const r of lit) for (const [x, y] of r.towns) copy(x - 5, y - 13, 10, 15)
+  }
   g.globalCompositeOperation = 'lighter'
   for (const r of geo.routes) {
     const v = roads.find((q) => q.company === r.company)!
-    if (!v.light) continue
-    if (r.company !== skip) strokeGlow(g, r.chain, colorOf(r.company), v.light, k)
-    r.towns.forEach(([x, y], i) => radial(g, x * k, (y - 3) * k, (10 + i * 4) * k, '#f5c451', 0.18 + v.light * 0.02))
+    const on = litBy(focus, r.company)
+    const light = on ? Math.max(v.light, v.state === 'uncharted' ? 2 : 5) : v.light
+    if (!light) continue
+    const mul = !focus || on ? 1 : UNFOCUSED_LIGHT
+    if (r.company !== skip) strokeGlow(g, r.chain, colorOf(r.company), light, k, on ? 1.5 : mul, on ? 1.15 : 1)
+    if (v.light) r.towns.forEach(([x, y], i) => radial(g, x * k, (y - 3) * k, (10 + i * 4) * k, '#f5c451', (0.18 + v.light * 0.02) * (on ? 1.3 : mul)))
   }
   radial(g, geo.hub[0] * k, geo.hub[1] * k, 34 * k, '#f5c451', 0.22)
   g.globalCompositeOperation = 'source-over'
@@ -411,7 +540,7 @@ export function glowSprite(color: string, k: number): HTMLCanvasElement {
   return c
 }
 
-/** Draw one frame: the base, any brighten layers, then the traffic at time `t`. */
+/** Draw one frame: the base (crossfading out of the last focus's), any brighten layers, then the traffic at time `t`. */
 export function drawFrame(
   ctx: CanvasRenderingContext2D,
   base: HTMLCanvasElement,
@@ -421,10 +550,23 @@ export function drawFrame(
   k: number,
   t: number,
   brighten?: (BrightenLayers & { glowA: number; flashA: number }) | null,
+  o: {
+    /** The base a focus change is fading out of, and how much of it is left (0–1). */
+    fading?: { base: HTMLCanvasElement; a: number } | null
+    /** The focused road (or every road): the others' traffic runs dim. */
+    focus?: MapFocus
+  } = {},
 ): void {
+  const { fading, focus = null } = o
+  const dim = (c: CompanyId) => !!focus && !litBy(focus, c)
   ctx.globalCompositeOperation = 'source-over'
   ctx.globalAlpha = 1
   ctx.drawImage(base, 0, 0)
+  if (fading && fading.a > 0.01) {
+    ctx.globalAlpha = fading.a
+    ctx.drawImage(fading.base, 0, 0)
+    ctx.globalAlpha = 1
+  }
   ctx.globalCompositeOperation = 'lighter'
   if (brighten) {
     ctx.globalAlpha = brighten.glowA
@@ -440,7 +582,7 @@ export function drawFrame(
     const ch = routes.get(p.company)!.chain
     const [x, y] = ch[pulseIndex(p, ch.length, t)]
     const s = sprites.get(p.company)!
-    ctx.globalAlpha = p.faint ? 0.58 : 1
+    ctx.globalAlpha = (p.faint ? 0.58 : 1) * (dim(p.company) ? UNFOCUSED_LIGHT : 1)
     ctx.drawImage(s, (x + 1) * k - s.width / 2, (y + 1) * k - s.height / 2)
   }
   ctx.globalCompositeOperation = 'source-over'
@@ -449,6 +591,7 @@ export function drawFrame(
     const ch = routes.get(p.company)!.chain
     const j = pulseIndex(p, ch.length, t)
     const color = colorOf(p.company)
+    ctx.globalAlpha = dim(p.company) ? 0.45 : 1
     // The tail: five pixels behind, fading in steps.
     for (let n = 1; n <= 5; n++) {
       const q = ch[j - n * p.dir]
@@ -480,4 +623,5 @@ export function drawFrame(
       px(x, y + z - 1, z, 1)
     }
   }
+  ctx.globalAlpha = 1
 }

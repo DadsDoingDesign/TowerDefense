@@ -9,6 +9,7 @@ import { streamRng } from '../../game/core/rng'
 import type { MetaBonuses } from '../metaStore'
 import { useMetaStore } from '../metaStore'
 import { hiresTrained } from '../../game/run/relics'
+import { HALL_SLATE_SIZE, SLATE_SIZE } from '../../game/run/recruits'
 import { chooseFieldOrientation, type FieldOrientation } from '../../game/data/maps'
 import { recruitSkill } from '../../game/run/skills'
 import { skillPoolFor } from '../../game/run/watch'
@@ -76,12 +77,14 @@ export type RunFocus = { company: CompanyId | null; boost: number } | null
 export const skillRun: { seed: number; pool: readonly string[]; items: readonly string[] } = { seed: 0, pool: [], items: [] }
 export const dealSkill = (heroId: string): string | null => recruitSkill(skillRun.seed, heroId, skillRun.pool)
 
-/** The hub facts a mid-run hire reads (Seasoned Recruits, Free Companies), and its first skill. */
+/** The hub facts a city's hire reads (the Hiring Hall), and its first skill. */
 export const recruitHub = (relics: readonly string[] = []) => ({
   // Nothing the HQ sells raises a hire's stats (Seasoned Recruits retired).
   statBonus: 0,
-  // Free Companies, or the Mercenary Charter relic (Phase 3b).
+  // The Hiring Hall (it was Free Companies), or the Mercenary Charter relic (Phase 3b).
   trained: hiresTrained(runUnlocked('freeCompanies'), relics),
+  // The Hiring Hall: one more candidate at every city.
+  slate: runUnlocked('freeCompanies') ? HALL_SLATE_SIZE : SLATE_SIZE,
   skillFor: dealSkill,
   itemPool: skillRun.items,
 })

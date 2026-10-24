@@ -25,7 +25,12 @@
  */
 import type { Vec2 } from '../core/vec'
 import type { GameMap } from '../types'
+import type { FieldSeason, PropKind, PropRule, PropWhere } from '../data/fieldSeasons'
 import { pixmap } from './pixmap'
+import { CARAVAN_BOX, caravanLayout } from './caravan'
+import { ACCENT_KEEP, ACCENT_PAINT, ACCENT_SHIFT, markAccent, seasonFinish, seasonGround, seasonOnDeco, spriteAlpha } from './season'
+import { broadleaf, propArt, repaintFoliage, repaintRock, seasonArtStamp } from './seasonArt'
+import { hash01, hashStr, valueNoise } from './seasonHash'
 import { onSpritesReady, spriteFor } from './sprites'
 import { getActiveStyle } from './themes'
 import { darken, lighten, mix, roundRect, strokePolyline, toRgb } from './paint'
@@ -108,6 +113,18 @@ export function drawnRoad(map: GameMap): Vec2[] {
  */
 const TERRAIN_CACHE_SIZE = 2
 let terrainCache: { key: string; canvas: HTMLCanvasElement }[] = []
+
+/**
+ * The season the battlefield wears (Oct 2026, `data/fieldSeasons.ts`): the
+ * run's hiring company's, set by `BattleCanvas`; null is the plain field. It
+ * is part of the bake's key, so a change re-bakes once and costs nothing per
+ * frame after.
+ */
+let fieldSeason: FieldSeason | null = null
+export function setFieldSeason(season: FieldSeason | null): void {
+  fieldSeason = season
+}
+export const activeFieldSeason = (): FieldSeason | null => fieldSeason
 onSpritesReady(() => {
   terrainCache = []
 })
@@ -125,19 +142,42 @@ function bakeTerrain(map: GameMap): HTMLCanvasElement | null {
   const ctx = c.getContext('2d', { willReadFrequently: true })
   if (!ctx) return null
   ctx.imageSmoothingEnabled = false
+  // The season's working state for this bake (`render/season.ts`): what it
+  // must not touch, and what it painted in its own colour.
+  bakeSeason = fieldSeason
+    ? { season: fieldSeason, W, keep: keepMask(map, W), accent: new Uint8Array(W.w * W.h), salt: hashStr(`${map.id}|${fieldSeason.name}`), near: nearPlay(map) }
+    : null
   ctx.translate(-W.x0, -W.y0)
   const road = spriteFor('road')
   drawSpriteTerrain(ctx, map, W, grass, road, style.path.edge, style.path.fill)
   ctx.setTransform(1, 0, 0, 1, 0, 0)
+  // The season over the ground and the scenery, before the grade (so the grade
+  // still governs the enemies' reserved channels): the road and the danger
+  // ground are kept exactly as they are.
+  const bs = bakeSeason
+  bakeSeason = null
+  if (bs) seasonFinish(ctx, W.w, W.h, bs.season, bs.keep.mask, bs.accent)
   // The environment is graded AFTER the dressing goes down, so the grade
   // reaches the decoration sprites (which is where the reserved-channel
   // violation lived) and never touches a gameplay glyph. The wood darkens
   // with its distance from the playable ground in the same pass — a slope,
   // never a step, so nothing reads as a seam.
   const pr = playRect(map)
-  gradeEnvironment(ctx, W.w, W.h, { x0: pr.x0 - W.x0, y0: pr.y0 - W.y0, x1: pr.x1 - W.x0, y1: pr.y1 - W.y0 })
+  gradeEnvironment(ctx, W.w, W.h, { x0: pr.x0 - W.x0, y0: pr.y0 - W.y0, x1: pr.x1 - W.x0, y1: pr.y1 - W.y0 }, bs?.season.accent ? bs.accent : undefined)
   return c
 }
+
+/** The season's state while a bake runs (null outside one, or with no season). */
+interface BakeSeason {
+  season: FieldSeason
+  W: WorldBox
+  keep: { mask: Uint8Array; canvas: HTMLCanvasElement }
+  accent: Uint8Array
+  salt: number
+  /** Is this field point within reach of the play (`nearPlay`)? */
+  near: (x: number, y: number) => boolean
+}
+let bakeSeason: BakeSeason | null = null
 
 /** The baked world for `map` (cached), or null before the pack has decoded. */
 function bakedWorld(map: GameMap): HTMLCanvasElement | null {
@@ -145,7 +185,7 @@ function bakedWorld(map: GameMap): HTMLCanvasElement | null {
   if (!style.sprites) return null
   // The pack stamp is in the key so a re-exported sprite pack re-bakes rather
   // than leaving a terrain built from the old art on screen.
-  const key = `${style.id}:${map.id}:${map.width}x${map.height}:${decoStamp()}:${artStamp('grass')}:${artStamp('road')}`
+  const key = `${style.id}:${map.id}:${map.width}x${map.height}:${decoStamp()}:${artStamp('grass')}:${artStamp('road')}:${fieldSeason?.name ?? '-'}:${fieldSeason ? seasonArtStamp() : 0}`
   let hit = terrainCache.find((e) => e.key === key)
   if (!hit) {
     const baked = bakeTerrain(map)
@@ -231,6 +271,11 @@ export function drawField(ctx: CanvasRenderingContext2D, map: GameMap, view?: { 
 const WATER = '#47aba9'
 const FOAM = '#c6f0db'
 const FOAM_EDGE = '#458597'
+/** A burn's corner radius (Oct 2026 asset critique: 12, a tray; now nearer a round scorch). */
+const FIRE_R = 15
+/** The bank's shadow on the water, and the lake's deeper middle (the pack's water, a step and a half step down). */
+const WATER_SHADE = '#357f86'
+const WATER_DEEP = '#40a0a1'
 
 type Rect = { x0: number; y0: number; x1: number; y1: number }
 type Tile = NonNullable<GameMap['tiles']>[number]
@@ -273,6 +318,24 @@ function pieceShape(map: GameMap, is: (t: Tile) => boolean, inset: number, r: nu
     }
   }
   return { cores: [...cores.values()], bridges }
+}
+
+/** A piece's shape as ONE path (for a clip): the same cores and bridges {@link fillShape} fills. */
+function shapePath(ctx: CanvasRenderingContext2D, s: { cores: Rect[]; bridges: Rect[] }, r: number): void {
+  ctx.beginPath()
+  for (const c of s.cores) {
+    const w = c.x1 - c.x0
+    const h = c.y1 - c.y0
+    if (w <= 0 || h <= 0) continue
+    const rr = Math.max(0, Math.min(r, w / 2, h / 2))
+    ctx.moveTo(c.x0 + rr, c.y0)
+    ctx.arcTo(c.x1, c.y0, c.x1, c.y1, rr)
+    ctx.arcTo(c.x1, c.y1, c.x0, c.y1, rr)
+    ctx.arcTo(c.x0, c.y1, c.x0, c.y0, rr)
+    ctx.arcTo(c.x0, c.y0, c.x1, c.y0, rr)
+    ctx.closePath()
+  }
+  for (const b of s.bridges) if (b.x1 > b.x0 && b.y1 > b.y0) ctx.rect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0)
 }
 
 function fillShape(ctx: CanvasRenderingContext2D, s: { cores: Rect[]; bridges: Rect[] }, r: number): void {
@@ -351,6 +414,26 @@ function drawTerrainGround(ctx: CanvasRenderingContext2D, map: GameMap, green: s
       ctx.fillStyle = col
       fillShape(ctx, pieceShape(map, (t) => t.block === 'water', inset, r), r)
     }
+    // Depth (Oct 2026 asset critique: the lake was one flat teal, a pool
+    // poured into a tray): the bank's shadow along the far and the lit side
+    // (light from the upper left), so the water sits BELOW the grass, and a
+    // deeper middle.
+    {
+      const r = Math.max(6, Math.round(18 * k * 1.4))
+      const core = pieceShape(map, (t) => t.block === 'water', 7, r)
+      ctx.save()
+      shapePath(ctx, core, r)
+      ctx.clip()
+      ctx.fillStyle = WATER_SHADE
+      fillShape(ctx, core, r)
+      ctx.translate(2, 3)
+      ctx.fillStyle = WATER
+      fillShape(ctx, core, r)
+      ctx.translate(-2, -3)
+      ctx.fillStyle = WATER_DEEP
+      fillShape(ctx, pieceShape(map, (t) => t.block === 'water', 15, Math.max(4, r - 6)), Math.max(4, r - 6))
+      ctx.restore()
+    }
     // A few flat ripples, the way the pack's water is lit, kept inside each
     // tile's water.
     ctx.strokeStyle = 'rgba(198,240,219,0.55)'
@@ -370,10 +453,60 @@ function drawTerrainGround(ctx: CanvasRenderingContext2D, map: GameMap, green: s
   if (tiles.some((t) => t.block === 'fire')) {
     // Scorched earth: charcoal, with a warm rim where the grass is burning back.
     const fire = (t: Tile) => t.block === 'fire'
+    // Burnt grass round the rim (Oct 2026 asset critique: the patch was a
+    // clean rounded tray): the meadow browned in the tile's margin, and the
+    // rim's edge eaten into by char, so the burn is ragged where it meets
+    // the grass.
+    ctx.fillStyle = 'rgba(62, 36, 16, 0.3)'
+    fillShape(ctx, pieceShape(map, fire, 0, 17), 17)
     ctx.fillStyle = '#6b3a1c'
-    fillShape(ctx, pieceShape(map, fire, 3, 12), 12)
+    fillShape(ctx, pieceShape(map, fire, 3, FIRE_R), FIRE_R)
+    for (const t of tiles) {
+      if (!fire(t)) continue
+      const x0 = Math.round(t.pos.x - T / 2)
+      const y0 = Math.round(t.pos.y - T / 2)
+      for (let y = 1; y < T - 1; y++)
+        for (let x = 1; x < T - 1; x++) {
+          const edge = Math.min(x, y, T - 1 - x, T - 1 - y)
+          if (edge > 6) continue
+          const h = hash01((x0 + x) >> 1, y0 + y, 47)
+          if (h > 0.3) continue
+          ctx.fillStyle = edge <= 3 ? '#4a2c18' : '#2b1d17'
+          ctx.fillRect(x0 + x, y0 + y, 1, 1)
+        }
+    }
+    // The line where the grass is still burning: a thin ember ring round the char.
+    ctx.fillStyle = '#b04a20'
+    fillShape(ctx, pieceShape(map, fire, 5, FIRE_R - 2), FIRE_R - 2)
     ctx.fillStyle = '#2b1d17'
-    fillShape(ctx, pieceShape(map, fire, 6, 9), 9)
+    fillShape(ctx, pieceShape(map, fire, 6, FIRE_R - 3), FIRE_R - 3)
+    {
+      // The char lit from the upper left: a soot shadow under the far rim,
+      // pale ash drifted against the near one, and ash flecks across it.
+      const char = pieceShape(map, fire, 6, FIRE_R - 3)
+      ctx.save()
+      shapePath(ctx, char, FIRE_R - 3)
+      ctx.clip()
+      ctx.fillStyle = '#17100c'
+      fillShape(ctx, char, FIRE_R - 3)
+      ctx.translate(2, 2)
+      ctx.fillStyle = '#2b1d17'
+      fillShape(ctx, char, FIRE_R - 3)
+      ctx.translate(-2, -2)
+      for (const t of tiles) {
+        if (!fire(t)) continue
+        const x0 = Math.round(t.pos.x - T / 2)
+        const y0 = Math.round(t.pos.y - T / 2)
+        for (let y = 0; y < T; y += 2)
+          for (let x = 0; x < T; x += 2) {
+            const r = hash01(x0 + x, y0 + y, 49)
+            if (r > 0.05) continue
+            ctx.fillStyle = r < 0.012 ? '#5a4a40' : '#3e3028'
+            ctx.fillRect(x0 + x, y0 + y, 2, 2)
+          }
+      }
+      ctx.restore()
+    }
     for (const t of tiles) {
       if (!fire(t)) continue
       const seed = mulberry32((t.col * 7919 + t.row * 104729) >>> 0)
@@ -424,6 +557,20 @@ function drawCursedGround(ctx: CanvasRenderingContext2D, map: GameMap): void {
   fillShape(ctx, pieceShape(map, cursedOf, 2, 12), 12)
   ctx.fillStyle = CURSE_SOIL
   fillShape(ctx, pieceShape(map, cursedOf, 5, 9), 9)
+  {
+    // Sunken (Oct 2026 asset critique): the blight lies a little below the
+    // meadow, a shade under its far and lit-side rims.
+    const soil = pieceShape(map, cursedOf, 5, 9)
+    ctx.save()
+    shapePath(ctx, soil, 9)
+    ctx.clip()
+    ctx.fillStyle = '#2a261e'
+    fillShape(ctx, soil, 9)
+    ctx.translate(2, 2)
+    ctx.fillStyle = CURSE_SOIL
+    fillShape(ctx, soil, 9)
+    ctx.restore()
+  }
   for (const group of clusters(map, cursedOf)) {
     const core = boundsOf(group, T, 5)
     const seed = mulberry32((group[0].col * 3571 + group[0].row * 7919 + 17) >>> 0)
@@ -630,16 +777,108 @@ function drawSpriteTerrain(
     ctx.lineWidth = DIRT_W
     strokePolyline(ctx, pts)
   } else {
-    ctx.strokeStyle = fillColor
+    // A sunken lane (Oct 2026 asset critique: it was one flat stroke): the
+    // dirt a step darker, then the dirt again a little narrower and nudged
+    // down-right, so its far and lit-side banks hold a shade, as a trodden
+    // track lies a little below the meadow under a light from the upper left.
+    ctx.strokeStyle = darken(fillColor, 0.2)
     ctx.lineWidth = DIRT_W
+    strokePolyline(ctx, pts)
+    ctx.save()
+    ctx.translate(1, 1.5)
+    ctx.strokeStyle = fillColor
+    ctx.lineWidth = DIRT_W - 3
     strokePolyline(ctx, pts)
     ctx.strokeStyle = lighten(fillColor, 0.1)
     ctx.lineWidth = DIRT_W / 2
     strokePolyline(ctx, pts)
+    ctx.restore()
+    drawCartTracks(ctx, pts, fillColor)
   }
   drawPathDetail(ctx, dr, fillColor, green)
 
-  drawDecos(ctx, dr)
+  // The season on the bare ground, then what it lays on it (puddles,
+  // flowers, reeds' pads), then the scenery with the season's own trees and
+  // props in it.
+  const bs = bakeSeason
+  if (bs) {
+    const m = ctx.getTransform()
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    seasonGround(ctx, W.w, W.h, bs.season, bs.keep.mask, bs.accent, bs.salt)
+    ctx.setTransform(m)
+  }
+  drawWagonClearing(ctx, map)
+  const scenery = bs ? seasonScenery(map, dr, bs.season, bs.salt) : null
+  if (bs && scenery) for (const p of scenery.flat) drawProp(ctx, p, bs)
+  drawDecos(ctx, dr, scenery, wagonBox(map))
+}
+
+/**
+ * The wagon's clearing (Oct 2026 asset critique): the caravan stood in the
+ * forest margin over the baked treetops, a cart pasted on canopies with a
+ * brown wash under it. Now nothing of the scenery is drawn inside its box,
+ * and the bake lays a trodden clearing there for it to stand in.
+ */
+function wagonBox(map: GameMap): Rect {
+  const at = caravanLayout(map)
+  const pad = 4
+  return { x0: at.x + CARAVAN_BOX.left - pad, y0: at.y + CARAVAN_BOX.top - pad, x1: at.x + CARAVAN_BOX.right + pad, y1: at.y + CARAVAN_BOX.bottom + pad }
+}
+function drawWagonClearing(ctx: CanvasRenderingContext2D, map: GameMap): void {
+  const b = wagonBox(map)
+  const cx = (b.x0 + b.x1) / 2
+  const cy = b.y1 - 12
+  const rx = (b.x1 - b.x0) * 0.62
+  const ry = 22
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 1)
+  g.addColorStop(0, 'rgba(96, 74, 44, 0.62)')
+  g.addColorStop(0.72, 'rgba(96, 74, 44, 0.5)')
+  g.addColorStop(1, 'rgba(96, 74, 44, 0)')
+  ctx.save()
+  ctx.translate(cx, cy)
+  ctx.scale(rx, ry)
+  ctx.fillStyle = g
+  ctx.beginPath()
+  ctx.arc(0, 0, 1, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.restore()
+  // Wheel ruts into it from the road side, and a few tufts trodden flat.
+  ctx.fillStyle = 'rgba(58, 42, 24, 0.4)'
+  for (let x = b.x0 + 6; x < b.x1 - 6; x += 3) {
+    if (hash01(Math.round(x), Math.round(cy), 57) < 0.3) continue
+    ctx.fillRect(Math.round(x), Math.round(cy + 2), 2, 1)
+    ctx.fillRect(Math.round(x), Math.round(cy + 8), 2, 1)
+  }
+}
+const inBox = (b: Rect, x0: number, y0: number, x1: number, y1: number): boolean => x1 > b.x0 && x0 < b.x1 && y1 > b.y0 && y0 < b.y1
+
+/**
+ * The caravans' wheel tracks down the lane (a merchant road), broken where
+ * the dirt has filled them, and a few pebbles, lit on top. Placed by a hash of
+ * position along the drawn road — the dressing's own stream is untouched.
+ */
+function drawCartTracks(ctx: CanvasRenderingContext2D, pts: Vec2[], fill: string): void {
+  const track = withAlpha(darken(fill, 0.24), 0.3)
+  let k = 0
+  for (const s of samplePath(pts, 2, () => true)) {
+    k++
+    const run = hash01(k >> 4, 0, 61) < 0.8
+    if (run) {
+      ctx.fillStyle = track
+      for (const o of [-7, 7]) ctx.fillRect(Math.round(s.x + s.nx * o - 1), Math.round(s.y + s.ny * o - 1), 2, 2)
+    }
+    if (hash01(k, 1, 62) < 0.024) {
+      const o = (hash01(k, 2, 63) - 0.5) * 22
+      const x = Math.round(s.x + s.nx * o)
+      const y = Math.round(s.y + s.ny * o)
+      ctx.fillStyle = withAlpha(darken(fill, 0.35), 0.8)
+      ctx.fillRect(x, y + 1, 3, 1)
+      ctx.fillStyle = lighten(fill, 0.22)
+      ctx.fillRect(x, y - 1, 3, 2)
+      ctx.fillStyle = lighten(fill, 0.4)
+      ctx.fillRect(x, y - 1, 1, 1)
+    }
+  }
 }
 
 /** Where the lattice's lines fall: the grid's top-left corner, field px. */
@@ -999,30 +1238,351 @@ function drawPathDetail(ctx: CanvasRenderingContext2D, dr: Dressing, fill: strin
   }
 }
 
-function drawDecos(ctx: CanvasRenderingContext2D, dr: Dressing): void {
+/**
+ * What a season must not touch, as a mask over the bake (1 = keep): the road
+ * and its verge, and the danger ground — water, fire and cursed tiles — which
+ * are gameplay, read by their colour.
+ */
+function keepMask(map: GameMap, W: WorldBox): { mask: Uint8Array; canvas: HTMLCanvasElement } {
+  const c = document.createElement('canvas')
+  c.width = W.w
+  c.height = W.h
+  const g = c.getContext('2d', { willReadFrequently: true })!
+  g.translate(-W.x0, -W.y0)
+  g.lineJoin = 'round'
+  g.lineCap = 'round'
+  g.strokeStyle = '#fff'
+  // Exactly the drawn road, and exactly each danger piece's drawn shape (Oct
+  // 2026 asset critique): a kept verge round them — 4 px of the road's sides,
+  // a square 2 px past each tile — left a ring of summer grass round every
+  // road and patch in the frost's snow and the harvest's straw, a seam.
+  g.lineWidth = ROAD_W
+  strokePolyline(g, drawnRoad(map))
+  g.fillStyle = '#fff'
+  const k = (map.tile ?? 40) / 80
+  const water = (t: Tile) => t.block === 'water'
+  const fire = (t: Tile) => t.block === 'fire'
+  const rW = Math.max(6, Math.round(23 * k * 1.4))
+  fillShape(g, pieceShape(map, water, 2, rW), rW)
+  fillShape(g, pieceShape(map, fire, 3, FIRE_R), FIRE_R)
+  fillShape(g, pieceShape(map, cursedOf, 2, 12), 12)
+  const data = g.getImageData(0, 0, W.w, W.h).data
+  const out = new Uint8Array(W.w * W.h)
+  for (let i = 0; i < out.length; i++) out[i] = data[i * 4 + 3] > 0 ? 1 : 0
+  return { mask: out, canvas: c }
+}
+
+/** A seasonal prop placed in the scenery: where its foot stands, which, and which variation. */
+interface PlacedProp { x: number; y: number; kind: PropKind; v: number; flip: boolean }
+/** The season's scenery for one field: flat props on the ground, upright ones in the wood, and the shrubs they stand in for. */
+interface Scenery { flat: PlacedProp[]; upright: PlacedProp[]; swapped: Set<number> }
+let sceneryCache: { key: string; s: Scenery } | null = null
+
+/**
+ * Where the season's props go on this field (`data/fieldSeasons.ts`,
+ * `props`): a hash of the field's id and the season, never a draw on any RNG
+ * stream, so the field's own dressing (`buildDressing`) is untouched.
+ *
+ *  - `forest`: one per forest tile at most — in a shrub's place, at a tree's
+ *    foot, or on bare forest floor; upright props live only here, so an open
+ *    tile never carries anything that looks like what blocks one;
+ *  - `open`: flat props at the corners of an open tile, off its standing
+ *    spot, never on the road, the danger ground or the wagon;
+ *  - `water`: reeds and pads along a lake's rim.
+ */
+function seasonScenery(map: GameMap, dr: Dressing, season: FieldSeason, salt: number): Scenery {
+  const key = `${map.id}:${map.width}x${map.height}:${season.name}:${dr.decos.length}`
+  if (sceneryCache?.key === key) return sceneryCache.s
+  const out: Scenery = { flat: [], upright: [], swapped: new Set() }
+  const rules = season.props ?? []
+  const T = map.tile ?? 40
+  const W = worldOf(map)
+  const road = drawnRoad(map)
+  const lat = latticeOrigin(map)
+  const clearOfGame = (x: number, y: number, r: number) =>
+    distToPath(x, y, road) > ROAD_W / 2 + 8 + r && Math.hypot(x - map.base.x, y - map.base.y) > 96 && x > W.x0 + 4 && x < W.x0 + W.w - 4 && y > W.y0 + 4 && y < W.y0 + W.h - 4
+  const pick = (where: PropWhere, r: number): PropRule | null => {
+    let acc = 0
+    for (const rule of rules) {
+      if (rule.where !== where) continue
+      acc += rule.share
+      if (r < acc) return rule
+    }
+    return null
+  }
+  const place = (rule: PropRule, x: number, y: number, a: number, b: number) => {
+    const p: PlacedProp = { x: Math.round(x), y: Math.round(y), kind: rule.kind, v: Math.floor(hash01(a, b, salt + 5) * 6), flip: hash01(a, b, salt + 6) < 0.5 }
+    if (FLAT_PROPS.has(rule.kind)) out.flat.push(p)
+    else out.upright.push(p)
+  }
+  const cellOf = (x: number, y: number) => `${Math.floor((x - lat.x) / T)},${Math.floor((y - lat.y) / T)}`
+  if (rules.some((r) => r.where === 'forest')) {
+    // What already stands on each forest tile: its shrub (by index), its tree.
+    const shrubAt = new Map<string, number>()
+    const treeAt = new Set<string>()
+    dr.decos.forEach((d, i) => {
+      const k = cellOf(d.x, d.y - 3)
+      const name = d.name ?? ''
+      if (name.startsWith('bush')) shrubAt.set(k, i)
+      else if (name.startsWith('tree')) treeAt.add(k)
+    })
+    for (const c of worldLattice(map, W, road).cells) {
+      if (c.kind !== 'forest') continue
+      // In clumps, when the season says so: a field of bales, a reed bed.
+      if (season.clump && valueNoise(c.x, c.y, season.clump, salt + 17) > 0.5) continue
+      const i = Math.floor((c.x - lat.x) / T)
+      const j = Math.floor((c.y - lat.y) / T)
+      const rule = pick('forest', hash01(i, j, salt))
+      if (!rule) continue
+      const k = `${i},${j}`
+      const shrub = shrubAt.get(k)
+      if (shrub !== undefined && !FLAT_PROPS.has(rule.kind)) {
+        const d = dr.decos[shrub]
+        if (!clearOfGame(d.x, d.y, 8)) continue
+        out.swapped.add(shrub)
+        place(rule, d.x, d.y, i, j)
+        continue
+      }
+      // At a tree's foot (in front of it), or on the bare floor.
+      const side = hash01(i, j, salt + 1) < 0.5 ? -1 : 1
+      const x = c.x + (treeAt.has(k) ? side * T * 0.24 : (hash01(i, j, salt + 2) - 0.5) * T * 0.3)
+      const y = c.y + T / 2 - 2 - Math.floor(hash01(i, j, salt + 3) * 4)
+      if (!clearOfGame(x, y, 10)) continue
+      place(rule, x, y, i, j)
+    }
+  }
+  const tiles = map.tiles ?? []
+  if (rules.some((r) => r.where === 'open')) {
+    for (const t of tiles) {
+      if (t.block || t.danger) continue
+      for (let q = 0; q < 4; q++) {
+        const rule = pick('open', hash01(t.col * 2 + (q & 1), t.row * 2 + (q >> 1), salt + 7))
+        if (!rule) continue
+        const x = t.pos.x + (q & 1 ? 1 : -1) * T * 0.34
+        const y = t.pos.y + (q >> 1 ? 1 : -1) * T * 0.34
+        // Off the danger ground and the lakes beside this tile too.
+        const near = tiles.some((o) => (o.block === 'water' || o.block === 'fire' || o.danger) && Math.abs(o.pos.x - x) < T * 0.75 && Math.abs(o.pos.y - y) < T * 0.75)
+        if (near || !clearOfGame(x, y, 10)) continue
+        place(rule, x, y, t.col * 2 + (q & 1), t.row * 2 + (q >> 1))
+      }
+    }
+  }
+  if (rules.some((r) => r.where === 'water')) {
+    const isWater = (x: number, y: number) => tiles.some((o) => o.block === 'water' && Math.abs(o.pos.x - x) < 1 && Math.abs(o.pos.y - y) < 1)
+    const sides: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+    for (const t of tiles) {
+      if (t.block !== 'water') continue
+      sides.forEach(([nx, ny], si) => {
+        if (isWater(t.pos.x + nx * T, t.pos.y + ny * T)) return
+        for (const rule of rules) {
+          if (rule.where !== 'water' || hash01(t.col * 4 + si, t.row, salt + 9 + rule.kind.length) >= rule.share) continue
+          const along = (hash01(t.col * 4 + si, t.row, salt + 11) - 0.5) * T * 0.5
+          const inset = rule.kind === 'lily' ? T * 0.5 - 16 : T * 0.5 - 7
+          const x = t.pos.x + nx * inset + (ny !== 0 ? along : 0)
+          const y = t.pos.y + ny * inset + (nx !== 0 ? along : 0) + (rule.kind === 'reeds' ? 6 : 0)
+          if (distToPath(x, y, road) <= ROAD_W / 2 + 6) continue
+          place(rule, x, y, t.col * 4 + si, t.row + rule.kind.length * 97)
+        }
+      })
+    }
+  }
+  out.upright.sort((a, b) => a.y - b.y)
+  sceneryCache = { key, s: out }
+  return out
+}
+
+/**
+ * Within reach of the play: where a goblin's art and bar can stand in front
+ * of it (Oct 2026 job critique) — a tile and a half of the road's centre
+ * line (its half-width and a goblin's height) — or a hero's (on an open
+ * tile). A season's tree here keeps no tier's hue (`season.ACCENT_SHIFT`);
+ * past it, at the margins, it keeps its own. (The ground's paint is
+ * `ACCENT_PAINT` wherever it lies.)
+ */
+const NEAR_ROAD_TILES = 1.5
+const NEAR_SLOT_TILES = 0.75
+function nearPlay(map: GameMap): (x: number, y: number) => boolean {
+  const T = map.tile ?? 40
+  const road = drawnRoad(map)
+  const rr = NEAR_ROAD_TILES * T
+  const sr2 = (NEAR_SLOT_TILES * T) ** 2
+  const slots = map.slots.map((s) => s.pos)
+  return (x, y) => {
+    for (const p of slots) if ((p.x - x) ** 2 + (p.y - y) ** 2 <= sr2) return true
+    return distToPath(x, y, road) <= rr
+  }
+}
+
+/** The props that lie flat on the ground (drawn before the scenery; never in the depth order). */
+const FLAT_PROPS = new Set<PropKind>(['flowers', 'puddle', 'mud', 'lily', 'leaves', 'pool'])
+
+/** One prop, its foot at (x, y): flat ones centred there, upright ones standing on it. */
+function drawProp(ctx: CanvasRenderingContext2D, p: PlacedProp, bs: BakeSeason): void {
+  const art = propArt(p.kind, p.v)
+  if (!art) return
+  const x = Math.round(p.x - art.w / 2)
+  const y = art.upright ? p.y - art.h : Math.round(p.y - art.h / 2)
+  if (art.upright && !bs.season.light) {
+    ctx.beginPath()
+    ctx.ellipse(p.x, p.y - 1, art.w * 0.4, Math.max(2, art.w * 0.14), 0, 0, Math.PI * 2)
+    ctx.fillStyle = 'rgba(0,0,0,0.20)'
+    ctx.fill()
+  }
+  const flip = p.flip && art.upright
+  blit(ctx, art.img, x, y, art.w, art.h, flip, p.x)
+  if (bs.season.accent || p.kind === 'puddle') {
+    const a = spriteAlpha(art.img, art.w, art.h)
+    // An upright prop stands only on a forest tile, at the margins: the
+    // season's set piece keeps its own colour. A flat one lies on the open
+    // ground, near the play, and keeps no tier's hue.
+    if (a && bs.season.accent) markAccent(bs.accent, bs.W.w, bs.W.h, a, x - bs.W.x0, y - bs.W.y0, art.w, art.h, flip, art.upright ? ACCENT_KEEP : ACCENT_PAINT)
+    // A puddle holds the sky's own blue: the overcast's washes pass it by (it is graded with the rest).
+    if (a && p.kind === 'puddle') markAccent(bs.keep.mask, bs.W.w, bs.W.h, a, x - bs.W.x0, y - bs.W.y0, art.w, art.h, flip)
+  }
+}
+
+/** Draw an image at (x, y), mirrored about `cx` when `flip`. */
+function blit(ctx: CanvasRenderingContext2D, img: CanvasImageSource, x: number, y: number, w: number, h: number, flip: boolean, cx: number): void {
+  if (flip) {
+    ctx.save()
+    ctx.translate(cx, 0)
+    ctx.scale(-1, 1)
+    ctx.translate(-cx, 0)
+    ctx.drawImage(img, x, y, w, h)
+    ctx.restore()
+  } else {
+    ctx.drawImage(img, x, y, w, h)
+  }
+}
+
+/** A decoration's drawn size (for the long shadows). */
+function decoSize(d: Deco): { w: number; h: number } | null {
+  const spr = spriteFor(d.name)
+  if (!spr) return null
+  const pm = pixmap(spr.img, { scale: d.native ? 1 : spr.spriteScale })
+  return pm ? { w: pm.fw, h: pm.fh } : null
+}
+
+/**
+ * A low sun (late summer): every shadow long and falling away from it, laid on
+ * the ground before anything stands on it — one layer, so two shadows never
+ * darken twice — and never on the road or the danger ground.
+ */
+function drawLongShadows(ctx: CanvasRenderingContext2D, bs: BakeSeason, items: { y: number; deco?: Deco; prop?: PlacedProp }[]): void {
+  const light = bs.season.light
+  if (!light) return
+  const layer = document.createElement('canvas')
+  layer.width = bs.W.w
+  layer.height = bs.W.h
+  const g = layer.getContext('2d')
+  if (!g) return
+  g.translate(-bs.W.x0, -bs.W.y0)
+  g.fillStyle = '#000'
+  const dir = light.from === 'w' ? 1 : -1
+  for (const it of items) {
+    const w = it.deco ? (decoSize(it.deco)?.w ?? 0) : it.prop ? (propArt(it.prop.kind, it.prop.v)?.w ?? 0) : 0
+    if (!w) continue
+    const x = it.deco?.x ?? it.prop?.x ?? 0
+    const len = w * 0.34 * light.shadow
+    g.beginPath()
+    g.ellipse(x + dir * (len - w * 0.3), it.y - 2, len, Math.max(2, w * 0.13), 0, 0, Math.PI * 2)
+    g.fill()
+  }
+  g.setTransform(1, 0, 0, 1, 0, 0)
+  g.globalCompositeOperation = 'destination-out'
+  g.drawImage(bs.keep.canvas, 0, 0)
+  const a0 = ctx.globalAlpha
+  ctx.globalAlpha = 0.24
+  ctx.drawImage(layer, bs.W.x0, bs.W.y0)
+  ctx.globalAlpha = a0
+}
+
+function drawDecos(ctx: CanvasRenderingContext2D, dr: Dressing, scenery: Scenery | null = null, clear: Rect | null = null): void {
   if (!getActiveStyle().sprites) return
-  for (const d of dr.decos) {
+  const bs = bakeSeason
+  const season = bs?.season ?? null
+  // The season's upright props stand in the scenery's depth order; the
+  // shrubs they stand in for are gone. Nothing stands in the wagon's clearing.
+  type Item = { y: number; deco?: Deco; prop?: PlacedProp }
+  const items: Item[] = []
+  dr.decos.forEach((d, idx) => {
+    if (scenery?.swapped.has(idx)) return
+    const sz = clear ? decoSize(d) : null
+    if (clear && sz && inBox(clear, d.x - sz.w / 2, d.y - sz.h, d.x + sz.w / 2, d.y)) return
+    items.push({ y: d.y, deco: d })
+  })
+  if (scenery) {
+    for (const p of scenery.upright) {
+      const art = clear ? propArt(p.kind, p.v) : null
+      if (clear && art && inBox(clear, p.x - art.w / 2, p.y - art.h, p.x + art.w / 2, p.y)) continue
+      items.push({ y: p.y, prop: p })
+    }
+    items.sort((a, b) => a.y - b.y)
+  }
+  if (bs) drawLongShadows(ctx, bs, items)
+  const light = !!season?.light
+  let salt = 0
+  for (const it of items) {
+    if (it.prop) {
+      if (bs) drawProp(ctx, it.prop, bs)
+      continue
+    }
+    const d = it.deco!
     const spr = spriteFor(d.name)
     if (!spr) continue
     const pm = pixmap(spr.img, { scale: d.native ? 1 : spr.spriteScale })
     if (!pm) continue
     const w = pm.fw, h = pm.fh
-    // Contact shadow — kept on all three object classes, per the checklist.
-    ctx.beginPath()
-    ctx.ellipse(d.x, d.y - 2, w * 0.34, w * 0.14, 0, 0, Math.PI * 2)
-    ctx.fillStyle = 'rgba(0,0,0,0.20)'
-    ctx.fill()
-    const x = d.x - Math.round(w / 2)
-    const y = d.y - h
-    if (d.flip) {
-      ctx.save()
-      ctx.translate(d.x, 0)
-      ctx.scale(-1, 1)
-      ctx.translate(-d.x, 0)
-      ctx.drawImage(pm.img, x, y, w, h)
-      ctx.restore()
-    } else {
-      ctx.drawImage(pm.img, x, y, w, h)
+    // Contact shadow — kept on all three object classes, per the checklist
+    // (laid with the long shadows above when the season has a low sun).
+    if (!light) {
+      ctx.beginPath()
+      ctx.ellipse(d.x, d.y - 2, w * 0.34, w * 0.14, 0, 0, Math.PI * 2)
+      ctx.fillStyle = 'rgba(0,0,0,0.20)'
+      ctx.fill()
+    }
+    let x = d.x - Math.round(w / 2)
+    let y = d.y - h
+    const tree = d.name.startsWith('tree')
+    let img: CanvasImageSource = pm.img
+    let iw = w
+    let ih = h
+    if (season && bs) {
+      const r = hash01(d.x, d.y, bs.salt + 31)
+      if (tree && season.broadleaf && h >= 60 && r < season.broadleaf.share) {
+        // A broadleaf in the pine's place: no taller and no wider than it.
+        const bh = Math.round(h * 0.8)
+        const bw = Math.min(w, Math.round(bh * 0.78))
+        const ramp = season.broadleaf.ramps[Math.floor(hash01(d.x, d.y, bs.salt + 32) * season.broadleaf.ramps.length)]
+        const art = broadleaf(ramp, Math.floor(hash01(d.x, d.y, bs.salt + 33) * 1000), bw, bh, season.broadleaf.blossom)
+        if (art) {
+          img = art.img
+          iw = bw
+          ih = bh
+          x = d.x - Math.round(bw / 2)
+          y = d.y - bh
+        }
+      } else if ((tree || d.name.startsWith('bush')) && season.foliage) {
+        const ramp = tree ? season.foliage.ramps[Math.floor(hash01(d.x, d.y, bs.salt + 34) * season.foliage.ramps.length)] : (season.foliage.bush ?? null)
+        if (ramp) img = repaintFoliage(pm.img, w, h, ramp) ?? pm.img
+      } else if (d.name.startsWith('rock') && season.rocks) {
+        img = repaintRock(pm.img, w, h, season.rocks) ?? pm.img
+      }
+    }
+    blit(ctx, img, x, y, iw, ih, d.flip, d.x)
+    // The season on it, right after it, so the next piece in front covers it
+    // as it covers the piece.
+    if (season && bs) {
+      const a = spriteAlpha(img, iw, ih)
+      if (a) {
+        if (season.caps || season.icicles) seasonOnDeco(ctx, a, x, y, iw, ih, d.flip, tree && iw === w, season, salt++)
+        // A season's tree keeps its colour at the margins; within reach of
+        // the play (by its foot or its crown) its reds and golds turn olive.
+        if (season.accent && img !== pm.img) {
+          const near = bs.near(d.x, d.y) || bs.near(d.x, d.y - ih / 2)
+          markAccent(bs.accent, bs.W.w, bs.W.h, a, x - bs.W.x0, y - bs.W.y0, iw, ih, d.flip, near ? ACCENT_SHIFT : ACCENT_KEEP)
+        }
+      }
     }
   }
 }
@@ -1056,6 +1616,8 @@ const ENV_LIFT = 2
 const ENV_WARM_R = 12
 const ENV_WARM_G = 4
 const ENV_WARM_B = -7
+/** A season's accent keeps its hue but a little less chroma than the rest, so the units stay the most saturated thing on screen. */
+const ACCENT_SAT = 0.88
 
 /**
  * ── the last reserved channel the uniform grade did not clear (minor) ───────
@@ -1120,6 +1682,43 @@ const WARM_MEAN = (ENV_WARM_R + ENV_WARM_G + ENV_WARM_B) / 3
 const SHADE_MAX = 0.5
 const SHADE_REACH = 420
 
+/**
+ * Tier 1's red window (0–30°, feathered 340–350° and 24–30°), cut only on a
+ * season's paint near the play (`season.ACCENT_PAINT`): the plain field has
+ * no red to cut, and the danger ground (fire) is never season paint.
+ */
+function redWeight(hue: number): number {
+  if (hue <= 24 || hue >= 350) return 1
+  if (hue < 30) return (30 - hue) / 6
+  if (hue > 340) return (hue - 340) / 10
+  return 0
+}
+
+/**
+ * A near tree's hue (`season.ACCENT_SHIFT`): the tiers' warm arc, 340° round
+ * to 68°, laid in order onto 70–78° (rust to ochre, amber to a yellowing olive) — the
+ * green side of yellow, short of the pines' and the meadow's green; -1 for a
+ * hue outside it, which is kept.
+ */
+// 70–78° (Oct 2026 asset critique; it was 75–90°): the near maples read as
+// yellowing birch, not as summer trees standing in an autumn wood.
+const SHIFT_LO = 70
+const SHIFT_HI = 78
+function shiftedHue(hue: number): number {
+  const h = hue >= 340 ? hue - 360 : hue
+  if (h < -20 || h > GOLD_HI) return -1
+  return SHIFT_LO + ((h + 20) / (GOLD_HI + 20)) * (SHIFT_HI - SHIFT_LO)
+}
+
+/** An RGB with this max and min channel (so value and chroma) at `hue`. */
+function hueRgb(hue: number, mx: number, mn: number): [number, number, number] {
+  const c = mx - mn
+  const hp = hue / 60
+  const x = c * (1 - Math.abs((hp % 2) - 1))
+  const [r, g, b] = hp < 1 ? [c, x, 0] : hp < 2 ? [x, c, 0] : hp < 3 ? [0, c, x] : hp < 4 ? [0, x, c] : hp < 5 ? [x, 0, c] : [c, 0, x]
+  return [r + mn, g + mn, b + mn]
+}
+
 /** 0 outside the feathered reserved window, 1 across its core. */
 function goldWeight(hue: number): number {
   if (hue <= GOLD_LO || hue >= GOLD_HI) return 0
@@ -1129,7 +1728,7 @@ function goldWeight(hue: number): number {
     : (GOLD_HI - hue) / (GOLD_HI - GOLD_CORE_HI)
 }
 
-export function gradeEnvironment(ctx: CanvasRenderingContext2D, w: number, h: number, lit?: { x0: number; y0: number; x1: number; y1: number }): void {
+export function gradeEnvironment(ctx: CanvasRenderingContext2D, w: number, h: number, lit?: { x0: number; y0: number; x1: number; y1: number }, accent?: Uint8Array): void {
   const id = ctx.getImageData(0, 0, w, h)
   const d = id.data
   // The shade per column and per row, so the per-pixel cost is one max.
@@ -1143,21 +1742,49 @@ export function gradeEnvironment(ctx: CanvasRenderingContext2D, w: number, h: nu
   for (let y = 0; y < h; y++) {
     const ry = rowOut[y]
     for (let x = 0; x < w; x++, i += 4) {
-      const r = d[i], g = d[i + 1], b = d[i + 2]
-      const yl = 0.299 * r + 0.587 * g + 0.114 * b
+      let r = d[i], g = d[i + 1], b = d[i + 2]
+      let yl = 0.299 * r + 0.587 * g + 0.114 * b
       // Hue, by the standard six-sector formula — no trig, one divide.
       const mx = r > g ? (r > b ? r : b) : g > b ? g : b
       const mn = r < g ? (r < b ? r : b) : g < b ? g : b
       const dl = mx - mn
       let gw = 0
-      if (dl > 0) {
+      // A season's own accent (`render/season.ts`) keeps its hue through the
+      // gold window and takes the warm push as value only: the harvest's
+      // props and far trees, the snow's cool white. It is still desaturated
+      // like the rest. Its paint near the play (`ACCENT_PAINT`) keeps its hue
+      // only where no tier wears it: in the red or the gold window it is cut
+      // like the environment's own — red too, which the plain field never
+      // carries but the harvest's rust would.
+      const mark = accent === undefined ? 0 : accent[i >> 2]
+      let acc = mark === ACCENT_KEEP || mark === ACCENT_SHIFT || (mark === ACCENT_PAINT && dl === 0)
+      if (mark === ACCENT_SHIFT && dl > 0) {
         const raw = 60 * (mx === r ? (g - b) / dl : mx === g ? (b - r) / dl + 2 : (r - g) / dl + 4)
-        gw = goldWeight(raw < 0 ? raw + 360 : raw)
+        const to = shiftedHue(raw < 0 ? raw + 360 : raw)
+        if (to >= 0) {
+          // Same max, same min (value and chroma kept), the new hue.
+          const [sr, sg, sb] = hueRgb(to, mx, mn)
+          r = sr
+          g = sg
+          b = sb
+          yl = 0.299 * r + 0.587 * g + 0.114 * b
+        }
       }
-      const sat = gw > 0 ? ENV_SAT * (1 - (1 - GOLD_KEEP) * gw) : ENV_SAT
-      const wr = ENV_WARM_R + (WARM_MEAN - ENV_WARM_R) * gw
-      const wg = ENV_WARM_G + (WARM_MEAN - ENV_WARM_G) * gw
-      const wb = ENV_WARM_B + (WARM_MEAN - ENV_WARM_B) * gw
+      if (dl > 0 && !acc) {
+        const raw = 60 * (mx === r ? (g - b) / dl : mx === g ? (b - r) / dl + 2 : (r - g) / dl + 4)
+        const hue = raw < 0 ? raw + 360 : raw
+        gw = goldWeight(hue)
+        if (mark === ACCENT_PAINT) {
+          const wt = Math.max(gw, redWeight(hue))
+          if (wt > 0) gw = wt
+          else acc = true
+        }
+      }
+      const sat = acc ? ENV_SAT * ACCENT_SAT : gw > 0 ? ENV_SAT * (1 - (1 - GOLD_KEEP) * gw) : ENV_SAT
+      const wk = acc ? 1 : gw
+      const wr = ENV_WARM_R + (WARM_MEAN - ENV_WARM_R) * wk
+      const wg = ENV_WARM_G + (WARM_MEAN - ENV_WARM_G) * wk
+      const wb = ENV_WARM_B + (WARM_MEAN - ENV_WARM_B) * wk
       let nr = yl + (r - yl) * sat
       let ng = yl + (g - yl) * sat
       let nb = yl + (b - yl) * sat
@@ -1182,4 +1809,14 @@ export function gradeEnvironment(ctx: CanvasRenderingContext2D, w: number, h: nu
     }
   }
   ctx.putImageData(id, 0, 0)
+}
+
+/**
+ * Where a season's props stand on a field (tests and the review): the flat
+ * ones and the upright ones, with the field's own dressing as the bake sees
+ * it. Pure — no canvas, no RNG stream.
+ */
+export function seasonPropsFor(map: GameMap, season: FieldSeason): { flat: { x: number; y: number; kind: PropKind }[]; upright: { x: number; y: number; kind: PropKind }[] } {
+  const s = seasonScenery(map, getDressing(map), season, hashStr(`${map.id}|${season.name}`))
+  return { flat: s.flat, upright: s.upright }
 }

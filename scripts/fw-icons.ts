@@ -1,5 +1,5 @@
 /**
- * The Fieldwatch icon atlas — one PNG, 96 icons, drawn in the Tiny Swords hand.
+ * The Fieldwatch icon atlas — one PNG, 108 icons, drawn in the Tiny Swords hand.
  *
  * Run with `npm run fw-icons` to REWRITE the committed
  * `public/assets/ui/fw-icons.png`; `npm run fw-icons:check` re-encodes into
@@ -45,7 +45,7 @@
  * Each icon is 16 rows × 16 columns of palette characters and holds only the
  * **interior**. `outline()` walks the grid afterwards and paints `#161C2E` into
  * every transparent pixel that touches a filled one, which is what makes the
- * silhouette ring uniform across 78 hand-drawn shapes instead of 78 separate
+ * silhouette ring uniform across 108 hand-drawn shapes instead of 108 separate
  * attempts at the same 1px border. Art must therefore stay inside rows/cols
  * 1..14 so the ring has somewhere to go; `assert` below enforces it.
  *
@@ -58,6 +58,12 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import sharp from 'sharp'
+import { isArt, PALETTE as PEOPLES_PALETTE, PEOPLES } from './peoples-art'
+import { peopleIconKey } from '../src/game/data/peopleKinds'
+import { ALL_SKILLS } from '../src/game/data/skills'
+import { FUSIONS } from '../src/game/data/fusions'
+import { skillArtKey } from '../src/game/data/skillArt'
+import { ICON_N, skillIconPixels } from '../src/game/data/skillIcons'
 
 const OUT = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'assets', 'ui')
 
@@ -206,21 +212,22 @@ icon('stun', [
   '................',
 ])
 
+/** Execute — the blade falling on a nearly empty HP bar: the rule, drawn. (Was a funnel over a bar, then a framed guillotine that read as a picture at 48 px; Oct 2026 icon critique.) */
 icon('execute', [
   '................',
+  '.......l........',
+  '......lol.......',
+  '...sssssssss....',
+  '...SSSSSSSSs....',
+  '...SSSSSSSSs....',
+  '...SSSSSSSWW....',
+  '...SSSSSWWW.....',
+  '...SSSWWW.......',
+  '...SWWW.........',
+  '...WW...........',
   '................',
-  '...SSSSSSSSS....',
-  '...SWWWWWWWS....',
-  '...SWWWWWWWS....',
-  '....SWWWWWS.....',
-  '.....SWWWS......',
-  '......SWS.......',
-  '.......S........',
-  '................',
-  '..rrrrrrrrrrr...',
-  '..rrrrrrrrrrr...',
-  '................',
-  '................',
+  '..RRRdddddddd...',
+  '..rRRdddddddd...',
   '................',
   '................',
 ])
@@ -443,18 +450,19 @@ icon('range', [
   '................',
 ])
 
+/** Haste points FORWARD (right, like Start Wave); `slow` is its mirror. It pointed left — rewind — on every Speed and Rush skill until the Oct 2026 icon critique. */
 icon('haste', [
   '................',
   '................',
-  '.....G...G......',
-  '....GG..GG......',
-  '...GG..GG.......',
-  '..GG..GG........',
-  '.GG..GG.........',
-  '..GG..GG........',
-  '...GG..GG.......',
-  '....GG..GG......',
-  '.....G...G......',
+  '......G...G.....',
+  '......GG..GG....',
+  '.......GG..GG...',
+  '........GG..GG..',
+  '.........GG..GG.',
+  '........GG..GG..',
+  '.......GG..GG...',
+  '......GG..GG....',
+  '......G...G.....',
   '................',
   '................',
   '................',
@@ -775,19 +783,20 @@ icon('greatblade', [
   '................',
 ])
 
+/** Warhammer — the head lit from the upper left (cream catch-light, mid, dark under-edge). Grip unchanged (`gearMarks` GRIP). */
 icon('hammer', [
   '................',
   '................',
-  '.....SSSSSS.....',
-  '....SSWWWSSS....',
-  '....SSWWWSSS....',
-  '....SSWWWSSS....',
-  '.....SSSSSS.....',
-  '.......ll.......',
-  '.......ll.......',
-  '.......ll.......',
-  '.......ll.......',
-  '.......ll.......',
+  '.....SSSSSs.....',
+  '....SWWSSSss....',
+  '....SWSSSSss....',
+  '....SSSSSsdd....',
+  '.....ssssdd.....',
+  '.......Ll.......',
+  '.......Ll.......',
+  '.......Ll.......',
+  '.......Ll.......',
+  '.......Ll.......',
   '......oooo......',
   '................',
   '................',
@@ -843,37 +852,39 @@ icon('staff', [
   '................',
 ])
 
+/** Grimoire — a violet book in the Tome's family (page edges right and below), gold corners, a gold eye, a clasp. It was concentric squares: a framed gem. */
 icon('grimoire', [
   '................',
   '................',
-  '...vvvvvvvvv....',
-  '...vVVVVVVVv....',
-  '...vVPPPPPVv....',
-  '...vVPGGGPVv....',
-  '...vVPGWGPVv....',
-  '...vVPGGGPVv....',
-  '...vVPPPPPVv....',
-  '...vVVVVVVVv....',
-  '...vvvvvvvvv....',
-  '....ooooooo.....',
+  '...GvvvvvvvG....',
+  '...vVVVVVVVvP...',
+  '...vVVVVVVVvP...',
+  '...vVVGGGVVvP...',
+  '...vVGWnWGVvP...',
+  '...vVVGGGVVgGP..',
+  '...vVVVVVVVvP...',
+  '...vVVVVVVVvP...',
+  '...GvvvvvvvGP...',
+  '....PPPPPPPPp...',
   '................',
   '................',
   '................',
   '................',
 ])
 
+/** Shield — the heater in a three-step steel ramp from the upper left. */
 icon('shield', [
   '................',
   '................',
-  '...SSSSSSSSS....',
-  '...SSWWSSSSS....',
-  '...SSWWSSSSS....',
-  '...SdSSSSSdS....',
-  '...SdSSSSSdS....',
-  '...SdSSSSSdS....',
-  '....dSSSSSd.....',
-  '.....dSSSd......',
-  '......dSd.......',
+  '...SSSSSSSss....',
+  '...SWWSSSSss....',
+  '...SWSSSSSsd....',
+  '...SSSSSSSsd....',
+  '...SSSSSSssd....',
+  '...SSSSSSssd....',
+  '....SSSSssd.....',
+  '.....SSssd......',
+  '......Ssd.......',
   '.......d........',
   '................',
   '................',
@@ -919,58 +930,61 @@ icon('orb', [
   '................',
 ])
 
+/** Plate — a cuirass: shoulder caps, neck notch, waist band, fauld. Keeps `bodyLayer.BODY_INK.plate`'s inks (S, d, W). It read as a tooth. */
 icon('plate', [
   '................',
   '................',
-  '...SS.SSS.SS....',
-  '..SSSSSSSSSSS...',
-  '..SSSWWSSSSdS...',
-  '..SSSWWSSSSdS...',
-  '..SSSSSSSSSdS...',
-  '..SSSSSSSSSdS...',
-  '..SSSSSSSSSdS...',
-  '...SSSSSSSSd....',
-  '...SS.SSS.SS....',
-  '...SS.SSS.SS....',
+  '...SSs....SSs...',
+  '..SWSSs..SSssd..',
+  '..SWSSSSSSsssd..',
+  '..SWSSSSSSsssd..',
+  '..SSSSSSSSsssd..',
+  '...SSSSSSsssd...',
+  '...SSSSSSsssd...',
+  '....dddddddd....',
+  '...SSSSSsssdd...',
+  '....ssssssdd....',
   '................',
   '................',
   '................',
   '................',
 ])
 
+/** Robe — sleeves apart from the body, a V neck, a cord belt, a floor-length skirt; `BODY_INK.cloth`'s three parchment inks. It was a hood with an eye-slot: a ghost. */
 icon('cloth', [
   '................',
   '................',
-  '....pppppp......',
-  '...pPPPPPPp.....',
-  '..pPPqqqqPPp....',
-  '..pPq....qPp....',
-  '..pPq....qPp....',
-  '..pPPqqqqPPp....',
-  '..pPPPPPPPPp....',
-  '..pPPPPPPPPp....',
-  '..pPPPPPPPPp....',
-  '..pqPPPPPPqp....',
-  '..pq.pppp.qp....',
-  '..p...pp...p....',
+  '.....PPqqpp.....',
+  '....PPPqqppp....',
+  '...PPPPPqpppq...',
+  '..PPPpPPPppqqq..',
+  '.PPPp.PPPpp.qqq.',
+  '.PPpp.PPPpp.qqq.',
+  '.Ppp..lLllo.qqq.',
+  '.....PPPPppq....',
+  '....PPPPPppqq...',
+  '....PPPPpppqq...',
+  '...PPPPPpppqqq..',
+  '...qqqqqqqqqqq..',
   '................',
   '................',
 ])
 
+/** Banner — red cloth hung from a crossbar, a gold lozenge, a swallowtail, the pole through the notch. It was a ringed square on a post: a target. */
 icon('banner', [
   '................',
-  '................',
-  '....GGGGGGG.....',
-  '....GRRRRRG.....',
-  '....GRWWWRG.....',
-  '....GRWGWRG.....',
-  '....GRWWWRG.....',
-  '....GRRRRRG.....',
-  '....GGGGGGG.....',
-  '.....o.o.o......',
-  '.......o........',
-  '.......o........',
-  '.......o........',
+  '.......G........',
+  '...lllllllll....',
+  '...RRRRRRRrr....',
+  '...RRRGGRRrr....',
+  '...RRGWWGRrr....',
+  '...RRRGGRRrr....',
+  '...RRRRRRRrr....',
+  '...RRRRRRRrr....',
+  '...RRRrlRRrr....',
+  '...RRr.l.Rrr....',
+  '...Rr..l..rr....',
+  '.......l........',
   '......ooo.......',
   '................',
   '................',
@@ -978,19 +992,20 @@ icon('banner', [
 
 /* ---------------------------------------------- row 5 · relics, marks, coin */
 
+/** Relic — a gold locket on its chain with a red gem. It was a pedestal with a hole: a one-eyed idol. */
 icon('relic', [
   '................',
+  '......hhh.......',
+  '.....h...h......',
+  '.....h...h......',
+  '......hGh.......',
+  '.....GGGGg......',
+  '....GGRRRgg.....',
+  '....GRWRRng.....',
+  '....GRRRRng.....',
+  '....gGnnngh.....',
+  '.....ggggh......',
   '................',
-  '......GGG.......',
-  '.....GWWWG......',
-  '....GW...WG.....',
-  '....GW...WG.....',
-  '.....GWWWG......',
-  '......GGG.......',
-  '.....hGGGh......',
-  '....hhGGGhh.....',
-  '...hhhGGGhhh....',
-  '...hhhhhhhhh....',
   '................',
   '................',
   '................',
@@ -1519,15 +1534,15 @@ icon('loot', [
 icon('slow', [
   '................',
   '................',
-  '......S...S.....',
-  '......SS..SS....',
-  '.......SS..SS...',
-  '........SS..SS..',
-  '.........SS..SS.',
-  '........SS..SS..',
-  '.......SS..SS...',
-  '......SS..SS....',
-  '......S...S.....',
+  '.....S...S......',
+  '....SS..SS......',
+  '...SS..SS.......',
+  '..SS..SS........',
+  '.SS..SS.........',
+  '..SS..SS........',
+  '...SS..SS.......',
+  '....SS..SS......',
+  '.....S...S......',
   '................',
   '................',
   '................',
@@ -2247,10 +2262,394 @@ icon('mono', [
   '................',
 ])
 
+/* ------------------------------------------- rows 12–13 · item kinds (Oct 2026)
+
+   Twelve item kinds used to borrow another kind's cell (`iconAtlas.NOUN_ICON`):
+   a Buckler and a Pavise were the heater shield, Mail and an Aegis were plate,
+   a Tome was the violet grimoire. The designer asked for every item to look
+   like itself, and the battlefield figure carries the same cell in its fist
+   (`render/gearMarks.ts`), so one cell fixes the tile and the hero together.
+   Each stays the SAME KIND OF OBJECT as the cell it borrowed — a buckler is
+   still a shield, smaller and round; mail is still a torso — and differs from
+   it in silhouette first and colour second, so the pair parts at 16 px.
+   Original pixel art, drawn here (drafted on the Figma page "Item assets",
+   `docs/FIGMA.md`), in the same palette and outline as every other cell. */
+
+/** Saffron Brand — the Sovereign sword: a gilded blade, flames licking up its back. */
+icon('brand', [
+  '................',
+  '.........R..GG..',
+  '........RR.GWG..',
+  '.........RGWGg..',
+  '.......R.GWGg...',
+  '......RRGWGg....',
+  '.......GWGg.....',
+  '.....RGWGg......',
+  '....RGWGg.......',
+  '.....GGg........',
+  '....rGg.........',
+  '...rrrrrr.......',
+  '...ll.rr........',
+  '..lll.r.........',
+  '..ll............',
+  '................',
+])
+
+/** Rod — a long steel rod corner to corner, two gold bands and a red gem: reach, not a twig. */
+icon('rod', [
+  '................',
+  '...........RR...',
+  '..........RWRR..',
+  '..........RRRn..',
+  '.........gRRn...',
+  '........gGg.....',
+  '.......SSs......',
+  '......SSs.......',
+  '.....gGg........',
+  '....SSs.........',
+  '...SSs..........',
+  '..gGg...........',
+  '..Ss............',
+  '..o.............',
+  '................',
+  '................',
+])
+
+/** Tome — a small brown book, three-quarter view, page edges showing and a red ribbon. */
+icon('tome', [
+  '................',
+  '................',
+  '................',
+  '....LLLLLLLL....',
+  '...LLLLLLLLlP...',
+  '...lLLqqqLLlP...',
+  '...lLLLLLLLlP...',
+  '...lLLqqqLLlP...',
+  '...lLLLLLLLlP...',
+  '...lLLLLLLLlP...',
+  '...llllllllpP...',
+  '....PPPPPPPPp...',
+  '.....r..........',
+  '.....rr.........',
+  '................',
+  '................',
+])
+
+/** Moonquill Codex — a night-teal codex with a cream crescent, a quill standing out of it. */
+icon('codex', [
+  '................',
+  '.............W..',
+  '............WP..',
+  '...........WP...',
+  '..uuuuuuuuWPu...',
+  '..utttWWttPtu...',
+  '..uttWWtttttu...',
+  '..utWWWtttTtu...',
+  '..utWWWtttttu...',
+  '..uttWWtttttu...',
+  '..utttWWttttu...',
+  '..uuuuuuuuuuu...',
+  '..PPPPPPPPPPp...',
+  '...hhhhhhhhh....',
+  '................',
+  '................',
+])
+
+/** Buckler — the shield, smaller and ROUND: a wooden disc, steel rim, steel boss. */
+icon('buckler', [
+  '................',
+  '................',
+  '................',
+  '................',
+  '......sssss.....',
+  '.....SLLLLls....',
+  '....SLLLLLLls...',
+  '....SLLSSSlls...',
+  '....SLLSWdlls...',
+  '....SLLSddlls...',
+  '....sLlllllls...',
+  '.....sllllls....',
+  '......sssss.....',
+  '................',
+  '................',
+  '................',
+])
+
+/** Pavise — the shield, TALL: a full-height wooden wall-shield, steel rim, a ridge and two feet. */
+icon('pavise', [
+  '................',
+  '......sSSs......',
+  '.....sRSWRs.....',
+  '....sRRSSRrs....',
+  '....sRRSSRrs....',
+  '....sPPSSPps....',
+  '....sRRSSRrs....',
+  '....sRRSSRrs....',
+  '....sRRSSRrs....',
+  '....sRRSSRrs....',
+  '....sRRSSrrs....',
+  '....srrSdrrs....',
+  '....ssssssss....',
+  '....s......s....',
+  '................',
+  '................',
+])
+
+/** Gilded Easel — the Sovereign off-hand: a gold frame round a painted canvas, on easel legs. */
+icon('easel', [
+  '................',
+  '.......gg.......',
+  '...gggggggggg...',
+  '...gGGGGGGGGg...',
+  '...gGTTTTWWGg...',
+  '...gGTTTTWWGg...',
+  '...gGTTEETTGg...',
+  '...gGTEEEETGg...',
+  '...gGeeeeeeGg...',
+  '...gGGGGGGGGg...',
+  '...gggggggggg...',
+  '....l..l...l....',
+  '...l...l....l...',
+  '..l....l.....l..',
+  '................',
+  '................',
+])
+
+/** Mail — a chain shirt: a T of rings, short sleeves, a belt and a ragged hem. */
+icon('mail', [
+  '................',
+  '................',
+  '.....ss..ss.....',
+  '..sSsSsSSsSsSs..',
+  '..SsSsSsSsSsSs..',
+  '..sSsSsSsSsSsS..',
+  '..SsssSsSsssSs..',
+  '.....SsSsSs.....',
+  '.....sSsSsS.....',
+  '.....lLLLLl.....',
+  '.....SsSsSs.....',
+  '.....sSsSsS.....',
+  '.....S.s.S.s....',
+  '................',
+  '................',
+  '................',
+])
+
+/** Aegis — a rounded steel cuirass, shoulders up, gold rim and a gold sun boss. */
+icon('aegis', [
+  '................',
+  '................',
+  '...ggg....ggg...',
+  '..gSSSggggSSSg..',
+  '..gSWSSSSSSSdg..',
+  '..gSSSSGGSSSdg..',
+  '..gSSSGWGGSSdg..',
+  '..gSSSGGGGSSdg..',
+  '..gSSSSGGSSSdg..',
+  '...gSSSSSSSdg...',
+  '....gSSSSSdg....',
+  '.....gggggg.....',
+  '................',
+  '................',
+  '................',
+  '................',
+])
+
+/** Ironheart Plate — the Sovereign body: dark iron plate with a red heart at its centre. */
+icon('ironheart', [
+  '................',
+  '................',
+  '...dd.ddd.dd....',
+  '..ddddddddddd...',
+  '..dssssssssdd...',
+  '..dsRR.RRssdd...',
+  '..dsRWRRRssdd...',
+  '..dsRRRRnssdd...',
+  '..dssRRnsssdd...',
+  '..dsssnssssdd...',
+  '...dssssssdd....',
+  '...dd.ddd.dd....',
+  '...dd.ddd.dd....',
+  '................',
+  '................',
+  '................',
+])
+
+/** Cloak — a hooded figure: a narrow hood with a dark face, the clasp, shoulders, the cape and its red lining (a tent, then a melon, before the Oct 2026 icon critique settled here). */
+icon('cloak', [
+  '................',
+  '................',
+  '......EEee......',
+  '.....EEEeee.....',
+  '.....EE..ee.....',
+  '.....EE..ee.....',
+  '....EEEGGeef....',
+  '...EEEEerreeff..',
+  '..EEEEEerreeeff.',
+  '..EEEEEerreeeff.',
+  '...EEEEerreeff..',
+  '...EEEerrrreff..',
+  '..EEEEerrrreeff.',
+  '..ffffnnnnfffff.',
+  '................',
+  '................',
+])
+
+/** Silkwind Cloak — the Cloak's hooded figure in violet silk with a gold lining, its hem kicked right by the wind (it read as a bird). */
+icon('silkwind', [
+  '................',
+  '................',
+  '......VVvv......',
+  '.....VVVvvv..WW.',
+  '.....VV..vv.....',
+  '.....VV..vv.WWW.',
+  '....VVVGGvvn....',
+  '...VVVVvggvvnn..',
+  '...VVVVvggvvvnn.',
+  '...VVVVvggvvvnn.',
+  '....VVVvggvvvnn.',
+  '....VVvgggvvvnn.',
+  '....VVvgggvvvvn.',
+  '.....nnnnnnnnnn.',
+  '................',
+  '................',
+])
+
+/*
+ * ---------------------------------------------------------------------------
+ * The peoples' kinds (Oct 2026) — rows 13 (cont.) to 22
+ * ---------------------------------------------------------------------------
+ * Every NEW and RENAMED item of the five rosters (`docs/peoples/roster.json`),
+ * baked from the reviewed draft art in `scripts/peoples-art/` — our own pixel
+ * art, drawn in this atlas's palette letter for letter (checked below) and
+ * outlined by the same rule. A kept item already has its cell above. The key
+ * is `peopleKinds.peopleIconKey` of the name, in roster order.
+ */
+for (const [k, hexv] of Object.entries(PEOPLES_PALETTE)) {
+  if (PALETTE[k]?.toLowerCase() !== hexv.toLowerCase()) throw new Error(`peoples-art palette letter ${k} (${hexv}) is not the atlas's (${PALETTE[k]})`)
+}
+for (const people of PEOPLES) {
+  for (const it of people.items) {
+    if (it.status === 'kept') continue
+    if (!isArt(it.icon)) throw new Error(`${people.id}/${it.name}: a ${it.status} item needs drafted art`)
+    icon(peopleIconKey(it.name), [...it.icon])
+  }
+}
+
+/*
+ * ---------------------------------------------------------------------------
+ * The HQ castle's quality tiers (Oct 2026) — row 22 (cont.) to 23
+ * ---------------------------------------------------------------------------
+ * The home bar's HQ plate shows the castle's material (`run/hq.castleTier`),
+ * the way a Town Hall shows its level: timber, stone, fortified, grand. The
+ * pack's castle (`Factions/Knights/Buildings/Castle`) redrawn for 16 × 16 —
+ * never the 320 px sprite shrunk — so the four read apart at the plate's
+ * 32 px by material AND by outline: a log palisade with stake tips, plain
+ * grey stone, slate with gold banners on an iron-banded base, and white
+ * stone with gold caps, red banners and two red pennants above it.
+ */
+icon('hqTimber', [
+  '................',
+  '................',
+  '................',
+  '.L.L.L....L.L.L.',
+  '.LLLLL....LLLLL.',
+  '.LlLlLL..LLlLlL.',
+  '.LlLlLLLLLLlLlL.',
+  '.LlLlLlLlLLlLlL.',
+  '.LlLlLooooLlLlL.',
+  '.LlLlLooooLlLlL.',
+  '.LlLlLooooLlLlL.',
+  '.llllllllllllll.',
+  '.oooooooooooooo.',
+  '................',
+  '................',
+  '................',
+])
+
+icon('hqStone', [
+  '................',
+  '................',
+  '................',
+  '.SS.SS....SS.SS.',
+  '.SSSSS....SSSSS.',
+  '.dsssdS.S.dsssd.',
+  '.SSSSSdSSdSSSSS.',
+  '.SsSSSdssdSSSsS.',
+  '.SSSSdLLLLdSSSS.',
+  '.SSsSLooooLSsSS.',
+  '.SSSSLooooLSSSS.',
+  '.sSSSLooooLSSSs.',
+  '.llllllllllllll.',
+  '.lololololololo.',
+  '................',
+  '................',
+])
+
+icon('hqFortified', [
+  '................',
+  '................',
+  '................',
+  '.TT.TT....TT.TT.',
+  '.TTTTT....TTTTT.',
+  '.utttuT.T.utttu.',
+  '.TGGTTuTTuTTGGT.',
+  '.TGGTTuttuTTGGT.',
+  '.TggTuLLLLuTggT.',
+  '.TTTTLooooLTTTT.',
+  '.TTTTLooooLTTTT.',
+  '.tTTTLooooLTTTt.',
+  '.dddddddddddddd.',
+  '.dsdsdsdsdsdsds.',
+  '................',
+  '................',
+])
+
+icon('hqGrand', [
+  '................',
+  '..lRRR....RRRl..',
+  '..lRR......RRl..',
+  '..l..........l..',
+  '.Gl.GG....GG.lG.',
+  '.PPPPP....PPPPP.',
+  '.qpppqP.P.qpppq.',
+  '.PRRPPqPPqPPRRP.',
+  '.PRRPPqppqPPRRP.',
+  '.PrrPqGGGGqPrrP.',
+  '.PPPPGooooGPPPP.',
+  '.PPPPGooooGPPPP.',
+  '.pPPPGooooGPPPp.',
+  '.qqqqqqqqqqqqqq.',
+  '.qhqhqhqhqhqhqh.',
+  '................',
+])
+
+/*
+ * ---------------------------------------------------------------------------
+ * Skill pictures (Oct 2026, the merge art pass) — rows 23 (cont.) to 32
+ * ---------------------------------------------------------------------------
+ * Every library skill's own drawing (`game/data/skillArt.ts`) in its own
+ * element's colours, then the twenty named merges (`skillArtNamed.ts`) with
+ * their gold marker. They are not authored in this file's letters: the
+ * runtime composes the 2,437 plain merges from the same drawings and ramps
+ * (`ui/SkillIcon.tsx`), so the pixels come from THE composer
+ * (`skillIcons.skillIconPixels`), already inked by the same 1 px rule, and a
+ * baked cell can never drift from what a merge is built on.
+ */
+const BAKED: [string, Uint8ClampedArray][] = [...ALL_SKILLS.map((k) => k.id), ...FUSIONS.map((f) => f.id)].map((id) => {
+  const px = skillIconPixels(id)
+  if (!px || px.length !== N * N * 4 || ICON_N !== N) throw new Error(`skill picture ${id}: the composer drew nothing`)
+  return [skillArtKey(id), px]
+})
+
 /* ========================================================================= */
 
 const assert = () => {
   const seen = new Set<string>()
+  for (const [key] of BAKED) {
+    if (seen.has(key)) throw new Error(`duplicate icon key ${key}`)
+    seen.add(key)
+  }
   for (const [key, art] of ICONS) {
     if (seen.has(key)) throw new Error(`duplicate icon key ${key}`)
     seen.add(key)
@@ -2277,7 +2676,7 @@ const hex = (h: string): [number, number, number] => [
 
 /**
  * The style tell, applied uniformly: every transparent pixel 4-adjacent to a
- * filled one becomes an opaque `#161C2E`. Hand-drawing this 78 times would have
+ * filled one becomes an opaque `#161C2E`. Hand-drawing this 108 times would have
  * produced 78 slightly different borders.
  */
 const outline = (art: Art): string[][] => {
@@ -2321,8 +2720,8 @@ const SRC = (...p: string[]) => resolve(dirname(fileURLToPath(import.meta.url)),
  */
 const checkConsumers = async () => {
   const { readFile } = await import('node:fs/promises')
-  const rows = Math.ceil(ICONS.length / COLS)
-  const mine = ICONS.map(([k]) => k)
+  const rows = Math.ceil((ICONS.length + BAKED.length) / COLS)
+  const mine = [...ICONS.map(([k]) => k), ...BAKED.map(([k]) => k)]
 
   // The order lives in `game/data/iconAtlas.ts` (the canvas draws gear from the
   // sheet too); `channels.ts` re-exports it.
@@ -2359,7 +2758,7 @@ const checkConsumers = async () => {
 async function main() {
   assert()
   await checkConsumers()
-  const rows = Math.ceil(ICONS.length / COLS)
+  const rows = Math.ceil((ICONS.length + BAKED.length) / COLS)
   const W = COLS * N
   const H = rows * N
   const buf = Buffer.alloc(W * H * 4, 0)
@@ -2380,6 +2779,13 @@ async function main() {
         buf[o + 3] = 255
       }
     }
+  })
+  // The skill pictures, after the authored cells: already inked RGBA.
+  BAKED.forEach(([, px], j) => {
+    const i = ICONS.length + j
+    const ox = (i % COLS) * N
+    const oy = Math.floor(i / COLS) * N
+    for (let y = 0; y < N; y++) buf.set(px.subarray(y * N * 4, (y + 1) * N * 4), ((oy + y) * W + ox) * 4)
   })
 
   /*
@@ -2422,20 +2828,20 @@ async function main() {
         `public/assets/ui/fw-icons.png is stale (${on_disk.length}B on disk, ${png.length}B from source) — run \`npm run fw-icons\``,
       )
     }
-    console.log(`fw-icons.png is current  ${W}x${H}  ${ICONS.length} icons  ${(png.length / 1024).toFixed(1)} KB`)
+    console.log(`fw-icons.png is current  ${W}x${H}  ${ICONS.length + BAKED.length} icons  ${(png.length / 1024).toFixed(1)} KB`)
     return
   }
   await writeFile(target, png)
 
   // The key order IS the cell order; print it so `channels.ts` can be checked
   // against the atlas by eye rather than by trust.
-  console.log(`fw-icons.png  ${W}x${H}  ${ICONS.length} icons  ${(png.length / 1024).toFixed(1)} KB`)
-  ICONS.forEach(([k], i) => {
+  console.log(`fw-icons.png  ${W}x${H}  ${ICONS.length + BAKED.length} icons  ${(png.length / 1024).toFixed(1)} KB`)
+  ;[...ICONS, ...BAKED].forEach(([k], i) => {
     const c = i % COLS
     const r = Math.floor(i / COLS)
     process.stdout.write(`${String(i).padStart(2)} ${k.padEnd(12)} (${c},${r})${c === COLS - 1 ? '\n' : '  '}`)
   })
-  if (ICONS.length % COLS) process.stdout.write('\n')
+  if ((ICONS.length + BAKED.length) % COLS) process.stdout.write('\n')
 
   // A 6x contact sheet for the render-and-measure loop. Scratch output, not
   // shipped — it is written next to the atlas only when --sheet is passed.

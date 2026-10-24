@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   ALL_SKILLS,
+  NAMED_MERGES,
   EVOLUTION_TO_SKILL,
   FEAT_SKILLS,
   PERK_TO_SKILL,
@@ -8,6 +9,7 @@ import {
   COMBO_SKILLS,
   skillById,
   skillHeadline,
+  SIGNATURE_SKILLS,
   STARTER_SKILLS,
 } from '../src/game/data/skills'
 import { ICON_ORDER } from '../src/game/data/iconAtlas'
@@ -20,7 +22,7 @@ import {
   recruitSkill,
   skillOffer,
   takeBump,
-  takeSkill,
+  dropSkill,
 } from '../src/game/run/skills'
 import { difficultyRules, LAST_LEG, legMult, MAX_DIFFICULTY, rollUnlock, skillPoolFor, watchLevelFor, watchXpToReach } from '../src/game/run/watch'
 import { standingXpFor } from '../src/game/run/standing'
@@ -34,9 +36,9 @@ const ALL_POOL = ALL_SKILLS.map((k) => k.id)
 const at = (a: Archetype, level: number, extra: Partial<Sentinel> = {}): Sentinel => ({ ...applyXp(classicHero(a), xpToReach(level)), ...extra })
 
 describe('the skill library (SK1)', () => {
-  it('is 14 / 15 / 11 across the three levels, every id unique', () => {
+  it('is 14 / 24 / 12 across the three levels, every id unique', () => {
     const by = (l: number) => ALL_SKILLS.filter((k) => k.level === l).length
-    expect([by(1), by(2), by(3)]).toEqual([14, 15, 11])
+    expect([by(1), by(2), by(3)]).toEqual([14, 24, 12])
     expect(new Set(ALL_SKILLS.map((k) => k.id)).size).toBe(ALL_SKILLS.length)
   })
 
@@ -49,7 +51,7 @@ describe('the skill library (SK1)', () => {
   })
 
   it('splits the rest into random cards and feat cards, with no overlap', () => {
-    expect(RANDOM_UNLOCK_SKILLS.length + Object.keys(FEAT_SKILLS).length + STARTER_SKILLS.length).toBe(ALL_SKILLS.length)
+    expect(RANDOM_UNLOCK_SKILLS.length + Object.keys(FEAT_SKILLS).length + STARTER_SKILLS.length + Object.keys(SIGNATURE_SKILLS).length).toBe(ALL_SKILLS.length)
     for (const id of RANDOM_UNLOCK_SKILLS) expect(FEAT_SKILLS[id]).toBeUndefined()
   })
 
@@ -135,21 +137,23 @@ describe('milestones and offers', () => {
     expect(bumpOffered(full, ALL_POOL, seed)).toBe(true)
   })
 
-  it('takes a skill into a free slot, and swaps one out when full', () => {
+  it('learns a skill dropped on a free slot as itself, and merges one dropped on a held skill (no swap)', () => {
     const h = at('fighter', 5, { skills: ['quick_hands'] })
     const pick = skillOffer(h, ALL_POOL, seed)[0].id
-    const t = takeSkill(h, pick, ALL_POOL, seed)!
+    const t = dropSkill(h, pick, 1, ALL_POOL, seed)!
     expect(t.skills).toEqual(['quick_hands', pick])
     expect(t.skillPicks).toBe(1)
-    expect(takeSkill(h, 'berserk', ALL_POOL, seed)).toBeNull()
+    expect(dropSkill(h, 'berserk', 1, ALL_POOL, seed)).toBeNull()
 
     const full = at('fighter', 15, { skills: ['quick_hands', 'hard_hitter', 'heavy_blows'], skillPicks: 2 })
     const l3 = skillOffer(full, ALL_POOL, seed)[0].id
-    expect(takeSkill(full, l3, ALL_POOL, seed)).toBeNull()
-    expect(takeSkill(full, l3, ALL_POOL, seed, 'not_held')).toBeNull()
-    const sw = takeSkill(full, l3, ALL_POOL, seed, 'hard_hitter')!
-    expect(sw.skills).toEqual(['quick_hands', l3, 'heavy_blows'])
-    expect(sw.skillPicks).toBe(3)
+    // A full hero has no empty slot: the card must merge into a held one.
+    expect(dropSkill(full, l3, 3, ALL_POOL, seed)).toBeNull()
+    const m = dropSkill(full, l3, 1, ALL_POOL, seed)!
+    expect(m.skills![0]).toBe('quick_hands')
+    expect(m.skills![2]).toBe('heavy_blows')
+    expect(skillById(m.skills![1])!.parts).toEqual(['hard_hitter', l3])
+    expect(m.skillPicks).toBe(3)
   })
 
   it('pays the bump by the milestone level, on the stat chosen', () => {
@@ -186,13 +190,13 @@ describe('the classless rework’s combo skills', () => {
 
   it('say exactly what they do', () => {
     const desc = (id: string) => skillById(id)!.desc
-    expect(desc('bounty')).toBe('Each kill it makes pays 3 more gold.')
-    expect(desc('pin_down')).toBe('Its hits deal 30% more to enemies that are being held.')
-    expect(desc('cold_snap')).toBe('Its hits deal 25% more to slowed enemies.')
-    expect(desc('firebrand')).toBe('Its thorns set what it holds burning for 12 a second, for 3 seconds.')
+    expect(desc('bounty')).toBe('Each kill pays 3 more gold.')
+    expect(desc('pin_down')).toBe('Hits 30% harder on held enemies.')
+    expect(desc('cold_snap')).toBe('Hits 25% harder on slowed enemies.')
+    expect(desc('firebrand')).toBe('Its thorns burn what it holds 12/s for 3s.')
     expect(desc('split_shot')).toBe('Its attacks pass through 1 more enemy.')
-    expect(desc('momentum')).toBe('Attacks 15% faster for each enemy it is holding.')
-    expect(desc('last_rites')).toBe('Every 5th kill it makes wins back 5% of the cargo.')
+    expect(desc('momentum')).toBe('Attacks 15% faster per enemy it holds.')
+    expect(desc('last_rites')).toBe('Every 5th kill wins back 5% cargo.')
   })
 
   it('reach the combat profile exactly by their mods', () => {
@@ -276,41 +280,65 @@ describe('the unlock curve, cards and the stake’s difficulty', () => {
   })
 })
 
-describe('the skill library view (Codex)', () => {
-  it('is a Collection with two tabs; a locked card is a silhouette that says only how it opens', async () => {
-    const { skillLibraryOffer, UNLOCK_BY_CHARTER, UNLOCK_BY_PLAYING } = await import('../src/ui/shell/codexOffers')
+describe('the Codex collection (items and skills)', () => {
+  it('deals a tile for every skill and item; a locked tile is a silhouette that says only how it opens', async () => {
+    const { codexModel, UNLOCK_BY_CHARTER, UNLOCK_BY_PLAYING } = await import('../src/ui/shell/codex/codexModel')
     const { ITEM_KINDS, BASIC_ITEM_KINDS } = await import('../src/game/data/itemKinds')
-    const o = skillLibraryOffer({ achievements: {}, skills: ['charge'], items: ['Axe'], staged: false })
-    expect(o.tabs!.map((t) => t.label)).toEqual(['Skills', 'Items'])
-    const skillsTab = o.tabs![0]
-    const itemsTab = o.tabs![1]
-    expect(skillsTab.cards).toHaveLength(ALL_SKILLS.length)
-    expect(itemsTab.cards).toHaveLength(ITEM_KINDS.length)
-    // A pip per card ran 33 dots off a phone's row: the count rides in `sub`.
-    expect(o.pips).toBeUndefined()
-    expect(skillsTab.count).toBe(`${STARTER_SKILLS.length + 1}/${ALL_SKILLS.length}`)
-    expect(itemsTab.count).toBe(`${BASIC_ITEM_KINDS.length + 1}/${ITEM_KINDS.length}`)
+    const tabs = codexModel({ achievements: {}, codex: { enemies: [], relics: [], felled: {} }, skills: ['charge'], items: ['Axe'], staged: false })
+    expect(tabs.map((t) => t.label)).toEqual(['Items', 'Skills', 'Goblins', 'Relics', 'Feats'])
+    const [items, skills] = tabs
+    const itemTiles = items.sections.flatMap((s) => s.entries)
+    // The library's tiles; the Merges section's are held in tests/fusion.test.ts.
+    const skillTiles = skills.sections.filter((s) => s.title !== 'Merges').flatMap((s) => s.entries)
+    expect(itemTiles).toHaveLength(ITEM_KINDS.length)
+    expect(skillTiles).toHaveLength(ALL_SKILLS.length)
+    expect(`${skills.have}/${skills.total}`).toBe(`${STARTER_SKILLS.length + 1}/${ALL_SKILLS.length + NAMED_MERGES.length}`)
+    expect(`${items.have}/${items.total}`).toBe(`${BASIC_ITEM_KINDS.length + 1}/${ITEM_KINDS.length}`)
     // A locked kind says how it opens: by playing, or — the Sovereign tier — by a delivered Sovereign Route.
-    for (const c of itemsTab.cards.filter((c) => c.locked)) {
-      expect(c.name).toBe('Locked')
-      expect(c.text).toBe(c.tier === 'sovereign' ? UNLOCK_BY_CHARTER : UNLOCK_BY_PLAYING)
+    const sovereign = items.sections.find((s) => s.title === 'Sovereign')!
+    expect(sovereign.entries).toHaveLength(15)
+    for (const e of itemTiles.filter((e) => e.locked)) {
+      expect(e.name).toBe('???')
+      expect(e.how).toBe(sovereign.entries.includes(e) ? UNLOCK_BY_CHARTER : UNLOCK_BY_PLAYING)
     }
-    expect(itemsTab.cards.filter((c) => c.tier === 'sovereign').map((c) => c.group)).toEqual(Array(5).fill('Sovereign'))
-    const o2 = { cards: skillsTab.cards }
-    const locked = o2.cards.filter((c) => c.locked)
+    const locked = skillTiles.filter((e) => e.locked)
     expect(locked).toHaveLength(ALL_SKILLS.length - STARTER_SKILLS.length - 1)
-    for (const c of locked) {
-      expect(c.name).toBe('Locked')
-      expect(ALL_SKILLS.some((k) => c.text.includes(k.desc))).toBe(false)
+    for (const e of locked) {
+      expect(e.name).toBe('???')
+      expect(e.does).toBe('')
+      expect(ALL_SKILLS.some((k) => e.how.includes(k.desc))).toBe(false)
     }
-    expect(new Set(o2.cards.map((c) => c.group))).toEqual(new Set(['Level 1', 'Level 2', 'Level 3']))
+    expect(skills.sections.map((s) => s.title)).toEqual(['Level 1', 'Level 2', 'Level 3', 'Merges'])
+    // Every tile has a picture from the atlas.
+    for (const e of [...itemTiles, ...skillTiles]) expect(ICON_ORDER as readonly string[], e.id).toContain(e.icon)
   })
 
-  it('stays locked until the first run is over', async () => {
-    const { skillLibraryOffer } = await import('../src/ui/shell/codexOffers')
-    const o = skillLibraryOffer({ achievements: {}, skills: [], staged: true })
-    expect(o.tabs).toBeUndefined()
-    expect(o.sub).toBe('Locked')
+  it('holds the collection back until the first run is over', async () => {
+    const { codexModel, LIBRARY_LOCKED } = await import('../src/ui/shell/codex/codexModel')
+    const tabs = codexModel({ achievements: {}, codex: { enemies: [], relics: [], felled: {} }, skills: [], staged: true })
+    expect(tabs[0].locked).toBe(LIBRARY_LOCKED)
+    expect(tabs[1].locked).toBe(LIBRARY_LOCKED)
+    expect(tabs[0].sections).toHaveLength(0)
+    // Goblins, relics and feats are there from the start.
+    expect(tabs.slice(2).every((t) => !t.locked)).toBe(true)
+  })
+
+  it('records a goblin once met, and never names one that has not been', async () => {
+    const { codexModel } = await import('../src/ui/shell/codex/codexModel')
+    const tabs = codexModel({ achievements: {}, codex: { enemies: ['torch1_plated'], relics: [], felled: { torch2: 7 }, clans: ['delve'] }, staged: false })
+    const goblins = tabs[2].sections.flatMap((s) => s.entries)
+    // One section per clan (the companies' roads), each its fifteen units.
+    expect(tabs[2].sections.map((s) => s.title)).toEqual(['Cinder Clan', 'Gnawbone Pack', 'Deepdelve', 'Silkcut Gang', 'Sporecap Rot'])
+    expect(goblins).toHaveLength(75)
+    // A unit opens in a clan that has fielded a wave against you, under that clan's name and dress.
+    expect(goblins.filter((g) => !g.locked).map((g) => g.id)).toEqual(['goblin:delve:torch1', 'goblin:delve:torch2'])
+    const pick = goblins.find((g) => g.id === 'goblin:delve:torch2')!
+    expect(pick.name).toBe('Pick Goblin')
+    expect(pick.enemy).toBe('delve_torch2')
+    expect(pick.how).toMatch(/^Studied/)
+    for (const g of goblins.filter((g) => g.locked)) expect(g.name).toBe('???')
+    // A clan not met yet says whose road it raids, and nothing else.
+    expect(goblins.find((g) => g.id === 'goblin:cinder:torch1')!.how).toBe('Raids Peppercorn Co.’s road.')
   })
 })
 
@@ -324,7 +352,38 @@ describe('skill headlines (the pick-one strip\'s tokens)', () => {
   })
 
   it('carries a number only where the mod is the number', () => {
-    expect(skillHeadline(skillById('quick_hands')!)).toEqual({ icon: 'haste', label: 'Speed', value: '+15%' })
-    expect(skillHeadline(skillById('hard_hitter')!)).toEqual({ icon: 'damage', label: 'Dmg', value: '+15%' })
+    expect(skillHeadline(skillById('quick_hands')!)).toEqual({ icon: 'skQuickHands', label: 'Speed', value: '+15%' })
+    expect(skillHeadline(skillById('hard_hitter')!)).toEqual({ icon: 'skHardHitter', label: 'Dmg', value: '+15%' })
+  })
+
+  it('pictures every skill by its own drawing (the merge art pass)', () => {
+    for (const k of ALL_SKILLS) expect(skillHeadline(k).icon, k.id).toBe(`sk${k.id.split('_').map((w) => w[0].toUpperCase() + w.slice(1)).join('')}`)
+  })
+
+  it('says what the sentence says first, not the first multiplier', () => {
+    const lead = (id: string) => skillHeadline(skillById(id)!).label
+    // "Hits 25% harder and attacks 10% faster."
+    expect(lead('heavy_blows')).toBe('Dmg')
+    expect(lead('berserk')).toBe('Dmg')
+    // "Holds 1 more enemy, slows …" / "Holds 3 more enemies and slows …"
+    expect(lead('anchor')).toBe('Hold')
+    expect(lead('bulwark')).toBe('Hold')
+    expect(lead('ore_sense')).toBe('Hold')
+    // "Lays a snare on the path …"
+    expect(lead('snare')).toBe('Trap')
+    // "Kills enemies under N% health outright …"
+    expect(lead('finisher')).toBe('Execute')
+    expect(lead('reaper')).toBe('Execute')
+    // "Every hit has an N% chance to stun …"
+    expect(lead('stunning_bash')).toBe('Stun')
+    expect(lead('hexblade')).toBe('Stun')
+    // "Every hit jumps to N more enemies …"
+    expect(lead('stormcaller')).toBe('Shock')
+    expect(lead('moonwake')).toBe('Shock')
+    // "Every hit burns …, and it attacks 15% faster." / "Each kill pays 4 more gold, and …"
+    expect(lead('pepperfire')).toBe('Burn')
+    expect(lead('velvet_toll')).toBe('Bounty')
+    // "Every 2nd attack pierces its whole path; reaches 15% farther."
+    expect(lead('volley')).toBe('Volley')
   })
 })

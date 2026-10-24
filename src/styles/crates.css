@@ -1,0 +1,701 @@
+/**
+ * The sealed crates (Oct 2026, the crates pass): the screen
+ * (`ui/shell/hq/CratesScreen.tsx`) and its opening (`CrateOpening.tsx`).
+ *
+ * The screen is one column, no tabs: the big crate with how many the bank
+ * buys, one framed panel (what one holds: the three levels as Codex tiles,
+ * then label/value rows), and the CTA. Frames stay one deep: the panel wears
+ * the world (`worlds.css` lists `.cr-panel`), nothing inside it does.
+ *
+ * The opening is the one place a big effect is right: a full-screen moment
+ * over the page — the canvas (`crateStage.ts`) under the reward cards, which
+ * are the Codex's tiles grown into cards that flip. Under reduced motion only
+ * the summary's fade plays.
+ *
+ * Tokens only: the level hues come in as `--lv` (the Codex's `LEVEL_HUE`),
+ * the crate's own wood is the art's.
+ */
+
+/* ------------------------------------------------------------ the screen */
+.crates .ct-body {
+  gap: 12px;
+}
+.cr-title {
+  margin: 2px 0 0;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.05;
+  color: var(--accent);
+  text-shadow: 0 2px 0 var(--shade);
+  outline: none;
+}
+/* The stage: the hero chest on its plinth, in the world's own light. The
+   backdrop is a wash of the world's accent (tokens only); the canvas
+   (CrateHero) draws the rays, the glow, the chest and its sparkles. */
+.cr-stage {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  margin: 0 calc(-1 * var(--gutter, 16px));
+  padding-bottom: 6px;
+  background:
+    radial-gradient(60% 70% at 50% 58%, color-mix(in srgb, var(--accent) 16%, transparent) 0, transparent 70%),
+    radial-gradient(40% 30% at 50% 82%, color-mix(in srgb, var(--gold) 14%, transparent) 0, transparent 80%);
+}
+.cr-hero-btn {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cr-hero-btn[aria-disabled='true'] {
+  cursor: default;
+}
+.cr-hero-btn:focus-visible {
+  outline: var(--focus-width) solid var(--focus-ring);
+  outline-offset: -4px;
+  border-radius: 12px;
+}
+.cr-hero-canvas {
+  display: block;
+  width: 100%;
+  height: 236px;
+  image-rendering: pixelated;
+}
+/* The ribbon under the chest: how many, and its steps. */
+.cr-ribbon {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: -2px;
+  padding: 4px 22px 6px;
+  color: var(--ink-on-fill);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--text) 18%, transparent) 0 2px, transparent 2px calc(100% - 3px), color-mix(in srgb, var(--shade) 40%, transparent) calc(100% - 3px)),
+    var(--gold);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 50%, 100% 100%, 0 100%, 12px 50%);
+  filter: drop-shadow(0 3px 0 var(--shade));
+}
+.cr-rib-n {
+  min-width: 2.6ch;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.cr-rib-step {
+  width: 44px;
+  height: 40px;
+  border: 0;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--shade) 22%, transparent);
+  color: var(--ink-on-fill);
+  font: inherit;
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+}
+.cr-rib-step:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.cr-rib-step:focus-visible {
+  outline: var(--focus-width) solid var(--focus-ring);
+  outline-offset: 1px;
+}
+/* The coins paying: from the CTA's price up into the chest. */
+.cr-pay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.cr-pay-coin {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  animation: cr-pay 300ms cubic-bezier(0.3, 0, 0.6, 1) both;
+  animation-delay: calc(var(--i) * 10ms);
+}
+/* Each coin leaves the price a little apart from the last and arcs up into
+   the chest (its own spread, from its index). */
+@keyframes cr-pay {
+  from {
+    transform: translate(calc(var(--fx) - 50% + (var(--i) - 5) * 7px), calc(var(--fy) - 50%));
+    opacity: 1;
+  }
+  45% {
+    transform: translate(calc(var(--fx) * 0.4 - 50% + (var(--i) - 5) * 10px), calc(var(--fy) * 0.35 - 50% - 40px)) scale(1.15);
+  }
+  80% {
+    opacity: 1;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 0;
+  }
+}
+/* A satisfying press. */
+.crates .pg-cta:active:not(:disabled) {
+  transform: translateY(2px) scale(0.985);
+}
+.cr-from {
+  position: relative;
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  text-align: center;
+}
+.cr-from.short {
+  color: var(--bad-text);
+}
+
+.cr-panel {
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  text-align: left;
+}
+.cr-h {
+  margin: 0 0 8px;
+  font-size: var(--fs-micro);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.cr-bands {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.cr-band {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+}
+/* A level as the Codex draws it: its hue's frame round a lit well. */
+.cr-myst,
+.cr-tile-in,
+.cr-front-in {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  border-radius: 9px;
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--lv) 38%, var(--panel)) 0, color-mix(in srgb, var(--panel) 20%, var(--bg)) 72%);
+  box-shadow:
+    0 0 0 3px var(--lv),
+    0 0 0 4px color-mix(in srgb, var(--lv) 50%, var(--shade)),
+    0 4px 0 3px var(--shade);
+}
+.cr-myst {
+  aspect-ratio: 1.25;
+  margin-top: 4px;
+  overflow: hidden;
+  background:
+    repeating-linear-gradient(180deg, transparent 0 14px, color-mix(in srgb, var(--shade) 35%, transparent) 14px 16px),
+    radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--lv) 45%, var(--wood)) 0, color-mix(in srgb, var(--wood) 70%, var(--shade)) 75%);
+}
+/* A question, not a promise: the level's "?" where an item would be. */
+.cr-q {
+  font-family: var(--font-display);
+  font-size: 38px;
+  font-weight: 700;
+  line-height: 1;
+  color: color-mix(in srgb, var(--lv) 40%, var(--text));
+  text-shadow:
+    0 3px 0 var(--shade),
+    0 0 14px color-mix(in srgb, var(--lv) 70%, transparent);
+}
+.cr-tile-in .fw-i {
+  transform: scale(1.4);
+}
+.cr-lv {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 4px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: var(--lv);
+  color: var(--shade);
+  font-size: 11px;
+  font-weight: 900;
+  box-shadow: 0 1px 0 var(--shade);
+}
+.cr-pct {
+  margin-top: 6px;
+  font-family: var(--font-display);
+  font-size: 26px;
+  line-height: 1;
+  color: color-mix(in srgb, var(--lv) 55%, var(--text));
+  font-variant-numeric: tabular-nums;
+}
+.cr-band-k {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--muted);
+}
+.cr-rows {
+  margin-top: 10px;
+}
+.cr-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-height: 34px;
+  border-top: 1px solid var(--line);
+}
+.cr-row .field-v {
+  text-align: right;
+}
+.cr-note {
+  margin: 8px 0 0;
+  font-size: var(--fs-xs);
+  font-style: italic;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.cr-band-new {
+  font-size: var(--fs-micro);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--good);
+}
+
+/* ------------------------------------------------------------ the opening */
+/* Under the opening the page is covered: once the overlay has faded in, the
+   page stops painting at all (one big effect at a time; it holds 60 fps). */
+.crates.is-under > * {
+  visibility: hidden;
+  transition: visibility 0s 260ms;
+}
+.cr-open {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 58%, color-mix(in srgb, var(--cr-hue) 24%, var(--night)) 0, var(--night) 46%, var(--shade) 100%);
+  color: var(--text);
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+  cursor: pointer;
+  animation: cr-fade 220ms ease-out both;
+}
+.cr-open.at-summary {
+  cursor: default;
+}
+@keyframes cr-fade {
+  from {
+    opacity: 0;
+  }
+}
+.cr-open-stage {
+  position: absolute;
+  inset: 0;
+}
+.cr-open-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+.cr-open-top {
+  position: absolute;
+  top: calc(12px + var(--safe-top, 0px));
+  left: var(--gutter);
+  right: var(--gutter);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.cr-skip,
+.cr-open-count {
+  min-height: var(--hit-min, 44px);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel) 78%, transparent);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 800;
+}
+.cr-skip {
+  cursor: pointer;
+}
+.cr-skip:focus-visible {
+  outline: var(--focus-width) solid var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+.cr-open-count {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.cr-open-hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(7% + var(--safe-bottom, 0px));
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--text);
+  text-shadow: 0 2px 0 var(--shade);
+  pointer-events: none;
+  animation:
+    cr-hint-in 300ms ease-out 900ms both,
+    cr-hint-pulse 1.6s ease-in-out 1.2s infinite;
+}
+@keyframes cr-hint-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@keyframes cr-hint-pulse {
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* A reward card: the Codex tile grown into a card, face down, then flipped. */
+.cr-card {
+  --cr-w: clamp(168px, 26vh, 240px);
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  width: var(--cr-w);
+  aspect-ratio: 3 / 4;
+  transform: translate(-50%, -50%);
+  perspective: 900px;
+  will-change: transform;
+}
+.cr-card.is-fly {
+  animation: cr-fly var(--cr-fly) cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+}
+@keyframes cr-fly {
+  from {
+    transform: translate(-50%, calc(-50% + 30vh)) scale(0.18) rotate(-14deg);
+  }
+  70% {
+    transform: translate(-50%, calc(-50% - 2vh)) scale(1.04) rotate(3deg);
+  }
+}
+.cr-card-in {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform: rotateY(180deg);
+  transition: transform var(--cr-flip) cubic-bezier(0.3, 1.35, 0.5, 1);
+}
+.cr-card-in.up {
+  transform: rotateY(0deg);
+}
+.cr-card.is-build .cr-card-in {
+  animation: cr-tremble 90ms linear infinite;
+}
+.cr-card.t1.is-build .cr-card-in {
+  animation: none;
+}
+.cr-card.is-build.is-still .cr-card-in {
+  animation: none;
+}
+@keyframes cr-tremble {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  25% {
+    translate: -2px 1px;
+  }
+  75% {
+    translate: 2px -1px;
+  }
+}
+.cr-card.is-shown {
+  animation: cr-pop 300ms cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+@keyframes cr-pop {
+  from {
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+}
+.cr-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.cr-back {
+  display: grid;
+  place-items: center;
+  transform: rotateY(180deg);
+  background:
+    repeating-linear-gradient(180deg, transparent 0 22px, color-mix(in srgb, var(--shade) 40%, transparent) 22px 25px),
+    linear-gradient(color-mix(in srgb, var(--wood) 80%, var(--text)), var(--wood));
+  box-shadow:
+    0 0 0 4px var(--lv),
+    0 0 0 6px var(--shade),
+    0 8px 0 4px var(--shade);
+}
+.cr-back svg {
+  filter: drop-shadow(0 3px 0 color-mix(in srgb, var(--shade) 80%, transparent));
+}
+/* The build-up: the card's edge charges with its level's light (a glow layer
+   fading in — opacity only, so it never repaints the card). */
+.cr-back::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 14px;
+  box-shadow: 0 0 34px 14px var(--lv);
+  opacity: 0;
+}
+.cr-card.is-build .cr-back::before {
+  animation: cr-charge var(--cr-build) ease-in both;
+}
+@keyframes cr-charge {
+  to {
+    opacity: 1;
+  }
+}
+.cr-front {
+  display: flex;
+}
+.cr-front-in {
+  align-content: center;
+  gap: 4px;
+  padding: 26px 12px 14px;
+  border-radius: 14px;
+  text-align: center;
+  box-shadow:
+    0 0 0 4px var(--lv),
+    0 0 0 6px var(--shade),
+    0 0 26px 6px color-mix(in srgb, var(--lv) 55%, transparent),
+    0 8px 0 4px var(--shade);
+}
+.cr-card.t3 .cr-front-in {
+  box-shadow:
+    0 0 0 4px var(--lv),
+    0 0 0 6px var(--gold),
+    0 0 0 8px var(--shade),
+    0 0 40px 12px color-mix(in srgb, var(--gold) 55%, transparent),
+    0 8px 0 6px var(--shade);
+}
+.cr-front-in .cr-lv {
+  top: 8px;
+  left: 8px;
+  height: 22px;
+  min-width: 24px;
+  font-size: 13px;
+}
+.cr-front-in .cr-art {
+  display: grid;
+  place-items: center;
+  height: 84px;
+}
+.cr-front-in .cr-art .fw-i {
+  transform: scale(2.4);
+  filter: drop-shadow(0 2px 0 var(--shade));
+}
+.cr-name {
+  font-family: var(--font-display);
+  font-size: 24px;
+  line-height: 1.05;
+  color: var(--text);
+  text-shadow: 0 2px 0 var(--shade);
+}
+.cr-meta {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: color-mix(in srgb, var(--lv) 50%, var(--text));
+}
+.cr-line {
+  font-size: var(--fs-sm);
+  line-height: 1.3;
+  color: var(--text);
+}
+.cr-line.dup {
+  color: var(--gold-text);
+  font-weight: 700;
+}
+.cr-new {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  z-index: 2;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: var(--bad);
+  border: 2px solid var(--bg);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transform: rotate(8deg);
+}
+
+/* Everything won. */
+.cr-sum {
+  position: absolute;
+  left: var(--gutter);
+  right: var(--gutter);
+  top: 50%;
+  max-width: 460px;
+  margin: 0 auto;
+  padding: 18px 14px 14px;
+  transform: translateY(-50%);
+  text-align: center;
+  cursor: default;
+  animation: cr-sum-in 280ms cubic-bezier(0.3, 1.4, 0.5, 1) both;
+}
+@keyframes cr-sum-in {
+  from {
+    opacity: 0;
+    transform: translateY(-46%) scale(0.94);
+  }
+}
+.cr-sum-title {
+  margin: 0 0 14px;
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--accent);
+  text-shadow: 0 2px 0 var(--shade);
+}
+.cr-sum-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
+  gap: 12px 10px;
+  margin: 0 auto;
+  padding: 6px 4px 8px;
+  list-style: none;
+}
+.cr-sum-grid.n1 {
+  --cols: 1;
+  max-width: 168px;
+}
+.cr-sum-grid.n1 .cr-tile-name {
+  font-size: var(--fs-sm);
+}
+.cr-sum-grid.n1 .fw-i {
+  transform: scale(2);
+}
+.cr-sum-grid.n2 {
+  --cols: 2;
+  max-width: 264px;
+}
+.cr-sum-grid.n3 {
+  --cols: 3;
+}
+.cr-sum-grid.n4 {
+  --cols: 4;
+}
+.cr-sum-grid.n5 {
+  --cols: 5;
+  gap: 10px 7px;
+}
+.cr-tile {
+  position: relative;
+  animation: cr-tile-in 260ms cubic-bezier(0.3, 1.5, 0.5, 1) both;
+  animation-delay: calc(var(--i, 0) * 70ms + 120ms);
+}
+@keyframes cr-tile-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+.cr-tile-in {
+  aspect-ratio: 1 / 1.12;
+  align-content: start;
+  padding-top: 24%;
+  overflow: hidden;
+}
+.cr-tile-name {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 3px 3px 4px;
+  font-size: 10.5px;
+  font-weight: 800;
+  line-height: 1.05;
+  color: var(--text);
+  background: linear-gradient(transparent, color-mix(in srgb, var(--shade) 80%, transparent) 40%);
+  text-shadow: 0 1px 0 var(--shade);
+  overflow-wrap: anywhere;
+}
+.cr-tile .cr-new {
+  top: -8px;
+  right: -8px;
+  font-size: 9.5px;
+  padding: 1px 5px;
+}
+.cr-sum .cr-note {
+  text-align: center;
+  margin: 2px 0 0;
+}
+.cr-collect {
+  margin-top: 14px;
+}
+
+/* Reduced motion: the summary fades in; nothing else moves. */
+.cr-open.is-still .cr-sum,
+.cr-open.is-still .cr-tile {
+  animation: none;
+}
+:root[data-reduced-motion='true'] .cr-pay {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cr-pay {
+    display: none;
+  }
+  .cr-open .cr-sum,
+  .cr-open .cr-tile {
+    animation: none;
+  }
+}
+
+/* A desk: the screen stays a column; the opening's card grows with the screen. */
+@media (min-width: 900px) and (min-height: 540px) {
+  .cr-myst {
+    aspect-ratio: 1.5;
+  }
+  .cr-hero-canvas {
+    height: 300px;
+  }
+  .cr-name {
+    font-size: 28px;
+  }
+  .cr-sum-grid.n5 {
+    gap: 12px 10px;
+  }
+}

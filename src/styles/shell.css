@@ -114,6 +114,42 @@
 .sh-header-row > .sh-res {
   flex: 0 0 auto;
 }
+/* The way out of the run (Oct 2026): a quiet back arrow at the row's head —
+   a chip-sized face inside a 44px touch target. */
+.sh-leave {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: -6px -6px -6px -8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.sh-leave-face {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+}
+.sh-leave:focus-visible {
+  outline: none;
+}
+.sh-leave:focus-visible .sh-leave-face {
+  outline: var(--focus-width, 2px) solid var(--focus-ring, var(--accent));
+  outline-offset: 2px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .sh-leave:hover .sh-leave-face {
+    border-color: var(--accent-dim);
+  }
+}
 /* The cargo block takes the room the chips leave (its own content does not
    size it, so it can be queried). With depth and strength beside it on a
    phone, the visible word "Cargo" steps aside before the bar would shrink
@@ -128,12 +164,42 @@
     display: none;
   }
 }
+/* Tighter still — strength, the purse and the HUD's Team button beside it on
+   a phone: the crate steps aside too, so the bar and its percentage keep
+   their room. They were drawn under the purse at 390 wide ("10" for 100%,
+   job critique Oct 2026); the accessible name still says "Cargo 100%". */
+@container sh-cargo (max-width: 96px) {
+  .sh-base .sh-base-glyph {
+    display: none;
+  }
+}
 /* A phone's row: a little less air between the pieces, and slimmer chips
    below 390, so depth, strength, cargo and a four-digit purse share one row
    down to 360 wide. */
 @media (max-width: 699.98px) {
   .sh-header-row {
     gap: 6px;
+  }
+}
+/* A phone in battle carries the Team button too (the battle band): the row's
+   air and the chips' padding give it its room, so the cargo bar keeps a
+   readable length and its percentage is never under the purse. */
+@media (max-width: 429.98px) {
+  .sh-header:has(.sh-team-btn) {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  .sh-header-row:has(> .sh-team-btn) {
+    gap: 4px;
+  }
+  .sh-header-row:has(> .sh-team-btn) > .sh-chip,
+  .sh-header-row:has(> .sh-team-btn) .sh-chip.gold {
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+  .sh-header-row > .sh-team-btn {
+    padding: 0 7px;
+    margin-right: -8px;
   }
 }
 @media (max-width: 389.98px) {
@@ -179,6 +245,33 @@
     flex-basis: 100%;
   }
 }
+/* In a two-row header the Team button rides the cargo's row, at its end: it
+   wrapped alone onto a row of its own at 320 and pushed the cargo to a third
+   (job critique, Oct 2026). */
+@media (max-width: 359.98px) {
+  .sh-header-row:has(> .sh-chip ~ .sh-chip):has(> .sh-team-btn) > .sh-base {
+    flex-basis: calc(100% - 48px);
+  }
+  .sh-header-row:has(> .sh-chip ~ .sh-chip) > .sh-team-btn {
+    order: 2;
+  }
+}
+@media (max-width: 429.98px) {
+  :root[data-scale='large'] .sh-header-row:has(> .sh-chip ~ .sh-chip):has(> .sh-team-btn) > .sh-base {
+    flex-basis: calc(100% - 48px);
+  }
+  :root[data-scale='large'] .sh-header-row:has(> .sh-chip ~ .sh-chip) > .sh-team-btn {
+    order: 2;
+  }
+}
+@media (max-width: 699.98px) {
+  .sh-header-row:has(> .sh-chip.sov):has(> .sh-team-btn) > .sh-base {
+    flex-basis: calc(100% - 48px);
+  }
+  .sh-header-row:has(> .sh-chip.sov) > .sh-team-btn {
+    order: 2;
+  }
+}
 /* The bands' heading: a real, focusable h1 with an aria-label and no visible
    box. Placed off-screen like the announcer — not clipped (global.css). */
 .sh-screen-h {
@@ -199,8 +292,8 @@
   white-space: nowrap;
 }
 .sh-chip.gold {
-  color: var(--accent);
-  border-color: rgba(224, 172, 76, 0.28);
+  color: var(--gold);
+  border-color: color-mix(in srgb, var(--gold) 28%, transparent);
 }
 .sh-chip.teal {
   color: var(--teal);
@@ -467,7 +560,7 @@
 .sh-offer-cost {
   font-size: var(--fs-micro);
   font-weight: 700;
-  color: var(--accent);
+  color: var(--gold);
 }
 
 
@@ -508,6 +601,19 @@
 .sh-detail:has(> .sh-wavebar) {
   grid-template-rows: minmax(0, 1fr) auto;
   height: calc(var(--sh-detail-h) + var(--sh-wavebar-h) + var(--safe-bottom));
+}
+/* The run map (Oct 2026): the stop's card over one full-width CTA, as on every
+   page. No party row above and no gear or pack beside it, so the map keeps the
+   room they took. */
+.sh-detail:has(> .sh-marchbar) {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  row-gap: 10px;
+  height: calc(var(--sh-detail-h) + var(--safe-bottom));
+}
+.sh-marchbar {
+  grid-column: 1 / -1;
+  padding-bottom: var(--safe-bottom);
 }
 .sh-context,
 .sh-gear,
@@ -622,7 +728,7 @@
 }
 .sh-tab.active {
   background: var(--accent);
-  color: #1b1409;
+  color: var(--ink-on-fill);
 }
 
 /* `minmax(0, 1fr)`, not `1fr`: grid items floor at min-content, so the longest
@@ -1549,8 +1655,8 @@
   gap: 8px;
   padding: 8px 12px 8px 10px;
   border-radius: 14px;
-  background: rgba(20, 13, 7, 0.9);
-  border: 1px solid rgba(224, 172, 76, 0.42);
+  background: color-mix(in srgb, var(--shade) 90%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, transparent);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
   pointer-events: none;
   opacity: 1;
@@ -1579,10 +1685,8 @@
 .sh-stage:has(.place-zoom-hint) .sh-coach.top {
   top: 40px;
 }
-/* …and of the receipt toast, which drops in just under the header. */
-.shell:has(.pg-toast) .sh-coach.top {
-  top: 52px;
-}
+/* The receipt toast drops in just under the header: a top pill waits for it
+   to clear (`Coach`, `toastUp`), so the two never share the band. */
 @keyframes sh-pill-down {
   from {
     opacity: 0;
@@ -2040,7 +2144,10 @@
      item with `height: 100%` it still measured 30x31, because the grid row is
      sized by its tallest item, not by the badge. `position: absolute; inset: 0`
      takes exactly the badge, and `cover` fills it by CROPPING — which on a
-     standing figure means losing the feet, the right thing to lose. */
+     standing figure means losing the feet, the right thing to lose.
+     Oct 2026: the portrait is a square bust cut from the hero's own figure in
+     its kit (`render/heroPortrait`) — the feet are already gone, and in the
+     square badge `cover` crops nothing. */
   position: absolute;
   inset: 0;
   width: 100%;
@@ -2244,14 +2351,14 @@
 }
 .sh-selector::before {
   left: 0;
-  background: linear-gradient(90deg, var(--bg-2) 20%, rgba(42, 31, 22, 0));
+  background: linear-gradient(90deg, var(--bg-2) 20%, transparent);
 }
 .sh-selector::after {
   right: 0;
   background:
     no-repeat center / 10px 16px
       url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 16'%3E%3Cpath d='M2 2l6 6-6 6' fill='none' stroke='%23e0ac4c' stroke-width='2.5'/%3E%3C/svg%3E"),
-    linear-gradient(270deg, var(--bg-2) 30%, rgba(42, 31, 22, 0));
+    linear-gradient(270deg, var(--bg-2) 30%, transparent);
 }
 .sh-selector[data-more-left='1']::before,
 .sh-selector[data-more-right='1']::after {
@@ -2487,7 +2594,7 @@
   background: var(--panel-3);
   box-shadow:
     0 0 0 3px var(--accent),
-    0 0 14px rgba(224, 172, 76, 0.45);
+    0 0 14px color-mix(in srgb, var(--accent) 45%, transparent);
   animation: none;
   z-index: 2;
 }
@@ -2638,4 +2745,57 @@
 .sh-slot:disabled {
   cursor: default;
   opacity: 0.55;
+}
+
+/*
+ * A second term (Draft 4 · B): the company's crest wears a gold rim wherever
+ * it is drawn — a one-pixel ring of the accent gold that follows the logo's
+ * own outline (four hard drop-shadows; no blur, so it stays pixel art).
+ */
+.crest.rim {
+  filter: drop-shadow(var(--rim, 1px) 0 0 var(--gold)) drop-shadow(calc(-1 * var(--rim, 1px)) 0 0 var(--gold)) drop-shadow(0 var(--rim, 1px) 0 var(--gold)) drop-shadow(0 calc(-1 * var(--rim, 1px)) 0 var(--gold));
+}
+
+/* ------------------------------------------------------------ the Assisted tag */
+/* The gameplay pass (Oct 2026, `AssistedTag`): assist was on at some point of
+   the run, so it counts for no leaderboard. Quiet, never alarming — the info
+   hue, not the danger one: it reports a setting, not a fault. */
+.assisted-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--teal-text);
+  white-space: nowrap;
+}
+.assisted-tag.hud {
+  border-color: var(--teal-dim);
+}
+/* On a phone the tag, depth and strength leave the cargo bar no room: the row
+   wraps: the chips, then the cargo and the purse on the second row. Chosen by
+   which chips the run has, never by a number's width, so it cannot flip
+   mid-battle. */
+@media (max-width: 699.98px) {
+  .sh-header-row:has(> .assisted-tag.hud):has(> .sh-chip.threat) {
+    flex-wrap: wrap;
+    row-gap: 5px;
+  }
+  .sh-header-row:has(> .assisted-tag.hud):has(> .sh-chip.threat) > .sh-base {
+    order: 1;
+    flex: 1 1 55%;
+  }
+  .sh-header-row:has(> .assisted-tag.hud):has(> .sh-chip.threat) > .sh-res {
+    order: 2;
+  }
+}
+.assisted-tag.result {
+  align-self: center;
+  margin: 2px auto 0;
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--teal-dim);
+  background: var(--panel-2);
 }

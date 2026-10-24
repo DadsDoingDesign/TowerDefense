@@ -68,10 +68,10 @@ export function CharterScreen({ onBack }: { onBack: () => void }) {
           ? {
               label: (
                 <>
-                  Charter the road <small className="ct-cta-cost"><Gold n={CHARTER_FEE} /></small>
+                  Buy Company <small className="ct-cta-cost"><Gold n={CHARTER_FEE} /></small>
                 </>
               ),
-              name: `Charter the road, ${moneyText(CHARTER_FEE)}${can ? '' : ' — your bank is short'}`,
+              name: `Buy Company, ${moneyText(CHARTER_FEE)}${can ? '' : ' — your bank is short'}`,
               run: signCharter,
               disabled: !can,
               heavy: true,
@@ -80,7 +80,9 @@ export function CharterScreen({ onBack }: { onBack: () => void }) {
       }
     >
       <div className="ch-hero">
-        <p className="ch-kick">The endgame charter</p>
+        {/* The home's name for it, so the page is plainly where its slot led —
+            while it is locked; once open, the CTA says it ("Buy Company"). */}
+        {!door.open && <p className="ch-kick">Buy Company</p>}
         <h1 className="ct-title" tabIndex={-1}>
           {CHARTER_NAME}
         </h1>
@@ -128,7 +130,7 @@ export function CharterScreen({ onBack }: { onBack: () => void }) {
         <>
           <div className="ch-terms">
             <div>
-              <span>Charter</span>
+              <span>Price</span>
               <b>
                 <Gold n={CHARTER_FEE} />
               </b>
@@ -150,7 +152,7 @@ export function CharterScreen({ onBack }: { onBack: () => void }) {
             </div>
           </div>
           <p className="ch-standing">
-            <b>Standing with all five companies</b>, win or lose: each earns what an escort that ended the same way earns with its one.
+            <b>Standing with all five companies</b>, win or lose: as much with each as an escort for it would earn.
           </p>
 
           <section className="ch-offs" aria-label="Every company sets a condition">
@@ -160,10 +162,10 @@ export function CharterScreen({ onBack }: { onBack: () => void }) {
               return (
                 <div key={t.company} className="ch-off" style={{ '--co': companyVar(t.company) } as CSSProperties}>
                   <Crest company={t.company} scale={2} />
+                  {/* The company, then what it does to the road, once: its rule's
+                      name ("Merchants charge double") said the line again. */}
                   <span>
-                    <b>
-                      {co.name}: {t.rule}
-                    </b>
+                    <b>{co.name}</b>
                     <span>{t.line}</span>
                   </span>
                 </div>
@@ -213,7 +215,7 @@ export function CharterScreen({ onBack }: { onBack: () => void }) {
 
           {!can && (
             <p className="ch-note short">
-              Your bank holds {bank.toLocaleString('en')} gold; the charter is {CHARTER_FEE.toLocaleString('en')}.
+              Your bank holds {bank.toLocaleString('en')} gold of the {CHARTER_FEE.toLocaleString('en')} it costs.
             </p>
           )}
         </>

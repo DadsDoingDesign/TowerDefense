@@ -5,7 +5,9 @@
 import { roadPays } from './purse'
 import { canUpgrade, reforgeCost, reforgeItem, upgradeCost, upgradeRarity } from '../../game/data/items'
 import type { BumpStat } from '../../game/data/skills'
-import { takeBump, takeSkill } from '../../game/run/skills'
+import { dropSkill, takeBump } from '../../game/run/skills'
+import { mergedHeld, namedHeld } from '../../game/run/fusion'
+import { useMetaStore } from '../metaStore'
 import { scrapGold, sortItems } from '../../game/run/economy'
 import { equipFromPack, findItem, replaceItem, unequipToPack } from '../../game/run/inventory'
 import { equipRules } from '../../game/run/relics'
@@ -24,13 +26,14 @@ export interface RosterActions {
   reforge: (itemId: string) => void
   upgradeItem: (itemId: string) => void
   /**
-   * Take a skill at the hero's owed milestone (SK1). Refused unless the skill
-   * is on the offer the hero is shown right now (`run/skills.skillOffer`, the
-   * same list every picker draws), and — for a hero whose three slots are full
-   * — unless `drop` names the skill it gives up. Never during a live wave:
-   * choices are made between rounds.
+   * Drop a skill card on one of the hero's slots at its owed milestone (SK1;
+   * the drag-and-drop pass, `run/skills.dropSkill`): onto an empty slot it is
+   * learned as itself, onto a held skill it merges in. Refused unless the
+   * card is on the offer the hero is shown right now (`run/skills.skillOffer`,
+   * the same list every picker draws) and can land on that slot. Never during
+   * a live wave: choices are made between rounds.
    */
-  chooseSkill: (sentinelId: string, skillId: string, drop?: string | null) => void
+  dropSkill: (sentinelId: string, skillId: string, slot: number) => void
   /** Take the stat bump instead, at the same milestone, on the stat chosen (SK1). */
   chooseStatBump: (sentinelId: string, stat: BumpStat) => void
 }
@@ -107,16 +110,17 @@ export const createRosterSlice: Slice<RosterActions> = (set, get) => ({
     redressWearer(get, set, itemId)
   },
 
-  chooseSkill: (sentinelId, skillId, drop) => {
+  dropSkill: (sentinelId, skillId, slot) => {
     const { roster, skillPool, runSeed } = get()
     const hero = roster.find((x) => x.id === sentinelId)
     if (!hero || waveLive(get())) return
-    const next = takeSkill(hero, skillId, skillPool, runSeed, drop)
+    const next = dropSkill(hero, skillId, slot, skillPool, runSeed)
     if (!next) return sfx('error')
     set({ roster: roster.map((x) => (x.id === sentinelId ? next : x)) })
-    // A skill is the biggest choice a hero makes, and keeps the struck chord
+    // A merge plays the fuse beat's own cue (`FuseBeat`); a skill learned as
+    // itself is the biggest choice a hero makes, and keeps the struck chord
     // the evolution had.
-    sfx('evolve')
+    if (!noteMerged(hero.skills, next.skills)) sfx('evolve')
   },
 
   chooseStatBump: (sentinelId, stat) => {
@@ -129,6 +133,18 @@ export const createRosterSlice: Slice<RosterActions> = (set, get) => ({
     sfx('upgrade')
   },
 })
+
+/**
+ * Whether a drop merged; a named merge it made is recorded in the Codex as
+ * found (an undiscovered recipe's result is a "?" until it is made once).
+ */
+function noteMerged(before: readonly string[] | undefined, after: readonly string[] | undefined): boolean {
+  const had = new Set(before ?? [])
+  const made = mergedHeld({ skills: [...(after ?? [])] }).filter((id) => !had.has(id))
+  const named = namedHeld({ skills: made })
+  if (named.length) useMetaStore.getState().recordCodex({ fusions: named })
+  return made.length > 0
+}
 
 /**
  * A gear change in the breather reaches the fight: the hero standing in the

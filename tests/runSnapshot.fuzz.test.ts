@@ -50,10 +50,11 @@ import {
   type RunSnapshot,
 } from '../src/state/runSnapshot'
 import { relicTeamMods } from '../src/game/data/relics'
-import { skillById, STARTER_SKILLS } from '../src/game/data/skills'
-import { ALL_ITEM_KINDS, BASIC_ITEM_KINDS, isItemKind, isSovereignKind, SOVEREIGN_ITEM_KINDS } from '../src/game/data/itemKinds'
+import { chainOf, isMergedId, skillById, STARTER_SKILLS } from '../src/game/data/skills'
+import { ALL_ITEM_KINDS, BASIC_ITEM_KINDS, CLASSIC_ITEM_KINDS, isItemKind, isSovereignKind, SOVEREIGN_ITEM_KINDS } from '../src/game/data/itemKinds'
 import { MAX_SKILLS, skillOffer } from '../src/game/run/skills'
 import { CITY_COUNT, MARKET_MULT, MAX_CRATES, runItemPool } from '../src/game/run/contracts'
+import { askById, judgeAsks } from '../src/game/run/asks'
 import { CHARTER_PAYOUT, SOVEREIGN_DILUTION } from '../src/game/run/charter'
 import { ROUTE_HAZARDS } from '../src/game/data/hazards'
 import { devCharter } from '../src/state/devCharter'
@@ -88,6 +89,8 @@ function buildBase(): Record<string, unknown> {
   setLayoutOrientation(null)
   useMetaStore.setState({ stats: { ...useMetaStore.getState().stats, runsCompleted: runs } })
   useGameStore.setState({ firstRun: true })
+  // The gameplay pass (v19): the base run is assisted, so mutations land on `assisted` too.
+  useGameStore.setState({ assisted: true })
   // v10 (G1-2): the battle is fought under a map challenge with the hero posted
   // on a tile, so mutations land on `terrainRule` and a tile-keyed placement.
   // Q1: `withTerrainRule` keeps the node's danger ground, so they land on
@@ -118,13 +121,26 @@ function buildBase(): Record<string, unknown> {
   const extra: Sentinel = {
     ...classicHero('mystic'),
     equipment: { mainHand: null, offHand: { ...epic('oneHand'), name: 'Heavy Sword' }, body: null },
+    // Merging (Oct 2026): a greater named merge (three skills in one slot)
+    // and a plain merge, so every load of the base validates both id shapes
+    // and every mutation of `skills` reaches them.
+    skills: ['fz_skyfall', 'mx.frostbite.arc_spark'],
+    skillPicks: 1,
   }
   const runMods: EffectMods[] = [{ damageMult: 1.05, burn: { dps: 2, dur: 1.5 } }]
   useGameStore.setState({
     roster: [hero, extra],
     // Item identities (October audit): a Tome rolls `damagePct`, a base stat the
     // validators must hold too. Its own stream, so no draw above moves.
-    inventory: [...s.inventory, epic('twoHand'), generateItem(new RNG(77), { kind: 'Tome', rarity: 'epic' })],
+    inventory: [
+      ...s.inventory,
+      epic('twoHand'),
+      generateItem(new RNG(77), { kind: 'Tome', rarity: 'epic' }),
+      // The peoples' kinds (Oct 2026): edges carrying the new mods — a speed
+      // aura and a mend, roots, a crit burn and a boolean — so the validators
+      // and every mutation reach them. Their own streams.
+      ...['Elixir of Plenty', 'Bloomstaff', 'Pepperport Sabre', 'Whisperfang'].map((kind, i) => generateItem(new RNG(90 + i), { kind, rarity: 'rare' })),
+    ],
     runKills: 25,
     runMods,
     reward: [
@@ -136,7 +152,7 @@ function buildBase(): Record<string, unknown> {
     // …and the Twinblade Harness under its pre-round-3 id, `ambidextrous`.
     relics: ['ledger', 'charter', 'warding_stone', 'ambidextrous'],
     feats: { starter: 'swing', startSize: 1, maxFielded: 2, actBosses: 1, flawlessBosses: 0, goldPeak: 120 },
-    merchant: { items: [{ item: epic('oneHand'), price: 40 }], recruit: { sentinel: classicHero('rogue'), price: 90 }, repair: { hp: 5, price: 35 }, rerolls: 1 },
+    merchant: { items: [{ item: epic('oneHand'), price: 40 }], repair: { hp: 5, price: 35 }, rerolls: 1 },
     crossroads: { recruits: [classicHero('rogue')], mutations: muts.slice(1, 4), mutationHeroId: null },
     // v15: a staked contract one city in, so the fuzz lands on every field of it.
     contract: {
@@ -153,6 +169,13 @@ function buildBase(): Record<string, unknown> {
       // October 2026: the purse is the company's advance (never banked).
       purse: 60,
       advance: true,
+      // The trade war (Draft 4 · D): signed on desperate terms.
+      desperate: true,
+      // v18: the company's asks (Draft 4 · A), one counted, one judged at the end.
+      asks: [
+        { id: 'silk.wares', target: 4, got: 3 },
+        { id: 'silk.roadGold', target: 3500, got: 0 },
+      ],
     },
   })
   const snap = captureRun(useGameStore.getState(), {
@@ -199,14 +222,12 @@ function assertPlayable(snap: RunSnapshot, where: string): void {
   // Field-per-act: the act the field belongs to is always a real act.
   if (validFieldAct(snap.fieldAct) === null) throw new Error(`${where}: field act ${snap.fieldAct}`)
   const cursed = (field.tiles ?? []).filter((t) => t.danger)
-  // A route's own ground may curse more (Moonquill's, the Sovereign Route's).
+  // A route's own ground may curse more (Greenvial's, the Sovereign Route's).
   const cursedMax = DANGER_TILES + (field.terrainRule ? (ROUTE_HAZARDS[field.terrainRule]?.dangerTiles ?? 0) : 0)
   if (cursed.length > cursedMax * 4 || cursed.some((t) => t.block)) throw new Error(`${where}: bad danger ground`)
   const team = [...snap.runMods, ...teamKeepsakeMods(snap.roster), ...relicTeamMods(snap.relics)]
   const heroes: Sentinel[] = [
     ...snap.roster,
-    ...snap.recruitOptions,
-    ...(snap.merchant?.recruit ? [snap.merchant.recruit.sentinel] : []),
     ...(snap.crossroads?.recruits ?? []),
   ]
   for (const s of heroes) assertFiniteCombat(s, team, where)
@@ -269,6 +290,23 @@ function assertPlayable(snap: RunSnapshot, where: string): void {
   for (const n of c.cargoAt) if (!Number.isInteger(n) || n < 0 || n > 100) throw new Error(`${where}: cargo ${n}`)
   if (c.pending !== null && c.pending !== c.paid.length - 1) throw new Error(`${where}: pending ${c.pending}`)
   if (!Number.isFinite(runDeposit({ gold: snap.gold, contract: c }))) throw new Error(`${where}: deposit`)
+  // The trade war: desperate terms are a strict true or absent, and never on a charter.
+  if ('desperate' in c && (c.desperate !== true || c.charter)) throw new Error(`${where}: desperate ${c.desperate}`)
+  // v18: the company's asks — known ids once each, from the company's own list
+  // (any three on a charter), whole counts, and a judged settle that is finite.
+  if (c.asks) {
+    if (!Array.isArray(c.asks) || c.asks.length === 0 || c.asks.length > (c.charter ? 3 : 2)) throw new Error(`${where}: asks ${JSON.stringify(c.asks)}`)
+    if (new Set(c.asks.map((a) => a.id)).size !== c.asks.length) throw new Error(`${where}: an ask twice`)
+    for (const a of c.asks) {
+      const def = askById(a.id)
+      if (!def) throw new Error(`${where}: ask ${a.id}`)
+      if (!c.charter && def.company !== c.company) throw new Error(`${where}: ask ${a.id} on ${c.company}'s road`)
+      if (!Number.isInteger(a.target) || a.target < 1 || a.target > 1e6) throw new Error(`${where}: ask target ${a.target}`)
+      if (!Number.isInteger(a.got) || a.got < 0 || a.got > 1e6) throw new Error(`${where}: ask count ${a.got}`)
+    }
+    const judged = judgeAsks({ contract: c, gold: snap.gold }, 'delivered')
+    if (judged.some((r) => !Number.isFinite(r.got))) throw new Error(`${where}: ask judged ${JSON.stringify(judged)}`)
+  }
   // v16: the road's gold and the HQ's terms, each within what the HQ sells.
   if (!Number.isInteger(c.earned) || c.earned < 0 || c.earned > 1e6) throw new Error(`${where}: earned ${c.earned}`)
   const hq = c.hq
@@ -285,6 +323,8 @@ function assertPlayable(snap: RunSnapshot, where: string): void {
   // SK1 (v13): the run's pool is known skill ids, and every hero's skills are
   // known, distinct, its class's, at most three — and its owed offer deals.
   if (!snap.skillPool.length || !snap.skillPool.every((id) => !!skillById(id))) throw new Error(`${where}: bad skill pool`)
+  // Merging: a pool is library cards only — a merged skill is never dealt.
+  if (snap.skillPool.some((id) => isMergedId(id))) throw new Error(`${where}: a merged skill in the pool`)
   // v14: the item pool is known kinds, always holding the basic five; v15:
   // weighted to the contract's company — and (v16) its HQ focus — exactly as
   // a run beginning on those terms weights it, nothing more.
@@ -300,6 +340,9 @@ function assertPlayable(snap: RunSnapshot, where: string): void {
       const k = skillById(id)
       if (!k) throw new Error(`${where}: ${s.id} holds ${id}`)
     }
+    // No library skill is held twice: not loose beside a merge of it, not in two merges.
+    const cards = ks.flatMap((id) => [...chainOf(id)])
+    if (new Set(cards).size !== cards.length) throw new Error(`${where}: ${s.id} holds a skill twice: ${ks}`)
     const picks = s.skillPicks ?? 0
     if (!Number.isInteger(picks) || picks < 0 || picks > 3) throw new Error(`${where}: ${s.id} skillPicks ${picks}`)
     // v14: no class left on a hero, and its profile builds from its gear.
@@ -553,7 +596,7 @@ describe('v13 → v14: heroes lose their class (the classless rework)', () => {
   })
 
   it('drops the class, keeps gear and skills, and hands an old Fighter with a free off hand a plain Shield', () => {
-    const raw = buildBase() as Record<string, unknown> & { roster: Sentinel[]; recruitOptions: Sentinel[] }
+    const raw = buildBase() as Record<string, unknown> & { roster: Sentinel[] }
     raw.v = 13
     delete raw.itemPool
     const h = raw.roster[0]
@@ -570,8 +613,8 @@ describe('v13 → v14: heroes lose their class (the classless rework)', () => {
     expect(computeCombat({ ...f, skills: [] }).mods.block?.count).toBe(2)
     expect(f.skills).toEqual(h.skills)
     for (const k of ['archetype', 'branchPath', 'color', 'accent']) expect(k in f).toBe(false)
-    // A run saved before item unlocks keeps dealing every kind.
-    expect([...new Set(snap!.itemPool)]).toEqual([...ALL_ITEM_KINDS])
+    // A run saved before item unlocks keeps dealing every kind it was dealing then (the classic catalogue).
+    expect([...new Set(snap!.itemPool)]).toEqual([...CLASSIC_ITEM_KINDS])
     assertPlayable(snap!, 'v13')
   })
 
@@ -675,6 +718,66 @@ describe('v10 → v11: heroes have no HP', () => {
     expect(snap!.runMods.every(clean)).toBe(true)
     expect(snap!.runMods[0].damageMult).toBe(1.05)
     assertPlayable(snap!, 'v10 save')
+  })
+})
+
+describe('Oct 2026: a merchant sells goods only', () => {
+  it('loads a save whose merchant still carried a hire, and drops the hire', () => {
+    const raw = buildBase() as Record<string, unknown> & { merchant: Record<string, unknown> }
+    raw.merchant = { ...raw.merchant, recruit: { sentinel: classicHero('rogue'), price: 80 } }
+    const snap = migrateSnapshot(JSON.parse(JSON.stringify(raw)))
+    expect(snap).not.toBeNull()
+    expect(snap!.merchant).not.toBeNull()
+    expect('recruit' in snap!.merchant!).toBe(false)
+    expect(snap!.merchant!.items.length).toBeGreaterThan(0)
+    assertPlayable(snap!, 'a save with a merchant hire')
+  })
+})
+
+describe('v18 → v19: no recruit stops (the gameplay pass)', () => {
+  it('a mid-run save parked on a recruit stop loads, the stop a battle and the event dropped', () => {
+    const raw = buildBase() as Record<string, unknown> & {
+      runMap: { nodes: { id: string; type: string; layer: number }[] }
+      reachableNodeIds: string[]
+      clearedNodeIds: string[]
+    }
+    raw.v = 18
+    // A reachable node of the save becomes the recruit stop it would have been.
+    const id = raw.reachableNodeIds.find((n) => !raw.clearedNodeIds.includes(n))!
+    raw.runMap.nodes = raw.runMap.nodes.map((n) => (n.id === id ? { ...n, type: 'recruit' } : n))
+    Object.assign(raw, {
+      screen: 'map',
+      activeNodeId: null,
+      currentWave: null,
+      lastResult: null,
+      event: { kind: 'recruit', nodeId: id },
+      recruitOptions: [classicHero('rogue'), classicHero('mystic')],
+    })
+    const snap = migrateSnapshot(JSON.parse(JSON.stringify(raw)))
+    expect(snap).not.toBeNull()
+    expect(snap!.runMap.nodes.find((n) => n.id === id)?.type).toBe('battle')
+    expect(snap!.runMap.nodes.some((n) => (n.type as string) === 'recruit')).toBe(false)
+    expect(snap!.event).toBeNull()
+    expect('recruitOptions' in snap!).toBe(false)
+    // Still on the road, and the old stop can be entered again — as a fight.
+    expect(snap!.reachableNodeIds).toContain(id)
+    assertPlayable(snap!, 'a save parked on a recruit stop')
+  })
+
+  it('a cleared recruit stop reads as a cleared battle', () => {
+    const raw = buildBase() as Record<string, unknown> & {
+      runMap: { nodes: { id: string; type: string; layer: number }[] }
+      reachableNodeIds: string[]
+      clearedNodeIds: string[]
+    }
+    raw.v = 18
+    const id = raw.reachableNodeIds[0]
+    raw.runMap.nodes = raw.runMap.nodes.map((n) => (n.id === id ? { ...n, type: 'recruit' } : n))
+    Object.assign(raw, { screen: 'map', activeNodeId: null, currentWave: null, lastResult: null, clearedNodeIds: [...raw.clearedNodeIds, id] })
+    const snap = migrateSnapshot(JSON.parse(JSON.stringify(raw)))
+    expect(snap).not.toBeNull()
+    expect(snap!.runMap.nodes.find((n) => n.id === id)?.type).toBe('battle')
+    expect(snap!.clearedNodeIds).toContain(id)
   })
 })
 
@@ -790,9 +893,20 @@ function buildCharterBase(): Record<string, unknown> {
   const brand = generateItem(rng, { kind: 'Saffron Brand', rarity: 'rare' })
   useGameStore.setState({
     roster: [{ ...s.roster[0], equipment: { ...s.roster[0].equipment, mainHand: brand } }],
-    merchant: { items: [{ item: generateItem(rng, { kind: 'Gilded Easel', rarity: 'epic' }), price: 220 }], recruit: null, repair: { hp: 5, price: 70 }, rerolls: 0 },
+    merchant: { items: [{ item: generateItem(rng, { kind: 'Gilded Easel', rarity: 'epic' }), price: 220 }], repair: { hp: 5, price: 70 }, rerolls: 0 },
     // A charter one waypoint in: it paid nothing there, and waits on nothing.
-    contract: { ...s.contract!, paid: [0], cargoAt: [90], earned: 60 },
+    contract: {
+      ...s.contract!,
+      paid: [0],
+      cargoAt: [90],
+      earned: 60,
+      // v18: three asks from three companies' lists, one already met.
+      asks: [
+        { id: 'spice.burning', target: 120, got: 130 },
+        { id: 'metals.plated', target: 25, got: 4 },
+        { id: 'scrolls.pact', target: 1, got: 0 },
+      ],
+    },
   })
   const snap = captureRun(useGameStore.getState(), { rngLoot: 3, rngMap: 5, lootPity: 0, idCounter: idCounterState(), nameCounters: nameCounterState() })
   useMetaStore.setState({ skills: keep.skills, items: keep.items, bank: keep.bank, stats: keep.stats, sovereign: keep.sovereign })
@@ -948,5 +1062,51 @@ describe('October 2026: the company’s advance (no version step)', () => {
       const snap = migrateSnapshot(structuredClone(raw))!
       expect(snap.contract.advance).toBeUndefined()
     }
+  })
+})
+
+describe('v17 → v18: company asks (Draft 4 · A)', () => {
+  let base: Record<string, unknown> & { contract: Record<string, unknown> }
+  beforeAll(() => {
+    base = buildBase() as typeof base
+  })
+
+  it('carries the asks through a save, and a v17 payload with none loads and settles as it was signed', () => {
+    const snap = migrateSnapshot(structuredClone(base))!
+    expect(snap.contract.asks).toEqual([
+      { id: 'silk.wares', target: 4, got: 3 },
+      { id: 'silk.roadGold', target: 3500, got: 0 },
+    ])
+    const old = structuredClone(base)
+    delete old.contract.asks
+    old.v = 17
+    const back = migrateSnapshot(old)!
+    expect(back).not.toBeNull()
+    assertPlayable(back, 'v17')
+    expect('asks' in back.contract).toBe(false)
+    const pay = payoutFromRaw(old)!
+    expect(pay.contract && 'asks' in pay.contract).toBe(false)
+  })
+
+  it('drops what the catalogue and the road do not allow, and cleans every number', () => {
+    const raw = structuredClone(base)
+    raw.contract.asks = [
+      { id: 'nope', target: 3, got: 1 },
+      { id: 'metals.plated', target: 25, got: 30 }, // another company's ask on Rosethread's road
+      { id: 'silk.wares', target: 4.7, got: -3 },
+      { id: 'silk.wares', target: 2, got: 2 }, // the same ask twice
+      { id: 'silk.earned', target: 0, got: 1e12 },
+      { id: 'silk.roadGold', target: 3500, got: 0 }, // a third on a company's road
+    ]
+    const snap = migrateSnapshot(raw)!
+    expect(snap.contract.asks).toEqual([
+      { id: 'silk.wares', target: 4, got: 0 },
+      { id: 'silk.earned', target: 1, got: 1e6 },
+    ])
+    raw.contract.asks = 'everything'
+    expect('asks' in migrateSnapshot(raw)!.contract).toBe(false)
+    raw.contract.asks = [{ id: 'art.cargo', target: 900, got: 0 }]
+    raw.contract.company = 'art'
+    expect(migrateSnapshot(raw)!.contract.asks).toEqual([{ id: 'art.cargo', target: 100, got: 0 }])
   })
 })

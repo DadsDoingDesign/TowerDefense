@@ -23,6 +23,23 @@
   align-items: center;
   text-align: center;
 }
+/* A hub submenu's head: the back button at the top left, the title centred
+   between it and a matching empty column — the Codex's head. */
+.pg-titlebar {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.pg-titlebar .t-title {
+  margin: 0;
+}
+/* The button sits as high as the Codex's: the head's 32px rhythm is for a
+   title alone (and `:has` out-ranks the viewport tiers' plain `.pg-head`). */
+.pg-head:has(> .pg-titlebar) {
+  padding-top: max(12px, var(--safe-top));
+}
 .pg-body {
   flex: 1 0 0;
   min-height: 0;
@@ -276,6 +293,13 @@
   font-size: var(--fs-xs);
   line-height: 1.4;
   color: var(--muted);
+}
+/* Context the player needs once, said quietly: the same italic note as a
+   relic card's (`.sh-line.note`, docs/copy/COPY.md). */
+.pg-card-body.note {
+  font-size: var(--fs-micro);
+  line-height: 1.3;
+  font-style: italic;
 }
 /* The tradeoff line. Colour AND the ⚠ glyph AND the word "Downside", because
    colour alone never carries meaning (BRAND.md). */
@@ -637,8 +661,8 @@
   white-space: nowrap;
 }
 .pg-chip.gold {
-  color: var(--accent);
-  border-color: rgba(224, 172, 76, 0.28);
+  color: var(--gold);
+  border-color: color-mix(in srgb, var(--gold) 28%, transparent);
 }
 .pg-chip.teal {
   color: var(--teal-text);
@@ -647,6 +671,32 @@
 .pg-row.sel {
   background: var(--panel-3);
   box-shadow: inset 0 0 0 1px var(--accent);
+}
+/* Oct 2026 (the designer: "helper text should expand below each selection"):
+   on a row chooser the selected row opens downward — its detail hangs under
+   it as one piece, the same gold edge carried round both. */
+.pg-row.sel:has(+ .pg-detail.inline) {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  box-shadow:
+    inset 1px 0 0 var(--accent),
+    inset -1px 0 0 var(--accent),
+    inset 0 1px 0 var(--accent);
+}
+.pg-rows > .pg-detail.inline {
+  align-items: stretch;
+  margin-top: calc(-1 * var(--gap));
+  padding: 2px var(--gap-sm) var(--gap-sm);
+  border-radius: 0 0 var(--r-md) var(--r-md);
+  background: var(--panel-3);
+  box-shadow:
+    inset 1px 0 0 var(--accent),
+    inset -1px 0 0 var(--accent),
+    inset 0 -1px 0 var(--accent);
+  scroll-margin-bottom: var(--gap);
+}
+.pg-detail.inline > .pg-card {
+  background: color-mix(in srgb, var(--shade) 35%, transparent);
 }
 
 /* When the body scrolls, fade its bottom edge so a half-cut row reads as
@@ -1474,3 +1524,31 @@
   padding: 0 4px 8px;
 }
 
+
+/* ============================================== a UI theme's swatch (Oct 2026)
+   `ui/theme/ThemeSwatch`: the theme's own panel, its accent across the top and
+   its CTA along the foot — drawn from the theme's colours, not the page's, so
+   it shows the theme whatever the page around it wears. The militia builder's
+   theme carousel and the loyalty track's theme row. */
+.th-swatch {
+  display: inline-block;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  background:
+    linear-gradient(var(--th-accent) 0 3px, transparent 3px calc(100% - 5px), var(--th-cta) calc(100% - 5px)),
+    var(--th-panel);
+  box-shadow:
+    inset 0 0 0 1px var(--th-line),
+    0 0 0 1px rgba(0, 0, 0, 0.5);
+  vertical-align: -3px;
+}
+.th-swatch.lg {
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
+  background:
+    linear-gradient(var(--th-accent) 0 5px, transparent 5px calc(100% - 8px), var(--th-cta) calc(100% - 8px)),
+    var(--th-panel);
+}

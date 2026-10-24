@@ -358,6 +358,49 @@ export function mergeMods(list: (EffectMods | undefined)[]): EffectMods {
         ? { every: Math.min(out.killMend.every, m.killMend.every), hp: Math.max(out.killMend.hp, m.killMend.hp) }
         : m.killMend
     }
+    // The peoples' kit: an aura and a burn keep the best of each field, the
+    // fractions add, a cadence keeps the shortest interval.
+    out.rateAura = bestOf(out.rateAura, m.rateAura)
+    if (m.vsPlated) out.vsPlated = (out.vsPlated ?? 0) + m.vsPlated
+    if (m.vsWarded) out.vsWarded = (out.vsWarded ?? 0) + m.vsWarded
+    out.critBurn = bestOf(out.critBurn, m.critBurn)
+    if (m.doubleEvery != null) out.doubleEvery = out.doubleEvery != null ? Math.min(out.doubleEvery, m.doubleEvery) : m.doubleEvery
+    if (m.killReady) out.killReady = true
+    if (m.chainEvery) {
+      const a = out.chainEvery
+      out.chainEvery = a ? { every: Math.min(a.every, m.chainEvery.every), chains: Math.max(a.chains, m.chainEvery.chains), dmgFrac: Math.max(a.dmgFrac, m.chainEvery.dmgFrac) } : m.chainEvery
+    }
+    if (m.spitEvery) {
+      const a = out.spitEvery
+      out.spitEvery = a
+        ? { every: Math.min(a.every, m.spitEvery.every), count: Math.max(a.count, m.spitEvery.count), dps: Math.max(a.dps, m.spitEvery.dps), dur: Math.max(a.dur, m.spitEvery.dur) }
+        : m.spitEvery
+    }
+    out.root = bestOf(out.root, m.root)
+    // The fusions' twists: shares add, flags or, the structured ones keep the
+    // best of each field and a cadence the shortest interval. Only a fused
+    // skill grants one, so none of this runs for any other source.
+    if (m.ricochet) out.ricochet = (out.ricochet ?? 0) + m.ricochet
+    if (m.overkill) out.overkill = (out.overkill ?? 0) + m.overkill
+    if (m.arcCarry) out.arcCarry = true
+    out.critFreeze = bestOf(out.critFreeze, m.critFreeze)
+    out.focusStack = bestOf(out.focusStack, m.focusStack)
+    out.heldBurst = bestOf(out.heldBurst, m.heldBurst)
+    if (m.firstHit) out.firstHit = (out.firstHit ?? 0) + m.firstHit
+    out.contagion = bestOf(out.contagion, m.contagion)
+    out.deathBurst = bestOf(out.deathBurst, m.deathBurst)
+    if (m.fanEvery) {
+      const a = out.fanEvery
+      out.fanEvery = a ? { every: Math.min(a.every, m.fanEvery.every), count: Math.max(a.count, m.fanEvery.count), frac: Math.max(a.frac, m.fanEvery.frac) } : m.fanEvery
+    }
+    if (m.executeReady) out.executeReady = true
+    out.frostSplash = bestOf(out.frostSplash, m.frostSplash)
+    out.critAura = bestOf(out.critAura, m.critAura)
+    if (m.quakeEvery) {
+      const a = out.quakeEvery
+      out.quakeEvery = a ? { every: Math.min(a.every, m.quakeEvery.every), frac: Math.max(a.frac, m.quakeEvery.frac), radius: Math.max(a.radius, m.quakeEvery.radius) } : m.quakeEvery
+    }
+    out.frenzy = bestOf(out.frenzy, m.frenzy)
   }
   return out
 }

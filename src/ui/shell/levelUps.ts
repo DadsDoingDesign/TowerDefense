@@ -24,7 +24,7 @@ import type { GameState } from '../../state/game/types'
  * choice when XP lands — when the wave settles — and if the badge is still up
  * when the next wave starts, the choice waits: the panel says so and its
  * commit is disabled until that wave (and its sub-waves) is over. The store's
- * `chooseSkill` refuses a live wave too.
+ * `dropSkill` refuses a live wave too.
  *
  * The owed choice is read off the hero, never stored here, so a resumed run
  * shows every badge it should. What lives here is view state, like

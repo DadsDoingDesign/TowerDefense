@@ -26,6 +26,8 @@ export const PULSE_SECONDS: readonly [number, number] = [8, 14]
 export const WAGON_STANDING = 7
 /** A road brightens over this long when your standing with its company rises. */
 export const BRIGHTEN_MS = 600
+/** A focus change (a dock slot or a signpost picked another road) crossfades the map's light over this long. */
+export const FOCUS_FADE_MS = 220
 /** Share of the pulses that run outbound (hub → destination). */
 export const OUTBOUND = 0.7
 /** The time the still frame (reduced motion, screenshots) is drawn at. */
@@ -74,6 +76,91 @@ export function roadViews(o: {
   })
 }
 
+/**
+ * What the home's map lights: one company's road (its dock slot or its
+ * signpost), `'all'` — every road at once, for the dock's Buy Company slot
+ * (the Sovereign Route carries every company's goods) — or nothing.
+ */
+export type MapFocus = CompanyId | 'all' | null
+
+/** Is this company's road one the focus lights? */
+export const litBy = (focus: MapFocus, company: CompanyId): boolean => focus === 'all' || focus === company
+
+// ---------------------------------------------------------------------------
+// A season per company (October 2026)
+// ---------------------------------------------------------------------------
+
+/**
+ * The designer: "if the map were to re-theme for that selection slightly that
+ * would be cool, like snow or autumn". Each company in focus tints the map's
+ * season over the SAME baked terrain — never a re-scatter: a wash over the
+ * whole map (a canvas composite), and a sparse speckle on the open ground and
+ * the tree-tops (snow, leaves, blossom), seeded per pixel so it is the same
+ * every time. Subtle: the lit road and its glow are laid over it, so they
+ * stay the strongest thing on screen. No focus, and Buy Company's every road,
+ * keep the neutral night.
+ */
+export interface MapSeason {
+  name: string
+  /** Washes over the whole map, in order: a composite op, a colour, its strength. */
+  washes: readonly { op: GlobalCompositeOperation; color: string; alpha: number }[]
+  /** Speckle on open grass: its colours and the share of grass pixels it takes. */
+  grass?: { colors: readonly string[]; share: number }
+  /** Speckle on the tree-tops' lightest pixels: colour and share. */
+  trees?: { color: string; share: number }
+  /** A low mist: its colour, its strongest alpha, and how much of the map from the bottom it fills (0–1). */
+  mist?: { color: string; alpha: number; reach: number }
+}
+export const MAP_SEASONS: Record<CompanyId, MapSeason> = {
+  // Peppercorn: late summer into autumn — amber light, a few turning leaves.
+  spice: {
+    name: 'late summer',
+    washes: [{ op: 'soft-light', color: '#f0a040', alpha: 0.42 }],
+    grass: { colors: ['#6a4a1e', '#7c5a22'], share: 0.035 },
+    trees: { color: '#4e4418', share: 0.45 },
+  },
+  // Butcherblock: the salt marsh in spring — a grey-green haze, salt crusting
+  // the open ground, a low mist.
+  art: {
+    name: 'marsh spring',
+    washes: [
+      { op: 'saturation', color: '#7a7a7a', alpha: 0.22 },
+      { op: 'soft-light', color: '#a8c4a0', alpha: 0.3 },
+    ],
+    grass: { colors: ['#c8c2b0', '#b4ae9a'], share: 0.012 },
+    trees: { color: '#86985a', share: 0.08 },
+    mist: { color: '#b8c4b8', alpha: 0.24, reach: 0.45 },
+  },
+  // Ironvein: overcast — the colour drained toward slate.
+  metals: {
+    name: 'overcast',
+    washes: [
+      { op: 'saturation', color: '#7a7a7a', alpha: 0.5 },
+      { op: 'soft-light', color: '#6a7a9a', alpha: 0.3 },
+    ],
+  },
+  // Rosethread: a misty morning — a pale haze lying low.
+  silk: {
+    name: 'misty morning',
+    washes: [{ op: 'soft-light', color: '#e8c8d8', alpha: 0.22 }],
+    mist: { color: '#c4b4c4', alpha: 0.3, reach: 0.85 },
+  },
+  // Greenvial: the hollows at dusk — a deep green light, moss on the open
+  // ground, a few glowing spores in the trees.
+  scrolls: {
+    name: 'spore dusk',
+    washes: [
+      { op: 'soft-light', color: '#3a8a6a', alpha: 0.38 },
+      { op: 'multiply', color: '#c0d8cc', alpha: 0.22 },
+    ],
+    grass: { colors: ['#2e5e44', '#3a7050'], share: 0.03 },
+    trees: { color: '#9cc86a', share: 0.05 },
+  },
+}
+
+/** The season the map wears for a focus: a company's, or none (no focus, or every road). */
+export const seasonFor = (focus: MapFocus): MapSeason | null => (focus && focus !== 'all' ? MAP_SEASONS[focus] : null)
+
 // ---------------------------------------------------------------------------
 // Geometry
 // ---------------------------------------------------------------------------
@@ -85,10 +172,17 @@ export interface Rect {
   h: number
 }
 
-/** Each road's heading out of the hub, in degrees (0 = east, −90 = north). */
-const ANGLE: Record<CompanyId, number> = { spice: -52, art: -122, metals: -158, silk: -16, scrolls: -88 }
-/** How far each destination lies, as a share of the fan's radius: a little variety in the skyline of labels. */
-const REACH: Record<CompanyId, number> = { spice: 0.84, art: 0.9, metals: 0.86, silk: 0.6, scrolls: 1 }
+/**
+ * Each road's heading out of the hub, in degrees (0 = east, −90 = north), by
+ * its place in {@link COMPANY_IDS}: the roads fan from west to east in the
+ * same order as the home's company dock (October 2026, the map-first home),
+ * so the dock reads as the map's legend — its first slot is the leftmost road.
+ */
+export const FAN_ANGLES: readonly number[] = [-158, -122, -88, -52, -20]
+/** How far each destination lies, as a share of the fan's radius, by place: a little variety in the skyline of signposts. */
+const FAN_REACH: readonly number[] = [0.84, 0.92, 1, 0.9, 0.78]
+const ANGLE = Object.fromEntries(COMPANY_IDS.map((c, i) => [c, FAN_ANGLES[i]])) as Record<CompanyId, number>
+const REACH = Object.fromEntries(COMPANY_IDS.map((c, i) => [c, FAN_REACH[i]])) as Record<CompanyId, number>
 
 export interface Route {
   company: CompanyId
@@ -117,11 +211,11 @@ export interface MapGeometry {
  */
 export function buildGeometry(W: number, H: number, open: Rect): MapGeometry {
   const wide = open.w >= open.h
-  const hx = Math.round(open.x + open.w * (wide ? 0.52 : 0.5))
-  const hy = Math.round(open.y + open.h * (wide ? 0.68 : 0.86))
+  const hx = Math.round(open.x + open.w * 0.5)
+  const hy = Math.round(open.y + open.h * (wide ? 0.86 : 0.88))
   // Room for a label (about 17 map px) above the highest destination.
   const ry = Math.max(24, hy - (open.y + (wide ? Math.max(30, open.h * 0.1) : 26)))
-  const rx = Math.max(30, open.w * (wide ? 0.42 : 0.4))
+  const rx = Math.max(30, open.w * (wide ? 0.4 : 0.46))
   const R = new RNG(7)
   const routes = COMPANY_IDS.map((company): Route => {
     const a = (ANGLE[company] * Math.PI) / 180

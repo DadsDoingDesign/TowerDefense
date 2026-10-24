@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { peekSavedRun, useGameStore } from '../state/gameStore'
 import { describeSnapshot, type RunSnapshot } from '../state/runSnapshot'
+import { flyingMilitia, militiaTheme } from '../game/run/militia'
+import { useMetaStore } from '../state/metaStore'
+import { contractTheme } from './theme/companyThemes'
+import { useThemePreview } from './theme/useCompanyTheme'
 import './overlays.css'
 
 /**
@@ -35,6 +39,16 @@ export function ResumeRunPrompt() {
     setChecked(true)
   }, [])
 
+  // The prompt wears the theme of the run it offers (the whole UI does, the
+  // moment it resumes), not the home's focus behind it.
+  const showTheme = useThemePreview((s) => s.set)
+  useEffect(() => {
+    if (!snap?.contract) return
+    const meta = useMetaStore.getState()
+    showTheme(contractTheme(snap.contract, militiaTheme(flyingMilitia(meta.militia, meta))))
+    return () => showTheme(null)
+  }, [snap, showTheme])
+
   if (!checked || !snap) return null
 
   const wasMidBattle = snap.screen === 'battle' && !!snap.currentWave
@@ -45,14 +59,14 @@ export function ResumeRunPrompt() {
         <h1 className="fw-resume-title" id="fw-resume-title">
           Run in progress
         </h1>
+        {/* The title says a run was saved; the body is which run, and, if a
+            wave was cut off, what restarts (the job critique, Oct 2026). */}
         <p className="fw-resume-body">
-          A run was interrupted and saved: <strong>{describeSnapshot(snap)}</strong>.
+          <strong>{describeSnapshot(snap)}</strong>
         </p>
         {wasMidBattle && (
           <p className="fw-resume-body">
-            You were mid-wave. It picks back up at the start of{' '}
-            <strong>{snap.currentWave?.label ?? 'that wave'}</strong>, with your heroes to post
-            again. A half-fought wave is not a save point.
+            The wave at <strong>{snap.currentWave?.label ?? 'that fight'}</strong> restarts: post your heroes again.
           </p>
         )}
         <div className="fw-resume-actions">
@@ -71,8 +85,8 @@ export function ResumeRunPrompt() {
             <p className="fw-resume-body fw-resume-warn" role="alert">
               {/* The company's advance never comes home; an older save's purse does. */}
               {snap.contract.charter
-                ? `The charter ends here, and its fee is lost. You keep ${snap.contract.advance ? 'a share of the road’s gold' : 'the rest of your purse'}; your heroes, the map and the pack are gone.`
-                : `The contract ends here. You keep what its cities paid and ${snap.contract.advance ? 'a share of the road’s gold' : 'the rest of your purse'}; unsold crates, your heroes, the map and the pack are gone.`}
+                ? `Its fee is lost. You keep ${snap.contract.advance ? 'a share of the road gold' : 'the rest of your purse'}; your heroes, map and pack are gone.`
+                : `You keep city pay and ${snap.contract.advance ? 'a share of the road gold' : 'the rest of your purse'}; unsold crates, heroes, map and pack are gone.`}
             </p>
           )}
           {armed && (

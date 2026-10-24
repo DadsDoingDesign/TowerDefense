@@ -12,8 +12,9 @@ import { mutationOfferSize, rollMutationChoices } from '../../game/data/mutation
 import { applyBattleXp, combatSeed, levelXpAwards } from '../../game/run/battle'
 import { MAX_ROSTER } from '../../game/run/economy'
 import { forkFires, frontierFrom, meleeOf, placedSentinels, postsOf } from '../../game/run/map'
-import { recruitSlate } from '../../game/run/recruits'
+import { citySlate } from '../../game/run/recruits'
 import { contractGrant } from '../../game/run/settle'
+import { fightTally, tallyAsks } from '../../game/run/asks'
 import { cargoPct, cityOfLayer, cityPay, contractRules, earn } from '../../game/run/contracts'
 import { stow } from '../../game/run/inventory'
 import { packSale, packSlotsOf } from './purse'
@@ -27,11 +28,13 @@ import type { Placement, Tactics } from '../../game/types'
 import { gameSfx, sfx } from '../../audio/audio'
 import { useMetaStore } from '../metaStore'
 import { assistProfile, useSettingsStore } from '../settingsStore'
+import { markAssisted } from '../../game/run/ranking'
 import { abandonBattle, CLEAR_SHELL } from './fresh'
 import { buildRecap } from './recap'
 import { runFactsFromState, settleFactsFromState } from './settle'
 import { beat, clearBeatTimer, featUnlocked, recruitHub, relicUnlocked, streams, WAVE_BEAT_LOSS_MS, WAVE_BEAT_MS, waveFirsts } from './runtime'
 import { enemyKind } from '../../game/data/enemyKnowledge'
+import { runClan } from '../../game/run/clans'
 import { battleHpMult, battleTheftMult, canStartWave, fieldConflicts } from './selectors'
 import type { Crossroads, Slice, Speed } from './types'
 
@@ -104,7 +107,13 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
       return
     }
     if (st.selectedSentinelId) st.placeOnSlot(tileId)
-    else if (st.placements[tileId]) st.focusTower(st.placements[tileId]!)
+    // A posted hero, tapped with nobody in hand, is PICKED UP — the same
+    // gesture, and the same result, as its card on the bar: the posts glow and
+    // the next tap moves it (Oct 2026; the designer: "sometimes there is a
+    // details button and other times clicking my tower opens the details —
+    // confusing when I need to click to place it too"). It used to open the
+    // hero's panel instead; reading a hero is the Details button's job.
+    else if (st.placements[tileId]) st.shellSelect({ kind: 'hero', id: st.placements[tileId]! })
   },
 
   placeOnSlot: (slotId) => {
@@ -225,11 +234,15 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
     // enemy info card (see `waveFirsts`).
     const seenBefore = new Set(useMetaStore.getState().codex.enemies.map(enemyKind))
     waveFirsts.kinds = new Set(currentWave.spawns.map((sp) => enemyKind(sp.typeId)).filter((k) => !seenBefore.has(k)))
-    useMetaStore.getState().recordCodex({ enemies: [...new Set(currentWave.spawns.map((sp) => sp.typeId))] })
+    // …and the clan that fielded them (Oct 2026): the Codex's goblins tab is by clan.
+    const clan = runClan(st)
+    useMetaStore.getState().recordCodex({ enemies: [...new Set(currentWave.spawns.map((sp) => sp.typeId))], ...(clan ? { clans: [clan] } : {}) })
     const fielded = engine.sentinels.length
     set({
       engine,
       battlePhase: 'battle',
+      // The dial this wave is fought under marks the run (`run/ranking`).
+      assisted: markAssisted(st.assisted, useSettingsStore.getState().assist),
       selectedSentinelId: null,
       breatherPick: null,
       // Gear locks for the round: an armed gear slot would offer an equip the
@@ -397,7 +410,9 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
       // already paid keep their pay, the purse comes home, unsold crates are lost.
       sfx('defeat')
       const depth = get().clearedNodeIds.length - 1
-      const contract = st.contract ? { ...st.contract, pending: null, status: 'lost' as const } : null
+      // The company's asks count what this last fight did too (Draft 4 · A).
+      const tally = fightTally(st.engine, { cleared: false, enemiesLeaked: result.enemiesLeaked, cargoBefore: st.baseHp, cargoAfter: 0, node })
+      const contract = st.contract ? tallyAsks({ ...st.contract, pending: null, status: 'lost' as const }, tally) : null
       const lost = { ...st, roster: rosterXp, contract, runKills: totalKills }
       const deposit = useMetaStore
         .getState()
@@ -440,7 +455,10 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
     // completion bonus — into the contract's ledger (banked at the settle, so
     // a later fall keeps it). Cities 1 and 2 then wait on "cash out or press on".
     const city = cityOfLayer(node.layer)
-    let contract = st.contract
+    // The company's asks (Draft 4 · A): what the fight felled, and whether it
+    // was a clean win, an elite, a city — counted before the city judges the
+    // delivery, so the destination's own fight counts.
+    let contract = tallyAsks(st.contract, fightTally(st.engine, { cleared: true, enemiesLeaked: result.enemiesLeaked, cargoBefore: st.baseHp, cargoAfter: result.baseHpLeft, node }))
     if (contract && city != null && contract.paid.length === city) {
       const cargo = cargoPct(result.baseHpLeft, st.maxBaseHp)
       const pay = cityPay(contract, city, cargo)
@@ -478,6 +496,7 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
       : rewardHand(streams.rng, {
           kind: handKind,
           luck,
+          depth: node.layer,
           count: handSize({ thinPickings: false }),
           // LS3: a first run meets relics at its first elite.
           noBattleRelics: battleRelicsWithheld(st.firstRun, st.runMap, cleared),
@@ -490,14 +509,17 @@ export const createBattleSlice: Slice<BattleActions> = (set, get) => ({
     // The boss's spoils go on the RECAP, not into the inventory of a run that
     // has just ended (M16).
     const bossLoot = wonRun
-      ? Array.from({ length: 3 }, () => generateItem(streams.rng, { luck, roster: rosterXp, pity, kinds: st.itemPool }))
+      ? Array.from({ length: 3 }, () => generateItem(streams.rng, { luck, depth: node.layer, roster: rosterXp, pity, kinds: st.itemPool }))
       : []
 
-    // After each act boss, the Crossroads: recruit or mutate (Phase 3b).
+    // After each act boss — a city reached — the Crossroads: hire one of the
+    // city's candidates, or a mutation instead (Phase 3b; the gameplay pass
+    // made the city the only place a hero is hired). The candidates are a
+    // hash of (run seed, city), never a loot-stream draw.
     const fireFork = !wonRun && forkFires(node)
     const crossroads: Crossroads | null = fireFork
       ? {
-          recruits: rosterXp.length < MAX_ROSTER ? recruitSlate(streams.rng, rosterXp, recruitHub(st.relics)) : [],
+          recruits: rosterXp.length < MAX_ROSTER ? citySlate(st.runSeed, city ?? node.layer, rosterXp, recruitHub(st.relics)) : [],
           mutations: rollMutationChoices(
             streams.rng,
             [...new Set(rosterXp.flatMap((s) => (s.mutations ?? []).map((m) => m.key)))],

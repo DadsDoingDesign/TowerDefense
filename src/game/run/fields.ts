@@ -12,14 +12,15 @@
  *
  * The rules, all pure:
  *
- *  - **Act 1 is the field the run was always dealt** (`maps.pickBattleMap`, the
- *    `field` stream), so every act-1 fight, every determinism golden and every
- *    act-1 balance number is exactly what it was.
- *  - **A later act is a fresh hash of (run seed, act)** — never a draw on a run
- *    stream, so dealing it cannot move the loot, the map or the fights (RNG
- *    draw order is behaviour).
- *  - **It never repeats the act before it** while another field exists. With
- *    two fields the road alternates; with more, the hash picks among the rest.
+ *  - **Every act is a generated road** (Oct 2026; `data/fieldGen`): a profile
+ *    (balanced, switchbacks, winding) and a road seed, each a fresh hash of
+ *    (run seed, act) — never a draw on a run stream, so dealing it cannot move
+ *    the loot, the map or the fights (RNG draw order is behaviour). Before,
+ *    act 1 was one of the two hand-made fields and the acts alternated.
+ *  - **It never repeats the act before's profile**, so the country changes
+ *    character at every city, not just shape.
+ *  - **The hand-made fields are the fallback** for a seed that dealt no road
+ *    inside its bands, and stay the balance suite's fixed benches.
  *  - **Only the field changes.** The node's map challenge is still the route's
  *    own ground (the company's — wildfire, quarry, flooded…) and its danger
  *    ground is still seeded per node (`run/terrain`), now laid on the new field.
@@ -30,6 +31,7 @@
  */
 import { hashSeed, RNG } from '../core/rng'
 import { ALL_MAPS, mapById, pickBattleMap } from '../data/maps'
+import { FIELD_PROFILE_IDS, genFieldId, parseGenFieldId } from '../data/fieldGen'
 import { actOf, ACTS } from './threat'
 
 /**
@@ -40,8 +42,25 @@ import { actOf, ACTS } from './threat'
  * without repeating it.
  */
 export function actFieldId(runSeed: number, act: number, prevFieldId?: string | null): string {
+  const prev = act > 1 ? (prevFieldId ?? actFieldId(runSeed, act - 1)) : null
+  // A generated road (Oct 2026: "the maps aren't changing to the procedural
+  // ones"): a profile that is not the act before's, and a road seed, both
+  // fresh hashes of (run seed, act).
+  const prevProfile = prev ? parseGenFieldId(prev)?.profile : null
+  const profiles = FIELD_PROFILE_IDS.filter((p) => p !== prevProfile)
+  const profile = new RNG(hashSeed(runSeed, 'act-profile', act)).pick(profiles.length ? profiles : FIELD_PROFILE_IDS)
+  const id = genFieldId(profile, hashSeed(runSeed, 'act-road', act))
+  if (mapById(id)) return id
+  return handMadeFieldId(runSeed, act, prev)
+}
+
+/**
+ * The hand-made rule, kept as the fallback for a seed whose road never fell
+ * inside its bands (it does not happen in practice; it must not strand a run):
+ * act 1 is `maps.pickBattleMap`, a later act any other shipped field.
+ */
+function handMadeFieldId(runSeed: number, act: number, prev: string | null): string {
   if (!(act > 1)) return pickBattleMap(runSeed).id
-  const prev = prevFieldId ?? actFieldId(runSeed, act - 1)
   const others = ALL_MAPS.filter((m) => m.id !== prev)
   const pool = others.length ? others : ALL_MAPS
   return new RNG(hashSeed(runSeed, 'act-field', act)).pick(pool).id

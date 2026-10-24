@@ -1,0 +1,274 @@
+[
+  {
+    "id": "wren-sheet",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "Wren · all ten at 3×",
+    "caption": "Ten brand-new gnome designs beside the CC0 pawn and knight. Judge: which two or three are Wren?",
+    "file": "sheet.png"
+  },
+  {
+    "id": "wren-lineup",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "Wren · at game size",
+    "caption": "All ten at 1× on the grass beside the pack. Judge: does each read as a gnome, and does any stand out as not Pixel Frog?",
+    "file": "lineup.png"
+  },
+  {
+    "id": "wren-d01",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "1. Toadstool Forager",
+    "caption": "Gathers in the mushroom hollows: a round jade toadstool for a hat, spotted with glowing spores, a basket of finds held low at her side. Judge: would it pass for Pixel Frog's, and is it a gnome at 1×?",
+    "file": "d01.png"
+  },
+  {
+    "id": "wren-d01-motion",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "1. Toadstool Forager · motion",
+    "caption": "The idle (the pack's squash and bob) and the tic, looped: does the tic say quiet, a little ominous?",
+    "file": "d01.webp"
+  },
+  {
+    "id": "wren-d02",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "2. Bell-jar Keeper",
+    "caption": "Keeps the glasshouse seedlings, and keeps one under a bell jar on his own head; a moss-green can low at his side. Judge: would it pass for Pixel Frog's, and is it a gnome at 1×?",
+    "file": "d02.png"
+  },
+  {
+    "id": "wren-d02-motion",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "2. Bell-jar Keeper · motion",
+    "caption": "The idle (the pack's squash and bob) and the tic, looped: does the tic say quiet, a little ominous?",
+    "file": "d02.webp"
+  },
+  {
+    "id": "wren-d03",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "3. Vial Peddler",
+    "caption": "Sells doses door to door: a long grey-green stocking cap slumped over backward with a spore-puff bobble, grey braids, a tray of three vials held low. Judge: would it pass for Pixel Frog's, and is it a gnome at 1×?",
+    "file": "d03.png"
+  },
+  {
+    "id": "wren-d03-motion",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "3. Vial Peddler · motion",
+    "caption": "The idle (the pack's squash and bob) and the tic, looped: does the tic say quiet, a little ominous?",
+    "file": "d03.webp"
+  },
+  {
+    "id": "wren-d04",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "4. Moss Hermit",
+    "caption": "Lives in a mushroom hollow and grows moss like a coat: a shaggy cowl of living moss with toadstools on its crown, a spore-lantern held low. Judge: would it pass for Pixel Frog's, and is it a gnome at 1×?",
+    "file": "d04.png"
+  },
+  {
+    "id": "wren-d04-motion",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "4. Moss Hermit · motion",
+    "caption": "The idle (the pack's squash and bob) and the tic, looped: does the tic say quiet, a little ominous?",
+    "file": "d04.webp"
+  },
+  {
+    "id": "wren-d05",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "5. Goggle Distiller",
+    "caption": "Runs the stills under the glasshouse: a short dented leather stovepipe, brass goggles pushed up on the band, a round flask of jade brew held low. Judge: would it pass for Pixel Frog's, and is it a gnome at 1×?",
+    "file": "d05.png"
+  },
+  {
+    "id": "wren-d05-motion",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "5. Goggle Distiller · motion",
+    "caption": "The idle (the pack's squash and bob) and the tic, looped: does the tic say quiet, a little ominous?",
+    "file": "d05.webp"
+  },
+  {
+    "id": "wren-d06",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "6. Leaf-hat Sower",
+    "caption": "Sows the hidden gardens: one great leaf laid over her head like a hat, a stalk curling off the crown, a burlap seed pouch held low. Judge: would it pass for Pixel Frog's, and is it a gnome at 1×?",
+    "file": "d06.png"
+  },
+  {
+    "id": "wren-d06-motion",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "6. Leaf-hat Sower · motion",
+    "caption": "The idle (the pack's squash and bob) and the tic, looped: does the tic say quiet, a little ominous?",
+    "file": "d06.webp"
+  },
+  {
+    "id": "wren-d07",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "7. Foxglove Doser",
+    "caption": "Measures the doses that cure or kill: a foxglove bell for a hat, petals flaring, speckled inside, a dropper of green held low. Judge: would it pass for Pixel Frog's, and is it a gnome at 1×?",
+    "file": "d07.png"
+  },
+  {
+    "id": "wren-d07-motion",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "7. Foxglove Doser · motion",
+    "caption": "The idle (the pack's squash and bob) and the tic, looped: does the tic say quiet, a little ominous?",
+    "file": "d07.webp"
+  },
+  {
+    "id": "wren-d08",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "8. Twig-crown Druid",
+    "caption": "Keeps the old wild garden the glasshouses were built over: a night-blue hood wound with ivy, two leafing twigs grown out of it like antlers, a gold sickle low. Judge: would it pass for Pixel Frog's, and is it a gnome at 1×?",
+    "file": "d08.png"
+  },
+  {
+    "id": "wren-d08-motion",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "8. Twig-crown Druid · motion",
+    "caption": "The idle (the pack's squash and bob) and the tic, looped: does the tic say quiet, a little ominous?",
+    "file": "d08.webp"
+  },
+  {
+    "id": "wren-d09",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "9. Flowerpot Potter",
+    "caption": "Pots the glasshouse cuttings: a terracotta flowerpot worn upside down as a hat, a seedling up through its drain hole, a trowel held low. Judge: would it pass for Pixel Frog's, and is it a gnome at 1×?",
+    "file": "d09.png"
+  },
+  {
+    "id": "wren-d09-motion",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "9. Flowerpot Potter · motion",
+    "caption": "The idle (the pack's squash and bob) and the tic, looped: does the tic say quiet, a little ominous?",
+    "file": "d09.webp"
+  },
+  {
+    "id": "wren-d10",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "10. Hollow Warden",
+    "caption": "Watches the rot in the deep hollows: a broad sagging felt hat gone green, toadstools and lichen growing on its brim, a mortar and pestle held low. Judge: would it pass for Pixel Frog's, and is it a gnome at 1×?",
+    "file": "d10.png"
+  },
+  {
+    "id": "wren-d10-motion",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "10. Hollow Warden · motion",
+    "caption": "The idle (the pack's squash and bob) and the tic, looped: does the tic say quiet, a little ominous?",
+    "file": "d10.webp"
+  },
+  {
+    "id": "wren-bodies",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "Wren · bodies of their own",
+    "caption": "The top three before (shared bell) and after (own body) at 4× and 1×. Judge: does each body say who they are, and do the three differ below the neck?",
+    "file": "bodies.png"
+  },
+  {
+    "id": "wren-d08-body",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "8. Twig-crown Druid · own body, motion",
+    "caption": "A mossy robe to the ground, root-hemmed, a vine belt, hands in its sleeves, with the idle and tic. Judge: still a tiny round gnome, hat leading?",
+    "file": "d08-body.webp"
+  },
+  {
+    "id": "wren-d02-body",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "2. Bell-jar Keeper · own body, motion",
+    "caption": "A gardener's waistcoat, rolled sleeves, a trowel loop, soil on the knees, with the idle and tic. Judge: still a tiny round gnome, hat leading?",
+    "file": "d02-body.webp"
+  },
+  {
+    "id": "wren-d09-body",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "9. Flowerpot Potter · own body, motion",
+    "caption": "A clay-smeared potter's apron over a round belly, with the idle and tic. Judge: still a tiny round gnome, hat leading?",
+    "file": "d09-body.webp"
+  },
+  {
+    "id": "wren-d09-final",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "9. Flowerpot Potter · shoulders and nose",
+    "caption": "Before and after at 4× and 1× beside the pack: the pot now sits on round shoulders, and the nose is a long sausage. Judge: does the pot fit the body now?",
+    "file": "d09-final.png"
+  },
+  {
+    "id": "wren-d09-final-motion",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "9. Flowerpot Potter · the nose flops",
+    "caption": "The idle and the trowel tic, looped: the nose lags the head a frame and swings on each tap. Judge: floppy, not jittery?",
+    "file": "d09-final.webp"
+  },
+  {
+    "id": "wren-d09-options",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "9. Flowerpot Potter · five options",
+    "caption": "The pick and five refinements, each pushing one thing (nose, pot, join, trade, posture), at 4× and at 1× beside the pack. Judge: which direction, or which mix?",
+    "file": "d09-options.png"
+  },
+  {
+    "id": "wren-d09-options-motion",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "9. Flowerpot Potter · five options, moving",
+    "caption": "All six idling and doing their tic: sneeze, spores, shrug, sniff, stamp. Judge: which tic says him?",
+    "file": "d09-options.webp"
+  },
+  {
+    "id": "wren-d09-E-final",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "9. Flowerpot Potter · E, final",
+    "caption": "Option E with the nose hanging down and one clear garment, every part named, three outfits side by side. Judge: is every part nameable at 1×, and which outfit?",
+    "file": "d09-E-final.png"
+  },
+  {
+    "id": "wren-d09-E-final-motion",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "9. Flowerpot Potter · E, final, moving",
+    "caption": "The idle (the nose swings a frame behind the head) and the stamp (the nose bounces and wobbles still). Judge: a pendulum, not a jitter?",
+    "file": "d09-E-final.webp"
+  },
+  {
+    "id": "wren-d09-final-smock",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "9. Flowerpot Potter · the smock, final",
+    "caption": "The smock with the nose coming out from under the pot, shorter and bulb-shaped; every part named, three nose shapes. Judge: does the nose come from under the rim, and which shape?",
+    "file": "d09-final-smock.png"
+  },
+  {
+    "id": "wren-d09-final-smock-motion",
+    "group": "Wren designs",
+    "people": "Wren",
+    "title": "9. Flowerpot Potter · the smock, final, moving",
+    "caption": "The idle (the nose swings a frame behind the head) and the stamp (it bounces and settles). Judge: soft and floppy, not jittery?",
+    "file": "d09-final-smock.webp"
+  }
+]

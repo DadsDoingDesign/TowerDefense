@@ -1,3 +1,4 @@
+import { flyingMilitia } from '../game/run/militia'
 import { useEffect, useRef, useState } from 'react'
 import { lookOf } from '../game/data/gear'
 import { lookHue } from '../game/data/sentinels'
@@ -21,10 +22,11 @@ import {
   drawTerrainFlames,
   drawTileGrid,
   entrySide,
+  firstRowTop,
   playRect,
   setPresentationTime,
   setViewScale,
-  stageView,
+  stageViewClear,
   worldOf,
   type DrawSentinel,
   type StageView,
@@ -47,6 +49,7 @@ import { dist } from '../game/core/vec'
 import { clearanceOverlay, COARSE, distToPolyline, LANE_HALF } from '../game/data/terrain'
 import { isMelee } from '../game/engine/melee'
 import { fieldConflicts } from '../state/game/selectors'
+import { wavePreviewShown } from './shell/live'
 import { drawnRoad } from '../game/render/terrain'
 import { getActiveStyle } from '../game/render/themes'
 import { placedSentinels, useGameStore } from '../state/gameStore'
@@ -54,7 +57,12 @@ import { useSettingsStore } from '../state/settingsStore'
 import { useMetaStore } from '../state/metaStore'
 import { reportFatal } from './fatal'
 import { routeOf } from '../game/run/charter'
-import { baseAnchor, drawBestTile, drawCaravan, drawLastStretch } from '../game/render/renderer'
+import { baseAnchor, drawBestTile, drawCaravan, drawLastStretch, EdgeBand, setEnemyClan, setFieldSeason, WeatherLayer } from '../game/render/renderer'
+import { runClan } from '../game/run/clans'
+import { fieldSeasonFor } from '../game/data/fieldSeasons'
+import { fxLevel, noteFxFrame } from '../game/render/fxQuality'
+import { militiaTheme } from '../game/run/militia'
+import { contractTheme } from './theme/companyThemes'
 import { bestTiles, inLastStretch, lastStretch } from '../game/run/placement'
 import type { GameMap } from '../game/types'
 import {
@@ -300,6 +308,15 @@ export function BattleCanvas() {
      * put together. Handing the same resize to the compositor costs the main
      * thread nothing and is the operation hardware acceleration exists to do.
      */
+    /**
+     * Repaint now, inside the resize, rather than on the next frame. Setting a
+     * canvas's size clears it, and a `ResizeObserver` callback lands after this
+     * frame's rAF and before its paint — so a resize left the field BLANK for
+     * a frame, and while the Detail band animates open or shut (a hero's
+     * details on the field) that was every frame of the slide: a flicker.
+     * Bound to `step` once it exists; a zero-length step draws and banks nothing.
+     */
+    let paintNow: (() => void) | null = null
     const resize = () => {
       const rect = wrap.getBoundingClientRect()
       // The playable rect fits the wrap's CONTENT box: the Stage reserves a
@@ -313,21 +330,31 @@ export function BattleCanvas() {
       // The wide layout (shell-wide.css) sets `--field-snap: 1`: crisp scales
       // there (see `stageView`). Phones never set it — their field is fit
       // exactly and must keep the full width.
-      sv = stageView({
-        wrapW: rect.width,
-        wrapH: rect.height,
-        padT,
-        padB,
-        dpr: lastDpr,
-        crisp: cs.getPropertyValue('--field-snap').trim() === '1',
-        play: playRect(map),
-        world: worldOf(map),
-        entry: entrySide(map),
-      })
+      // The battle band (Oct 2026): in setup the coming wave hangs from the
+      // Stage's top edge (`WavePreview`). The play is fit below it when the
+      // woodland and the road's way in above the first row of posts are not
+      // room enough (`frame.previewRoom`) — never over a post or the lane.
+      const need = wavePreviewShown(useGameStore.getState()) ? (parseFloat(cs.getPropertyValue('--sh-wavepre-h')) || 0) + 8 : 0
+      sv = stageViewClear(
+        {
+          wrapW: rect.width,
+          wrapH: rect.height,
+          padT,
+          padB,
+          dpr: lastDpr,
+          crisp: cs.getPropertyValue('--field-snap').trim() === '1',
+          play: playRect(map),
+          world: worldOf(map),
+          entry: entrySide(map),
+        },
+        firstRowTop(map),
+        need,
+      )
       svMap = map
       const bw = sv.w * sv.density
       const bh = sv.h * sv.density
-      if (canvas.width !== bw || canvas.height !== bh) {
+      const cleared = canvas.width !== bw || canvas.height !== bh
+      if (cleared) {
         canvas.width = bw
         canvas.height = bh
       }
@@ -350,10 +377,19 @@ export function BattleCanvas() {
         setZoomOn(false)
         showView(fit)
       }
+      if (cleared) paintNow?.()
     }
     resize()
     const ro = new ResizeObserver(resize)
     ro.observe(wrap)
+    // The preview comes and goes without the wrap changing size: re-fit then.
+    let preview = wavePreviewShown(useGameStore.getState())
+    const unsubPreview = useGameStore.subscribe((s) => {
+      const p = wavePreviewShown(s)
+      if (p === preview) return
+      preview = p
+      resize()
+    })
 
     // MUST stay byte-identical to the rotate-prompt query in overlays.css and
     // shell.css. Dropping a clause here does not just desync the prompt — it
@@ -395,9 +431,21 @@ export function BattleCanvas() {
      * here used to freeze the battle silently forever, because rAF callbacks
      * are outside React and nothing was catching them (H21).
      */
+    /** The company world at the field's edges (Oct 2026; `render/edgeFx`). */
+    const edge = new EdgeBand()
+    // The season's weather (Oct 2026; `render/weatherFx`): rain, snow, petals,
+    // fog banks, cloud shadows — under the wagon and the units. The edge band
+    // keeps half its share beside it, so the two stay near one cap (12 and
+    // 20 before the calm pass, Oct 2026).
+    const weather = new WeatherLayer()
+    edge.caps = { phone: 6, desk: 9 }
+    // Dev only: the live counts, for the review's numbers.
+    if (import.meta.env.DEV) (window as unknown as { __weather?: { weather: WeatherLayer; edge: EdgeBand } }).__weather = { weather, edge }
     const step = (now: number) => {
       let dt = (now - last) / 1000
       last = now
+      // The frame's length feeds the effects' automatic step down (`fxQuality`).
+      noteFxFrame(dt * 1000)
       // A tab-out can hand us an enormous delta; cap the real time we bank.
       if (dt > 0.25) dt = 0.25
 
@@ -535,6 +583,19 @@ export function BattleCanvas() {
        * grows a black edge as it kicks. It costs one extra blit, on shake
        * frames only.
        */
+      // The battlefield wears the run's season (Oct 2026): its hiring
+      // company's, your militia's chosen world's on the Sovereign Route — a
+      // re-bake on a change, nothing per frame (`render/season`).
+      const meta = useMetaStore.getState()
+      const runTheme = st.contract ? contractTheme(st.contract, militiaTheme(flyingMilitia(meta.militia, meta))) : null
+      // Dev only: `window.__seasonOff` shows the plain field, for a before / after.
+      const season = import.meta.env.DEV && (window as unknown as { __seasonOff?: boolean }).__seasonOff ? null : fieldSeasonFor(runTheme)
+      setFieldSeason(season)
+      // …and its goblins wear the road's clan (Oct 2026, `data/clans.ts`): a
+      // look only — the engine never sees it. Dev only: `window.__clanOff`
+      // shows the plain goblins, for a before / after.
+      setEnemyClan(import.meta.env.DEV && (window as unknown as { __clanOff?: boolean }).__clanOff ? null : runClan(st))
+
       const sh = fxShake()
       if (sh.on) {
         drawField(ctx, map, sv)
@@ -546,14 +607,27 @@ export function BattleCanvas() {
       drawTerrainFlames(map, (x, y, p) => drawStandingFlame(ctx, x, y, p))
       // Q1: the skulls on cursed ground — terrain too, under the hero on it.
       drawTerrainDanger(map, (x, y, v) => drawSkull(ctx, x, y, v))
+      // The world at the field's edges: clear of the road, the slots and the
+      // wagon, and under the wagon and the units in any case.
+      edge.frame(ctx, map, sv, shown.scale, season, fxLevel(), dt * 1000)
+      weather.frame(ctx, map, sv, shown.scale, season, fxLevel(), dt * 1000)
       // The caravan at the road's end (the mercenary company): its crates are
       // the cargo still on board, so a leak is seen to take one away.
       {
         const hp = st.engine ? st.hud.baseHp : st.baseHp
         const max = (st.engine ? st.hud.maxBaseHp : st.maxBaseHp) || 1
         const co = st.contract ? routeOf(st.contract).color : '#e0ac4c'
-        // Your militia's banner flies beside the wagon (build step 4).
-        drawCaravan(ctx, map, { color: co, cargo: Math.max(0, hp) / max, banner: useMetaStore.getState().militia })
+        // The flag of whoever the run is for: the hiring company's standard,
+        // or on your own road (the Sovereign Route) your militia's banner.
+        const company = st.contract?.company ?? null
+        drawCaravan(ctx, map, {
+          color: co,
+          cargo: Math.max(0, hp) / max,
+          company,
+          // Dressed as you dressed it (Draft 4 § C): the livery you keep for that company.
+          livery: company ? (useMetaStore.getState().liveries[company] ?? null) : null,
+          banner: company ? null : flyingMilitia(useMetaStore.getState().militia, useMetaStore.getState()),
+        })
       }
 
       const liveEngine = st.engine
@@ -706,6 +780,14 @@ export function BattleCanvas() {
       ctx.fillStyle = GRADE
       ctx.fillRect(sv.x0, sv.y0, sv.w, sv.h)
       ctx.globalCompositeOperation = 'source-over'
+    }
+
+    paintNow = () => {
+      try {
+        step(last)
+      } catch (err) {
+        reportFatal(err, 'battle-loop')
+      }
     }
 
     const frame = (now: number) => {
@@ -919,6 +1001,7 @@ export function BattleCanvas() {
       wrap.removeEventListener('focusin', onFocusIn)
       cancelAnimationFrame(raf)
       ro.disconnect()
+      unsubPreview()
       canvas.removeEventListener('pointermove', onPointerMove)
       canvas.removeEventListener('pointerdown', onPointerDown)
       canvas.removeEventListener('pointerup', onPointerUp)

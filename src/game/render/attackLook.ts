@@ -26,7 +26,7 @@
  * and the shot's on-hit effects ({@link hitEffects}) colour its trail and its
  * impact from ONE palette ({@link EFFECT_INK}) whether it flew or was swung.
  */
-import { itemNoun } from '../data/items'
+import { isBow } from '../data/items'
 import { heroStyle, styleWeapon } from '../data/gear'
 import { isMelee, swingWeapon } from '../engine/melee'
 import type { EffectMods, Sentinel } from '../types'
@@ -45,7 +45,7 @@ export function deliveryOf(hero: Sentinel, melee: boolean = isMelee(hero)): Deli
   if (style === 'shoot') {
     // The weapon the style comes from (main hand first): a bow, or a knife.
     const w = styleWeapon(hero)
-    return w && itemNoun(w) === 'Bow' ? 'arrow' : 'knife'
+    return w && isBow(w) ? 'arrow' : 'knife'
   }
   return 'stone'
 }
@@ -130,6 +130,20 @@ export const EFFECT_INK: Readonly<Record<HitEffect, EffectInk>> = {
   drain: { core: '#ffb3b8', glow: '#d0324a', spark: '#ff5d6c' },
   stun: { core: '#fff6c8', glow: '#ffe08a', spark: '#ffe08a' },
   execute: { core: '#ffd0d0', glow: '#ff5d5d', spark: '#ff5d5d' },
+}
+
+/**
+ * The ink a chain's ARCS take (the merge art pass, Oct 2026): a hero whose
+ * jumps carry its status (`EffectMods.arcCarry` — Frozen Arc Spark, Sparking
+ * Frostbite, Plague Spark) draws its chain in that status's ink, so the arc
+ * that slows looks cold and the one that burns looks hot. Null: the plain
+ * shock arc. Presentation only — the engine resolves the carry on its own.
+ */
+export function arcInk(mods: EffectMods): EffectInk | null {
+  if (!mods.arcCarry) return null
+  if (mods.burn && mods.burn.dps > 0) return EFFECT_INK.burn
+  if (mods.chill && mods.chill.slow > 0) return EFFECT_INK.chill
+  return null
 }
 
 /** The plain inks, for a hit that carries no effect. */

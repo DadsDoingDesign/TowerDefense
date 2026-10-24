@@ -1,9 +1,12 @@
-import { useRef, type CSSProperties, type ReactNode } from 'react'
-import { companyById, type CompanyId } from '../../../game/data/companies'
+import { useMemo, useRef, type CSSProperties, type ReactNode } from 'react'
+import { COMPANY_LOGOS, companyById, type CompanyId } from '../../../game/data/companies'
+import { companyStandardPalette, companyStandardRows, standardPaletteFor, standardRowsFor, type StandardLook } from '../../../game/data/companyStandard'
 import { companyVar, moneyText, SOVEREIGN_VAR } from '../../channels'
-import { Coin, Crest, Lantern, SovereignCrest } from '../../pixel'
+import { Banner, Coin, Crest, Lantern, Pixel, SovereignCrest } from '../../pixel'
+import type { BannerLook } from '../../../game/data/banner'
 import { CHARTER_NAME, CHARTER_TOWNS } from '../../../game/run/charter'
 import { useMoreBelow } from '../Page'
+import { ThemeFx } from '../../theme/ThemeFx'
 
 /**
  * The trade pages' shared parts (the mercenary company, build step 2), drawn
@@ -37,6 +40,7 @@ export function ContractPage({
   const more = useMoreBelow(bodyRef)
   return (
     <div className={`pg ct ${className ?? ''}`} style={heat != null ? ({ '--heat': heat.toFixed(2) } as CSSProperties) : undefined} aria-label={label}>
+      <ThemeFx />
       <div className="pg-band pg-head ct-head">{head}</div>
       <div className={`pg-band pg-body ct-body${more ? ' more' : ''}`} ref={bodyRef}>
         {children}
@@ -72,16 +76,6 @@ export const MarketTag = ({ mult }: { mult: number }) => (
     ×{mult} today
   </span>
 )
-
-/** The route's ground: a swatch chip beside its name (never a signal on its own). */
-export const GroundChip = ({ company }: { company: CompanyId }) => {
-  const g = companyById(company).ground
-  return (
-    <span className="ct-ground" style={{ '--gr': g.swatch } as CSSProperties}>
-      {g.name}
-    </span>
-  )
-}
 
 /** Danger as 1–5 pips, numbered — never an invented probability. */
 export function DangerPips({ n }: { n: number }) {
@@ -160,32 +154,87 @@ export function RouteRail({ company, stops, progress, marker }: { company: Compa
 }
 
 /**
- * The contract being set up, on the hero pick: whose road, how much cargo, to
- * where, and the purse — so a first-timer (who never sees the board) still
- * reads that this run is a job for someone. The purse is the company's
- * advance on every contract signed now (October 2026), and says so.
+ * A trade company's small hung flag (Oct 2026; the designer: the company's
+ * icon on a road's notice should be a flag, on the left). A rod with gold
+ * finials, and under it the company's standard — the same pixel rows the
+ * wagon flies (`data/companyStandard.ts`), dressed as you dressed it (Draft
+ * 4 § C, `look`). A road not hiring yet hangs a grey cloth with the locked
+ * mark.
  */
-export function ContractChip({ company, crates, purse, advance = false }: { company: CompanyId | null; crates: number; purse: number; advance?: boolean }) {
-  const word = advance ? 'advance' : 'purse'
-  if (!company) {
-    // The Sovereign Route: no company's, every good, the fee already on the charter page.
-    return (
-      <p className="ct-contract-chip sovereign" style={{ '--co': SOVEREIGN_VAR } as CSSProperties}>
-        <SovereignCrest scale={1} />
-        <span>
-          <b>{CHARTER_NAME}</b> · every good to {CHARTER_TOWNS[2]} · {word} <Gold n={purse} scale={1} />
-        </span>
-      </p>
-    )
-  }
-  const co = companyById(company)
+export function CompanyFlag({ company, locked = false, look, scale = 2 }: { company: CompanyId; locked?: boolean; look?: StandardLook | null; scale?: number }) {
+  const rows = useMemo(() => hungCloth(locked ? standardRowsFor(COMPANY_LOGOS.locked, null) : companyStandardRows(company, look)), [company, locked, look])
+  const pal = locked ? standardPaletteFor(COMPANY_LOGOS.locked, LOCKED_CLOTH, null) : companyStandardPalette(company, look)
   return (
-    <p className="ct-contract-chip" style={{ '--co': companyVar(company) } as CSSProperties}>
-      <Crest company={company} scale={1} />
-      <span>
-        <b>{co.name}</b> · {crates ? `${crates} crate${crates === 1 ? '' : 's'} of ${co.noun}` : 'escort'} to {co.towns[2]} · {word} <Gold n={purse} scale={1} />
-      </span>
-    </p>
+    <span className={`co-flag${locked ? ' locked' : ''}`} style={{ '--co': companyById(company).color } as CSSProperties} aria-hidden="true">
+      <span className="co-flag-rod" />
+      <Pixel rows={rows} palette={pal} scale={scale} className="co-flag-cloth" />
+    </span>
+  )
+}
+/** A road not hiring yet: its cloth in undyed grey. */
+const LOCKED_CLOTH = '#6c675f'
+
+/** A standard's cloth off its pole, to hang from a rod: no pole columns, no finial row, no bare rows under the foot. */
+export function hungCloth(rows: readonly string[]): string[] {
+  const cloth = rows.slice(1).map((r) => r.slice(2))
+  while (cloth.length && /^\.*$/.test(cloth[cloth.length - 1])) cloth.pop()
+  return cloth
+}
+
+/**
+ * The hero pick's brand (Oct 2026; the designer: "this screen should feel more
+ * branded to the company — the top should have the company flag I'm
+ * repping"; then "the big banner is better but it's kind of tacky"). The
+ * hiring company's standard hangs from a rod across the head: dark wool
+ * dyed with its colour, trimmed in it, its seal hung over the rod, its name
+ * and the contract's terms; your own militia's flag and name sit under it —
+ * who you fly for. The Sovereign Route's is its cyan and crown.
+ */
+export function ContractBanner({
+  company,
+  crates,
+  purse,
+  advance = false,
+  militia,
+}: {
+  company: CompanyId | null
+  crates: number
+  purse: number
+  advance?: boolean
+  militia: { name: string; look: BannerLook } | null
+}) {
+  const co = company ? companyById(company) : null
+  const word = advance ? 'advance' : 'purse'
+  const terms = co
+    ? `${crates ? `${crates} crate${crates === 1 ? '' : 's'} of ${co.noun}` : 'Escort'} to ${co.towns[2]}`
+    : `Every good to ${CHARTER_TOWNS[2]}`
+  return (
+    <div className={`ct-banner${co ? '' : ' sovereign'}`} style={{ '--co': co ? co.color : SOVEREIGN_VAR } as CSSProperties}>
+      <span className="ct-banner-rod" aria-hidden="true" />
+      <div className="ct-banner-cloth">
+        <span className="ct-banner-seal" aria-hidden="true">
+          {company ? <Crest company={company} scale={2} /> : <SovereignCrest scale={2} />}
+        </span>
+        <span className="ct-banner-k">{co ? 'Under contract' : 'Your own charter'}</span>
+        <b className="ct-banner-name">{co ? co.name : CHARTER_NAME}</b>
+        <span className="ct-banner-terms">
+          {terms} ·{' '}
+          <span className="ct-banner-adv">
+            {word} <Gold n={purse} scale={1} />
+          </span>
+        </span>
+      </div>
+      {militia && (
+        <p className="ct-banner-us">
+          <Banner look={militia.look} scale={2} />
+          <span>
+            <b>{militia.name}</b>
+            <br />
+            flying for {co ? co.name : 'no company but its own'}
+          </span>
+        </p>
+      )}
+    </div>
   )
 }
 

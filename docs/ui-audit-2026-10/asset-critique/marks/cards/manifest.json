@@ -1,0 +1,154 @@
+[
+  {
+    "id": "marks-crest-spice",
+    "group": "Marks & map",
+    "people": "Humans · spice",
+    "title": "Peppercorn Co. crest",
+    "caption": "The fat lime sausage read as a pickle.",
+    "file": "crest-spice.png"
+  },
+  {
+    "id": "marks-crest-art",
+    "group": "Marks & map",
+    "people": "Easel House · art (to become Butcherblock)",
+    "title": "Easel House crest",
+    "caption": "Random daubs on a lilac board read as a screen.",
+    "file": "crest-art.png"
+  },
+  {
+    "id": "marks-crest-metals",
+    "group": "Marks & map",
+    "people": "Dwarves · ore and stone",
+    "title": "Ironvein crest",
+    "caption": "A brown rock with a three-pixel blue vein: at dock size a grey sack, no Ironvein blue.",
+    "file": "crest-metals.png"
+  },
+  {
+    "id": "marks-crest-silk",
+    "group": "Marks & map",
+    "people": "Elves · silk",
+    "title": "Rosethread crest",
+    "caption": "The dotted winding read as a jar of buttons.",
+    "file": "crest-silk.png"
+  },
+  {
+    "id": "marks-crest-scrolls",
+    "group": "Marks & map",
+    "people": "Moonquill · scrolls (to become Greenvial)",
+    "title": "Moonquill crest",
+    "caption": "The quill was a solid white blade, so the mark read as a scimitar and shield.",
+    "file": "crest-scrolls.png"
+  },
+  {
+    "id": "marks-crest-family",
+    "group": "Marks & map",
+    "people": "All five companies",
+    "title": "The five crests as a family",
+    "caption": "Can you tell the five apart at 16 and 32 px, and do they look like one set?",
+    "file": "crest-family.png"
+  },
+  {
+    "id": "marks-standards",
+    "group": "Marks & map",
+    "people": "All five companies",
+    "title": "Company standards: the logo is sewn on",
+    "caption": "Each logo was drawn in its cloth's own colour, so only its outline showed; a patch of deeper dye now sews it on.",
+    "file": "standards.png"
+  },
+  {
+    "id": "marks-lock",
+    "group": "Marks & map",
+    "people": "Shared mark",
+    "title": "The lock",
+    "caption": "The small lock's shackle was outline only, so on dark wood it was a box; it now has its own steel.",
+    "file": "lock.png"
+  },
+  {
+    "id": "marks-coin",
+    "group": "Marks & map",
+    "people": "Money",
+    "title": "The gold coin (shell)",
+    "caption": "The 7 × 7 coin was a gold square beside the run's round coin; now it is round, lit, its far edge in shade.",
+    "file": "coin.png"
+  },
+  {
+    "id": "marks-crown",
+    "group": "Marks & map",
+    "people": "The Sovereign Route · the trade war",
+    "title": "Sovereign crest and the leader's crown",
+    "caption": "Two paper jewels over a dark band made the crown a smiling face; it now has a raised centre point and one ruby on its band.",
+    "file": "crown.png"
+  },
+  {
+    "id": "marks-gold-rim",
+    "group": "Marks & map",
+    "people": "All five companies",
+    "title": "The second-term gold rim",
+    "caption": "The rim was a 1 px hairline round 2 px pixels, in the themed accent (lime under Peppercorn); now one crest pixel wide, in --gold.",
+    "file": "gold-rim.png"
+  },
+  {
+    "id": "marks-emblems",
+    "group": "Marks & map",
+    "people": "All five companies · the militia",
+    "title": "Flag emblems (5 × 5)",
+    "caption": "Eight company emblems read as something else at 3×: the gem and palette as skulls, the rose as a key, the chili and quill as slashes.",
+    "file": "emblems.png"
+  },
+  {
+    "id": "marks-map-detail",
+    "group": "Marks & map",
+    "people": "The home map",
+    "title": "Map towns, woods and peaks",
+    "caption": "Towns were flat boxes, the pines black blots, the peaks tents; now houses with roofs, lit pines and peaks with a shoulder. Roads stay first.",
+    "file": "map-detail.png"
+  },
+  {
+    "id": "marks-codex-tiles",
+    "group": "Marks & map",
+    "people": "The Codex",
+    "title": "Codex tile frames",
+    "caption": "The frames used pure white and black; they now use the cream text and warm shade tokens, so a tile sits on the wood.",
+    "file": "codex-tiles.png"
+  },
+  {
+    "id": "marks-home-phone",
+    "group": "Marks & map",
+    "people": "The home",
+    "title": "The home at phone width (390)",
+    "caption": "The whole home before and after: crests, coin, gold rim, towns, woods and peaks. Nothing moves between picks (home-stability passes).",
+    "file": "home-phone.png"
+  },
+  {
+    "id": "marks-proposal-butcherblock",
+    "group": "Marks & map",
+    "people": "Reptilians · meat, hides and salt",
+    "title": "PROPOSAL · Butcherblock crest and standard",
+    "caption": "Proposal, not shipped: a haunch on the bone in brine-red #c25b6b, for Easel House's slot. Judge the read at 1× and 2×.",
+    "file": "proposal-butcherblock.png"
+  },
+  {
+    "id": "marks-proposal-greenvial",
+    "group": "Marks & map",
+    "people": "Gnomes · plant potions",
+    "title": "PROPOSAL · Greenvial crest and standard",
+    "caption": "Proposal, not shipped: a potion flask with a sprouting cork and glowing spores, in bottle jade #2fa58a, for Moonquill's slot.",
+    "file": "proposal-greenvial.png"
+  },
+  {
+    "id": "marks-proposal-family",
+    "group": "Marks & map",
+    "people": "All five, as planned",
+    "title": "PROPOSAL · The five as they would be",
+    "caption": "Proposal: Peppercorn, Butcherblock, Ironvein, Rosethread and Greenvial side by side. Do they still read as five?",
+    "file": "proposal-family.png"
+  },
+  {
+    "id": "marks-rarity-teal",
+    "group": "Marks & map",
+    "people": "Rarity · the CTA",
+    "title": "FIX? · Rare is the CTA's teal",
+    "caption": "Not changed: Rare #5fb0c4 sits ΔE 4 from the CTA teal #57a2b6, so a Rare rail reads as a button. Retuning a token needs your call.",
+    "file": "rarity-teal.png"
+  }
+]

@@ -9,14 +9,15 @@
  * callers keep importing from there; `scripts/fw-icons.ts` checks THIS file's
  * `ICON_ORDER` / `ICON_COLS` / `ICON_ROWS` against the sheet.
  */
-import { ITEM_NOUN_RE } from './items'
+import { itemNoun } from './items'
+import { PEOPLE_KINDS, peopleIconKey } from './peopleKinds'
 import type { Item } from '../types'
 
 /**
- * The 78 cells of `public/assets/ui/fw-icons.png`, IN CELL ORDER.
+ * The 257 cells of `public/assets/ui/fw-icons.png`, IN CELL ORDER.
  *
  * The list is authored twice on purpose — here and in `scripts/fw-icons.ts` —
- * because a PNG cannot carry its own index and a silently-shifted atlas is 78
+ * because a PNG cannot carry its own index and a silently-shifted atlas is 257
  * wrong pictures rather than one visible error. The generator refuses to write
  * the file unless this array matches it exactly, and `npm run build` runs the
  * same check without writing, so the duplication is checked rather than
@@ -74,6 +75,53 @@ export const ICON_ORDER = [
   'map', 'orders', 'vow',
   // row 11 (cont.) — the Settings rows' last system-font glyphs (Phase 2)
   'motion', 'contrast', 'scale', 'vision', 'tips', 'calm', 'mono',
+  // rows 12–13 — the twelve item kinds that borrowed another kind's cell
+  // (Oct 2026: every item looks like itself, on the tile and in the fist)
+  'brand', 'rod', 'tome', 'codex', 'buckler', 'pavise', 'easel', 'mail',
+  'aegis', 'ironheart', 'cloak', 'silkwind',
+  // rows 13 (cont.) – 22 — the peoples' kinds (Oct 2026, `docs/peoples/roster.json`):
+  // every new and renamed item of the five rosters, in roster order, baked
+  // from the reviewed drafts (`scripts/peoples-art/`). Keys are
+  // `peopleKinds.peopleIconKey` of the name.
+  // Humans
+  'armingSword', 'kiteShield', 'gambeson', 'falchion', 'spicedBlade', 'halberd',
+  'bannerPole', 'heaterShield', 'brigandine', 'pepperportSabre', 'captainsShield', 'sergeantsCuirass',
+  'pepperportStandard', 'saltmarshWarplate',
+  // Elves
+  'shortbow', 'silkWrap', 'longbow', 'twinKnives', 'barbedQuiver', 'wovenVest',
+  'thornweaveHood', 'recurveBow', 'loomwardenBow', 'rangersDirk', 'starfeatherQuiver', 'moonsilkMantle',
+  'starstringLongbow', 'whisperfang',
+  // Dwarves
+  'handHammer', 'minersPick', 'roundShield', 'chainshirt', 'forgeApron', 'beardedAxe',
+  'maul', 'runeShield', 'stoneskinMail', 'greataxe', 'quarryBreaker', 'anvilShield',
+  'deepforgePlate', 'mountainbreaker', 'thanesBulwark',
+  // Reptilians
+  'spear', 'fangKnife', 'boneClub', 'leather', 'hideWrap', 'cleaver',
+  'meatHook', 'harpoon', 'gatorBuckler', 'javelinSling', 'scaleHide', 'glaive',
+  'bonecrusher', 'venomFang', 'stalkerLeathers', 'smokehouseApron', 'kingscaleShield', 'wyrmtoothSpear',
+  'butcherKingsCleaver',
+  // Gnomes
+  'sproutWand', 'herbPouch', 'thornrod', 'sparkCoil', 'flask', 'mossweaveRobe',
+  'brewBelt', 'bloomstaff', 'philterRack', 'alchemistsCoat', 'greenvialHerbal', 'worldrootStaff',
+  'elixirOfPlenty',
+  // rows 22 (cont.) – 23 — the HQ castle's quality tiers (Oct 2026, `run/hq.castleTier`):
+  // the home bar's HQ plate shows the castle's material
+  'hqTimber', 'hqStone', 'hqFortified', 'hqGrand',
+  // rows 23 (cont.) – 29 — every library skill's own picture (Oct 2026, the merge
+  // art pass): `skillArt.SKILL_ART`, baked through `skillIcons.ts` in its own
+  // element's colours, in `skills.ALL_SKILLS` order. Keys are `skillArt.skillArtKey`.
+  'skQuickHands', 'skHardHitter', 'skKeenEye', 'skHoldFast', 'skCharge', 'skBloodrush', 'skPoisonTips', 'skArcSpark',
+  'skFrostbite', 'skLongReach', 'skCleave', 'skBounty', 'skPinDown', 'skRiposte', 'skHeavyBlows', 'skLongShot',
+  'skFinisher', 'skShieldWall', 'skAnchor', 'skStunningBash', 'skSnare', 'skWildfire', 'skBlessing', 'skGateSiphon',
+  'skKillingSpree', 'skColdSnap', 'skFirebrand', 'skSplitShot', 'skDeadeye', 'skPepperfire', 'skGiltFrame', 'skOreSense',
+  'skVelvetToll', 'skMoonwake', 'skBolderBash', 'skBannerBearer', 'skVenomSpit', 'skOvergrowth', 'skBerserk', 'skWeaponmaster',
+  'skVolley', 'skBulwark', 'skReaper', 'skRally', 'skMomentum', 'skLastRites', 'skWardenOfAsh', 'skHexblade',
+  'skStormcaller', 'skTinkersSpark',
+  // rows 29 (cont.) – 32 — the twenty named merges, hand-drawn (`skillArtNamed.ts`),
+  // with the named marker (gold corner brackets), in `fusions.FUSIONS` order.
+  'fzThousandCuts', 'fzRelentless', 'fzBushwhack', 'fzSunder', 'fzPlagueSpark', 'fzRimecut', 'fzCrushingGrip', 'fzPlaguebearer',
+  'fzCinderburst', 'fzHailOfArrows', 'fzCoupDeGrace', 'fzShatterglass', 'fzRallyingStandard', 'fzAnvilfall', 'fzRedMist', 'fzSkyfall',
+  'fzBlackDeath', 'fzGlassStorm', 'fzForgefire', 'fzWarBanner',
 ] as const
 
 export type IconKey = (typeof ICON_ORDER)[number]
@@ -87,7 +135,7 @@ export type IconKey = (typeof ICON_ORDER)[number]
  * every cell in the atlas with nothing anywhere to notice (M13).
  */
 export const ICON_COLS = 8
-export const ICON_ROWS = 12
+export const ICON_ROWS = 33
 
 /**
  * Where an icon sits in the sheet, as (column, row).
@@ -107,13 +155,19 @@ export const iconCell = (k: IconKey): { ix: number; iy: number } => {
 
 
 /**
- * The 26 item nouns, mapped onto 18 drawn shapes.
+ * Every item noun the game deals, each on a cell of its own.
  *
- * Compression, not laziness: a Buckler and a Shield are the same silhouette at
- * 16px and pretending otherwise buys a difference nobody can see, while a
- * Greatsword and a Dagger are genuinely different objects and now look it. What
- * matters is that the four-glyph regime is over — a Bow, a Staff and a Warhammer
- * were all `⚒`.
+ * This used to be compression — 26 nouns on 18 shapes, on the argument that a
+ * Buckler and a Shield are the same silhouette at 16px. They are not, once a
+ * buckler is drawn round and small, and the designer asked for every item to
+ * look like itself (Oct 2026): twelve kinds that borrowed another kind's cell
+ * (the Buckler, Pavise and Gilded Easel the heater shield; Mail, Aegis and
+ * Ironheart Plate the plate; the Tome and Moonquill Codex the grimoire; the Rod
+ * the wand; the Saffron Brand the sword; both cloaks the robe) got their own
+ * (rows 12–13). The figure carries the same cell in its fist
+ * (`render/gearMarks.ts`), so the hero changed with the tile. Only the legacy
+ * spellings and keepsakes still share: Scepter is Sceptre, a Standard is a
+ * Banner, an Oath is a Relic — one object under two names.
  *
  * ---------------------------------------------------------------------------
  * ONE regex, because `renameFor` is one regex (M9)
@@ -148,43 +202,47 @@ export const iconCell = (k: IconKey): { ix: number; iy: number } => {
  * rule cannot disagree about which noun a name carries. Both spellings of
  * Sceptre/Scepter are carried.
  */
-const NOUN_RE = ITEM_NOUN_RE
 
 const NOUN_ICON: Record<string, IconKey> = {
-  // The Sovereign tier draws as its everyday cousin; the cyan tier mark says the rest.
-  'Saffron Brand': 'blade',
-  'Moonquill Codex': 'grimoire',
-  'Gilded Easel': 'shield',
-  'Ironheart Plate': 'plate',
-  'Silkwind Cloak': 'cloth',
+  // The Sovereign tier: each its own object (the cyan tier mark still says the tier).
+  'Saffron Brand': 'brand',
+  // The roster's renames are redrawn; an unmigrated old name is the same object.
+  'Greenvial Herbal': 'greenvialHerbal',
+  'Kingscale Shield': 'kingscaleShield',
+  'Moonquill Codex': 'greenvialHerbal',
+  'Gilded Easel': 'kingscaleShield',
+  'Ironheart Plate': 'ironheart',
+  'Silkwind Cloak': 'silkwind',
   Greatsword: 'greatblade',
   Sword: 'blade',
   Axe: 'axe',
   Dagger: 'dagger',
   Wand: 'wand',
-  Rod: 'wand',
+  Rod: 'rod',
   Scepter: 'sceptre',
   Sceptre: 'sceptre',
   Warhammer: 'hammer',
   Bow: 'bow',
   Staff: 'staff',
   Grimoire: 'grimoire',
-  Tome: 'grimoire',
+  Tome: 'tome',
   Shield: 'shield',
-  Buckler: 'shield',
-  Pavise: 'shield',
+  Buckler: 'buckler',
+  Pavise: 'pavise',
   Quiver: 'quiver',
   Focus: 'orb',
   Plate: 'plate',
-  Mail: 'plate',
-  Aegis: 'plate',
+  Mail: 'mail',
+  Aegis: 'aegis',
   Robe: 'cloth',
-  Cloak: 'cloth',
+  Cloak: 'cloak',
   Banner: 'banner',
   Standard: 'banner',
   Relic: 'relic',
   Oath: 'relic',
   Beacon: 'beacon',
+  // Every peoples' kind on a cell of its own (`ICON_ORDER` rows 13–22).
+  ...Object.fromEntries(PEOPLE_KINDS.map((k) => [k.id, peopleIconKey(k.id) as IconKey])),
 }
 
 /** Fallback when a name carries no noun the table knows (a hand-built item). */
@@ -197,7 +255,7 @@ const SLOT_ICON: Record<string, IconKey> = {
 
 /** The shape for an item — what it IS, before what it does. */
 export function itemIcon(item: Pick<Item, 'name' | 'slot'>): IconKey {
-  const noun = NOUN_RE.exec(item.name)?.[0]
+  const noun = itemNoun(item)
   if (noun && NOUN_ICON[noun]) return NOUN_ICON[noun]
   return SLOT_ICON[item.slot] ?? 'loot'
 }

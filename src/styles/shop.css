@@ -1,0 +1,139 @@
+/**
+ * The merchant as a little shop on the road (`ui/shell/ShopFront.tsx`, Oct
+ * 2026). The stall itself is the stop's scene (`StopScene`, `stops.css`); here,
+ * the wares on a shelf with paper price tags, the services on a counter. Built from the pick-one parts
+ * (`pick.css`): only the dressing is here.
+ */
+
+/* ------------------------------------------------------------ the shelf */
+.shop-shelf {
+  position: relative;
+  padding: 0 4px 12px;
+}
+/* The plank the wares stand on. */
+.shop-shelf::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 12px;
+  border: 1px solid var(--sign-rim);
+  border-radius: 3px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--sign-ink) 18%, transparent) 0 2px, transparent 2px, color-mix(in srgb, var(--shade) 30%, transparent)),
+    var(--sign-wood);
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--shade) 40%, transparent);
+}
+.shop .pk-tok {
+  background: color-mix(in srgb, var(--shade) 40%, transparent);
+  border-color: color-mix(in srgb, var(--rule) 14%, transparent);
+}
+.shop .pk-tok[aria-checked='true'] {
+  background: var(--panel-3);
+}
+.shop-wares .pk-tok {
+  height: 100px;
+  border-bottom-left-radius: 2px;
+  border-bottom-right-radius: 2px;
+}
+/* A ware stands at 3× its sprite (48px, an integer scale) on the shelf. */
+.shop-wares .pk-ware > .fw-i {
+  --fw-i-size: var(--icon-lg);
+}
+
+/* The price: a paper tag at the ware's foot. On the shelf it carries the
+   price alone (the rarity is the token's rail and the card's kicker); on the
+   counter it names the service too. */
+.shop .pk-foot {
+  align-items: center;
+  margin: 0 -2px -1px;
+  padding: 3px 4px;
+  border-radius: 3px;
+  background: var(--paper);
+  color: var(--paper-ink);
+}
+.shop .pk-label,
+.shop .pk-tok.unavailable .pk-label {
+  /* On the paper tag even when the service is out ("Cargo is whole"): the
+     shared parts' muted ink was cream on cream there (asset critique, Oct 2026). */
+  color: var(--paper-ink-2);
+}
+.shop-wares .pk-foot {
+  justify-content: center;
+}
+.shop-wares .pk-label {
+  display: none;
+}
+.shop .pk-value,
+.shop .pk-tok[aria-checked='true'] .pk-value {
+  color: var(--paper-ink);
+}
+.shop .pk-value.warn,
+.shop .pk-tok[aria-checked='true'] .pk-value.warn {
+  color: var(--bad);
+}
+
+/* ------------------------------------------------------------ the counter */
+.shop-counter {
+  padding: 6px;
+  border: 1px solid var(--sign-rim);
+  border-radius: var(--r-md);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--sign-ink) 12%, transparent) 0 2px, transparent 2px),
+    repeating-linear-gradient(90deg, transparent 0 46px, color-mix(in srgb, var(--shade) 12%, transparent) 46px 48px),
+    var(--sign-wood);
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--shade) 40%, transparent);
+}
+.shop-counter .pk-tok {
+  flex-direction: row;
+  align-items: center;
+  height: 52px;
+  gap: 6px;
+}
+.shop-counter .pk-art {
+  flex: none;
+}
+.shop-counter .pk-foot {
+  flex: 1 1 auto;
+}
+
+.shop-empty {
+  margin: 0;
+  padding: 18px 8px;
+  text-align: center;
+  color: var(--muted);
+}
+
+/* A bought ware's cubby: it stays on the shelf, empty, stamped SOLD. */
+.shop-sold {
+  display: grid;
+  place-items: center;
+  height: 100px;
+  border: 1px dashed color-mix(in srgb, var(--rule) 16%, transparent);
+  border-radius: var(--r-md);
+  border-bottom-left-radius: 2px;
+  border-bottom-right-radius: 2px;
+  background: color-mix(in srgb, var(--shade) 55%, transparent);
+}
+.shop-sold-stamp {
+  padding: 2px 8px;
+  border: 2px solid var(--bad);
+  border-radius: 3px;
+  color: var(--bad);
+  font-size: var(--fs-micro);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transform: rotate(-12deg);
+  opacity: 0.85;
+}
+
+/* A service's line ("Cargo is whole", "Cargo +25%") wraps to a second line
+   rather than being cut ("Cargo is w…", Oct 2026 review). */
+.shop-counter .pk-foot,
+.shop-counter .pk-label {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}

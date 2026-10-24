@@ -12,7 +12,9 @@ import type { Archetype, Sentinel } from '../types'
 import { ANIM_FRAMES, loopFrame } from './anim'
 import { fxEnemyDot, fxEnemyFlash, fxEnemyRecoil, fxReducedMotion, fxSentinel, type ProcKind } from './fx'
 import { heroStrip, type Loadout } from './loadout'
-import { drawMainHand, drawOffHand, heroGearCached, rigFor, unpaintedStrip, unpaints, type HeroGear } from './gearMarks'
+import { drawMainHand, drawOffHand, handsAt, heldGripsFor, heroGearCached, offHandPlan, paintsMain, rigFor, unpaintedStrip, unpaints, type Hands, type HeldStrip, type HeroGear, type StripFill } from './gearMarks'
+import { dressedStrip, wornOnFigure } from './bodyLayer'
+import type { Pixmap } from './pixmap'
 import { deliveryCached, deliveryOfRt, type Delivery } from './attackLook'
 import { pixmap, quarterTurns } from './pixmap'
 import { artFor, getSprite } from './sprites'
@@ -20,8 +22,9 @@ import { getActiveStyle } from './themes'
 import { animNow, unitPixmapScale } from './frame'
 import { darken, hexToRgba, lighten, mix, radialFill, roundRect, shapePath } from './paint'
 import { blitPixmap } from './blit'
-import { eliteMark, enemyTier } from './plaques'
-import { drawEnemyBar } from './hpbar'
+import { eliteMark, enemyTier, type EliteMark } from './plaques'
+import { clanArtFor, clanArtTop } from './clanArt'
+import { drawEnemyBar, enemyBarTop } from './hpbar'
 
 /** A minimal, uniform description of a tower to draw (works for setup + battle). */
 export interface DrawSentinel {
@@ -274,8 +277,6 @@ export function drawSentinel(ctx: CanvasRenderingContext2D, s: DrawSentinel): vo
   // family (still, idle, attack) comes from one pack, at that pack's density.
   const art = artFor(s.archetype)
   const pack = art?.pack
-  const idle = pack ? getSprite(pack, `${s.archetype}_idle`) : undefined
-  const atk = pack ? getSprite(pack, `${s.archetype}_atk`) : undefined
   const staticSpr = pack ? getSprite(pack, s.archetype) : undefined
 
   const groundRing = () => {
@@ -290,34 +291,18 @@ export function drawSentinel(ctx: CanvasRenderingContext2D, s: DrawSentinel): vo
     ctx.stroke()
   }
 
-  // What the hero really carries (`gearMarks`). When the art paints a weapon the
-  // hero is NOT holding, the idle strip is drawn with it cut out and the real
-  // item goes in the fist — and the attack strip, which swings the painted
-  // weapon, is not played: the item itself makes the move (`reach` below).
-  const rig = rigFor(art?.pack, s.archetype)
+  // The figure in its real kit (`heroFigure`, shared with the portraits).
+  const fig = art ? heroFigure(art.pack, art.spriteScale, s.archetype, s.gear, s.fireFlash > 0.05, s.loadout) : null
+  const rig = fig?.rig ?? rigFor(art?.pack, s.archetype)
   const gear = s.gear
-  const cut = !!gear && unpaints(rig, gear)
-  const ownArt = !gear || !rig.measured || gear.main === rig.paintedMain
-
-  const towerPm = (() => {
-    if (!art) return null
-    const firing = s.fireFlash > 0.05 && !!atk && ownArt
-    const anim = firing ? 'atk' : 'idle'
-    const frames = ANIM_FRAMES[`${s.archetype}_${anim}`] ?? 1
-    // heroStrip returns the bare body when nothing is equipped, so the
-    // un-geared path is exactly what it was before the compositor existed.
-    const body =
-      heroStrip(art.pack, s.archetype, anim, frames, s.loadout) ??
-      ((firing ? atk : idle) ?? idle ?? atk)
-    if (!body) return null
-    const strip = cut && anim === 'idle' ? unpaintedStrip(body, rig, frames) : body
-    const pm = pixmap(strip, { scale: unitPixmapScale(art.spriteScale), frames, ring: true })
-    if (!pm) return null
-    const frame = firing
-      ? Math.min(frames - 1, Math.floor((1 - Math.max(0, Math.min(1, s.fireFlash))) * frames))
-      : loopFrame(animNow(), frames, 6, s.pos.x * 0.05)
-    return { pm, frame }
-  })()
+  const towerPm = fig
+    ? {
+        pm: fig.pm,
+        frame: fig.firing
+          ? Math.min(fig.frames - 1, Math.floor((1 - Math.max(0, Math.min(1, s.fireFlash))) * fig.frames))
+          : loopFrame(animNow(), fig.frames, 6, s.pos.x * 0.05),
+      }
+    : null
 
   // A swing reaches: the weapon (and only the weapon) lunges along the aim
   // while the blow is out. Everything else carries its weapon at rest.
@@ -339,10 +324,19 @@ export function drawSentinel(ctx: CanvasRenderingContext2D, s: DrawSentinel): vo
     // Anchored at the FEET (bottom edge at y = 8), so the taller attack frames
     // grow upward — a raised sword — instead of sinking the character.
     blitPixmap(ctx, towerPm.pm, towerPm.frame, 0, 8)
-    if (gear) {
-      drawOffHand(ctx, rig, gear)
-      drawMainHand(ctx, rig, gear, Math.round(Math.cos(s.aimAngle) * reach), Math.round(Math.sin(s.aimAngle) * reach), animNow(), still, ownArt && s.fireFlash > 0.05 && !!atk)
-    }
+    if (gear)
+      drawHeldGear(
+        ctx,
+        rig,
+        gear,
+        Math.round(Math.cos(s.aimAngle) * reach),
+        Math.round(Math.sin(s.aimAngle) * reach),
+        animNow(),
+        still,
+        !!fig?.firing,
+        fig?.grips?.[towerPm.frame],
+        handsAt(rig, fig?.held, towerPm.frame),
+      )
   } else if (staticSpr) {
     groundRing()
     const pm = pixmap(staticSpr, { scale: unitPixmapScale(art!.spriteScale), ring: true })
@@ -426,6 +420,100 @@ export function drawSentinel(ctx: CanvasRenderingContext2D, s: DrawSentinel): vo
   ctx.restore()
 }
 
+/** One hero figure in its real kit, baked: what {@link drawSentinel} blits and every portrait crops. */
+export interface HeroFigure {
+  pm: Pixmap
+  frames: number
+  /** The art's own attack strip is the one baked (it swings the painted weapon). */
+  firing: boolean
+  /** The art paints what the hero holds (or nothing is measured): its own strips play. */
+  ownArt: boolean
+  rig: ReturnType<typeof rigFor>
+  /** Per frame, where the off-hand piece is held on the rebuilt knight (`StripFill.grips`); null when nothing was rebuilt. */
+  grips: StripFill['grips'] | null
+  /** Per frame, where each hand is on the strip baked (`heldGrips.generated.ts`); null when not measured (the rig's fixed fists). */
+  held: HeldStrip | null
+}
+
+/**
+ * The figure a hero of this look is drawn as, in this kit — the ONE
+ * composition the field and the portraits share (`heroPortrait.ts`), so a
+ * portrait can never drift from the figure:
+ *
+ *  1. the strip (idle, or the attack strip while firing when the art's own
+ *     weapon is the hero's — `gearMarks`), through the paper doll when a
+ *     `loadout` is given;
+ *  2. the painted weapon and/or off-hand piece cut (`unpaintedStrip`), and the
+ *     body the shield hid rebuilt from its build-time patch;
+ *  3. the body piece worn (`bodyLayer.dressedStrip`) — while
+ *     `bodyLayer.BODY_ON_FIGURE` is on; it is off, so nothing is;
+ *  4. baked once by `pixmap()` with one contour ring.
+ *
+ * Every step returns a kept object for a kept input, so after the first call
+ * for a (look, kit) this is three map lookups. The held marks are drawn on top
+ * by {@link drawHeldGear}.
+ */
+export function heroFigure(
+  pack: string,
+  spriteScale: 0.5 | 1,
+  archetype: Archetype,
+  gear: HeroGear | undefined,
+  wantFire: boolean,
+  loadout?: Loadout,
+): HeroFigure | null {
+  const idle = getSprite(pack, `${archetype}_idle`)
+  const atk = getSprite(pack, `${archetype}_atk`)
+  // What the hero really carries (`gearMarks`). When the art paints a weapon the
+  // hero is NOT holding, the idle strip is drawn with it cut out and the real
+  // item goes in the fist — and the attack strip, which swings the painted
+  // weapon, is not played: the item itself makes the move (`reach` in drawSentinel).
+  const rig = rigFor(pack, archetype)
+  const cut = !!gear && unpaints(rig, gear)
+  const ownArt = !gear || !rig.measured || gear.main === rig.paintedMain || paintsMain(rig, gear)
+  const firing = wantFire && !!atk && ownArt
+  const anim = firing ? 'atk' : 'idle'
+  const frames = ANIM_FRAMES[`${archetype}_${anim}`] ?? 1
+  // heroStrip returns the bare body when nothing is equipped, so the
+  // un-geared path is exactly what it was before the compositor existed.
+  const body = heroStrip(pack, archetype, anim, frames, loadout) ?? ((firing ? atk : idle) ?? idle ?? atk)
+  if (!body) return null
+  const cutMain = cut && anim === 'idle'
+  // ...and the painted shield, whenever the off hand holds anything else or
+  // nothing (a two-hander): cut from BOTH strips, so a swing never brings it
+  // back, and the body it hid rebuilt (`gearMarks.offHandPlan`); the body piece
+  // then dresses that whole tunic (the rebuilt strip's own torso table).
+  const off = offHandPlan(pack, rig, gear, `${archetype}_${anim}`)
+  const strip = cutMain || off.cut ? unpaintedStrip(body, rig, frames, { main: cutMain, off: off.cut }, off.fill) : body
+  // The body piece, worn over what is left (an empty slot, or BODY_ON_FIGURE off, returns `strip` itself).
+  const worn = dressedStrip(strip, pack, off.torso, frames, wornOnFigure(gear))
+  const pm = pixmap(worn, { scale: unitPixmapScale(spriteScale), frames, ring: true })
+  return pm ? { pm, frames, firing, ownArt, rig, grips: off.fill?.grips ?? null, held: heldGripsFor(pack, `${archetype}_${anim}`) } : null
+}
+
+/**
+ * The held marks over a figure: the off-hand piece in the left fist, then the
+ * weapon in the right — each in this frame's fist (`hands`), so it moves with
+ * the hand — `lunge` px toward the aim (`gearMarks`). The context is
+ * at the hero's origin (feet at y = +8).
+ */
+export function drawHeldGear(
+  ctx: CanvasRenderingContext2D,
+  rig: ReturnType<typeof rigFor>,
+  gear: HeroGear,
+  lungeX: number,
+  lungeY: number,
+  now: number,
+  still: boolean,
+  attacking: boolean,
+  /** This frame's off-hand grip on the rebuilt knight (`HeroFigure.grips`), if any. */
+  grip?: StripFill['grips'][number],
+  /** This frame's two hands (`gearMarks.handsAt` over `HeroFigure.held`): the marks move with them. */
+  hands?: Hands,
+): void {
+  drawOffHand(ctx, rig, gear, grip, hands?.l)
+  drawMainHand(ctx, rig, gear, lungeX, lungeY, now, still, attacking, hands?.r)
+}
+
 /**
  * @param now    the presentation clock — ambient animation ONLY (walk cycle, bob).
  * @param simNow the ENGINE clock (`engine.elapsed`). Every gameplay-state
@@ -442,6 +530,8 @@ export function drawEnemy(
   e: RtEnemy,
   now: number,
   simNow: number = now,
+  /** Queue the head stack for {@link drawEnemyBars} instead of drawing it now (a battle's crowd). */
+  deferBar = false,
 ): void {
   const { pos, type } = e
   const burning = simNow < e.burnUntil
@@ -470,11 +560,16 @@ export function drawEnemy(
   const style = getActiveStyle()
   const es = style.enemy
   const fill = chilled ? mix(type.color, '#8fd0ff', 0.4) : type.color
-  const art = artFor(type.id)
+  // The road's clan (Oct 2026, `clanArt.ts`): the same goblin, re-dressed —
+  // its baked strip when it has decoded, the plain art until then.
+  const role = clanArtFor(type.id)
+  const art = artFor(role)
   const pack = art?.pack
-  const walkFrames = pack ? ANIM_FRAMES[`${type.id}_walk`] : undefined
-  const walk = pack && walkFrames ? getSprite(pack, `${type.id}_walk`) : undefined
-  const staticSpr = pack ? getSprite(pack, type.id) : undefined
+  const walkFrames = pack ? ANIM_FRAMES[`${role}_walk`] : undefined
+  const walk = pack && walkFrames ? getSprite(pack, `${role}_walk`) : undefined
+  const staticSpr = pack ? getSprite(pack, role) : undefined
+  /** A clan strip's own art top (its crest, hat or horns), as a fraction of the cell. */
+  const clanTop = role === type.id ? undefined : clanArtTop(role)
   /**
    * TWO render buckets, and only two (see `pixmap.ts`): rank and file at half
    * density, the tier-5 champion at the pack's native density — so a champion
@@ -545,7 +640,7 @@ export function drawEnemy(
     // 0.9 rather than 1.0: the top tenth of a Tiny Swords frame is transparent
     // headroom, and anchoring to the frame rather than to the character left
     // the tag visibly detached — 9 logical px of nothing over a champion.
-    artTop = Math.round(feet - walkPm.fh) + walkPm.fh * 0.1
+    artTop = Math.round(feet - walkPm.fh) + walkPm.fh * (clanTop ?? 0.1)
     overlays(walkPm.fh / 2 + 2)
   } else if (staticPm) {
     enemyShadow()
@@ -683,11 +778,42 @@ export function drawEnemy(
   // HP bar, tier ticks and elite badge — one stack over the head (Phase 2,
   // `hpbar.ts`). The tier plaque it replaces stacked into a white ribbon down
   // a crowded lane; the count now lives inside the bar.
-  const barTop = drawEnemyBar(ctx, e.id, e.hp, e.maxHp, enemyTier(type.id), eliteMark(type), !!type.isBoss, Math.round(artTop) - 1)
+  const tier = enemyTier(type.id)
+  const elite = eliteMark(type)
+  const bottom = Math.round(artTop) - 1
+  const ox = Math.round(pos.x + kick.x)
+  const oy = Math.round(pos.y + kick.y)
+  let barTop: number
+  if (deferBar) {
+    barQueue.push({ x: ox, y: oy, id: e.id, hp: e.hp, maxHp: e.maxHp, tier, elite, champion: !!type.isBoss, bottom })
+    barTop = enemyBarTop(elite, !!type.isBoss, bottom)
+  } else {
+    barTop = drawEnemyBar(ctx, e.id, e.hp, e.maxHp, tier, elite, !!type.isBoss, bottom)
+  }
   // Phase 3a: where this enemy's head-stack ends, in field space, so the
   // behaviour marks (`telegraphs.ts`) sit above the bar instead of on the art.
-  headTops.set(e.id, Math.round(pos.y + kick.y) + barTop)
+  headTops.set(e.id, oy + barTop)
   ctx.restore()
+}
+
+/** Head stacks queued by `drawEnemy(…, deferBar)`, drawn by {@link drawEnemyBars}. */
+const barQueue: { x: number; y: number; id: string; hp: number; maxHp: number; tier: number; elite: EliteMark; champion: boolean; bottom: number }[] = []
+
+/**
+ * Every queued enemy's HP bar, tier ticks and elite badge, over all the
+ * bodies, shots and hits (Oct 2026 job critique). Drawn with its body, a bar
+ * was covered by the next goblin in a column and by a hit's smoke — the
+ * one layer that says how close to death went first in a crowd. Back to
+ * front, so where two bars overlap the nearer one's reads whole.
+ */
+export function drawEnemyBars(ctx: CanvasRenderingContext2D): void {
+  for (const b of barQueue) {
+    ctx.save()
+    ctx.translate(b.x, b.y)
+    drawEnemyBar(ctx, b.id, b.hp, b.maxHp, b.tier, b.elite, b.champion, b.bottom)
+    ctx.restore()
+  }
+  barQueue.length = 0
 }
 
 /** Top of each drawn enemy's bar stack this frame (field px), keyed by id. */

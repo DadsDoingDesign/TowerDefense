@@ -10,23 +10,26 @@ import { restoreNameCounters } from '../../game/data/sentinels'
 import type { RarityPity } from '../../game/data/items'
 import { rollShrine } from '../../game/data/shrines'
 import { nodeEncounter } from '../../game/data/waves'
-import { GATE_REPAIR, merchantLuck, MAX_ROSTER, RECRUIT_PRICE, rollMerchantShelf } from '../../game/run/economy'
-import { carryPlacements, emptyPlacements, encounterNode } from '../../game/run/map'
+import { GATE_REPAIR, merchantLuck, MAX_ROSTER, rollMerchantShelf } from '../../game/run/economy'
+import { carryPlacements, emptyPlacements, encounterNode, firstFightOf } from '../../game/run/map'
 import { groundFor } from '../../game/run/fields'
 import { nodeHazardSeed, nodeTerrainRule, type GroundOpts } from '../../game/run/terrain'
 import { stageFirstRunMap } from '../../game/run/firstRun'
 import { startsFirstRun } from '../staging'
 import { useSettingsStore } from '../settingsStore'
+import { markAssisted } from '../../game/run/ranking'
 import { shelfSize } from '../../game/run/relics'
 import { freshFeats } from '../../game/run/settle'
 import { gearReturnedText } from '../../game/run/inventory'
-import { hubExtras, recruitSlate, scaledRecruit } from '../../game/run/recruits'
+import { hubExtras } from '../../game/run/recruits'
 import { bonusItemsFor } from '../../game/run/hq'
 import { soldText, stow } from '../../game/run/inventory'
 import { chosenHero, resolvePick } from '../../game/run/heroes'
 import { heroStyle } from '../../game/data/items'
 import { companyById, type CompanyId } from '../../game/data/companies'
 import { encounterRulesOf, priceMultOf, routePrice } from '../../game/run/charter'
+import { freshAsks } from '../../game/run/asks'
+import { isDesperate } from '../../game/run/tradeWar'
 import { contractRules, earn, freshContract, marketFor, marketOpen, signingCost, utcDateKey, type RunContract } from '../../game/run/contracts'
 import type { Placement } from '../../game/types'
 import { useMetaStore } from '../metaStore'
@@ -34,7 +37,7 @@ import { parseSeed, SEEDED_RUN, STANDARD_RUN, type RunChallenge } from '../seeds
 import { seedEditable } from '../runTerms'
 import { clearSnapshot, snapshotBattleMap, snapshotShrine, type RunSnapshot } from '../runSnapshot'
 import { CLEAR_SHELL, dealRunMap, freshHud, freshRunState, leaveToHub } from './fresh'
-import { clearBeatTimer, dealSkill, layout, recruitHub, runBonuses, seedRunStreams, session, skillRun, startingItemPool, startingSkillPool, streams } from './runtime'
+import { clearBeatTimer, dealSkill, layout, runBonuses, seedRunStreams, session, skillRun, startingItemPool, startingSkillPool, streams } from './runtime'
 import { fieldFor, fieldIdOf, orientField } from '../../game/data/maps'
 import { settleSavedRun } from './settle'
 import type { Slice } from './types'
@@ -82,7 +85,7 @@ export interface RunActions {
   reseedRun: (input: string) => boolean
   /** The way back from a typed seed: a fresh random seed, same terms. */
   randomizeRunSeed: () => boolean
-  /** Take another contract from the end screen: back to the board, the last terms set. */
+  /** Take another contract from the end screen: the last company's terms, its stake set. */
   runAgain: () => void
   /**
    * Commit the hero pick: one of the three random heroes the pick deals
@@ -90,6 +93,12 @@ export interface RunActions {
    * and the company's advance becomes the run's gold.
    */
   pickStartingHero: (choiceId: string) => void
+  /**
+   * The hero pick's CTA (Oct 2026, Figma "B2"): commit the hero, then march
+   * straight into the road's first fight — the middle of the first layer's
+   * plain battles ({@link firstFightOf}). The map comes after its spoils.
+   */
+  marchOut: (choiceId: string) => void
   returnToHub: () => void
   /**
    * Back out of the hero pick before any hero is committed. Nothing has begun:
@@ -128,12 +137,20 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     const charter = !!order.charter
     // The market of the day pays from the fifth finished contract (the
     // staggered reveal); before that every contract signs at 1.
-    const market = !charter && (marketOpen(useMetaStore.getState().stats.runsCompleted) || useSettingsStore.getState().showEverything) ? marketFor(order.company, utcDateKey()) : 1
-    const contract = freshContract(
-      { company: charter ? null : order.company, crates: order.crates, market, ...(charter ? { charter } : {}) },
+    const marketOn = marketOpen(useMetaStore.getState().stats.runsCompleted) || useSettingsStore.getState().showEverything
+    const market = !charter && marketOn ? marketFor(order.company, utcDateKey()) : 1
+    // The trade war (Draft 4 § D) opens with the market: a contract for the
+    // company that finished last season last is signed on its desperate terms.
+    const desperate = !charter && marketOn && isDesperate(useMetaStore.getState().season, order.company)
+    const signed = freshContract(
+      { company: charter ? null : order.company, crates: order.crates, market, ...(charter ? { charter } : {}), ...(desperate ? { desperate } : {}) },
       // The Sovereign Route deals for no company: no HQ focus either.
       charter ? { ...hq, focus: null, boost: 0 } : hq,
     )
+    // What the company asks of the road (Draft 4 · A): a hash of the run seed
+    // and the company, never a draw. A first contract (LS3) is asked nothing —
+    // it never saw the terms that name them.
+    const contract: RunContract = firstRun ? signed : { ...signed, asks: freshAsks(runSeed, signed.company) }
     // The stake is the run's difficulty step: re-deal the map from the same
     // seed with its elites (a hash of the seed, never a draw — the map stream
     // is rewound, so an escort deals exactly the map an unstaked run did).
@@ -154,6 +171,8 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       runMap: stageFirstRunMap(dealt.runMap, firstRun),
       threat: rules.startThreat,
       firstRun,
+      // The gameplay pass: a run begun with assist on is assisted from the start.
+      assisted: markAssisted(false, useSettingsStore.getState().assist),
       runSeed,
       challenge,
       contract,
@@ -192,10 +211,10 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
   },
 
   runAgain: () => {
-    // The end screen's second door (M15): back to the board with the last
-    // contract's terms set, one tap from signing another.
+    // The end screen's second door (M15): the last contract's terms, its
+    // stake set, one tap from signing another.
     const last = get().contract
-    // After a Sovereign Route, the board opens on its default company.
+    // After a Sovereign Route, the terms open on the menu's focused road.
     get().openContracts(last?.company ? { company: last.company, crates: last.crates } : undefined)
   },
 
@@ -244,6 +263,15 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     useSettingsStore.getState().markTaught('heroGear')
   },
 
+  marchOut: (choiceId) => {
+    get().pickStartingHero(choiceId)
+    const st = get()
+    // Refused (the bank changed in another tab): still on the pick.
+    if (st.screen !== 'map' || !st.roster.length) return
+    const first = firstFightOf(st.runMap, st.reachableNodeIds)
+    if (first) get().selectNode(first)
+  },
+
   // Leaving for the menu ends the run, so it settles like any other end: a
   // fall — the cities' pay and the road's share come home, unsold crates are lost.
   returnToHub: () => {
@@ -262,7 +290,7 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     set(leaveToHub())
     // Back to the terms it came from — a first-timer's free escort has none,
     // and the Sovereign Route's are on the menu's charter page.
-    if (c?.company && !st.firstRun) get().openContracts({ company: c.company, crates: c.crates }, 'terms')
+    if (c?.company && !st.firstRun) get().openContracts({ company: c.company, crates: c.crates })
   },
 
   // ---- run snapshot (C3) ----
@@ -331,7 +359,6 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       tactics: snap.tactics,
       merchant: snap.merchant,
       shrineOffer: snapshotShrine(snap),
-      recruitOptions: snap.recruitOptions,
       reward: snap.reward,
       runMods: snap.runMods,
       relics: snap.relics,
@@ -355,6 +382,8 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       challenge: snap.challenge,
       // LS3: a run saved before staging existed has none, and plays unstaged.
       firstRun: snap.firstRun === true,
+      // Once assisted, always: a resume keeps the mark, and the dial as it is now adds to it.
+      assisted: markAssisted(snap.assisted === true, useSettingsStore.getState().assist),
       // A snapshot only ever exists for a LIVE run, so there is no recap.
       victory: null,
       selectedSentinelId: null,
@@ -384,7 +413,7 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     // ---- a parked event is never left live behind you (F1) ---------------
     if (event) {
       if (event.nodeId === nodeId) return
-      set({ event: null, merchant: null, shrineOffer: null, recruitOptions: [] })
+      set({ event: null, merchant: null, shrineOffer: null })
     }
 
     if (node.type === 'merchant') {
@@ -395,18 +424,18 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
       const contract = get().contract
       const items = rollMerchantShelf(streams.rng, {
         luck: merchantLuck(node.layer),
+        depth: node.layer,
         roster,
         pity: lootPity,
         size: shelfSize(relics),
         kinds: get().itemPool,
         priceMult: priceMultOf(contract),
       })
-      const recruit =
-        roster.length < MAX_ROSTER
-          ? { sentinel: scaledRecruit(streams.rng, roster, recruitHub(relics)), price: routePrice(RECRUIT_PRICE, contract) }
-          : null
-      // The wagon repair is on every counter (Phase 3b): the comeback.
-      set({ event: { kind: 'merchant', nodeId }, merchant: { items, recruit, repair: { ...GATE_REPAIR, price: routePrice(GATE_REPAIR.price, contract) }, rerolls: 0 } })
+      // No hire on the counter (Oct 2026, the designer: "merchant shouldn't
+      // offer people for hire"): a merchant sells goods; heroes are hired at
+      // a city (the gameplay pass). The wagon repair is on every counter (Phase
+      // 3b): the comeback.
+      set({ event: { kind: 'merchant', nodeId }, merchant: { items, repair: { ...GATE_REPAIR, price: routePrice(GATE_REPAIR.price, contract) }, rerolls: 0 } })
       return
     }
     if (node.type === 'campfire') {
@@ -415,10 +444,6 @@ export const createRunSlice: Slice<RunActions> = (set, get) => ({
     }
     if (node.type === 'shrine') {
       set({ event: { kind: 'shrine', nodeId }, shrineOffer: rollShrine(streams.rng) })
-      return
-    }
-    if (node.type === 'recruit') {
-      set({ event: { kind: 'recruit', nodeId }, recruitOptions: recruitSlate(streams.rng, roster, recruitHub(get().relics)) })
       return
     }
 

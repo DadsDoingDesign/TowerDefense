@@ -1,12 +1,15 @@
 import { DUAL_WIELD_DEX, gripOf, OFF_HAND_SHARE, RARITY, RARITY_ORDER, type Grip } from '../game/data/items'
 import { interestLine, LOST_ROAD_SHARE, ROAD_SHARE } from '../game/run/hq'
-import { ADVANCE, MARKET_MULT, STAKES_OPEN_AT } from '../game/run/contracts'
+import { ADVANCE, DESPERATE_PAY, MARKET_MULT, STAKES_OPEN_AT } from '../game/run/contracts'
+import { DESPERATE_STRENGTH, PATRON_PURSE, SEASON_LENGTH } from '../game/run/tradeWar'
 import { ARCHETYPE_GLYPH as ARCHETYPE_GLYPH_TABLE } from '../game/data/glyphs'
 import { lookOf } from '../game/data/gear'
 import type { FocusMode, Item, ItemRarity } from '../game/types'
 import { MAX_ROSTER as MAX_HEROES } from '../game/run/economy'
 import type { CompanyId } from '../game/data/companies'
 import type { IdeaId } from '../state/staging'
+import { skillById, skillHeadline } from '../game/data/skills'
+import { itemKindById } from '../game/data/itemKinds'
 
 /**
  * The UI's shared vocabulary: non-colour channels, the tokens that carry the
@@ -213,7 +216,18 @@ export const focusFull = (f: FocusMode): string => FOCUS_OPTS.find((o) => o.id =
 // sheet (`game/` must not import `ui/`); re-exported so every UI caller keeps
 // importing them from here.
 export { ICON_ORDER, ICON_COLS, ICON_ROWS, iconCell, itemIcon, type IconKey } from '../game/data/iconAtlas'
-import type { IconKey } from '../game/data/iconAtlas'
+import { itemIcon as atlasItemIcon, type IconKey } from '../game/data/iconAtlas'
+
+/** A skill's mark: its headline's icon (the track's rows and the home card's Unlocks row). */
+export const skillIcon = (id: string): IconKey => {
+  const k = skillById(id)
+  return k ? skillHeadline(k).icon : 'boon'
+}
+/** An item kind's mark: the atlas cell its noun draws. */
+export const itemKindIcon = (id: string): IconKey => {
+  const k = itemKindById(id)
+  return k ? atlasItemIcon({ name: k.id, slot: k.slot }) : 'loot'
+}
 
 /**
  * The run map's node marks (Wave 1). These were `⚔ ◆ ☠ ♛ ⟡ ❖ ＋` from
@@ -227,12 +241,27 @@ export const NODE_ICON: Record<string, IconKey> = {
   elite: 'elite',
   merchant: 'merchant',
   shrine: 'shrine',
-  recruit: 'recruit',
   // No atlas cell of their own yet (the sheet is a pipeline asset): the fire is
   // the heal mark, an act boss the boss mark, the final boss keeps the crown.
   campfire: 'auraHeal',
   miniboss: 'boss',
   boss: 'crown',
+}
+
+/**
+ * A node's name as TEXT (the map preview's head). `NODE_META.color` is the
+ * node's mark colour — a border on the map — and the fight reds (`#c0503a`,
+ * `#d0563a`) are 2.5–3:1 on every panel, under the 4.5:1 text bar. The
+ * danger stops say their name in `--bad-text`, the start in `--teal-text`
+ * (both held to 4.5:1 on every theme's panels by `companyThemes.test.ts`);
+ * the rest keep their mark colour, which already clears it
+ * (`tests/nodeTitle.test.ts`).
+ */
+export const NODE_TEXT: Record<string, string> = {
+  start: 'var(--teal-text)',
+  elite: 'var(--bad-text)',
+  miniboss: 'var(--bad-text)',
+  boss: 'var(--bad-text)',
 }
 
 /**
@@ -291,11 +320,11 @@ export function dualWieldShort(heroName: string, check: { dex: number; need: num
 export function handLine(item: Pick<Item, 'name' | 'slot'>): string | null {
   switch (gripOf(item)) {
     case 'either':
-      return `Either hand · off hand: ${Math.round(OFF_HAND_SHARE * 100)}% of its damage and speed`
+      return `Either hand · ${Math.round(OFF_HAND_SHARE * 100)}% in the off hand`
     case 'off':
       return 'Off hand'
     case 'main':
-      return `Main hand · off hand only with the ${TWINBLADE} and ${DUAL_WIELD_DEX} DEX`
+      return `Main hand · off hand with ${TWINBLADE}, ${DUAL_WIELD_DEX} DEX`
     case 'twoHand':
       return 'Both hands · empties the off hand'
     case 'body':
@@ -539,94 +568,108 @@ export const itemName = (item: Pick<Item, 'name'>): string =>
 export const GLOSSARY: Record<IdeaId, { term: string; line: string; also?: { term: string; line: string }[] }> = {
   hero: {
     term: 'Heroes',
-    line: 'Each one hits whatever walks inside its ring. What a hero does comes from its gear: a sword or axe swings up close, a bow or dagger strikes from far away, a wand or staff casts magic at a group, and a shield holds enemies on the road.',
+    line: 'Hits whatever walks inside its ring, as its gear decides: swords and axes swing up close, bows and daggers strike from afar, wands and staffs cast at a group, shields hold enemies.',
   },
-  post: { term: 'Posting', line: 'Put a hero on a glowing tile beside the road before the wave starts.' },
+  post: { term: 'Posting', line: 'Put a hero on a glowing tile beside the road before the wave.' },
   cargo: {
     term: 'Cargo',
-    line: 'What your wagons carry, at the end of the road. Each raider that reaches them steals some. Every city pays for the share that arrives; at 0% the contract is lost.',
+    line: 'What your wagons carry. Each raider that reaches them steals some; each city pays for what arrives. At 0% the contract is lost.',
   },
   gold: {
     term: 'Gold',
-    line: 'The only currency. Fights pay it on the road, and cities pay it into your bank. Spend it at a Merchant.',
+    line: 'The only currency. Fights pay it on the road; cities pay it into your bank.',
     also: [
       {
         term: 'Road gold',
-        line: `Gold the road pays into your purse. When the run ends, ${Math.round(ROAD_SHARE * 100)}% of what is left of it comes home (${Math.round(LOST_ROAD_SHARE * 100)}% if the contract fell).`,
+        line: `Gold the road pays into your purse. ${Math.round(ROAD_SHARE * 100)}% of what is left comes home (${Math.round(LOST_ROAD_SHARE * 100)}% if the contract fell).`,
       },
     ],
   },
   contract: {
     term: 'Contract',
-    line: 'A trade company hires your militia to guard its road for one run. The road has three cities, one at the end of each act.',
+    line: 'A trade company hires you to guard its road for one run: three acts, a city at the end of each.',
   },
-  escort: { term: 'Escort', line: 'A contract with no stake. Every city pays a fee and the last pays a bonus. Nothing to lose.' },
+  escort: { term: 'Escort', line: 'A contract with no stake: every city pays a fee, the last a bonus. Nothing to lose.' },
   city: {
     term: 'City',
-    line: 'Where an act ends. The caravan sells cargo there and you are paid. At the first two you may cash out and head home, or press on.',
+    line: 'Where an act ends and you are paid for the cargo. At the first two, cash out or press on.',
   },
-  subwave: { term: 'Sub-wave', line: 'A wave comes in parts. Between them the fight pauses, and you may move one hero.' },
+  subwave: { term: 'Sub-wave', line: 'A part of a wave. Between parts the fight pauses and you may move one hero.' },
   speed: { term: 'Speed', line: 'Fast-forwards a fight: 1×, 2× or 3×.' },
   depth: { term: 'Depth', line: 'How far down the road you are. The boss waits at the end.' },
-  gear: { term: 'Gear and pack', line: 'Items your heroes wear — body, main hand, off hand. New ones wait in the pack.' },
+  gear: { term: 'Gear and pack', line: 'What heroes wear: body, main hand, off hand. New items wait in the pack.' },
   command: { term: 'Watch Command', line: 'An order you give once per sub-wave, such as Rally Horn.' },
-  strength: { term: 'Enemy strength', line: 'How much more HP every goblin has than at the start of the run. It rises at every stop.' },
-  recruit: { term: 'Recruit', line: `A stop where a hero joins you. You can lead up to ${MAX_HEROES} heroes.` },
-  merchant: { term: 'Merchant', line: 'A stop that sells gear, a hire and a wagon repair (it wins back cargo), for gold.' },
-  shrine: { term: 'Shrine', line: 'A bargain: a boon for all your heroes, paid for with a curse.' },
-  campfire: { term: 'Campfire', line: 'A stop to rest (stray cargo is rounded up) or to train a hero.' },
-  elite: { term: 'Elite', line: 'A tougher fight whose spoils always include a relic.' },
-  relic: { term: 'Relic', line: 'Helps all your heroes for the rest of the run.' },
+  strength: { term: 'Enemy strength', line: 'Extra HP on every goblin since the run began. It rises at every stop.' },
+  recruit: { term: 'Hire', line: `At each city before the last, hire one candidate or none. You can lead up to ${MAX_HEROES} heroes.` },
+  merchant: { term: 'Merchant', line: 'A stop that sells gear and a wagon repair (wins back cargo).' },
+  shrine: { term: 'Shrine', line: 'A bargain: a boon for your heroes, paid with a curse.' },
+  campfire: { term: 'Campfire', line: 'A stop to rest (wins back cargo) or train a hero.' },
+  elite: { term: 'Elite', line: 'A tougher fight. Its spoils always include a relic.' },
+  relic: { term: 'Relic', line: 'Helps the whole team, hires too, for the rest of the run. Relics stack.' },
   skill: {
     term: 'Skill',
-    line: 'Something a hero does — attack faster, hold more enemies, burn what it hits. Each hero starts with one and holds up to three.',
+    line: 'Something a hero does: attack faster, hold more, burn what it hits. Each starts with one and holds up to three.',
     also: [
-      { term: 'Skill level', line: 'Level 1, 2 or 3. A hero is offered three skills of one level at hero levels 5 (Level 1), 10 (Level 2) and 15 (Level 3). With three already, it swaps one out or takes +stats instead.' },
-      { term: 'Collection', line: 'Every skill and item you have unlocked. Heroes, loot and offers are dealt only from it.' },
+      { term: 'Skill level', line: 'Level 1, 2 or 3. At hero levels 5, 10 and 15 a hero is offered three of that level. With three held, it swaps one or takes +stats.' },
+      { term: 'Collection', line: 'Every skill and item you have unlocked. Heroes, loot and offers come only from it.' },
     ],
   },
-  danger: { term: 'Cursed ground', line: 'Skull tiles. A hero may stand there, but deals much less damage.' },
+  danger: { term: 'Cursed ground', line: 'Skull tiles. Heroes may stand there but deal much less damage.' },
   challenge: {
     term: 'Map challenge',
-    line: 'A field changed for one fight. Each road has its own ground: wildfire, flooded canals, quarry boulders or cursed ground.',
+    line: 'A field changed for one fight. Each road has its own: wildfire, floods, boulders or cursed ground.',
   },
   bank: {
     term: 'Bank',
-    line: `Your gold at home. Stakes come out of it; city pay and ${Math.round(ROAD_SHARE * 100)}% of the road gold go back in.`,
+    line: `Your gold at home. Stakes come out; city pay and ${Math.round(ROAD_SHARE * 100)}% of road gold go in.`,
     also: [{ term: 'Interest', line: interestLine() }],
   },
   purse: {
     term: 'Purse',
-    line: `The gold you carry on the road. Every contract sets out with a ${ADVANCE}-gold advance from the trade company that hires you — not from your bank. Spending comes out of the advance first; what is left of it is repaid when the run ends.`,
+    line: `Your gold on the road. Each contract starts with a ${ADVANCE}-gold advance from your employer, not your bank. You spend the advance first; what is left is repaid at the end.`,
   },
   standing: {
     term: 'Standing',
-    line: `How well a company knows your militia. Its contracts raise it. Each level unlocks a skill (a Rare bonus item once every skill is yours), and lets you carry one more crate. Stakes open at Standing ${STAKES_OPEN_AT}.`,
+    line: `How well a company knows you; its contracts raise it. Each level unlocks a skill (or a Rare item once you have them all) and one more crate. Stakes open at Standing ${STAKES_OPEN_AT}.`,
   },
   stake: {
     term: 'Stake',
-    line: 'Crates of cargo you buy for a contract. More crates: tougher raiders, a bigger bonus, more item chances, and a skill at every milestone crate.',
+    line: 'Cargo crates you buy for a contract. More crates: tougher raiders, a bigger bonus, more items, and a skill at each milestone crate.',
   },
   hq: {
     term: 'Headquarters',
-    line: 'Your militia’s two offices. HR deals better first heroes; Operations buys pack slots, trains the scouts and sets a company focus.',
+    line: 'Two offices. HR deals better first heroes; Operations buys pack slots, scouts and a company focus.',
     also: [{ term: 'Order', line: 'An HQ purchase for your next contract only.' }],
   },
   crates: {
     term: 'Sealed crate',
-    line: 'Gold for one random item kind, yours for good. One you already own comes as a bonus item in your next contract.',
+    line: 'Gold for one random item kind, yours for good. A repeat becomes a bonus item next contract.',
   },
   sovereign: {
     term: 'Sovereign Route',
-    line: 'The endgame charter: your own road, sponsored from your bank. It opens once every skill and item is unlocked. Every company sets a condition, there is no city pay, and a fall loses the fee. Delivered, it pays a fortune and a Sovereign item.',
-    also: [{ term: 'Sovereign tier', line: 'The top tier of items, marked S in cyan. Each one unlocks only by delivering a Sovereign Route; once yours, it turns up now and then on every road.' }],
+    line: 'The endgame: your own road, paid from your bank. Opens once every skill and item is unlocked. Every company sets a condition; no city pay; a fall loses the fee. Delivered, it pays a fortune and a Sovereign item.',
+    also: [{ term: 'Sovereign tier', line: 'The top item tier, marked S in cyan. Unlocked by delivering a Sovereign Route; then it turns up on every road.' }],
   },
   market: {
     term: 'Market of the day',
-    line: `Each day one company’s good sells for ×${MARKET_MULT}: its crate sales and its completion bonus. The price is locked when you sign.`,
+    line: `Each day one company’s good sells for ×${MARKET_MULT}: crate sales and completion bonus. Locked when you sign.`,
   },
   focus: {
     term: 'Company focus',
-    line: 'One company at a time: its skills and items fill more of what you are dealt, on every road. Set at the HQ.',
+    line: 'One company’s skills and items come up more on every road. Set at the HQ.',
+  },
+  war: {
+    term: 'The trade war',
+    line: `Contracts move the trade: a delivery wins its company share, a fall loses some. The leader wears the crown. Every ${SEASON_LENGTH} contracts a season ends: your patron pays, and the last company posts desperate terms.`,
+    also: [
+      {
+        term: 'Your patron',
+        line: `Whichever company you delivered for most this season. At its end it pays ${PATRON_PURSE} gold a delivery and one of its items. Ties go to the bigger share. No delivery, no patron.`,
+      },
+      {
+        term: 'Desperate terms',
+        line: `Posted for a season by the hiring company that came last: pays ×${DESPERATE_PAY}, raiders ${Math.round((DESPERATE_STRENGTH - 1) * 100)}% stronger.`,
+      },
+    ],
   },
 }

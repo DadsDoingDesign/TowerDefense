@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useMilitia } from './useMilitia'
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { useGameStore } from '../../state/gameStore'
 import { useMetaStore } from '../../state/metaStore'
 import type { ShellContext } from './context'
@@ -10,9 +11,18 @@ import { PackStrip } from './PackStrip'
 import { InfoToggle } from './InfoToggle'
 import { Money } from './Money'
 import { InfoCard, MenuRow, PageLayout, PortraitRow, priceNode, RarityTag, StatRow, Tile } from './Page'
+import { isShopService, ShopShelf } from './ShopFront'
+import { StopScene } from './StopScene'
+import { isStopKind, stopLine, type StopKind } from './stopScene'
+import { shelfSize } from '../../game/run/relics'
+
+import { OfferPick } from './OfferPick'
 import { VolumeSlider } from './VolumeSlider'
-import { ContractChip } from './contracts/parts'
+import { ContractBanner } from './contracts/parts'
 import { commitOneTap, describeOneTap, OneTapHint, useOneTap, useOneTapUntaught } from './oneTap'
+
+/** Each stop's page tone: how its sign and its cards are dressed (`stops.css`). */
+const STOP_TONE: Record<StopKind, 'shop' | 'camp' | 'shrine' | 'recruit'> = { merchant: 'shop', campfire: 'camp', shrine: 'shrine', recruit: 'recruit' }
 
 /**
  * How long a freshly-revealed confirm control refuses to act.
@@ -174,6 +184,7 @@ export function PageScreen({
   const shellSelect = useGameStore((s) => s.shellSelect)
   const gold = useGameStore((s) => s.gold)
   const bank = useMetaStore((s) => s.bank)
+  const militia = useMilitia()
   const onHub = useGameStore((s) => s.screen === 'hub')
   // How far off an unaffordable price is, in the gold it is paid from (R2):
   // the purse in a run, the bank at home.
@@ -184,11 +195,19 @@ export function PageScreen({
   const inRunBoard = useGameStore(
     (s) => s.runPhase === 'active' && (s.screen === 'map' || s.screen === 'crossroads'),
   )
+  const shopOpen = useGameStore((s) => s.event?.kind === 'merchant' && !!s.merchant)
+  const event = useGameStore((s) => s.event)
+  // Wares bought off this shelf: a full shelf is `shelfSize`, a restock refills it.
+  const shopSold = useGameStore((s) => (s.merchant ? Math.max(0, shelfSize(s.relics) - s.merchant.items.length) : 0))
+  const spoilsOpen = useGameStore((s) => !s.event && !!s.reward?.length)
 
   // Offers that act on tap (back, leave) are navigation, not choices — they
   // sit under the body as rows rather than joining the chooser.
   const choices = offers.filter((o) => !o.immediate)
-  const navs = offers.filter((o) => o.immediate)
+  // A hub submenu's way home is the back button at the top left, where every
+  // other page keeps it (the Codex, the HQ) — not a row at the foot.
+  const backNav = titleOverride ? offers.find((o) => o.immediate && o.id === 'back') : undefined
+  const navs = offers.filter((o) => o.immediate && o !== backNav)
 
   /*
    * After a purchase the page selects NOTHING (Wave 1).
@@ -271,6 +290,22 @@ export function PageScreen({
   // strip are the head, and the board's own detail says the rest. The flavour
   // line cost a row of chrome on every stop of every run.
   const eventBoard = inRunBoard && !titleOverride
+  // The merchant is a little shop on the road (Oct 2026): an awning over its
+  // sign, its wares on a shelf, its services on the counter (`ShopFront`).
+  const isShop = eventBoard && shopOpen
+  // The spoils are a pick board too (Oct 2026): the same strip-and-card as the
+  // level-up pick, the hero pick and the shop.
+  const isSpoils = eventBoard && !isShop && spoilsOpen
+  // A stop on the road is drawn as a place (Oct 2026, `StopScene`): a scene
+  // with the title hung on it as the place's sign, and someone there saying
+  // the stop's line.
+  // A city's hiring (the Crossroads with hires on it) is drawn as the city's
+  // recruiting yard — the scene the old recruit stop had (the gameplay pass).
+  const hiring = useGameStore((s) => s.screen === 'crossroads' && !!s.crossroads?.recruits.length && !s.crossroads.mutationHeroId && !s.crossroads.revealed)
+  const hireNode = useGameStore((s) => s.currentNodeId)
+  const stop = eventBoard && event && isStopKind(event.kind) ? event.kind : eventBoard && hiring ? 'recruit' : null
+  // At a stop the keeper says the line, in a bubble on the scene: it is the
+  // page's subtitle, so the head carries no second one.
   const subtitle = subtitleOverride ?? (eventBoard ? undefined : ctx.board?.blurb)
 
   // A page where nothing is bought or spent does not need a purse on it, and a
@@ -289,12 +324,61 @@ export function PageScreen({
   const asHeroes = choices.length > 1 && choices.every((o) => o.hero)
   const asPortraits = !asHeroes && choices.length > 1 && choices.every((o) => o.portrait)
   // A one-tap choice is always a row, even alone: the row IS its commit.
-  const asRows = (choices.length > 1 || hasOneTap) && !asPortraits && !asHeroes
+  const asRows = !isShop && !isSpoils && (choices.length > 1 || hasOneTap) && !asPortraits && !asHeroes
+
+  // The selected offer's specifics: the stats, the lines, the extras. A row
+  // chooser opens them under its row with the name on top; a pick board
+  // (`OfferPick`) puts them on the focused offer's card.
+  const detailBody = selected ? (
+    <>
+      {selected.stats?.length ? <StatRow stats={selected.stats} /> : null}
+      {selected.skill ? <SkillCard skill={selected.skill} color={selected.color} /> : null}
+      <InfoCard lines={selected.body} warn={selected.warn} icons={selected.bodyIcons} />
+      {selected.cards?.length ? <SkillCards cards={selected.cards} /> : null}
+      {selected.tabs?.length ? <CollectionTabs tabs={selected.tabs} /> : null}
+      {selected.info && (
+        <p className="pg-info-line">
+          {selected.info.label}
+          <InfoToggle label={selected.info.label} lines={selected.info.lines} />
+        </p>
+      )}
+      {selected.sliders?.length ? (
+        <div className="pg-sliders">
+          {selected.sliders.map((d) => (
+            <VolumeSlider key={d.id} label={d.label} value={d.value} onChange={d.set} preview={d.preview} />
+          ))}
+        </div>
+      ) : null}
+    </>
+  ) : null
+
+  // The selected offer's detail. On a row chooser it opens under its row.
+  const detail = selected ? (
+    <div className={`pg-detail${asRows ? ' inline' : ''}`} ref={detailRef}>
+      {!asRows && (
+        <p className="pg-name" style={selected.color ? { color: railText(selected.color) } : undefined}>
+          {selected.title}
+        </p>
+      )}
+      {/* The full name with its rarity in its own hue and pip count. A long
+          generated name ("Ruinous Bow of Precision") is cut short in its
+          row, and merchant and Forge rows spend their value slot on the
+          price, so this line is where both read in full. */}
+      {asRows && selected.rarity ? (
+        <p className="pg-rarity-line">
+          <b style={selected.color ? { color: railText(selected.color) } : undefined}>{selected.title}</b>{' '}
+          <RarityTag rarity={selected.rarity} />
+        </p>
+      ) : null}
+      {detailBody}
+    </div>
+  ) : null
 
   return (
     <PageLayout
       title={title}
       subtitle={subtitle}
+      back={backNav?.action ? { label: 'Back to the menu', run: backNav.action.run } : undefined}
       // Announced only where the board is an outcome — today, the Crossroads
       // reveal. `titleOverride` is a Watchtower submenu, which is navigation.
       live={!titleOverride && ctx.board?.live}
@@ -305,8 +389,22 @@ export function PageScreen({
       strip={
         eventBoard ? (
           <PackStrip gold={purse.has('gold') ? gold : undefined} />
+        ) : undefined
+      }
+      // The hero pick is branded to the contract: the hiring company's cloth
+      // over the title, your militia's flag under it (Oct 2026).
+      brand={
+        stop ? (
+          // The clerk holds up whatever ware you are looking at.
+          <StopScene kind={stop} line={stopLine(stop, event?.nodeId ?? hireNode)} held={isShop ? selected?.icon : undefined} />
         ) : heroPick && contract ? (
-          <ContractChip company={contract.company} crates={contract.crates} purse={contract.purse} advance={!!contract.advance} />
+          <ContractBanner
+            company={contract.company}
+            crates={contract.crates}
+            purse={contract.purse}
+            advance={!!contract.advance}
+            militia={militia ? { name: militia.name, look: militia } : null}
+          />
         ) : undefined
       }
       // 3.5: a short board keeps its CTA under its content instead of pinning
@@ -314,7 +412,7 @@ export function PageScreen({
       // can ARM (`confirm`): there the CTA stays pinned, so arming (which adds
       // the notice and the confirm above it) moves nothing under the finger.
       compact={!selected?.action?.confirm}
-      tone={ctx.board?.tone}
+      tone={stop ? STOP_TONE[stop] : ctx.board?.tone}
       notice={confirm.notice}
       confirm={confirm.confirm}
       cta={
@@ -422,74 +520,67 @@ export function PageScreen({
       {asRows && (
         <div className="pg-rows">
           {choices.map((o) => (
-            <MenuRow
-              key={o.id}
-              label={o.title}
-              value={
-                o.cost ? priceNode(o.cost, o.dim ? shortfall(o.cost) : false) : o.rarity ? <RarityTag rarity={o.rarity} suffix={o.sub} /> : o.sub
-              }
-              currency={o.cost?.currency}
-              rail={o.color}
-              icon={o.icon}
-              mark={o.mark}
-              glyph={o.glyph}
-              art={o.rowArt}
-              note={o.note}
-              big={!!o.note}
-              dim={o.dim}
-              pips={o.pips}
-              onClick={() => pick(o.id)}
-              selected={o.id === selected?.id}
-              {...(o.oneTap
-                ? {
-                    press: oneTap.bind(o.id),
-                    pressing: oneTap.pressing === o.id,
-                    name: o.oneTap.label,
-                    description: describeOneTap(o),
-                    disabled: o.action?.disabled,
-                  }
-                : {})}
-            />
+            <Fragment key={o.id}>
+              <MenuRow
+                label={o.title}
+                value={
+                  o.cost ? priceNode(o.cost, o.dim ? shortfall(o.cost) : false) : o.rarity ? <RarityTag rarity={o.rarity} suffix={o.sub} /> : o.sub
+                }
+                currency={o.cost?.currency}
+                rail={o.color}
+                icon={o.icon}
+                mark={o.mark}
+                glyph={o.glyph}
+                art={o.rowArt}
+                note={o.note}
+                big={!!o.note}
+                dim={o.dim}
+                pips={o.pips}
+                onClick={() => pick(o.id)}
+                selected={o.id === selected?.id}
+                {...(o.oneTap
+                  ? {
+                      press: oneTap.bind(o.id),
+                      pressing: oneTap.pressing === o.id,
+                      name: o.oneTap.label,
+                      description: describeOneTap(o),
+                      disabled: o.action?.disabled,
+                    }
+                  : {})}
+              />
+              {o.id === selected?.id && detail}
+            </Fragment>
           ))}
         </div>
       )}
 
-      {selected && !asHeroes && (
-        <div className="pg-detail" ref={detailRef}>
-          {!asRows && (
-            <p className="pg-name" style={selected.color ? { color: railText(selected.color) } : undefined}>
-              {selected.title}
-            </p>
-          )}
-          {/* The full name with its rarity in its own hue and pip count. A long
-              generated name ("Ruinous Bow of Precision") is cut short in its
-              row, and merchant and Forge rows spend their value slot on the
-              price, so this line is where both read in full. */}
-          {asRows && selected.rarity ? (
-            <p className="pg-rarity-line">
-              <b style={selected.color ? { color: railText(selected.color) } : undefined}>{selected.title}</b>{' '}
-              <RarityTag rarity={selected.rarity} />
-            </p>
-          ) : null}
-          {selected.stats?.length ? <StatRow stats={selected.stats} /> : null}
-          {selected.skill ? <SkillCard skill={selected.skill} color={selected.color} /> : null}
-          <InfoCard lines={selected.body} warn={selected.warn} icons={selected.bodyIcons} />
-          {selected.cards?.length ? <SkillCards cards={selected.cards} /> : null}
-          {selected.tabs?.length ? <CollectionTabs tabs={selected.tabs} /> : null}
-          {selected.info && (
-            <p className="pg-info-line">
-              {selected.info.label}
-              <InfoToggle label={selected.info.label} lines={selected.info.lines} />
-            </p>
-          )}
-          {selected.sliders?.length ? (
-            <div className="pg-sliders">
-              {selected.sliders.map((d) => (
-                <VolumeSlider key={d.id} label={d.label} value={d.value} onChange={d.set} preview={d.preview} />
-              ))}
-            </div>
-          ) : null}
-        </div>
+      {/* A row chooser opens the detail under the row it belongs to (Oct
+          2026, the designer: "helper text should expand below each
+          selection"); a portrait chooser keeps it under the strip. */}
+      {selected && !asHeroes && !asRows && !isShop && !isSpoils && detail}
+
+      {isSpoils && (
+        <OfferPick
+          groups={[{ label: title, offers: choices, foot: (o) => (o.sub ? o.sub.charAt(0).toUpperCase() + o.sub.slice(1) : '') }]}
+          selectedId={selected?.id ?? null}
+          onPick={pick}
+          short={() => 0}
+        >
+          {detailBody && <div className="pk-detail-body">{detailBody}</div>}
+        </OfferPick>
+      )}
+
+      {isShop && (
+        <ShopShelf
+          wares={choices.filter((o) => !isShopService(o))}
+          services={choices.filter(isShopService)}
+          selectedId={selected?.id ?? null}
+          onPick={pick}
+          short={(o) => (o.cost ? shortfall(o.cost) : 0)}
+          sold={shopSold}
+        >
+          {detailBody && <div className="pk-detail-body">{detailBody}</div>}
+        </ShopShelf>
       )}
 
       {/* The selected thing's second action belongs with it, above the ways

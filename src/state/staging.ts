@@ -31,8 +31,8 @@
  * `hq.HQ_OPENS_AT` gold (latched in `met`, so it stays open); the sealed
  * crates after the first DELIVERED contract (latched too); stakes per company
  * at `contracts.STAKES_OPEN_AT` standing with it (`stakesShown`); the market
- * of the day and company focus from the `contracts.MARKET_FROM_RUN`th
- * finished contract. A save that met the HQ or the crates before the stagger
+ * of the day, company focus and the trade war from the
+ * `contracts.MARKET_FROM_RUN`th finished contract. A save that met the HQ or the crates before the stagger
  * keeps them (the latch is the same `met` entry).
  */
 import type { MapNode, RunMap } from '../game/data/runmap'
@@ -77,6 +77,7 @@ export const IDEAS = [
   'sovereign',
   'market',
   'focus',
+  'war',
 ] as const
 export type IdeaId = (typeof IDEAS)[number]
 
@@ -151,8 +152,9 @@ export function fightsWon(s: Pick<StageState, 'runMap' | 'clearedNodeIds'>): num
  *  - **depth, gear, command** after the first win: the road's length, the
  *    spoils the first win pays out, and the one-per-sub-wave command;
  *  - **strength** once enemies are stronger than at the start (after a stop);
- *  - **merchant, recruit, shrine, campfire, elite** when one is in reach or
- *    being visited;
+ *  - **merchant, shrine, campfire, elite** when one is in reach or being
+ *    visited; **recruit** (a hire) at a city's Crossroads, the one place a
+ *    hero is hired (the gameplay pass);
  *  - **relic** when a relic is offered or held;
  *  - **skill** from the hero pick on: every hero there is offered with one
  *    (its coach tip is the pick's; the first milestone's tip is the choice);
@@ -175,7 +177,8 @@ export function presentIdeas(s: StageState): Set<IdeaId> {
 
   const byId = new Map(s.runMap.nodes.map((n) => [n.id, n]))
   const here = [...s.reachableNodeIds, ...(s.activeNodeId ? [s.activeNodeId] : [])].map((id) => byId.get(id)?.type)
-  for (const kind of ['merchant', 'recruit', 'shrine', 'campfire', 'elite'] as const) {
+  if (s.screen === 'crossroads') out.add('recruit')
+  for (const kind of ['merchant', 'shrine', 'campfire', 'elite'] as const) {
     if (here.includes(kind) || s.event?.kind === kind) out.add(kind)
   }
   if (s.relics.length > 0 || s.reward?.some((c) => c.kind === 'relic')) out.add('relic')
@@ -207,9 +210,11 @@ export interface Reveal {
   market: boolean
   /** Company focus (the HQ's Operations): from the `hq.FOCUS_FROM_RUN`th finished contract. */
   focus: boolean
+  /** The trade war (Draft 4 § D, `run/tradeWar.ts`): with the market of the day — its seasons count from then. */
+  war: boolean
 }
 
-export const ALL_REVEALED: Reveal = { hq: true, crates: true, market: true, focus: true }
+export const ALL_REVEALED: Reveal = { hq: true, crates: true, market: true, focus: true, war: true }
 
 /** The staggered reveal. "Show everything from the start" opens it all. */
 export function revealOf(v: RevealFacts, showEverything: boolean): Reveal {
@@ -221,6 +226,7 @@ export function revealOf(v: RevealFacts, showEverything: boolean): Reveal {
     crates: met.includes('crates') || cratesOpenFor(v.runsWon ?? 0),
     market: marketOpen(runs),
     focus: runs >= FOCUS_FROM_RUN,
+    war: marketOpen(runs),
   }
 }
 
@@ -245,6 +251,7 @@ export function metaIdeas(v: RevealFacts): IdeaId[] {
   if (v.standing && COMPANY_IDS.some((c) => stakesOpen(standingOf(v.standing!, c)))) out.push('stake')
   if (r.market) out.push('market')
   if (r.focus) out.push('focus')
+  if (r.war) out.push('war')
   return out
 }
 
@@ -253,22 +260,3 @@ export function ideaShown(id: IdeaId, staged: boolean, met: readonly string[], p
   return !staged || present.has(id) || met.includes(id)
 }
 
-/**
- * The party row's "Open slot · recruit a hero" card.
- *
- * It names the recruit idea, so it follows it — with one exception the brief
- * spells out: the first battle is only "post a hero, start the wave". A
- * recruit stop in reach on the first map (layer 1 may roll one) latches the
- * idea before the first fight, so on a staged run the card also waits out that
- * fight. Everywhere else — and on any run that is not staged — it is exactly
- * `recruitShown`.
- */
-export function openSlotShown(
-  staged: boolean,
-  recruitShown: boolean,
-  s: Pick<StageState, 'screen' | 'runMap' | 'clearedNodeIds'>,
-): boolean {
-  if (!staged) return recruitShown
-  if (s.screen === 'battle' && fightsWon(s) === 0) return false
-  return recruitShown
-}

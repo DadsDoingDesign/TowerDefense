@@ -209,3 +209,46 @@ export function entrySide(map: GameMap): StageViewInput['entry'] {
   if (p.y < 0) return 'top'
   return null
 }
+
+/**
+ * The top edge, in field px, of the field's first STANDING row: the highest
+ * tile that is neither woodland nor the lane — an open post, a rock, a lake.
+ * Above it there is only forest and the road's way in, which is where the
+ * Stage's wave preview may hang (the battle band, Oct 2026). A field with no
+ * tile grid answers 0 (nothing above the play is known to be free).
+ */
+export function firstRowTop(map: GameMap): number {
+  const T = map.tile ?? 40
+  let top = Infinity
+  for (const t of map.tiles ?? []) {
+    if (t.block === 'forest' || t.block === 'lane') continue
+    top = Math.min(top, t.pos.y - T / 2)
+  }
+  return Number.isFinite(top) ? Math.max(0, top) : 0
+}
+
+/**
+ * How much more top padding the Stage must reserve so a strip `need` CSS px
+ * tall at the wrap's top clears the first standing row (`firstRowTop`) — 0
+ * when the woodland and the road's way in above that row are room enough.
+ * Pure; `BattleCanvas` applies it until it settles (a padding shrinks the fit,
+ * which moves the row), and `tests/stageView.test.ts` holds it.
+ */
+export function previewRoom(v: StageViewInput, rowTop: number, need: number): number {
+  if (need <= 0) return 0
+  const sv = stageView(v)
+  const fy = sv.top - sv.y0 * sv.scale
+  const free = fy + rowTop * sv.scale
+  return Math.max(0, Math.ceil(need - free))
+}
+
+/** The stage view with `need` px kept clear at the top (see `previewRoom`). */
+export function stageViewClear(v: StageViewInput, rowTop: number, need: number): StageView {
+  let input = v
+  for (let i = 0; i < 4; i++) {
+    const extra = previewRoom(input, rowTop, need)
+    if (extra <= 0) break
+    input = { ...input, padT: input.padT + extra }
+  }
+  return stageView(input)
+}

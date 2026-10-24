@@ -40,17 +40,26 @@ export const cratePalette = (band: string): Palette => ({ o: OUTLINE, w: '#a8703
 /** An empty crate slot: the outline only, in the ladder's muted wood. */
 export const GHOST_CRATE: Palette = { o: '#6a5738', b: '#6a5738' }
 
-/** The coin — gold is the only currency. 7 × 7. */
-export const COIN: PixelRows = ['.ooooo.', 'oyyyyyo', 'oywyyYo', 'oyyyyYo', 'oyyyyYo', 'oyYYYYo', '.ooooo.']
+/**
+ * The coin — gold is the only currency. 8 × 8, round (the marks critique, Oct
+ * 2026: the 7 × 7 cut-corner square read as a gold block beside the run's
+ * round atlas coin), lit from the upper left, its far edge in shade.
+ */
+export const COIN: PixelRows = ['..oooo..', '.oyyyyo.', 'oywyyyYo', 'oyyyyyYo', 'oyyyyyYo', 'oyyyyYYo', '.oYYYYo.', '..oooo..']
 export const COIN_PALETTE: Palette = { o: OUTLINE, y: '#f0c03a', Y: '#c48a1e', w: '#fff3b0' }
 
 /** A city lantern on the route rail: lit once the city is reached. 6 × 6. */
 export const LANTERN: PixelRows = ['..oo..', '.oooo.', 'oyyyyo', 'oywyyo', 'oyyyyo', '.oooo.']
 export const lanternPalette = (lit: boolean): Palette => ({ o: OUTLINE, y: lit ? '#f5c451' : '#4a3a26', w: lit ? '#fff3c0' : '#5a4830' })
 
-/** A padlock: something that opens later (a crate past the standing cap, a company not hiring yet). 8 × 9. */
-export const LOCK: PixelRows = ['..oooo..', '.oo..oo.', '.o....o.', 'oooooooo', 'occcccco', 'occoocco', 'occoocco', 'occcccco', 'oooooooo']
-export const LOCK_PALETTE: Palette = { o: OUTLINE, c: '#c9b48c' }
+/**
+ * A padlock: something that opens later (a crate past the standing cap, a
+ * company not hiring yet). 8 × 10: a steel shackle with its own outline (the
+ * old one was outline only, so it vanished on dark wood) over a parchment-
+ * brass body lit from the upper left — the 16 × 16 locked logo's palette.
+ */
+export const LOCK: PixelRows = ['..oooo..', '.osssso.', 'oso..oso', 'oso..oso', 'oooooooo', 'ollllldo', 'occoocdo', 'occoocdo', 'oddddddo', '.oooooo.']
+export const LOCK_PALETTE: Palette = { o: OUTLINE, s: '#d8d2c4', l: '#ece0c8', c: '#c9b48c', d: '#94784e' }
 
 /** A short sword — an item chance on a receipt. 10 × 10. */
 export const SWORD: PixelRows = ['........oo', '.......oso', '......oso.', '.....oso..', '.o..oso...', '.oooso....', '..oho.....', '.ohoo.....', 'oho.o.....', 'oo........']
@@ -84,17 +93,19 @@ export const WAGON: PixelRows = [
   '......owwwwwwwwwwwwwwwwwwwwwwo',
   'ooooooobbbbbbbbbbbbbbbbbbbbbbo',
   '......oooooooooooooooooooooooo',
-  '.........ooooo........ooooo...',
-  '........otttttto.....otttttto.',
-  '........ottoootto....ottoootto',
-  '........otoaaaoto....otoaaaoto',
-  '........ottoootto....ottoootto',
-  '........otttttto.....otttttto.',
-  '.........ooooo........ooooo...',
+  // Round, spoked wheels lit from the upper left (Oct 2026 asset critique:
+  // the old ones were flat ovals, a lozenge under each end of the bed).
+  '..........ooo..........ooo....',
+  '.........owwto........owwto...',
+  '........owgtgto......owgtgto..',
+  '........ottatto......ottatto..',
+  '........otgtgto......otgtgto..',
+  '.........ottto........ottto...',
+  '..........ooo..........ooo....',
   '..............................',
   '..............................',
 ]
-export const WAGON_PALETTE: Palette = { o: OUTLINE, w: '#a8703a', b: '#6b4526', t: '#7d5230', a: '#c9b48c' }
+export const WAGON_PALETTE: Palette = { o: OUTLINE, w: '#a8703a', b: '#6b4526', t: '#7d5230', a: '#c9b48c', g: '#3a2414' }
 
 /** Each filled cell of `rows`, merged into horizontal runs (for SVG or a canvas). */
 export function pixelRuns(rows: PixelRows, pal: Palette): { x: number; y: number; w: number; fill: string }[] {

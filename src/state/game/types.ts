@@ -17,6 +17,9 @@ import type { RunProgress } from '../metaStore'
 import type { RunFeats } from '../../game/run/settle'
 import type { RunContract } from '../../game/run/contracts'
 import type { CompanyId } from '../../game/data/companies'
+
+/** What the home's dock has focused: a company's road, or `'charter'` — the Buy Company slot (the Sovereign Route). */
+export type HomeFocus = CompanyId | 'charter'
 import type { RunActions } from './runSlice'
 import type { BattleActions } from './battleSlice'
 import type { RosterActions } from './rosterSlice'
@@ -38,11 +41,19 @@ export type BattlePhase = 'setup' | 'battle'
  * of thing you can tap — heroes, items, offers — so the interaction is learned
  * once. See docs/FIGMA.md § The Root Shell.
  */
-export type HeroTab = 'stats' | 'upgrades' | 'tactics'
+/**
+ * What a selected hero shows in the Context panel (the battle band, Oct 2026):
+ * its card, or its Upgrade panel (opened by the action bar's Upgrade button).
+ * The Stats / Skills / Team tabs are gone — the card is structured instead, and
+ * the team's orders and relics are the HUD's Team panel (`kind: 'team'`).
+ */
+export type HeroTab = 'card' | 'upgrade'
 export type ShellSelection =
   | { kind: 'hero'; id: string }
   | { kind: 'item'; id: string }
   | { kind: 'offer'; id: string }
+  /** The team panel, from the HUD's Team button: targeting and relics, for every hero. */
+  | { kind: 'team'; id: 'team' }
   | null
 
 /**
@@ -75,19 +86,19 @@ export interface Crossroads {
  */
 export type RunPhase = 'active' | 'won' | 'lost' | 'cashedOut'
 export type Speed = 1 | 2 | 3
-export type EventKind = 'merchant' | 'shrine' | 'recruit' | 'campfire'
+export type EventKind = 'merchant' | 'shrine' | 'campfire'
 
 /**
- * The contract board while it is open (the `contracts` screen): which company
- * is chosen, and the terms being set. Presentation — never snapshotted, and
- * gone the moment a contract is signed.
+ * A company's terms while they are open (the `contracts` screen): which
+ * company, and the stake being set. Presentation — never snapshotted, and gone
+ * the moment a contract is signed. Since the home became the board (Oct 2026,
+ * Figma "B2"), the company is chosen on the menu's map and this is the terms
+ * page alone.
  */
 export interface ContractBoard {
   /** The board's own seed: each company's contract deals its run seed from it. */
   seed: number
   company: CompanyId
-  /** `board`: pick a company; `terms`: escort or stake. */
-  step: 'board' | 'terms'
   crates: number
 }
 
@@ -139,6 +150,8 @@ export interface RunRecap {
    * mid-march is reported at the setting it finished under.
    */
   assist: AssistLevel
+  /** Assist was on at some point of the run: the receipt's "Assisted" tag, and no record counted it. */
+  assisted: boolean
   depth: number
   kills: number
   goldLeft: number
@@ -167,7 +180,6 @@ export interface RunRecap {
 
 export interface MerchantStock {
   items: { item: Item; price: number }[]
-  recruit: { sentinel: Sentinel; price: number } | null
   /** The wagon repair on this stall's counter (Phase 3b): null once bought. */
   repair?: { hp: number; price: number } | null
   /** How many times this stall's shelf has been rerolled (each costs more). */
@@ -205,6 +217,14 @@ export interface GameData {
   contract: RunContract | null
   /** The contract board, while it is open (presentation, not snapshotted). */
   board: ContractBoard | null
+  /**
+   * The road focused on the menu's map (presentation, not snapshotted): its
+   * signpost is lit and the card under the dock is its company's. Null: the
+   * default (`contractSlice.homeCompany`). Any company, a locked one too, or
+   * `'charter'` — the dock's Buy Company slot (every road lit, the Sovereign
+   * Route's card).
+   */
+  homeFocus: HomeFocus | null
   /** A typed seed or the board's (Phase 1) — see `state/seeds.ts`. */
   challenge: RunChallenge
   /**
@@ -215,6 +235,14 @@ export interface GameData {
    * run keeps what it began with.
    */
   firstRun: boolean
+  /**
+   * Assist was on at some point of this run (the gameplay pass,
+   * `game/run/ranking`): set when the run begins or a wave starts with the dial
+   * off `off`, or the moment the dial is turned on mid-run, and never cleared
+   * until the run ends. An assisted run keeps every reward and counts for no
+   * ranking or record (`countsForRanking`). Snapshotted.
+   */
+  assisted: boolean
   /**
    * The recap a finished campaign leaves behind (H23) — what the win screen
    * reads, and what a defeat screen gets too, so the receipt is real.
@@ -282,7 +310,6 @@ export interface GameData {
   // Event payloads
   merchant: MerchantStock | null
   shrineOffer: ShrineOffer | null
-  recruitOptions: Sentinel[]
   /** Post-wave: three cards to choose one of (attribute buff or item). */
   reward: RewardCard[] | null
   /**

@@ -21,7 +21,12 @@ describe('merchants from the second stop', () => {
   it('a first run has no merchant before layer 2, and keeps its merchants wherever the road has room', () => {
     let moved = 0
     for (const seed of SEEDS) {
-      const map = generateRunMap(new RNG(seed))
+      // A road opens on one fight now (`OPENING_LAYER`), so a fresh deal never
+      // puts a merchant on layer 1; the rule still guards a road whose first
+      // stop is one — made here by turning the opening fight into a merchant.
+      const dealt = generateRunMap(new RNG(seed))
+      expect(dealt.nodes.some((n) => n.type === 'merchant' && n.layer < FIRST_MERCHANT_LAYER)).toBe(false)
+      const map = seed % 2 ? dealt : { ...dealt, nodes: dealt.nodes.map((n) => (n.layer === 1 ? { ...n, type: 'merchant' as const } : n)) }
       const staged = stageFirstRunMap(map, true)
       expect(staged.nodes.some((n) => n.type === 'merchant' && n.layer < FIRST_MERCHANT_LAYER)).toBe(false)
       const count = (m: typeof map) => m.nodes.filter((n) => n.type === 'merchant').length
@@ -91,7 +96,7 @@ describe('relics at the first elite', () => {
 
   it('the elite’s own hand still carries its relic', () => {
     for (const seed of SEEDS.slice(0, 40)) {
-      const hand = rewardHand(new RNG(seed), { kind: 'elite', luck: 0, count: 3, held: [], noBattleRelics: true })
+      const hand = rewardHand(new RNG(seed), { kind: 'elite', luck: 0, depth: 3, count: 3, held: [], noBattleRelics: true })
       expect(hand.some((c) => c.kind === 'relic')).toBe(true)
     }
   })
@@ -115,7 +120,7 @@ describe('RNG draw order (the store)', () => {
       // The map is exactly `generateRunMap` off the run's map stream…
       const rng = streamRng(seed, 'map')
       const shape = (m: typeof st.runMap) => ({ nodes: m.nodes.map((n) => [n.type, n.layer, n.row, n.ny]), edges: m.edges.length, layers: m.layers })
-      expect(shape(st.runMap)).toEqual(shape(generateRunMap(rng, { wideMap: false, extraRecruit: false, standingOrders: false, noMerchants: false, noRecruits: false })))
+      expect(shape(st.runMap)).toEqual(shape(generateRunMap(rng, { wideMap: false, standingOrders: false, noMerchants: false })))
       // …and the stream has moved exactly as far as that one deal.
       expect(map).toBe(rng.saveState())
     }

@@ -37,19 +37,172 @@
  * reach outside that frame's cell — see `gearFitProblems`.
  *
  * Usage:
- *   npm run anchors          rewrite src/game/render/anchors.generated.ts
- *   npm run anchors:check    exit 1 if that file is stale (build guard)
+ * ## The body layer's torsos
+ *
+ * The same run measures the tunic of every frame of the hero strips in
+ * `TORSO_PACKS` (Tiny Swords: no marker layers, so the art itself is read —
+ * `measureTorsos`) into `bodyAnchors.generated.ts`, and fails when any body
+ * piece, dressed on any frame, would paint outside its hero cell
+ * (`bodyFitProblems`).
+ *
+ * ## The hands, frame by frame
+ *
+ * And it tracks each hand of every hero strip in `HELD_PACKS` (Tiny Swords:
+ * the fist found frame by frame off the art, `held-grips-lib.ts`) — and reads
+ * a marker pack's from its markers — into `heldGrips.generated.ts`, so a held
+ * mark moves with the fist that holds it.
+ *
+ * Usage:
+ *   npm run anchors          rewrite src/game/render/anchors.generated.ts,
+ *                            bodyAnchors, shieldFill and heldGrips
+ *   npm run anchors:check    exit 1 if any of them is stale (build guard)
  */
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import sharp from 'sharp'
 import { ANIM_FRAMES } from '../src/game/render/anim'
 import { GEAR_POSE_CELLS } from '../src/game/render/anchors'
-import { gearFitProblems, opaqueBounds, render, scan, type Anchor, type GearInfo, type HeroStripInfo } from './anchors-lib'
+import type { Torso } from '../src/game/render/bodyLayer'
+import { bareStrip, cutAndFill, rigFor, type HeldGrips, type HeldStrip, type StripFill } from '../src/game/render/gearMarks'
+import { fillProblems, renderShieldFill, SHIELD_STRIPS, shieldFills, type RawStrip } from './shield-fill-lib'
+import {
+  bodyFitProblems,
+  gearFitProblems,
+  measureTorsos,
+  opaqueBounds,
+  render,
+  renderTorsos,
+  scan,
+  TORSO_PACKS,
+  type Anchor,
+  type GearInfo,
+  type HeroStripInfo,
+} from './anchors-lib'
+import { fromMarkers, HELD_PACKS, heldProblems, measureLook, renderHeldGrips, type RawStrip as HeldRaw } from './held-grips-lib'
+import type { Archetype } from '../src/game/types'
 
 const CHECK = process.argv.includes('--check')
 const ROOT = join('public', 'assets', 'sprites')
 const OUT = join('src', 'game', 'render', 'anchors.generated.ts')
+const BODY_OUT = join('src', 'game', 'render', 'bodyAnchors.generated.ts')
+const FILL_OUT = join('src', 'game', 'render', 'shieldFill.generated.ts')
+const HELD_OUT = join('src', 'game', 'render', 'heldGrips.generated.ts')
+
+/**
+ * Where each hand is on every frame (`held-grips-lib`): the fists of every
+ * look in `HELD_PACKS` tracked off its idle and attack strips (a hidden hand
+ * follows the measured tunic, `torsos`), and every marker pack's hero strips
+ * read off their markers. Appends to `problems`.
+ */
+async function scanHeld(
+  torsos: Record<string, Record<string, Torso[]>>,
+  markers: Record<string, Record<string, Anchor[]>>,
+  problems: string[],
+): Promise<HeldGrips> {
+  const out: Record<string, Record<string, HeldStrip>> = {}
+  const sizes: Record<string, Record<string, HeldRaw>> = {}
+  const load = async (pack: string, name: string): Promise<HeldRaw | null> => {
+    const frames = ANIM_FRAMES[name]
+    const file = join(ROOT, pack, `${name}.png`)
+    if (!frames || !existsSync(file)) {
+      problems.push(`${pack}/${name}: no strip or frame count`)
+      return null
+    }
+    const art = await raw(file)
+    const s = { name, data: art.data, w: art.w, h: art.h, frames }
+    ;(sizes[pack] ??= {})[name] = s
+    return s
+  }
+  for (const [pack, looks] of Object.entries(HELD_PACKS)) {
+    out[pack] = {}
+    for (const look of looks) {
+      const idle = await load(pack, `${look}_idle`)
+      const atk = await load(pack, `${look}_atk`)
+      if (!idle || !atk) continue
+      const rig = rigFor(pack, look as Archetype)
+      const { grips, problems: p } = measureLook({
+        look,
+        idle,
+        strips: [idle, atk],
+        fistR: [rig.fistR.x, rig.fistR.y],
+        fistL: [rig.fistL.x, rig.fistL.y],
+        torsos: torsos[pack] ?? {},
+      })
+      for (const e of p) problems.push(`${pack}/${e}`)
+      Object.assign(out[pack], grips)
+    }
+  }
+  for (const [pack, table] of Object.entries(markers)) {
+    if (HELD_PACKS[pack]) continue
+    for (const [name, anchors] of Object.entries(table)) {
+      if (isGear(name)) continue
+      const s = await load(pack, name)
+      if (s) (out[pack] ??= {})[name] = fromMarkers(anchors, s)
+    }
+  }
+  for (const p of heldProblems(out, sizes)) problems.push(p)
+  return out
+}
+
+/**
+ * Rebuild the knight's body under its painted shield (`shield-fill-lib`), per
+ * pack in `SHIELD_STRIPS`, and measure the rebuilt tunic of each strip into
+ * `torsos` as `bareStrip(strip)` — the table the body layer dresses a cut
+ * knight from. Appends to `problems`.
+ */
+async function scanShields(torsos: Record<string, Record<string, Torso[]>>, problems: string[]): Promise<Record<string, Record<string, StripFill>>> {
+  const out: Record<string, Record<string, StripFill>> = {}
+  for (const [pack, names] of Object.entries(SHIELD_STRIPS)) {
+    const strips: RawStrip[] = []
+    for (const name of names) {
+      const frames = ANIM_FRAMES[name]
+      const file = join(ROOT, pack, `${name}.png`)
+      if (!frames || !existsSync(file)) {
+        problems.push(`${pack}/${name}: no strip or frame count`)
+        continue
+      }
+      const art = await raw(file)
+      strips.push({ name, data: art.data, w: art.w, h: art.h, frames })
+    }
+    const fills = shieldFills(strips)
+    out[pack] = {}
+    for (const s of strips) {
+      const { fill } = fills[s.name]
+      out[pack][s.name] = fill
+      for (const p of fillProblems(`${pack}/${s.name}`, s, fill)) problems.push(p)
+      const bare = new Uint8Array(s.data)
+      cutAndFill(bare, s.w, s.h, s.frames, fill)
+      const { torsos: t, errors } = measureTorsos(bare, s.w, s.h, s.frames)
+      const name = bareStrip(s.name)
+      for (const e of errors) problems.push(`${pack}/${name}: ${e}`)
+      for (const p of bodyFitProblems(`${pack}/${name}`, bare, s.w, s.h, t)) problems.push(p)
+      ;(torsos[pack] ??= {})[name] = t
+    }
+  }
+  return out
+}
+
+/** Measure every torso strip of every pack in `TORSO_PACKS`; appends to `problems`. */
+async function scanTorsos(problems: string[]): Promise<Record<string, Record<string, Torso[]>>> {
+  const out: Record<string, Record<string, Torso[]>> = {}
+  for (const [pack, strips] of Object.entries(TORSO_PACKS)) {
+    out[pack] = {}
+    for (const strip of strips) {
+      const frames = ANIM_FRAMES[strip]
+      const file = join(ROOT, pack, `${strip}.png`)
+      if (!frames || !existsSync(file)) {
+        problems.push(`${pack}/${strip}: no strip or frame count`)
+        continue
+      }
+      const art = await raw(file)
+      const { torsos, errors } = measureTorsos(art.data, art.w, art.h, frames)
+      for (const e of errors) problems.push(`${pack}/${strip}: ${e}`)
+      for (const p of bodyFitProblems(`${pack}/${strip}`, art.data, art.w, art.h, torsos)) problems.push(p)
+      out[pack][strip] = torsos
+    }
+  }
+  return out
+}
 
 const isGear = (strip: string): boolean => strip.startsWith('gear_') || strip.startsWith('body_')
 
@@ -109,6 +262,9 @@ async function main(): Promise<void> {
     if (!readdirSync(join(ROOT, pack)).some((f) => f.endsWith('_anchors.png'))) continue
     packs[pack] = await scanPack(pack, problems)
   }
+  const torsos = await scanTorsos(problems)
+  const fills = await scanShields(torsos, problems)
+  const held = await scanHeld(torsos, packs, problems)
 
   if (problems.length) {
     console.error('anchors: problems found\n  ' + problems.join('\n  '))
@@ -116,22 +272,34 @@ async function main(): Promise<void> {
   }
 
   const count = Object.values(packs).reduce((n, t) => n + Object.keys(t).length, 0)
+  const bodyCount = Object.values(torsos).reduce((n, t) => n + Object.keys(t).length, 0)
   const next = render(packs)
+  const nextBody = renderTorsos(torsos)
+  const nextFill = renderShieldFill(fills)
+  const fillCount = Object.values(fills).reduce((n, t) => n + Object.keys(t).length, 0)
+  const nextHeld = renderHeldGrips(held)
+  const heldCount = Object.values(held).reduce((n, t) => n + Object.keys(t).length, 0)
   if (CHECK) {
-    const current = existsSync(OUT) ? readFileSync(OUT, 'utf8') : ''
-    if (current.trim() !== next.trim()) {
-      console.error(
-        `anchors: ${OUT} is stale — ${count} strip(s) on disk disagree with it.\n` +
-          'Run `npm run anchors` and commit the result.',
-      )
-      process.exit(1)
+    for (const [file, want, n] of [[OUT, next, count], [BODY_OUT, nextBody, bodyCount], [FILL_OUT, nextFill, fillCount], [HELD_OUT, nextHeld, heldCount]] as const) {
+      const current = existsSync(file) ? readFileSync(file, 'utf8') : ''
+      if (current.trim() !== want.trim()) {
+        console.error(`anchors: ${file} is stale — ${n} strip(s) on disk disagree with it.\n` + 'Run `npm run anchors` and commit the result.')
+        process.exit(1)
+      }
     }
-    console.log(`anchors: up to date (${count} strips in ${Object.keys(packs).length} pack(s)); all gear fits its cells.`)
+    console.log(
+      `anchors: up to date (${count} strips in ${Object.keys(packs).length} pack(s), ${bodyCount} torso strip(s), ${fillCount} shield-fill strip(s), ${heldCount} held-grip strip(s)); all gear and every body piece fits its cells, and every rebuilt body is whole.`,
+    )
     return
   }
 
   writeFileSync(OUT, next)
-  console.log(`anchors: wrote ${count} strip(s) in ${Object.keys(packs).length} pack(s) to ${OUT}.`)
+  writeFileSync(BODY_OUT, nextBody)
+  writeFileSync(FILL_OUT, nextFill)
+  writeFileSync(HELD_OUT, nextHeld)
+  console.log(
+    `anchors: wrote ${count} strip(s) in ${Object.keys(packs).length} pack(s) to ${OUT}, ${bodyCount} torso strip(s) to ${BODY_OUT}, ${fillCount} shield-fill strip(s) to ${FILL_OUT}, and ${heldCount} held-grip strip(s) to ${HELD_OUT}.`,
+  )
 }
 
 main().catch((e) => {

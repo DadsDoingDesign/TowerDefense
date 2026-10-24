@@ -12,6 +12,7 @@ import {
   recordAt,
 } from '../../../game/run/contracts'
 import { cityTrade } from '../../../game/run/settle'
+import { cityLine } from '../../../game/run/liaison'
 import { ACT_LAYERS, RUN_LAYERS } from '../../../game/run/threat'
 import { useGameStore } from '../../../state/gameStore'
 import { useMetaStore } from '../../../state/metaStore'
@@ -21,6 +22,7 @@ import { NextGround } from '../NextGround'
 import { Icon } from '../../Icon'
 import { PickCard, PickStrip } from '../PickStrip'
 import { companyVar } from '../../channels'
+import { LiaisonScene } from '../LiaisonScene'
 import { ContractPage, DangerPips, Gold, PageTip, RouteRail, Slip, SlipLine } from './parts'
 
 /** The two ways on from a city: cash out here, or press on. */
@@ -28,6 +30,12 @@ type Way = 'out' | 'on'
 
 /**
  * A city — an act boss down (mockup `trade/r3/5-payout.png`).
+ *
+ * The head is the place (Draft 4 · D, mockup 5b): the company's liaison at
+ * its post (`LiaisonScene`), the city's name hung on it as its sign — the
+ * page's one title — and the liaison's line on the cargo that arrived or on
+ * one of the contract's asks (`run/liaison.cityLine`, fixed for the run and
+ * the city).
  *
  * The gold leads: what this city paid, and why ("your stake is back, plus a
  * fee"). The receipt slip itemises it, the route rail shows what is ahead, and
@@ -47,6 +55,7 @@ export function CityScreen() {
   const maxBaseHp = useGameStore((s) => s.maxBaseHp)
   const firstRun = useGameStore((s) => s.firstRun)
   const gold = useGameStore((s) => s.gold)
+  const runSeed = useGameStore((s) => s.runSeed)
   const layer = useGameStore((s) => s.runMap.nodes.find((n) => n.id === s.currentNodeId)?.layer ?? 0)
   const pressOn = useGameStore((s) => s.pressOn)
   const cashOut = useGameStore((s) => s.cashOut)
@@ -84,24 +93,27 @@ export function CityScreen() {
       ? `Your ${stake}-gold stake is back${here.sales > stake ? ` with ${here.sales - stake} more` : ''}, plus a ${here.fee}-gold fee`
       : `${here.sold} crate${here.sold === 1 ? '' : 's'} sold, and the fee`
     : arrived < 100
-      ? `The escort fee, for the ${arrived}% of the cargo that arrived`
-      : 'The escort fee, for every crate that arrived'
+      ? `The escort fee, for ${arrived}% of the cargo`
+      : 'The escort fee, for all the cargo'
 
   return (
     <ContractPage
       // A city with no choice to make is a short board: its one CTA sits right
       // under the receipt rather than at the foot of an empty column (3.5).
-      className={`ct-city${!choose || nothingToLose ? ' compact' : ''}`}
+      className={`ct-city has-scene${!choose || nothingToLose ? ' compact' : ''}`}
       label={`${town}: paid ${here.total} gold`}
       head={
         <>
-          <p className="ct-eyebrow">
-            {/* The arrival beat (October audit 3.11): the caravan made it, then the pay. */}
-            The caravan reaches {town} · act {city + 1}
-          </p>
-          <h1 className="ct-big" tabIndex={-1}>
-            <Coin scale={4} />+{here.total} gold
+          {/* The arrival beat (October audit 3.11): the caravan made it — the
+              city's own square, its name on the sign, the company's liaison
+              there to meet it — then the pay. The rail below says which act. */}
+          <LiaisonScene company={c.company} line={cityLine(c.company, { seed: runSeed, city, arrived, asks: c.asks, facts: { contract: c, gold } })} />
+          <h1 className="ct-sign" tabIndex={-1}>
+            {town}
           </h1>
+          <p className="ct-big">
+            <Coin scale={4} />+{here.total} gold
+          </p>
           <p className="ct-msg">{msg}</p>
         </>
       }
@@ -122,28 +134,34 @@ export function CityScreen() {
             }
       }
     >
-      <Slip>
-        {here.sold > 0 && <SlipLine label={`Sold: ${here.sold} crate${here.sold === 1 ? '' : 's'} of ${co.noun}`} value={<Gold n={here.sales} />} />}
-        <SlipLine label="Escort fee" value={<Gold n={here.fee} />} />
-        {arrived < 100 && <SlipLine label="Cargo that arrived" value={`${arrived}%`} />}
-        {staked && (
-          <SlipLine
-            label="Unsold, still on the wagons"
-            value={
-              left > 0 ? (
-                <>
-                  {Array.from({ length: Math.min(4, left) }, (_, i) => (
-                    <Crate key={i} color={co.color} scale={1} />
-                  ))}{' '}
-                  {left} crate{left === 1 ? '' : 's'}
-                </>
-              ) : (
-                'none'
-              )
-            }
-          />
-        )}
-      </Slip>
+      {/* The slip itemises the pay. When the fee is all there is, the big
+          number and its line above have said it — a one-line slip was the
+          same 60 a third time, and pushed the choice's card under the CTA
+          (job critique, Oct 2026). */}
+      {(here.sold > 0 || arrived < 100 || staked) && (
+        <Slip>
+          {here.sold > 0 && <SlipLine label={`Sold: ${here.sold} crate${here.sold === 1 ? '' : 's'} of ${co.noun}`} value={<Gold n={here.sales} />} />}
+          <SlipLine label="Escort fee" value={<Gold n={here.fee} />} />
+          {arrived < 100 && <SlipLine label="Cargo that arrived" value={`${arrived}%`} />}
+          {staked && (
+            <SlipLine
+              label="Unsold, still on the wagons"
+              value={
+                left > 0 ? (
+                  <>
+                    {Array.from({ length: Math.min(4, left) }, (_, i) => (
+                      <Crate key={i} color={co.color} scale={1} />
+                    ))}{' '}
+                    {left} crate{left === 1 ? '' : 's'}
+                  </>
+                ) : (
+                  'none'
+                )
+              }
+            />
+          )}
+        </Slip>
+      )}
 
       <RouteRail
         company={c.company}
@@ -161,28 +179,28 @@ export function CityScreen() {
       <NextGround city={city} />
 
       {!choose ? (
-        <PageTip>Every city on the road pays as the caravan reaches it. From the next city you may cash out here and head home.</PageTip>
+        <PageTip>Every city pays as you reach it. From the next, you may cash out and head home.</PageTip>
       ) : nothingToLose ? (
         <PageTip>
-          Nothing on the wagons is at risk yet, so there is nothing to weigh: press on. Once the road has paid you, a fall leaves most of that gold behind.
+          Nothing on the wagons is at risk yet: press on.
         </PageTip>
       ) : (
         <>
           <h2 className="ct-q">Head home, or press on?</h2>
           {!taught && (
             <PageTip>
-              Cash out to bank everything now. Press on for the bigger payout, but a fall loses the unsold crates and most of the road's gold.
+              Cash out to bank it all now, or press on for more and risk what is still on the road.
             </PageTip>
           )}
           <div className="pk">
             <PickStrip
               label="Head home, or press on"
               tokens={[
-                { id: 'out', art: <Icon name="gold" lg />, label: 'Bank', value: trade.now, name: `Cash out: bank ${trade.now} gold now` },
+                { id: 'out', art: <Icon name="gold" lg />, label: 'Cash out', value: trade.now, name: `Cash out: bank ${trade.now} gold now` },
                 {
                   id: 'on',
                   art: <Crate color={co.color} scale={3} />,
-                  label: 'Bank',
+                  label: 'Press on',
                   value: `${trade.deliver}+`,
                   name: `Press on: deliver, and bank ${trade.deliver} gold or more`,
                   rail: companyVar(c.company),
@@ -208,8 +226,8 @@ export function CityScreen() {
               >
                 <p className="pk-does">
                   {left > 0 ? `${town} buys the last ${left} crate${left === 1 ? '' : 's'} for ${trade.sale}. ` : ''}
-                  {trade.road > 0 ? `${trade.roadIfCashed} of the road's gold comes home. ` : ''}
-                  No completion bonus, no item chances, no contract skill.
+                  {trade.road > 0 ? `${trade.roadIfCashed} road gold comes home. ` : ''}
+                  No bonus, items or skill.
                 </p>
               </PickCard>
             ) : (
@@ -232,7 +250,7 @@ export function CityScreen() {
                 </p>
                 <p className="pk-risk">
                   Fall, and you bank {trade.fall}: {left > 0 ? `the ${left} unsold crate${left === 1 ? ' is' : 's are'} lost` : 'the bonus is lost'}
-                  {roadLost > 0 ? `, and ${roadLost} of the road's gold stays on the road` : ''}.
+                  {roadLost > 0 ? `, and ${roadLost} road gold stays behind` : ''}.
                 </p>
               </PickCard>
             )}

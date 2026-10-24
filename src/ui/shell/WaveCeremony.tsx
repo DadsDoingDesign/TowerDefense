@@ -9,6 +9,7 @@ import { Icon } from '../Icon'
 import { Money } from './Money'
 import { battleLayoutOf } from './live'
 import { rewardInPlace } from './levelUps'
+import { encounterKindFor } from './encounterPreview'
 
 /**
  * A number that counts up to its value once, when it first appears. Instant
@@ -57,7 +58,13 @@ export function WaveCeremony() {
   const result = useGameStore((s) => s.lastResult)
   const loot = useGameStore((s) => s.lastLoot)
   const roster = useGameStore((s) => s.roster)
-  const waveLabel = useGameStore((s) => s.currentWave?.label ?? '')
+  // An elite fight is its node's kind (`encounterKindFor`), never a word in
+  // the wave's name: the name is the shape ("Warded Host"), not the kind.
+  const eliteNode = useGameStore((s) => {
+    const id = s.activeNodeId ?? s.currentNodeId
+    const node = s.runMap.nodes.find((n) => n.id === id)
+    return !!node && encounterKindFor(node) === 'elite'
+  })
   const isBossWave = useGameStore((s) => !!s.currentWave?.isBoss)
   const maxBaseHp = useGameStore((s) => s.maxBaseHp)
   const startLevels = useBattleLedger((s) => s.startLevels)
@@ -75,7 +82,7 @@ export function WaveCeremony() {
   if (layout !== 'live' && layout !== 'settled') return null
   if (!beat && !settled) return null
   const won = status === 'cleared'
-  const elite = /elite/i.test(waveLabel) || isBossWave
+  const elite = eliteNode || isBossWave
 
   const levelUps = settled
     ? roster.filter((h) => startLevels[h.id] !== undefined && h.level > startLevels[h.id])
@@ -102,7 +109,7 @@ export function WaveCeremony() {
         </p>
         {result!.enemiesLeaked > 0 && (
           <p className="sh-ceremony-note">
-            {result!.enemiesLeaked} reached the Gate · Gate {result!.baseHpLeft} left
+            {result!.enemiesLeaked} reached the wagons · cargo {cargoPct(result!.baseHpLeft, maxBaseHp)}%
           </p>
         )}
       </div>
@@ -113,7 +120,9 @@ export function WaveCeremony() {
     <div className={`sh-ceremony ${won ? 'won' : 'lost'} ${elite ? 'elite' : ''} ${settled ? 'settled' : 'beat'}`}>
       <div className="sh-ceremony-banner">
         <Icon name={won ? (elite ? 'crown' : 'wave') : 'warn'} />
-        <span>{won ? (elite ? 'Elite wave cleared' : 'Wave cleared') : 'The wagons fell'}</span>
+        {/* A boss is a boss: it read "Elite wave cleared" while the strip
+            under it named the act's boss. */}
+        <span>{won ? (isBossWave ? 'Boss defeated' : elite ? 'Elite wave cleared' : 'Wave cleared') : 'The wagons fell'}</span>
       </div>
       {settled && (
         <div className="sh-ceremony-card">

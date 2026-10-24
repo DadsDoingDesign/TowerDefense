@@ -1,11 +1,13 @@
+import { crateBadge } from './hq/crateShelf'
+import { flyingMilitia } from '../../game/run/militia'
 import { describeBase, itemNoun, RARITY } from '../../game/data/items'
 import { isSovereignKind } from '../../game/data/itemKinds'
 import { MUSTER_PCT, SOVEREIGN_TIER } from '../../game/run/charter'
 import { HQ_OPENS_AT, PULL_PRICE } from '../../game/run/hq'
-import { describeEnchant, describeGrant, describeMods, STACKING_RULES } from '../../game/data/describe'
+import { describeEnchant, describeMods, STACKING_RULES } from '../../game/data/describe'
 import { skillById, skillLevelLabel } from '../../game/data/skills'
 import { heroChoices, previewOf } from '../../game/run/heroes'
-import { heroDoes, kitName, lookOf } from '../../game/data/gear'
+import { heroDoes, kitName, lookOf, weaponDoes } from '../../game/data/gear'
 import { difficultyEffect } from '../../game/run/watch'
 import { standingOf, topStanding } from '../../game/run/standing'
 import { COMPANY_IDS } from '../../game/data/companies'
@@ -16,13 +18,16 @@ import { useMetaStore } from '../../state/metaStore'
 import { assistProfile, useSettingsStore, type AssistLevel, type VisionMode } from '../../state/settingsStore'
 import { menuStaged, revealOf } from '../../state/staging'
 import { revealFacts } from './staging'
+import { hqMark } from './hq/hqModel'
 import { useShallow } from 'zustand/react/shallow'
 import { archetypeVar, ARCHETYPE_GLYPH, damageMark, handLine, itemIcon, itemName, moneyText, rarityVar, type IconKey } from '../channels'
 import { useShellContext } from './context'
 import { campfireOffers, merchantServiceOffers } from './campfireOffers'
+import { cargoShare } from '../../game/run/contracts'
 import { relicLines } from './relicOffers'
-import { codexOffers } from './codexOffers'
+import { relicMark } from '../../game/data/relics'
 import type { Item, ItemRarity, Sentinel } from '../../game/types'
+import { heroPortraitUrl } from '../../game/render/heroPortrait'
 
 export interface Price {
   amount: number
@@ -52,8 +57,8 @@ export interface BodyLine {
   text: string
   /** Overrides `effectIcon` where the producer knows what the sentence cannot say. */
   mark?: IconKey
-  /** The Context panel's accent treatment. The page card renders every line alike. */
-  tone?: 'accent' | 'muted'
+  /** The Context panel's accent treatment. The page card renders every line alike. `note`: a quiet italic aside (a relic's rule of thumb). */
+  tone?: 'accent' | 'muted' | 'note'
 }
 export type Body = (string | BodyLine)[]
 
@@ -122,6 +127,10 @@ export type SecondaryAct = Omit<Act, 'confirm'> & { confirm?: never }
 export interface Offer {
   id: string
   title: string
+  /** A short name where room is tight: under a home place's mark on a phone ("HQ", "Crates"). */
+  short?: string
+  /** A count on a home place's mark (the crates the bank buys, `hq/crateShelf.crateBadge`). */
+  badge?: string
   sub?: string
   /** Accent for the card rail and the panel title. */
   color?: string
@@ -248,7 +257,7 @@ export interface Offer {
    * line under its name.
    */
   locked?: string
-  /** A real sprite for a row that is a hero (the merchant's recruit). */
+  /** A real sprite for a row that is a hero (a recruit). */
   rowArt?: string
   /**
    * LS3: one plain line under a row's name (the first-run hero pick's role
@@ -296,19 +305,17 @@ export interface HeroCardSpec {
  * heads and "take it or leave it, it costs the same" is the new rule.
  *
  */
-export const THREAT_FREE_CHOICE: string[] = [
-  'Enemies get no stronger for taking it. Enemy strength rises with every stop you pass, whatever you take there.',
-]
+export const THREAT_FREE_CHOICE: BodyLine[] = [{ text: 'Taking it doesn’t raise enemy strength.', tone: 'note' }]
 
-/** At the Crossroads — not a map stop, so nothing about the road moves. */
-export const THREAT_FREE_FORK: string[] = ['Enemies get no stronger for taking it: the Crossroads is not a stop on the road.']
+/** At a city's hiring (the Crossroads) — not a map stop, so nothing about the road moves. */
+export const THREAT_FREE_FORK: BodyLine[] = [{ text: 'Hiring doesn’t raise enemy strength.', tone: 'note' }]
 
 /**
  * LS3: the enemy-strength note rides on a choice only once the player has met
  * enemy strength — a first run's layer-1 recruit must not explain a number the
  * header has not shown yet.
  */
-function strengthNote(st: St, lines: string[]): string[] {
+function strengthNote(st: St, lines: BodyLine[]): BodyLine[] {
   const met = !st.firstRun || useSettingsStore.getState().showEverything || st.threat > 1.001 || useMetaStore.getState().met.includes('strength')
   return met ? lines : []
 }
@@ -323,8 +330,14 @@ function strengthNote(st: St, lines: string[]): string[] {
  * the whole of a battle were the least illustrated thing in the game.
  */
 export const heroArt = (look: string) => `assets/sprites/tinyswords/${look}.png`
-/** A hero's sprite and hue: picked by what it holds (there is no class). */
-export const heroLookArt = (h: Pick<Sentinel, 'equipment'>): string => heroArt(lookOf(h))
+/**
+ * A hero's portrait: its battlefield figure in the kit it wears now — weapon,
+ * off hand and body piece — cropped to a bust (`render/heroPortrait`). Every
+ * hero portrait in the shell reads this one function, so none can show the
+ * look's painted still once the art has loaded; until then (and in a theme
+ * without sprites) it is that still. `RootShell` re-renders when it lands.
+ */
+export const heroLookArt = (h: Pick<Sentinel, 'equipment'>): string => heroPortraitUrl(h) ?? heroArt(lookOf(h))
 export const heroLookVar = (h: Pick<Sentinel, 'equipment'>): string => archetypeVar(lookOf(h))
 
 /**
@@ -342,7 +355,7 @@ const GLYPH = ARCHETYPE_GLYPH
  * and the one item in the game whose value scales with roster size read as the
  * one with no armour on it (M6).
  */
-export const KEEPSAKE_TAG = 'Keepsake — its effects apply to all your heroes, not just whoever carries it.'
+export const KEEPSAKE_TAG = 'Keepsake: works for the whole team, whoever wears it.'
 
 /**
  * Everything an item's own text says about it — the ONE producer of it (M4).
@@ -377,8 +390,11 @@ export function itemBody(item: Item): Body {
     // a hardcoded list of labels here — a copy of that list is the same defect
     // one level down.
     const curse = e.id.startsWith('cx_')
+    // A peoples' kind's edge is the item's own trait (`items.KIND_EDGE`): the
+    // card's title already names it, so the line is the effect alone.
+    const own = e.id.startsWith('kind_')
     out.push({
-      text: curse ? `Curse · ${e.label} — ${t}` : `${e.label} — ${t}`,
+      text: curse ? `Curse · ${e.label} — ${t}` : own ? t.charAt(0).toUpperCase() + t.slice(1) : `${e.label} — ${t}`,
       mark: curse ? 'curse' : undefined,
       tone: 'accent',
     })
@@ -418,23 +434,6 @@ function heroBits(s: Sentinel) {
   }
 }
 
-/**
- * A hero offer's body. The STR/DEX/INT line is gone from here: every hero offer
- * also carries `heroBits(s).stats`, which the page renders as the stat row right
- * above this card, so the same three numbers were printed twice, one above the
- * other (Wave 1).
- */
-function heroBody(s: Sentinel): string[] {
-  const p = computeCombat(s)
-  const line = `${Math.round(p.dps)} DPS · ${Math.round(p.range)} range · ${p.rate.toFixed(1)}/s`
-  // SK1: every hire arrives with a skill. One is shown as its card
-  // (`heroBits`); more are listed here, each in its one sentence.
-  const skills = oneSkill(s) ? [] : skillLines(s)
-  // LS3: with the stat row held back, the sentence that says what the hero
-  // does leads — the same one the first pick shows.
-  return stagedRun() ? [`${heroDoes(s)}.`, ...skills, line] : [`${heroDoes(s)}.`, ...skills, line]
-}
-
 /** A hero as a comparison card: what its gear does, the gear, its skill (and its numbers, after the first run). */
 export function heroCard(s: Sentinel, staged: boolean): HeroCardSpec {
   const p = computeCombat(s)
@@ -449,7 +448,11 @@ export function heroCard(s: Sentinel, staged: boolean): HeroCardSpec {
   return {
     art: heroLookArt(s),
     color: heroLookVar(s),
-    does: heroDoes(s),
+    // Say a fact once (the copy pass): with the numbers showing, the Holds /
+    // Targets fact says what the shield holds and whether it hits a group, so
+    // the line keeps only what the weapon does. A staged first run has no
+    // numbers, and keeps the whole sentence.
+    does: staged ? heroDoes(s) : weaponDoes(s).replace(/ at a group$/, ''),
     slots: [
       { slot: 'Main', piece: mainHand ? piece(mainHand) : undefined },
       { slot: 'Off hand', piece: offHand ? piece(offHand) : undefined },
@@ -507,7 +510,6 @@ const offerDeps = (s: St) => ({
   reward: s.reward,
   merchant: s.merchant,
   shrineOffer: s.shrineOffer,
-  recruitOptions: s.recruitOptions,
   roster: s.roster,
   inventory: s.inventory,
   gold: s.gold,
@@ -583,7 +585,6 @@ function contextOffers(
   const kind = st.event?.kind
   if (kind === 'merchant') return merchantOffers(st)
   if (kind === 'shrine') return shrineOffers(st)
-  if (kind === 'recruit') return recruitOffers(st)
   if (kind === 'campfire') return campfireOffers(st)
   return []
 }
@@ -604,9 +605,9 @@ function escapeOffer(st: St): Offer {
     action: { label: title, run },
   })
 
-  if (st.reward) return exit('Walk on', 'There is nothing here to take.', () => st.continueAfterWave())
-  if (st.screen === 'crossroads') return exit('March on', 'Leave the crossroads behind.', () => st.finishCrossroads())
-  if (st.event) return exit('Walk on', 'Leave the offers and continue.', () => st.leaveEvent())
+  if (st.reward) return exit('Walk on', 'Nothing here to take.', () => st.continueAfterWave())
+  if (st.screen === 'crossroads') return exit('March on', 'Leave the city.', () => st.finishCrossroads())
+  if (st.event) return exit('Walk on', 'Leave this stop.', () => st.leaveEvent())
   // Nothing local left to close — the menu is always reachable, and it
   // settles the run rather than dropping it.
   return exit('Back to the menu', st.contract?.charter ? 'End the charter and head home. Its fee is lost.' : 'End the contract and head home.', () => st.returnToHub())
@@ -616,7 +617,7 @@ type St = ReturnType<typeof useGameStore.getState>
 type Meta = ReturnType<typeof useMetaStore.getState>
 type Settings = ReturnType<typeof useSettingsStore.getState>
 /** The hub's pages: the menu's rows, and the HQ and the sealed crates (their own screens). */
-export type MetaView = 'menu' | 'hq' | 'crates' | 'settings' | 'codex' | 'militia' | 'charter'
+export type MetaView = 'menu' | 'hq' | 'crates' | 'settings' | 'codex' | 'militia' | 'charter' | 'livery' | 'war' | 'track'
 
 /**
  * ---------------------------------------------------------------------------
@@ -647,12 +648,12 @@ function heroPickOffers(st: St, meta: Meta): Offer[] {
       color: heroLookVar(hero),
       hero: heroCard(hero, staged),
       body: [],
-      action: { label: `Choose ${c.name}`, run: () => st.pickStartingHero(c.id) },
+      action: { label: `Choose ${c.name}`, run: () => st.marchOut(c.id) },
     }
   })
   // The way back to the menu: nothing is spent until a hero is chosen, the
   // Daily's attempt included. `immediate`, so it sits as a row above the CTA.
-  const back: Offer = { id: 'back', title: 'Back', icon: 'back', immediate: true, body: ['Back to the menu.'], action: { label: 'Back', run: () => st.cancelHeroPick() } }
+  const back: Offer = { id: 'back', title: 'Back', icon: 'back', immediate: true, body: [], action: { label: 'Back', run: () => st.cancelHeroPick() } }
   return [...picks, back]
 }
 
@@ -682,36 +683,19 @@ function merchantOffers(st: St): Offer[] {
       disabled: st.gold < e.price,
     },
   }))
-  if (m.recruit) {
-    const r = m.recruit
-    out.push({
-      id: r.sentinel.id,
-      // What they carry rides in the row's own label: a merchant row is a line
-      // of text, and "Sable" alone did not say this was a hero for hire, let
-      // alone what kind (Wave 1). There is no class: the kit is the kind.
-      title: `${r.sentinel.name} · ${kitName(r.sentinel)} for hire`,
-      sub: kitName(r.sentinel),
-      rowArt: heroLookArt(r.sentinel),
-      dim: st.gold < r.price,
-      color: heroLookVar(r.sentinel),
-      glyph: GLYPH[lookOf(r.sentinel)],
-      cost: { amount: r.price, currency: 'gold' },
-      ...heroBits(r.sentinel),
-      // A merchant hire is one of the five choices that pays the choice tax, and
-      // the merchant is a map special, so the visit step is already on the bill.
-      body: [...heroBody(r.sentinel), ...strengthNote(st, THREAT_FREE_CHOICE)],
-      action: {
-        label: 'Recruit',
-        cost: { amount: r.price, currency: 'gold' },
-        done: `${r.sentinel.name} joins your heroes`,
-        run: () => st.buyMerchantRecruit(),
-        disabled: st.gold < r.price || st.roster.length >= MAX_ROSTER,
-      },
-    })
-  }
   out.push(...merchantServiceOffers(st))
   out.push(leaveOffer(st))
   return out
+}
+
+/**
+ * A shrine's curse as the player reads it: a cargo cost in the cargo's own
+ * percent (the HUD's unit), not the Gate HP the rule spends. The shrine's
+ * `apply` is pure, so it is read here for its numbers.
+ */
+function shrineCurse(st: St, s: NonNullable<St['shrineOffer']>): string {
+  const fx = s.apply({ roster: [], baseHp: st.baseHp, gold: st.gold })
+  return fx.baseHpDelta && fx.baseHpDelta < 0 ? `−${cargoShare(-fx.baseHpDelta, st.maxBaseHp)}% cargo now` : s.curse
 }
 
 function shrineOffers(st: St): Offer[] {
@@ -730,37 +714,11 @@ function shrineOffers(st: St): Offer[] {
       // as the card's `warn` (the boon's size, the danger ink, the warning
       // mark, right under the boon) instead of a muted body line under it.
       body: [`Boon — ${s.boon}`, ...strengthNote(st, THREAT_FREE_CHOICE)],
-      warn: `Curse — ${s.curse}`,
+      warn: `Curse — ${shrineCurse(st, s)}`,
       action: { label: 'Accept the terms', run: accept },
       secondary: { label: 'Walk away', icon: 'back', run: () => st.declineShrine() },
     },
   ]
-}
-
-function recruitOffers(st: St): Offer[] {
-  const full = st.roster.length >= MAX_ROSTER
-  const out: Offer[] = st.recruitOptions.map((s) => ({
-    id: s.id,
-    // A hire is shown as the hero pick shows a hero: one comparison card each.
-    title: s.name,
-    sub: kitName(s),
-    color: heroLookVar(s),
-    glyph: GLYPH[lookOf(s)],
-    hero: heroCard(s, stagedRun()),
-    body: [
-      ...(full ? [`You already have ${MAX_ROSTER} heroes — dismiss one first.`] : []),
-      ...(full ? [] : strengthNote(st, THREAT_FREE_CHOICE)),
-    ],
-    action: {
-      // The tapped candidate's id goes to the store.
-      label: full ? 'No room for more heroes' : `Recruit ${s.name}`,
-      done: `${s.name} joins your heroes`,
-      run: () => st.acceptRecruit(s.id),
-      disabled: full,
-    },
-  }))
-  out.push({ id: 'skip', title: 'Walk on', icon: 'back', immediate: true, body: ['Turn the recruit away and march.'], action: { label: 'Walk on', run: () => st.skipRecruit() } })
-  return out
 }
 
 /**
@@ -781,10 +739,10 @@ function rewardOffers(st: St): Offer[] {
     // applies to the whole watch", which is false for every item card: an item
     // goes to the pack and helps whoever wears it.
     // Short, because it shares the row with the card's name and rarity.
-    sub: c.kind === 'item' ? 'to pack' : c.kind === 'relic' ? 'relic' : 'all heroes',
+    sub: c.kind === 'item' ? 'to pack' : c.kind === 'relic' ? 'relic' : 'boon',
     rarity: c.rarity,
     color: rarityVar(c.rarity),
-    icon: c.item ? itemIcon(c.item) : c.kind === 'relic' ? 'relic' : 'boon',
+    icon: c.item ? itemIcon(c.item) : c.kind === 'relic' ? (c.relic ? relicMark(c.relic) : 'relic') : 'boon',
     mark: c.item ? damageMark(c.item) : null,
     bodyIcons: !!c.item,
     warn: c.downside ? `Downside — ${c.downside}` : undefined,
@@ -792,11 +750,9 @@ function rewardOffers(st: St): Offer[] {
       ? [c.desc, ...itemBody(c.item)]
       : c.kind === 'relic'
         ? relicLines(c.relic)
-        : [
-          c.desc,
-          c.grant ? describeGrant(c.grant) : '',
-          ...(c.grant?.mods ? describeMods(c.grant.mods) : []),
-        ]
+        : // The card's one effect line states every number (`rewards.ts`); the
+          // generated read-outs under it said each again (Oct 2026: say a fact once).
+          [c.desc]
     ).filter(Boolean),
     // Team-wide mods merge with gear and branch mods, and the rule that decides
     // the winner was surfaced nowhere (H2). It is reference text, so it sits
@@ -898,9 +854,7 @@ function crossroadsOffers(st: St): Offer[] {
           // line — `mutations.ts` states that its `downside` is the number the
           // engine applies, and this is what lets a player check that.
           ...describeMods(m.mods),
-          held
-            ? `${aimed.name} already carries this one.`
-            : `Permanent — ${aimed.name} keeps it for the rest of the run and there is no reroll.`,
+          ...(held ? [`${aimed.name} already carries this one.`] : []),
         ],
         action: {
           label: held ? 'Already carried' : `Give ${aimed.name} ${name}`,
@@ -908,47 +862,86 @@ function crossroadsOffers(st: St): Offer[] {
           disabled: held,
           confirm: {
             label: `Yes — mutate ${aimed.name}`,
-            note: `${name} is permanent — ${aimed.name} carries it for the rest of the run and there is no reroll.${m.downside ? ` It costs ${m.downside}.` : ''} Use the red "Yes — mutate ${aimed.name}" button below to go through with it; "Never mind" or another card leaves the choice open.`,
+            note: `${name} is permanent and can't be rerolled.${m.downside ? ` It costs ${m.downside}.` : ''}`,
           },
         },
       }
     })
     // Aiming is reversible, so backing out of it has to be reversible too — and
-    // it must not look like it forfeits the fork.
+    // it must not look like it forfeits the fork. With hires on the table the
+    // way back is to them; aiming at another of your own is a row each.
+    for (const h of st.roster) {
+      if (h.id === aimed.id) continue
+      out.push({
+        id: `aim-${h.id}`,
+        title: `Aim at ${h.name} instead`,
+        icon: 'mutate',
+        immediate: true,
+        body: [`The same ${mutations.length} mutations, for ${h.name}`],
+        action: { label: `Aim at ${h.name}`, run: () => st.aimHeroMutation(h.id) },
+      })
+    }
     out.push({
       id: 'unaim',
-      title: 'Pick someone else',
+      title: cr.recruits.length ? 'Back to the hires' : 'Pick someone else',
       sub: `Aiming at ${aimed.name}`,
       icon: 'back',
       immediate: true,
-      body: ['Back to the recruits and your heroes. Nothing has been spent, and the same three mutations will be waiting.'],
-      action: { label: 'Pick someone else', run: () => st.aimHeroMutation(null) },
+      body: ['Nothing spent. The same mutations will wait.'],
+      action: { label: cr.recruits.length ? 'Back to the hires' : 'Pick someone else', run: () => st.aimHeroMutation(null) },
     })
     return out
   }
 
-  // ---- step 1: recruit, or aim ---------------------------------------------
-  const out: Offer[] = cr.recruits.map((s) => ({
-    id: s.id,
-    title: `${s.name} · ${kitName(s)}`,
-    sub: `Recruit · ${kitName(s)}`,
-    color: heroLookVar(s),
-    glyph: GLYPH[lookOf(s)],
-    ...heroBits(s),
-    // A stranger and one of your own are the same sprite in the same coloured
-    // frame; the corner mark is what tells the two halves of this fork apart
-    // before you tap one.
-    portrait: { ...heroBits(s).portrait, badge: 'recruit' },
-    // `recruitTeammate` charges the choice tax on the spot. The mutate branch
-    // does NOT charge it here any more: `aimHeroMutation` commits nothing, and
-    // the tax is paid by `chooseHeroMutation` one step later (M5).
-    //
-    // The FREE_EXIT variant, not the VISIT one: the Crossroads is a screen, not
-    // a map node — `finishCrossroads` only changes `screen` and charges no
-    // visit step — so marching on here really does cost nothing.
-    body: [...heroBody(s), ...strengthNote(st, THREAT_FREE_FORK)],
-    action: { label: 'Take the recruit', run: () => st.recruitTeammate(s.id) },
-  }))
+  // ---- step 1: the city's hires — or, with none, aim a mutation -------------
+  //
+  // The gameplay pass (Oct 2026): a hero is hired only here, as the caravan
+  // reaches a city. The candidates are a pick-one board (`HeroCards`, the
+  // hero pick's strip and card): a token focuses, the CTA hires. Hiring
+  // nobody is a row under it, and so is the fork's other branch — a mutation
+  // for one of your own instead — which aims at your strongest hero; step 2
+  // lets you aim at another.
+  const mutateRow = (): Offer | null => {
+    if (!mutations.length || !st.roster.length) return null
+    const carry = st.roster.reduce((a, b) => (computeCombat(b).dps > computeCombat(a).dps ? b : a))
+    return {
+      id: 'mutate',
+      title: 'A mutation instead',
+      sub: `${mutations.length} Mythics`,
+      icon: 'mutate',
+      immediate: true,
+      body: ['Hire nobody; change how one hero attacks, for good.'],
+      action: { label: 'A mutation instead', run: () => st.aimHeroMutation(carry.id) },
+    }
+  }
+  if (cr.recruits.length) {
+    const full = st.roster.length >= MAX_ROSTER
+    const out: Offer[] = cr.recruits.map((s) => ({
+      id: s.id,
+      title: s.name,
+      sub: kitName(s),
+      color: heroLookVar(s),
+      glyph: GLYPH[lookOf(s)],
+      hero: heroCard(s, stagedRun()),
+      body: [
+        ...(full ? [`You have ${MAX_ROSTER} heroes, the most you can lead.`] : []),
+        ...(full ? [] : strengthNote(st, THREAT_FREE_FORK)),
+      ],
+      action: {
+        label: full ? 'No room for more heroes' : `Hire ${s.name}`,
+        done: `${s.name} joins your heroes`,
+        run: () => st.recruitTeammate(s.id),
+        disabled: full,
+      },
+    }))
+    const m = mutateRow()
+    if (m) out.push(m)
+    out.push({ id: 'skip', title: 'Hire nobody', icon: 'back', immediate: true, body: [], action: { label: 'Hire nobody', run: () => st.finishCrossroads() } })
+    return out
+  }
+
+  // No hires (a full company): the fork is a mutation, aimed at one of yours.
+  const out: Offer[] = []
   for (const h of st.roster) {
     const carried = h.mutations ?? []
     out.push({
@@ -960,19 +953,19 @@ function crossroadsOffers(st: St): Offer[] {
       ...heroBits(h),
       portrait: { ...heroBits(h).portrait, badge: 'mutate' },
       body: [
-        `Change how ${h.name} attacks, permanently.`,
-        `${mutations.length} Mythic mutations are on the table — you read all ${mutations.length} and take one. They were dealt when the fork fired, so aiming at a different hero does not change them.`,
-        ...carried.map((m) => `Already carries ${mutationName(m.key, m.name)} — ${m.desc}`),
-        'Aiming costs nothing and can be undone.',
+        `Change how ${h.name} attacks, for good: pick 1 of ${mutations.length} Mythic mutations.`,
+        ...carried.map((m) => `Carries ${mutationName(m.key, m.name)} — ${m.desc}`),
+        { text: 'The same mutations whoever you aim at. Aiming is free.', tone: 'note' as const },
       ],
       action: { label: `Aim at ${h.name}`, run: () => st.aimHeroMutation(h.id) },
     })
   }
+  out.push({ id: 'skip', title: 'March on', icon: 'back', immediate: true, body: [], action: { label: 'March on', run: () => st.finishCrossroads() } })
   return out
 }
 
 function leaveOffer(st: St): Offer {
-  return { id: 'leave', title: 'March on', icon: 'back', immediate: true, body: ['Leave the offers and continue.'], action: { label: 'March on', run: () => st.leaveEvent() } }
+  return { id: 'leave', title: 'March on', icon: 'back', immediate: true, body: [], action: { label: 'March on', run: () => st.leaveEvent() } }
 }
 
 /**
@@ -1027,10 +1020,7 @@ function settingsOffers(s: Settings): Offer[] {
        * (the director stops scheduling), so the old on/off row is the bottom of
        * this dial and no longer needs a row of its own.
        */
-      body: [
-        'Effects carry information — what hit, what died, what got through. Music carries none, so it is the one to turn down first.',
-        'Mute silences everything at once.',
-      ],
+      body: ['Effects tell you what hit, died or got through; music is safe to lower first.'],
       sliders: audioDials(s),
       action: { label: s.audio.muted ? 'Unmute' : 'Mute', run: () => s.toggleMute(), quiet: true },
     },
@@ -1039,10 +1029,7 @@ function settingsOffers(s: Settings): Offer[] {
       title: 'Calm audio',
       sub: onOff(s.calmAudio),
       icon: 'calm',
-      body: [
-        'The score without its drums, a softer master limiter, and the effects a little further forward than the music.',
-        'Every warning still plays — only the pulse goes.',
-      ],
+      body: ['No drums, a softer mix, effects ahead of the music. Every warning still plays.'],
       action: { label: s.calmAudio ? 'Turn off' : 'Turn on', run: () => s.setCalmAudio(!s.calmAudio), quiet: true },
     },
     {
@@ -1050,7 +1037,7 @@ function settingsOffers(s: Settings): Offer[] {
       title: 'Mono audio',
       sub: onOff(s.monoAudio),
       icon: 'mono',
-      body: ['Folds the stereo mix to one channel, so nothing is lost to a single earbud or one ear.'],
+      body: ['One channel, so one earbud hears everything.'],
       action: { label: s.monoAudio ? 'Turn off' : 'Turn on', run: () => s.setMonoAudio(!s.monoAudio), quiet: true },
     },
     {
@@ -1062,11 +1049,27 @@ function settingsOffers(s: Settings): Offer[] {
       action: { label: s.reducedMotion ? 'Turn off' : 'Turn on', run: () => s.setReducedMotion(!s.reducedMotion), quiet: true },
     },
     {
+      // Oct 2026: the company worlds' motion (`game/render/fxQuality`).
+      id: 'effects',
+      title: 'Effects',
+      sub: s.reducedMotion ? 'Off (reduced motion)' : s.effects === 'light' ? 'Light' : 'Full',
+      icon: 'evolve',
+      body: [
+        'Each company’s world round the panels and the field’s edges: embers, sparks, petals, paint, stars.',
+        'Light: half the particles, no glows, still frames. Full drops to Light by itself on a slow device.',
+      ],
+      action: {
+        label: s.effects === 'light' ? 'Set to Full' : 'Set to Light',
+        run: () => s.setEffects(s.effects === 'light' ? 'full' : 'light'),
+        quiet: true,
+      },
+    },
+    {
       id: 'contrast',
       title: 'High contrast',
       sub: onOff(s.highContrast),
       icon: 'contrast',
-      body: ['Stronger borders and text contrast throughout.'],
+      body: ['Stronger borders and text.'],
       action: { label: s.highContrast ? 'Turn off' : 'Turn on', run: () => s.setHighContrast(!s.highContrast), quiet: true },
     },
     {
@@ -1074,10 +1077,7 @@ function settingsOffers(s: Settings): Offer[] {
       title: 'Large UI',
       sub: onOff(s.uiScale === 'large'),
       icon: 'scale',
-      body: [
-        'Grows every label, tag and price by about 15%, and lifts the touch floor from 44px to 48px.',
-        'It used to promise "bigger type" and move one button. It moves the whole type ramp now.',
-      ],
+      body: ['All text about 15% larger; touch targets 48px.'],
       action: {
         label: s.uiScale === 'large' ? 'Normal size' : 'Make it large',
         run: () => s.setUiScale(s.uiScale === 'large' ? 'normal' : 'large'),
@@ -1089,11 +1089,7 @@ function settingsOffers(s: Settings): Offer[] {
       title: 'Colour vision',
       sub: VISION_LABEL[s.vision],
       icon: 'vision',
-      body: [
-        'Re-tints the rarity ramp, the three archetype hues and the good/bad pair for the common colour-vision differences.',
-        'Rarity also carries a letter and a pip count, and every hero carries its archetype mark — so colour is never the only signal either way.',
-        `Now: ${VISION_LABEL[s.vision]}.`,
-      ],
+      body: ['Re-tints rarity, hero and good/bad colours. Rarity also shows pips, so colour is never the only signal.'],
       action: {
         label: `Switch to ${VISION_LABEL[nextVision(s.vision)]}`,
         run: () => s.setVision(nextVision(s.vision)),
@@ -1124,9 +1120,10 @@ function settingsOffers(s: Settings): Offer[] {
          * is exactly what changes, so the choice is informed rather than a
          * mystery dial.
          */
-        'Softens how much cargo a raider steals when one reaches your wagons.',
         assistProfile(s.assist).blurb,
-        'Nothing else moves: same waves, same loot, same pay. Change it whenever you like, mid-run included.',
+        'Waves, loot and pay stay the same.',
+        // The gameplay pass: said plainly, where the dial is set (`run/ranking`).
+        { text: 'A run with assist on, even for one wave, is marked Assisted: it keeps every reward but skips leaderboards.', tone: 'note' },
       ],
       action: {
         label: `Set to ${assistProfile(nextAssist(s.assist)).label}`,
@@ -1140,10 +1137,7 @@ function settingsOffers(s: Settings): Offer[] {
       title: 'Held waves continue',
       sub: onOff(s.autoContinue),
       icon: 'wave',
-      body: [
-        'Between sub-waves the fight holds for your one move. On: if you leave the field alone, a ring on Next counts four seconds and the next sub-wave goes in by itself. Touch the field or a hero and it waits for you.',
-        'Off: every hold waits for Next.',
-      ],
+      body: ['On: a held sub-wave sends the next after 4 seconds, unless you touch the field. Off: it waits for Next.'],
       action: { label: s.autoContinue ? 'Turn off' : 'Turn on', run: () => s.setAutoContinue(!s.autoContinue), quiet: true },
     },
     {
@@ -1151,10 +1145,7 @@ function settingsOffers(s: Settings): Offer[] {
       title: 'Show everything from the start',
       sub: onOff(s.showEverything),
       icon: 'map',
-      body: [
-        'Off: the game introduces itself a piece at a time — gear after the first win, relics at the first elite, the contract board after the first contract, then the HQ, sealed crates, stakes, the market and company focus as you go.',
-        'On: every screen shows everything straight away, as it does for a returning player.',
-      ],
+      body: ['Off: features arrive one at a time as you play. On: every screen shows everything now.'],
       action: {
         label: s.showEverything ? 'Introduce things as they come' : 'Show everything',
         run: () => s.setShowEverything(!s.showEverything),
@@ -1166,10 +1157,7 @@ function settingsOffers(s: Settings): Offer[] {
       title: 'Tips',
       sub: Object.values(s.taught).some(Boolean) ? 'Some seen' : 'All waiting',
       icon: 'tips',
-      body: [
-        'The one-line hints that appear the first time something new matters — posting a hero, gear, enemy strength, the merchant, relics, evolutions.',
-        'Bring them back for another pass, or for whoever picks the game up on this device next.',
-      ],
+      body: ['The one-line hints shown the first time something matters. Bring them back for another pass.'],
       action: { label: 'Show the tips again', run: () => s.resetTeaching(), quiet: true },
     },
     {
@@ -1178,10 +1166,7 @@ function settingsOffers(s: Settings): Offer[] {
       sub: 'Destructive',
       icon: 'warn',
       color: 'var(--bad-text)',
-      body: [
-        'Wipes your bank, HQ upgrades, standing, unlocked skills and items, and records.',
-        'This cannot be undone. Nothing is kept and nothing is backed up.',
-      ],
+      body: ['Wipes your bank, HQ, standing, unlocks and records. There is no undo.'],
       action: {
         label: 'Erase everything',
         run: () => useMetaStore.getState().resetMeta(),
@@ -1189,7 +1174,7 @@ function settingsOffers(s: Settings): Offer[] {
         // when this one arms — not of this one. See `useArmedAction`.
         confirm: {
           label: 'Yes — erase it all',
-          note: 'Everything you have earned will be gone. Use the red "Yes — erase it all" button below to go through with it; "Never mind" or another row keeps it.',
+          note: 'Everything you have earned will be gone.',
         },
       },
     },
@@ -1199,7 +1184,7 @@ function settingsOffers(s: Settings): Offer[] {
 /** "4 crates · Raiders 32% stronger · 4 more elites an act" — the stake, for receipts. */
 export const stakeLine = (crates: number, charter = false): string =>
   charter
-    ? `Sovereign Route · every goblin clan from the first fight, ${MUSTER_PCT}% stronger.`
+    ? `Sovereign Route · every kind of goblin from the first fight, ${MUSTER_PCT}% stronger.`
     : crates <= 0
       ? 'Escort · standard raiders.'
       : `${crates} crate${crates === 1 ? '' : 's'} · ${difficultyEffect(crates)}`
@@ -1222,29 +1207,29 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
     title: 'Back',
     icon: 'back',
     immediate: true,
-    body: ['Back to the menu.'],
+    body: [],
     action: { label: 'Back', run: () => setView('menu') },
   }
   if (view === 'settings') {
-    // Your militia's name and banner (build step 4) — changed here, once raised.
-    const m = meta.militia
+    // Your militia's name and flag — founded when the Sovereign Route opens, changed here.
+    const m = flyingMilitia(meta.militia, meta)
+    if (!m) return [back, ...settingsOffers(settings)]
     const militia: Offer = {
       id: 'militia',
       title: 'Your militia',
-      sub: m ? m.name : 'Not named yet',
+      sub: m.name,
       icon: 'banner',
       immediate: true,
-      body: ['Your militia’s name and banner. The banner flies over your wagons and your HQ.'],
-      action: { label: m ? 'Change' : 'Raise your banner', run: () => setView('militia') },
+      body: ['Its name and flag. The flag flies over your wagons and HQ.'],
+      action: { label: 'Change', run: () => setView('militia') },
     }
-    return [back, ...(m || !staged ? [militia] : []), ...settingsOffers(settings)]
+    return [back, militia, ...settingsOffers(settings)]
   }
   // The banner picker draws itself (RootShell); it has no offers.
   if (view === 'militia') return [back]
-  if (view === 'codex') return [back, ...codexOffers({ ...meta, staged })]
   // The HQ and the sealed crates are pages of their own (`hq/HqScreen.tsx`,
   // `hq/CratesScreen.tsx`); the Selector holds only the way back.
-  if (view === 'hq' || view === 'crates' || view === 'charter') return [back]
+  if (view === 'hq' || view === 'crates' || view === 'charter' || view === 'codex' || view === 'livery' || view === 'war' || view === 'track') return [back]
   const best = topStanding(meta.standing)
   const bestCo = COMPANY_IDS.find((c) => standingOf(meta.standing, c) === best)
   // The staggered reveal (October 2026): the HQ and the crates keep their
@@ -1254,13 +1239,13 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
     {
       id: 'run',
       title: 'Start a Run',
-      sub: staged ? 'Your first contract' : 'Contract board',
+      sub: staged ? 'Your first contract' : 'The focused road’s terms',
       // `depth` is the map's own marker: a run is a walk down a road (M8).
       icon: 'depth',
       color: 'var(--accent)',
       body: staged
-        ? ['Peppercorn Co. needs an escort for its spice. Free — every city on the road pays you.']
-        : ['Pick a company and a road. Escort for free, or stake cargo for a bigger payout.'],
+        ? ['Peppercorn Co. needs its spice escorted. It’s free, and every city pays you.']
+        : ['Pick a road, then read its terms: escort free, or stake cargo for more pay.'],
       action: { label: 'Begin', run: () => game.openContracts() },
     },
     // LS3: a first-timer's menu names neither the HQ nor the sealed crates
@@ -1272,22 +1257,26 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
           {
             id: 'hq',
             title: 'Headquarters',
+            short: 'HQ',
             sub: `${moneyText(meta.bank, 'gold')} banked`,
-            icon: 'base',
+            // The castle as it stands: it grows with the upgrades bought (`run/hq.hqStage`).
+            icon: hqMark(meta.upgrades),
             immediate: true,
-            body: ['Your militia’s two offices: HR and Operations. Gold from your bank buys upgrades that last.'],
+            body: ['Bank gold buys upgrades that last; the castle grows with them.'],
             action: { label: 'Open', run: () => setView('hq') },
             ...(reveal.hq ? {} : { locked: HQ_OPENS_LINE }),
           } satisfies Offer,
           {
             id: 'crates',
             title: 'Sealed crates',
+            short: 'Crates',
             sub: `${moneyText(PULL_PRICE, 'gold')} a crate`,
             icon: 'loot',
             immediate: true,
-            body: ['A side bet: one random item, yours for good. The odds are on the crate.'],
+            body: ['A side bet: one random item, yours for good.'],
             action: { label: 'Open', run: () => setView('crates') },
             ...(reveal.crates ? {} : { locked: CRATES_OPEN_LINE }),
+            ...(crateBadge(meta.bank, reveal.crates) ? { badge: crateBadge(meta.bank, reveal.crates)! } : {}),
           } satisfies Offer,
         ]),
     {
@@ -1296,7 +1285,7 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
       sub: staged || !bestCo ? 'Glossary' : `Standing ${best}`,
       icon: 'grimoire',
       immediate: true,
-      body: ['A glossary of every idea you have met, your collection of skills and items, your standing with each company, feats earned and still open, and every goblin and relic your militia has seen.'],
+      body: ['Every item, skill, goblin, relic and feat, found and unfound, plus the glossary.'],
       action: { label: 'Open', run: () => setView('codex') },
     },
     {
@@ -1304,7 +1293,7 @@ function metaOffers(view: MetaView, meta: Meta, settings: Settings, setView: (v:
       title: 'Settings',
       icon: 'settings',
       immediate: true,
-      body: ['Audio, motion, contrast, scale, colour vision, assist and the first-run tips.'],
+      body: ['Sound, motion, contrast, size, colour, assist and tips.'],
       action: { label: 'Open', run: () => setView('settings') },
     },
   ]

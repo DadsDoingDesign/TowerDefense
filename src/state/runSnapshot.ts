@@ -29,8 +29,9 @@
  *   reload, and without it a freshly generated item could collide with the id of
  *   a restored one.
  */
-import { isSkillId, STARTER_SKILLS } from '../game/data/skills'
-import { ALL_ITEM_KINDS, BASIC_ITEM_KINDS, isItemKind } from '../game/data/itemKinds'
+import { chainOf, isCardId, isSkillId, STARTER_SKILLS } from '../game/data/skills'
+import { BASIC_ITEM_KINDS, CLASSIC_ITEM_KINDS, isItemKind } from '../game/data/itemKinds'
+import { canonicalKind, renamedItemName } from '../game/data/peopleKinds'
 import { gripOf, type HeroStyle } from '../game/data/items'
 import { MAX_SKILLS, migrateGrowth, SKILL_MILESTONES } from '../game/run/skills'
 import { clampStep } from '../game/run/watch'
@@ -48,6 +49,7 @@ import {
   type RunContract,
 } from '../game/run/contracts'
 import { CHARTER_PAYOUT, routeOf } from '../game/run/charter'
+import { readAsks, type RunAsk } from '../game/run/asks'
 import { BASE_RUN_HQ, FOCUS_STEP, MAX_FOCUS_BOOST, MAX_PACK, MAX_ROCKS_CUT, PACK_BASE, type RunHq } from '../game/run/hq'
 import { MYTHIC_EDGE } from '../game/data/items'
 import { LEGACY_RELIC_IDS } from '../game/data/relics'
@@ -117,13 +119,29 @@ export function legacyGold(o: Record<string, unknown>, depth: number): number {
  * (`charter: true`, no company, no crates, waypoints that pay nothing, a
  * destination that pays at most the charter's payout), and an item pool may
  * hold an owned Sovereign kind at its low weight. A v16 payload is neither.
+ *
+ * v18 — company asks (Draft 4 · A): a contract may carry `asks` — at most two
+ * from its company's own list (three on the Sovereign Route), each an id, the
+ * target it was dealt and its count (`run/asks.readAsks`). A v17 payload has
+ * none, and settles exactly as it was signed.
+ *
+ * v19 — the gameplay pass (Oct 2026): no recruit stops. A map node typed
+ * `recruit` loads as a battle (`asBattle`, every version), a recruit event is
+ * dropped (the node stays un-cleared and can be entered again) and
+ * `recruitOptions` is no longer written or read. The run may carry
+ * `assisted` (assist was on at some point of it; it counts for no ranking or
+ * record, `run/ranking.countsForRanking`): only a literal `true` reads as
+ * assisted, and a v18 payload loads unmarked.
  */
-export const RUN_SNAPSHOT_VERSION = 17
+export const RUN_SNAPSHOT_VERSION = 19
+
+/** A recruit stop from before the gameplay pass, read as the battle it is now. */
+const asBattle = (n: MapNode): MapNode => ((n.type as string) === 'recruit' ? { ...n, type: 'battle' } : n)
 
 /** `contracts` is never written (a board is not a run); it is here so the store's state is a source. */
 type Screen = 'hub' | 'contracts' | 'heroPick' | 'map' | 'crossroads' | 'battle'
 type RunPhase = 'active' | 'won' | 'lost' | 'cashedOut'
-type EventKind = 'merchant' | 'shrine' | 'recruit' | 'campfire'
+type EventKind = 'merchant' | 'shrine' | 'campfire'
 
 /**
  * The mid-map fork, as stored (v4).
@@ -148,12 +166,13 @@ interface CrossroadsSnap {
 const SCREENS: readonly Screen[] = ['hub', 'heroPick', 'map', 'crossroads', 'battle']
 const PHASES: readonly RunPhase[] = ['active', 'won', 'lost', 'cashedOut']
 const STATUSES: readonly ContractStatus[] = ['open', 'delivered', 'cashedOut', 'lost']
-const EVENT_KINDS: readonly EventKind[] = ['merchant', 'shrine', 'recruit', 'campfire']
+// A save parked on a recruit stop (before the gameplay pass) drops the event:
+// the stop is a battle now (`asBattle`), un-cleared, and can be entered again.
+const EVENT_KINDS: readonly EventKind[] = ['merchant', 'shrine', 'campfire']
 const ORIENTATIONS: readonly FieldOrientation[] = ['landscape', 'portrait']
 
 interface MerchantStock {
   items: { item: Item; price: number }[]
-  recruit: { sentinel: Sentinel; price: number } | null
   /** v7: the wagon repair on the counter (null once bought). */
   repair?: { hp: number; price: number } | null
   /** v7: rerolls taken at this stall. */
@@ -234,6 +253,8 @@ export interface RunSnapshot {
    * unstaged, which is what a returning player should get.
    */
   firstRun?: boolean
+  /** The gameplay pass (v19): assist was on at some point of the run — it counts for no ranking (`run/ranking`). */
+  assisted?: boolean
   inventory: Item[]
   runKills: number
 
@@ -253,7 +274,6 @@ export interface RunSnapshot {
   merchant: MerchantStock | null
   /** Shrines carry a closure; only the id survives JSON. */
   shrineOfferId: string | null
-  recruitOptions: Sentinel[]
   reward: RewardCard[] | null
   runMods: EffectMods[]
   /** v7: relics held, by id. An id this build does not know grants nothing. */
@@ -328,6 +348,8 @@ export interface RunStateSource {
   challenge: RunChallenge
   /** LS3 — optional so a source that predates staging still satisfies it. */
   firstRun?: boolean
+  /** The gameplay pass (v19): assist was on at some point of the run — it counts for no ranking (`run/ranking`). */
+  assisted?: boolean
   inventory: Item[]
   runKills: number
   activeNodeId: string | null
@@ -337,7 +359,6 @@ export interface RunStateSource {
   lastLoot: Item[]
   merchant: MerchantStock | null
   shrineOffer: ShrineOffer | null
-  recruitOptions: Sentinel[]
   reward: RewardCard[] | null
   runMods: EffectMods[]
   relics: string[]
@@ -387,6 +408,7 @@ export function captureRun(s: RunStateSource, streams: StreamPositions): RunSnap
     itemPool: s.itemPool,
     challenge: s.challenge,
     firstRun: s.firstRun === true,
+    assisted: s.assisted === true,
     inventory: s.inventory,
     runKills: s.runKills,
     activeNodeId: s.activeNodeId,
@@ -396,7 +418,6 @@ export function captureRun(s: RunStateSource, streams: StreamPositions): RunSnap
     lastLoot: s.lastLoot,
     merchant: s.merchant,
     shrineOfferId: s.shrineOffer?.id ?? null,
-    recruitOptions: s.recruitOptions,
     reward: s.reward,
     runMods: s.runMods,
     relics: s.relics,
@@ -447,7 +468,7 @@ const CLASS_STYLE: Readonly<Record<Archetype, HeroStyle>> = { fighter: 'swing', 
  * `battleMapId` has always been checked against the map registry, and the
  * comment on `snapshotBattleMap` explains why: "a map this build does not have
  * is not something to silently substitute". Every OTHER structured field was a
- * bare cast — `currentWave`, `reward`, `merchant`, `recruitOptions`, `roster`,
+ * bare cast — `currentWave`, `reward`, `merchant`, `roster`,
  * `inventory` — so a payload could name anything at all and the crash landed
  * wherever the value was first dereferenced, several screens later.
  *
@@ -523,6 +544,23 @@ const MOD_STRUCT_FIELDS = {
   // The classless rework's thorn burn and Gate mend.
   thornsBurn: ['dps', 'dur'],
   killMend: ['every', 'hp'],
+  // The peoples' kit (Oct 2026).
+  rateAura: ['rateMult', 'radius'],
+  critBurn: ['dps', 'dur'],
+  chainEvery: ['every', 'chains', 'dmgFrac'],
+  spitEvery: ['every', 'count', 'dps', 'dur'],
+  root: ['count', 'dur'],
+  // The fusions' twists (Oct 2026, `data/fusions.ts`).
+  critFreeze: ['dur', 'bonus', 'chance'],
+  focusStack: ['step', 'cap'],
+  heldBurst: ['frac', 'radius'],
+  contagion: ['count', 'radius'],
+  deathBurst: ['frac', 'radius'],
+  fanEvery: ['every', 'count', 'frac'],
+  frostSplash: ['frac', 'radius'],
+  critAura: ['add', 'radius'],
+  quakeEvery: ['every', 'frac', 'radius'],
+  frenzy: ['rate', 'cap'],
 } as const satisfies Partial<Record<keyof EffectMods, readonly string[]>>
 /**
  * Mods that are a **capability** rather than a magnitude — booleans.
@@ -536,6 +574,11 @@ const MOD_BOOL_FIELDS = {
   burnSpreadOnDeath: true,
   // Weapon clearance: the hook a skill sets to make its hero swing.
   grantsMelee: true,
+  // Whisperfang: a kill readies the next attack.
+  killReady: true,
+  // The fusions' twists: arcs carry statuses; an execution readies the next attack.
+  arcCarry: true,
+  executeReady: true,
 } as const satisfies Partial<Record<keyof EffectMods, true>>
 const MOD_KEYS: Record<keyof EffectMods, true> = {
   damageMult: true, rateMult: true, rangeMult: true, projSpeedMult: true,
@@ -547,6 +590,11 @@ const MOD_KEYS: Record<keyof EffectMods, true> = {
   burnSpreadOnDeath: true, grantsMelee: true,
   holdAdd: true, holdRadius: true, goldPerKill: true, vsHeld: true, vsSlowed: true,
   thornsBurn: true, rushPerHeld: true, killMend: true,
+  rateAura: true, vsPlated: true, vsWarded: true, critBurn: true, doubleEvery: true,
+  killReady: true, chainEvery: true, spitEvery: true, root: true,
+  ricochet: true, overkill: true, arcCarry: true, critFreeze: true, focusStack: true,
+  heldBurst: true, firstHit: true, contagion: true, deathBurst: true, fanEvery: true,
+  executeReady: true, frostSplash: true, critAura: true, quakeEvery: true, frenzy: true,
 }
 
 /**
@@ -753,8 +801,20 @@ function validRewardCard(raw: unknown): raw is RewardCard {
   return false
 }
 
-/** A merchant shelf: priced items, and either no recruit or a real one. */
-function validMerchant(raw: unknown): raw is MerchantStock {
+/**
+ * A merchant's counter as a save may hold it: a save from before Oct 2026 can
+ * carry the hire the counter used to offer. It is validated, migrated with
+ * every other hero a save holds, and then dropped on load (`dropHire`): a
+ * merchant sells goods only now.
+ */
+type SavedMerchant = MerchantStock & { recruit?: { sentinel: Sentinel; price: number } | null }
+const dropHire = (m: SavedMerchant): MerchantStock => {
+  const { recruit: _hire, ...rest } = m
+  return rest
+}
+
+/** A merchant shelf: priced items, and (an older save) either no recruit or a real one. */
+function validMerchant(raw: unknown): raw is SavedMerchant {
   if (!isObj(raw)) return false
   if (!Array.isArray(raw.items)) return false
   if (!raw.items.every((e) => isObj(e) && validItem(e.item) && isNum(e.price))) return false
@@ -976,7 +1036,20 @@ const legacyShield = (heroId: string): Item => ({
 
 function normaliseSkills(s: Sentinel): void {
   // Any hero may hold any skill (no classes): known ids, each once, at most three.
-  const kept = [...new Set(s.skills ?? [])].filter((id) => isSkillId(id)).slice(0, MAX_SKILLS)
+  // A merged skill (`run/fusion.ts`: a named `fz_*` or a plain `mx.…` id the
+  // resolver can read) is a known id. No library skill is held twice: a slot
+  // whose skills another slot before it already holds is dropped (a loose
+  // copy of a merge's part, or two merges sharing one).
+  const ids = [...new Set(s.skills ?? [])].filter((id) => isSkillId(id))
+  const held = new Set<string>()
+  const kept = ids
+    .filter((id) => {
+      const chain = chainOf(id)
+      if (chain.some((c) => held.has(c))) return false
+      for (const c of chain) held.add(c)
+      return true
+    })
+    .slice(0, MAX_SKILLS)
   if (kept.length) s.skills = kept
   else delete s.skills
   const picks = Math.max(0, Math.min(SKILL_MILESTONES.length, Math.floor(num(s.skillPicks, 0))))
@@ -991,15 +1064,18 @@ function normaliseSkills(s: Sentinel): void {
  * unlocks — keeps dealing every kind (what it was dealing).
  */
 function migrateItemPool(raw: unknown, company: CompanyId | null, hq: RunHq): string[] {
-  const ids = [...new Set(arr<unknown>(raw).filter(isItemKind))]
-  const set = ids.length ? ids.filter((k) => !BASIC_ITEM_KINDS.includes(k)) : [...ALL_ITEM_KINDS]
+  // A renamed kind (the roster's, Oct 2026) is read as its new name.
+  const ids = [...new Set(arr<unknown>(raw).map((k) => (typeof k === 'string' ? canonicalKind(k) : k)).filter(isItemKind))]
+  // A run saved before unlocks deals the catalogue it was dealing then.
+  const set = ids.length ? ids.filter((k) => !BASIC_ITEM_KINDS.includes(k)) : [...CLASSIC_ITEM_KINDS]
   // v17: an owned Sovereign kind deals at its low weight (`contracts.runItemPool`).
   return runItemPool(set, company, { company: hq.focus, boost: hq.boost })
 }
 
 /** The run's skill pool: known ids, weighted like the items (company focus too, v16); a payload with none deals the starters. */
 function migrateSkillPool(raw: unknown, company: CompanyId | null, hq: RunHq): string[] {
-  const ids = [...new Set(arr<unknown>(raw).filter(isSkillId))]
+  // Library cards only: a fused skill is never dealt, so never in a pool.
+  const ids = [...new Set(arr<unknown>(raw).filter(isCardId))]
   return weightPool(ids.length ? ids : [...STARTER_SKILLS], company, skillCompany, { company: hq.focus, boost: hq.boost })
 }
 
@@ -1060,6 +1136,9 @@ export function migrateContract(raw: unknown, runMap: Pick<RunMap, 'nodes'>, cle
     company: raw.company,
     crates: clampCrates(num(raw.crates, 0)),
     market: num(raw.market, 1) === MARKET_MULT ? MARKET_MULT : 1,
+    // The trade war's desperate terms (meta v14): a strict boolean, kept only
+    // when true — absent is ordinary terms, as every older run was signed.
+    ...(raw.desperate === true ? { desperate: true } : {}),
     purse: gold(raw.purse),
     ...(raw.advance === true ? { advance: true } : {}),
     paid,
@@ -1072,7 +1151,14 @@ export function migrateContract(raw: unknown, runMap: Pick<RunMap, 'nodes'>, cle
     // none of its purse was spent: every gold above the purse is the road's.
     earned: raw.earned == null ? Math.max(0, gold(purseNow) - gold(raw.purse)) : gold(raw.earned),
     hq: migrateRunHq(raw.hq),
+    ...withAsks(raw.asks, raw.company),
   }
+}
+
+/** v18: the contract's asks, validated (`run/asks.readAsks`); none is no field at all. */
+function withAsks(raw: unknown, company: CompanyId | null): { asks?: RunAsk[] } {
+  const asks = readAsks(raw, company)
+  return asks ? { asks } : {}
 }
 
 /**
@@ -1107,6 +1193,7 @@ function migrateCharter(raw: Record<string, unknown>, purseNow: number): RunCont
     signed: raw.signed === true,
     earned: raw.earned == null ? Math.max(0, gold(purseNow) - gold(raw.purse)) : gold(raw.earned),
     hq: { ...hq, focus: null, boost: 0 },
+    ...withAsks(raw.asks, null),
   }
 }
 
@@ -1169,15 +1256,15 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
   // malformed one means we cannot hand back the run that was saved. Refusing is
   // not discarding — `payoutFromRaw` still pays this payload its marks.
   const inventory = arr<Item>(o.inventory)
-  const recruitOptions = arr<Sentinel>(o.recruitOptions)
+  // A recruit stop's candidates (before the gameplay pass) are not read back:
+  // there are no recruit stops, and the stop itself loads as a battle.
   if (!roster.every(validSentinel)) return null
   if (!inventory.every(validItem)) return null
-  if (!recruitOptions.every(validSentinel)) return null
   const reward = Array.isArray(o.reward) ? (o.reward as RewardCard[]) : null
   if (reward && !reward.every(validRewardCard)) return null
   const merchant = o.merchant ?? null
   if (merchant !== null && !validMerchant(merchant)) return null
-  // The fork's recruit branch is `recruitOptions` under another name, and its
+  // The fork's recruit branch is a city's hires, and its
   // mutation branch was rolled from the seeded stream at fork time — both are
   // earned, neither is re-derivable, so they follow the same rule.
   const crossroads = migrateCrossroads(o.crossroads)
@@ -1224,11 +1311,10 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
   const refund = version < 7 ? legacyUpgradeRefund(roster) : 0
   if (version < 7) {
     legacyStripRoster(roster)
-    legacyStripSentinels(recruitOptions)
     for (const i of inventory) legacyItem(i)
     if (merchant && isObj(merchant)) {
       for (const e of (merchant as MerchantStock).items) legacyItem(e.item)
-      if ((merchant as MerchantStock).recruit) legacyStripSentinels([(merchant as MerchantStock).recruit!.sentinel])
+      if ((merchant as SavedMerchant).recruit) legacyStripSentinels([(merchant as SavedMerchant).recruit!.sentinel])
     }
     for (const c of reward ?? []) if (c.item) legacyItem(c.item)
     if (crossroads) {
@@ -1242,11 +1328,10 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
   // and the run's `runDowns` counter is simply not read back (below).
   if (version < 11) {
     stripSentinels(roster)
-    stripSentinels(recruitOptions)
     for (const i of inventory) stripItem(i)
     if (merchant && isObj(merchant)) {
       for (const e of (merchant as MerchantStock).items) stripItem(e.item)
-      if ((merchant as MerchantStock).recruit) stripSentinels([(merchant as MerchantStock).recruit!.sentinel])
+      if ((merchant as SavedMerchant).recruit) stripSentinels([(merchant as SavedMerchant).recruit!.sentinel])
     }
     for (const c of reward ?? []) {
       stripItem(c.item)
@@ -1260,12 +1345,32 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
     for (const m of runMods) stripMods(m)
   }
 
+  // ---- the roster's renames (Oct 2026): every version ----------------------
+  // A Gilded Easel is a Kingscale Shield now, a Moonquill Codex a Greenvial
+  // Herbal (`peopleKinds.KIND_RENAMES`): the noun in each saved item's name
+  // follows, so it reads, draws and tiers as the kind it is.
+  {
+    const rename = (item: Item | null | undefined) => {
+      if (item) item.name = renamedItemName(item.name)
+    }
+    const renameHeroes = (list: Sentinel[]) => {
+      for (const s of list) for (const slot of ['mainHand', 'offHand', 'body'] as const) rename(s.equipment[slot])
+    }
+    renameHeroes(roster)
+    for (const i of inventory) rename(i)
+    if (merchant && isObj(merchant)) {
+      for (const e of (merchant as MerchantStock).items) rename(e.item)
+      if ((merchant as SavedMerchant).recruit) renameHeroes([(merchant as SavedMerchant).recruit!.sentinel])
+    }
+    for (const c of reward ?? []) rename(c.item)
+    if (crossroads) renameHeroes(crossroads.recruits)
+  }
+
   // ---- v12 → v13: perks and evolutions became skills (SK1) ----------------
   // Every hero a save can carry — the company, the candidates on offer, a
   // merchant's hire, the fork's recruits — is migrated and normalised.
   migrateSkills(roster, version)
-  migrateSkills(recruitOptions, version)
-  if (merchant && isObj(merchant) && (merchant as MerchantStock).recruit) migrateSkills([(merchant as MerchantStock).recruit!.sentinel], version)
+  if (merchant && isObj(merchant) && (merchant as SavedMerchant).recruit) migrateSkills([(merchant as SavedMerchant).recruit!.sentinel], version)
   if (crossroads) migrateSkills(crossroads.recruits, version)
   const challenge = migrateChallenge(o.challenge)
   const clearedIds = arr<string>(o.clearedNodeIds)
@@ -1278,7 +1383,10 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
     runSeed: num(o.runSeed, 0),
     screen: str<Screen>(o.screen, 'map', SCREENS),
     runPhase: str<RunPhase>(o.runPhase, 'active', PHASES),
-    runMap: { nodes: runMap.nodes as MapNode[], edges, layers: num(runMap.layers, 11) },
+    // A recruit stop (before the gameplay pass, v19) is a battle now: a hire
+    // is made at a city. The node keeps its id and its place, so its cleared
+    // flag, its edges and its seeded ground all still read.
+    runMap: { nodes: (runMap.nodes as MapNode[]).map(asBattle), edges, layers: num(runMap.layers, 11) },
     currentNodeId,
     clearedNodeIds: clearedIds,
     reachableNodeIds: arr<string>(o.reachableNodeIds),
@@ -1319,6 +1427,10 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
     // LS3: only a literal `true` stages a run. Anything else — absent (a save
     // from before staging), a string, a number — resumes unstaged.
     firstRun: o.firstRun === true,
+    // v19: only a literal `true` marks a run assisted. Anything else — absent
+    // (a v18 save), a string, a number — loads unmarked; the store then adds
+    // the dial as it stands at the resume (`runSlice.resumeRun`).
+    assisted: o.assisted === true,
     // v5 → v6: the campaign kit used to be dealt into the pack at `newRun`,
     // before the hero was picked. It is dealt at the pick now, so a v5 payload
     // parked on hero-pick drops the old roster-blind kit instead of carrying
@@ -1341,9 +1453,8 @@ export function migrateSnapshot(raw: unknown): RunSnapshot | null {
     // in the inventory), so a malformed entry is dropped rather than refusing
     // the run over a line of copy.
     lastLoot: arr<unknown>(o.lastLoot).filter(validItem),
-    merchant: merchant as MerchantStock | null,
+    merchant: merchant ? dropHire(merchant as SavedMerchant) : null,
     shrineOfferId: typeof o.shrineOfferId === 'string' ? o.shrineOfferId : null,
-    recruitOptions,
     reward,
     runMods,
     // A relic list is earned content like the rest, but an entry is only an id:
@@ -1447,7 +1558,6 @@ function coherent(snap: RunSnapshot): RunSnapshot | null {
     snap.event = null
     snap.merchant = null
     snap.shrineOfferId = null
-    snap.recruitOptions = []
   }
 
   /** Back to the map, with no fight in hand. */
@@ -1584,6 +1694,8 @@ export function payoutFromRaw(raw: unknown): SnapshotPayout | null {
     kills: Math.max(0, num(o.runKills, 0)),
     gold: Math.max(0, Math.floor(num(o.gold, 0))),
     contract,
+    // A settle from storage keeps the run's mark: it counts for no ranking.
+    assisted: o.assisted === true,
     ...(legacy ? { legacyGold: legacyGold(o, depth) } : {}),
   }
 }

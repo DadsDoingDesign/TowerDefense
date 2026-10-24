@@ -1,6 +1,6 @@
 import { hashSeed, RNG } from '../core/rng'
 import { SPECIALISTS, specialistCount } from './behaviours'
-import { effectiveHp, ENEMY_TYPES, modKey } from './enemies'
+import { effectiveHp, ENEMY_MODS, ENEMY_TYPES, modKey } from './enemies'
 import type { SpawnEvent, WaveDef } from '../types'
 import { ACT_LAYERS, RUN_LAYERS } from '../run/threat'
 
@@ -917,6 +917,11 @@ export interface EncounterOptions {
    * arriving one at a time (`gate`). Omitted: the teaching ramp, as ever.
    */
   muster?: boolean
+  /**
+   * Armour every goblin in an ordinary fight wears ({@link nodeArmour}). A
+   * variant that already wears a modifier (the elite columns) keeps its own.
+   */
+  mod?: string | null
 }
 
 /**
@@ -947,6 +952,8 @@ export interface NodeEncounterRules {
   eliteDepth: number
   /** The Sovereign Route: every clan marches from the first fight ({@link EncounterOptions.muster}). */
   muster?: boolean
+  /** The armour this road's ordinary fights lean to ({@link nodeArmour}; `Company.armour`). */
+  armourLean?: 'plated' | 'warded'
 }
 const NO_ENCOUNTER_RULES: NodeEncounterRules = { allElite: false, eliteDepth: 0 }
 
@@ -958,6 +965,48 @@ export interface NodeEncounterSpec {
   sibling: number
   /** The Sovereign Route's muster (only ever `true`; absent on every other road). */
   muster?: true
+  /** An ordinary fight's armour ({@link nodeArmour}); absent when it has none. */
+  mod?: 'plated' | 'warded'
+}
+
+/**
+ * ---- Armoured ordinary fights (Oct 2026) -----------------------------------
+ *
+ * The elite columns were the only fights that wore armour, so steel-or-magic
+ * was a question one node in an act asked. Now a share of ORDINARY fights come
+ * Plated or Warded too — every goblin in the column wearing it (`ENEMY_MODS`,
+ * capped at `ARMOUR_CAP`) — and the map badges the node, so a company can plan
+ * its road around them: "like an elite you can plan for", in the designer's
+ * words. The wrong damage type needs about twice the damage, never infinitely
+ * more; the right one goes straight through.
+ *
+ * From {@link ARMOUR_DEPTH}: barrels march from depth 3 (`gate`), so a Plated
+ * column has plate in it, and the opening fights teach the plain game first.
+ * A company's road leans one way ({@link ARMOUR_LEAN} of its armoured fights):
+ * Ironvein's raiders strap on plate, Greenvial's are warded.
+ *
+ * Its own RNG, hashed from (run seed, layer, row) — never a draw on a run
+ * stream, so it moves no other roll.
+ */
+export const ARMOUR_DEPTH = 3
+/** The share of ordinary fights from {@link ARMOUR_DEPTH} that come armoured. */
+export const ARMOUR_CHANCE = 0.25
+/** On a road that leans ({@link NodeEncounterRules.armourLean}), the share of its armoured fights that wear the lean. */
+export const ARMOUR_LEAN = 0.75
+
+/** The armour an ordinary fight on this node wears, or null. */
+export function nodeArmour(
+  node: { type: string; layer: number; row: number },
+  runSeed: number,
+  rules: NodeEncounterRules = NO_ENCOUNTER_RULES,
+): 'plated' | 'warded' | null {
+  if (node.type !== 'battle' || rules.allElite || node.layer < ARMOUR_DEPTH) return null
+  const r = new RNG(hashSeed(runSeed, 'armour', node.layer, node.row))
+  if (r.next() >= ARMOUR_CHANCE) return null
+  const roll = r.next()
+  const lean = rules.armourLean
+  if (!lean) return roll < 0.5 ? 'plated' : 'warded'
+  return roll < ARMOUR_LEAN ? lean : lean === 'plated' ? 'warded' : 'plated'
 }
 
 /**
@@ -981,12 +1030,14 @@ export function nodeEncounterSpec(
   else if (node.type === 'battle') kind = rules.allElite ? 'elite' : 'normal'
   else return null
   const vowElite = node.type === 'battle' && kind === 'elite'
+  const mod = nodeArmour(node, runSeed, rules)
   return {
     kind,
     depth: node.layer + (vowElite ? rules.eliteDepth : 0),
     seed: encounterSeed(runSeed, node.layer),
     sibling: node.row,
     ...(rules.muster ? { muster: true as const } : {}),
+    ...(mod ? { mod } : {}),
   }
 }
 
@@ -997,13 +1048,14 @@ export function nodeEncounter(
   rules: NodeEncounterRules = NO_ENCOUNTER_RULES,
 ): WaveDef | null {
   const spec = nodeEncounterSpec(node, runSeed, rules)
-  return spec ? generateEncounter(spec.depth, spec.kind, { seed: spec.seed, sibling: spec.sibling, muster: spec.muster }) : null
+  return spec ? generateEncounter(spec.depth, spec.kind, { seed: spec.seed, sibling: spec.sibling, muster: spec.muster, mod: spec.mod }) : null
 }
 
 export function generateEncounter(depth: number, kind: EncounterKind, opts: EncounterOptions = {}): WaveDef {
-  const v = opts.variantId
+  const picked = opts.variantId
     ? (variantsFor(kind, depth).find((x) => x.id === opts.variantId) ?? pickVariant(kind, depth, opts.seed, opts.sibling))
     : pickVariant(kind, depth, opts.seed, opts.sibling)
+  const v = opts.mod && !picked.mod ? { ...picked, mod: opts.mod } : picked
   const budget = kindBudget(depth, kind) * v.budgetScale
   const window = spawnWindow(depth, kind)
 
@@ -1152,7 +1204,7 @@ function splitSubWaves(spawns: SpawnEvent[], groups: number, champions: number, 
  * The node's name, with the variant in it.
  *
  * The variant is named rather than hidden because the whole point of input
- * randomness is that the player gets to *solve* the setup: "Elite — Warded
+ * randomness is that the player gets to *solve* the setup: "Warded
  * Host" plus a preview listing `Warded Bomber ×14 — shrugs off magic 49%` is a
  * counter-pick problem. The same fight with a generic name is a surprise, which
  * is the other kind of randomness.
@@ -1164,15 +1216,27 @@ function splitSubWaves(spawns: SpawnEvent[], groups: number, champions: number, 
  * does, just aimed at the next maintainer instead of the player.)
  */
 function defaultLabel(depth: number, kind: EncounterKind, v: WaveVariant): string {
+  return fightName(depth, kind, v)
+}
+
+/**
+ * A fight's one name — the run map's (the node's head, "March to …") and the
+ * wave's own label (the preview on the Stage, the announcer, the ceremony, a
+ * fall's "Last wave"), so the two can never drift (Oct 2026: the preview said
+ * "Depth 2" — which the HUD header already says — where the map said
+ * "Patrol"). The depth is the header's to say, the kind is the map's node:
+ * the name is the shape you are handed. An ordinary fight in armour wears its
+ * prefix ("Plated Patrol"); an elite is its column ("Warded Host"); a boss
+ * is its court, or its act's title when the court has no name.
+ */
+export function fightName(depth: number, kind: EncounterKind, v: Pick<WaveVariant, 'label' | 'mod'>): string {
   if (kind === 'boss') {
-    // The three-act road (Phase 3b) fields a boss at the close of every act; only
-    // the last one is the Final Watch. Acts I and II used to be announced as
-    // "The Final Watch" at depth 4 and 8.
-    const title = depth >= RUN_LAYERS - 1 ? 'The Final Watch' : `Act ${Math.ceil(depth / ACT_LAYERS)} Boss`
-    return v.label ? `${title} — ${v.label}` : title
+    // The three-act road (Phase 3b) fields a boss at the close of every act;
+    // only the last one is the Final Watch.
+    return v.label || (depth >= RUN_LAYERS - 1 ? 'The Final Watch' : `Act ${Math.ceil(depth / ACT_LAYERS)} Boss`)
   }
-  if (kind === 'elite') return `Elite — ${v.label}`
-  return v.id === 'patrol' ? `Depth ${depth}` : `Depth ${depth} — ${v.label}`
+  const prefix = kind === 'normal' && v.mod ? ENEMY_MODS.find((m) => m.id === v.mod)?.prefix : undefined
+  return prefix ? `${prefix} ${v.label}` : v.label
 }
 
 /** Human-readable composition summary for the pre-wave preview. */
